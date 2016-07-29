@@ -48,6 +48,10 @@
     <developerConnection>scm:git:git@gitlab.cern.ch:7999/c2mon/c2mon-daq-opcua.git</developerConnection>
   </scm>
 
+  <properties>
+    <c2mon.daq.name>opcua</c2mon.daq.name>
+  </properties>
+
   <dependencies>
     <!-- C2MON dependencies -->
     <dependency>
@@ -166,24 +170,11 @@
   
   <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <descriptors>
-            <descriptor>src/dist/assembly.xml</descriptor>
-          </descriptors>
+      <!-- Activate plugin configurations to build a tarball and a docker image -->
+      <plugin><artifactId>maven-dependency-plugin</artifactId></plugin>
+      <plugin><artifactId>maven-assembly-plugin</artifactId></plugin>
+      <plugin><artifactId>docker-maven-plugin</artifactId></plugin>
 
-        </configuration>
-        <executions>
-          <execution>
-            <id>create-assembly-file</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 </project>
