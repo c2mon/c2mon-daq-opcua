@@ -12,33 +12,12 @@
   <packaging>jar</packaging>
   <description>DAQ module for acquiring data from OPC UA servers. Also supports the older DCOM and SOAP protocols</description>
 
-  <distributionManagement>
-    <repository>
-      <id>artifactory</id>
-      <name>cs-ccr-ap1.cern.ch-releases</name>
-      <url>http://artifactory/beco-release-local</url>
-    </repository>
-    <snapshotRepository>
-      <id>artifactory</id>
-      <name>cs-ccr-ap1.cern.ch-snapshots</name>
-      <url>http://artifactory/beco-development-local</url>
-    </snapshotRepository>
-  </distributionManagement>
-
   <repositories>
+    <!-- This is needed to retrieve the DIP dependencies -->
     <repository>
-      <id>artifactory-releases</id>
-      <url>http://artifactory/release</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>artifactory-snapshots</id>
-      <url>http://artifactory/development</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
+      <id>cern-nexus</id>
+      <name>CERN Central Nexus</name>
+      <url>https://nexus.web.cern.ch/nexus/content/groups/public</url>
     </repository>
   </repositories>
 
@@ -48,6 +27,10 @@
     <developerConnection>scm:git:git@gitlab.cern.ch:7999/c2mon/c2mon-daq-opcua.git</developerConnection>
   </scm>
 
+  <properties>
+    <docker.image.base>java:8-jdk</docker.image.base>
+  </properties>
+
   <dependencies>
     <!-- C2MON dependencies -->
     <dependency>
@@ -56,10 +39,14 @@
     </dependency>
     <dependency>
       <groupId>cern.c2mon.shared</groupId>
+      <artifactId>c2mon-shared-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>cern.c2mon.shared</groupId>
       <artifactId>c2mon-shared-daq</artifactId>
     </dependency>
 
-    <!-- 3rd-party dependencies -->
+    <!-- 3rd party dependencies -->
     <dependency>
       <groupId>com.prosys</groupId>
       <artifactId>opc-ua-java-sdk</artifactId>
@@ -153,6 +140,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>cern.c2mon.daq</groupId>
+      <artifactId>c2mon-daq-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
       <version>3.1</version>
@@ -169,10 +161,10 @@
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
+          <appendAssemblyId>false</appendAssemblyId>
           <descriptors>
             <descriptor>src/dist/assembly.xml</descriptor>
           </descriptors>
-
         </configuration>
         <executions>
           <execution>
@@ -183,6 +175,77 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+
+      <!-- Create docker image -->
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>docker-maven-plugin</artifactId>
+        <version>0.4.10</version>
+        <executions>
+          <execution>
+            <id>build-image</id>
+            <phase>package</phase>
+            <goals>
+              <goal>build</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>push-image</id>
+            <phase>deploy</phase>
+            <goals>
+              <goal>push</goal>
+            </goals>
+            <configuration>
+              <imageName>docker.cern.ch/c2mon-project/daq-opcua</imageName>
+            </configuration>
+          </execution>
+        </executions>
+        <configuration>
+          <imageName>docker.cern.ch/c2mon-project/daq-opcua</imageName>
+          <baseImage>${docker.image.base}</baseImage>
+          <serverId>docker.cern.ch</serverId>
+          <registryUrl>https://docker.cern.ch</registryUrl>
+          <forceTags>true</forceTags>
+          <imageTags>
+            <imageTag>${project.version}</imageTag>
+          </imageTags>
+          <workdir>/${project.artifactId}</workdir>
+          <entryPoint>["/docker-entrypoint.sh"]</entryPoint>
+          <exposes>
+            <expose>1099</expose>
+          </exposes>
+          <runs>
+            <run>chmod 755 /${project.artifactId}/bin/*</run>
+            <run>apt-get install -y --no-install-recommends xz-utils</run> <!--lsof command-not-found-->
+            <run>rm -rf /var/lib/apt/lists/*</run>
+          </runs>
+          <env>
+            <LD_LIBRARY_PATH>/${project.artifactId}/lib_so</LD_LIBRARY_PATH>
+          </env>
+          <volumes>
+            <volume>/${project.artifactId}/log</volume>
+            <volume>/${project.artifactId}/conf</volume>
+          </volumes>
+          <resources>
+            <resource>
+              <directory>${project.build.directory}</directory>
+              <include>${project.artifactId}-${project.version}.tar.gz</include>
+              <targetPath>/</targetPath>
+            </resource>
+            <resource>
+              <directory>src/dist/docker/conf</directory>
+              <targetPath>/${project.artifactId}/conf</targetPath>
+            </resource>
+            <resource>
+              <directory>src/dist/docker</directory>
+              <includes>
+                <include>docker-entrypoint.sh</include>
+              </includes>
+              <targetPath>/</targetPath>
+            </resource>
+          </resources>
+        </configuration>
       </plugin>
     </plugins>
   </build>
