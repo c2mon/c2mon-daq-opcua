@@ -26,6 +26,7 @@
         <priority>2</priority>
         <guaranteed-delivery>false</guaranteed-delivery>
       </DataTagAddress>
+    </DataTag>
     <DataTag id="1000009" name="opcua://pitrafficlighteth.cern.ch/RedLED.on" control="false">
       <mode>1</mode>
       <data-type>java.lang.Object</data-type>
