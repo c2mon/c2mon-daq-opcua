@@ -197,7 +197,7 @@ public class UAEndpointDigitalpetri extends OPCEndpoint<UAItemDefintionDigitalpe
   private void subscribe(final SubscriptionGroup<UAItemDefintionDigitalpetri> group) {
     try {
       final float valueDeadband = group.getValueDeadband();
-      final int timeDeadband = group.getTimeDeadband();
+      final int timeDeadband = Math.max(500, group.getTimeDeadband());
       final UaSubscription subscription = client.getSubscriptionManager().createSubscription(new Double(timeDeadband)).get();
 
       for (UAItemDefintionDigitalpetri definition : group.getDefintions()) {
