@@ -1,2 +1,13 @@
+# Fully build and deploy master branch
+build_and_deploy:
+  script: 
+    - mvn -q -U -B -T4 clean deploy --settings settings.xml
+  only:
+    - master
+    
+# Just run tests on feature branches
 build:
-  script: mvn -q -U -B -T4 clean deploy --settings settings.xml
+  script:
+    - mvn -q -B test -DskipDockerBuild -DskipDockerTag
+  except:
+    - master
