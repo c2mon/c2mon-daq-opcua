@@ -17,16 +17,6 @@
 package cern.c2mon.daq.opcua;
 
 
-import static org.easymock.EasyMock.eq;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.isA;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.reset;
-import static org.easymock.EasyMock.verify;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -40,7 +30,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.common.logger.EquipmentLoggerFactory;
 import cern.c2mon.daq.opcua.connection.common.IOPCEndpoint;
 import cern.c2mon.daq.opcua.connection.common.IOPCEndpoint.STATE;
 import cern.c2mon.daq.opcua.connection.common.IOPCEndpointFactory;
@@ -61,410 +50,414 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 public class EndpointControllerTest {
 
-    private IOPCEndpointFactory factory = EasyMock.createMock(IOPCEndpointFactory.class);
+  private IOPCEndpointFactory factory = EasyMock.createMock(IOPCEndpointFactory.class);
 
-    private IOPCEndpoint endpoint = EasyMock.createMock(IOPCEndpoint.class);
+  private IOPCEndpoint endpoint = EasyMock.createMock(IOPCEndpoint.class);
 
-    private IEquipmentMessageSender sender = EasyMock.createMock(IEquipmentMessageSender.class);
+  private IEquipmentMessageSender sender = EasyMock.createMock(IEquipmentMessageSender.class);
 
-    private IEquipmentConfiguration conf = EasyMock.createMock(IEquipmentConfiguration.class);
+  private IEquipmentConfiguration conf = EasyMock.createMock(IEquipmentConfiguration.class);
 
-    private OPCUADefaultAddress opcAddress;
+  private OPCUADefaultAddress opcAddress;
 
-    private EndpointControllerDefault controller;
+  private EndpointControllerDefault controller;
 
-    private Map<Long, ISourceDataTag> sourceDataTags;
+  private Map<Long, ISourceDataTag> sourceDataTags;
 
-    private Map<Long, ISourceCommandTag> sourceCommandTags;
+  private Map<Long, ISourceCommandTag> sourceCommandTags;
 
-    private volatile Throwable error;
+  private volatile Throwable error;
 
-    private ArrayList<OPCUADefaultAddress> addresses;
+  private ArrayList<OPCUADefaultAddress> addresses;
 
-    @Before
-    public void setUp() throws URISyntaxException {
-        opcAddress = new OPCUADefaultAddress.DefaultBuilder(
-                "test://somhost/somepath", 1000, 1000)
-                .build();
-        addresses = new ArrayList<OPCUADefaultAddress>();
-        addresses.add(opcAddress);
-        sourceDataTags =
+  @Before
+  public void setUp() throws URISyntaxException {
+    opcAddress = new OPCUADefaultAddress.DefaultBuilder(
+            "test://somhost/somepath", 1000, 1000)
+            .build();
+    addresses = new ArrayList<OPCUADefaultAddress>();
+    addresses.add(opcAddress);
+    sourceDataTags =
             new HashMap<Long, ISourceDataTag>();
-        sourceCommandTags =
+    sourceCommandTags =
             new HashMap<Long, ISourceCommandTag>();
-        controller = new EndpointControllerDefault(
-                factory, sender, new EquipmentLoggerFactory("asd", 1L, "asd", "asd", false, false),
-                addresses, conf);
-        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+    controller = new EndpointControllerDefault(
+            factory, sender,
+            addresses, conf);
+    Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
 
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                error = e;
-            }
-        });
+      @Override
+      public void uncaughtException(Thread t, Throwable e) {
+        error = e;
+      }
+    });
 //        reset(endpoint);
+  }
+
+  @After
+  public void tearDown() throws Throwable {
+    if (error != null)
+      throw error;
+    try {
+      reset(endpoint);
+      endpoint.reset();
     }
+    catch (Exception e) {
 
-    @After
-    public void tearDown() throws Throwable {
-        if (error != null)
-            throw error;
-        try {
-        	reset(endpoint);
-        	endpoint.reset();
-        }
-        catch (Exception e) {
-
-        }
     }
+  }
 
-    @Test
-    public void testStart() throws URISyntaxException {
-        expect(factory.createEndpoint(opcAddress)).andReturn(endpoint);
-        expect(conf.getSourceDataTags()).andReturn(sourceDataTags).anyTimes();
-        expect(conf.getSourceCommandTags()).andReturn(sourceCommandTags).anyTimes();
-        expect(conf.getAliveTagId()).andReturn(1L);
-        expect(conf.getSourceDataTag(1L)).andReturn(null);
-        endpoint.initialize(opcAddress);
-        endpoint.addDataTags(sourceDataTags.values());
-        endpoint.addCommandTags(sourceCommandTags.values());
-        endpoint.registerEndpointListener(controller);
-        endpoint.registerEndpointListener(
-                isA(EndpointEquipmentLogListener.class));
-        endpoint.setStateOperational();
+  @Test
+  public void testStart() throws URISyntaxException {
+    expect(factory.createEndpoint(opcAddress)).andReturn(endpoint);
+    expect(conf.getSourceDataTags()).andReturn(sourceDataTags).anyTimes();
+    expect(conf.getSourceCommandTags()).andReturn(sourceCommandTags).anyTimes();
+    expect(conf.getAliveTagId()).andReturn(1L);
+    expect(conf.getSourceDataTag(1L)).andReturn(null);
+    endpoint.initialize(opcAddress);
+    endpoint.addDataTags(sourceDataTags.values());
+    endpoint.addCommandTags(sourceCommandTags.values());
+    endpoint.registerEndpointListener(controller);
+    endpoint.registerEndpointListener(
+            isA(EndpointEquipmentLogListener.class));
+    endpoint.setStateOperational();
 
-        replay(factory, endpoint, conf);
-        controller.startEndpoint();
-        verify(factory, endpoint, conf);
-    }
+    replay(factory, endpoint, conf);
+    controller.startEndpoint();
+    verify(factory, endpoint, conf);
+  }
 
-    @Test(expected=EndpointTypesUnknownException.class)
-    public void testUnknownEndpoint() throws URISyntaxException {
-        expect(factory.createEndpoint(EasyMock.createNiceMock(OPCUADefaultAddress.class))).andReturn(null);
+  @Test(expected = EndpointTypesUnknownException.class)
+  public void testUnknownEndpoint() throws URISyntaxException {
+    expect(factory.createEndpoint(EasyMock.createNiceMock(OPCUADefaultAddress.class))).andReturn(null);
 
-        controller.startEndpoint();
-    }
+    controller.startEndpoint();
+  }
 
-    @Test
-    public void testOnNewTagValue() {
-        DataTagAddress address = new DataTagAddress();
-        ISourceDataTag currentTag = new SourceDataTag(1L, "", false, (short) 0, "String", address );
-        Object tagValue = "asd";
-        long milisecTimestamp = 1L;
-        expect(sender.sendTagFiltered(currentTag, tagValue, milisecTimestamp))
+  @Test
+  public void testOnNewTagValue() {
+    DataTagAddress address = new DataTagAddress();
+    ISourceDataTag currentTag = new SourceDataTag(1L, "", false, (short) 0, "String", address);
+    Object tagValue = "asd";
+    long milisecTimestamp = 1L;
+    expect(sender.sendTagFiltered(currentTag, tagValue, milisecTimestamp))
             .andReturn(true);
 
-        replay(sender);
-        controller.onNewTagValue(currentTag, milisecTimestamp, tagValue);
-        verify(sender);
-    }
+    replay(sender);
+    controller.onNewTagValue(currentTag, milisecTimestamp, tagValue);
+    verify(sender);
+  }
 
-//    @Test
-    public void testOnSubscriptionException() throws InterruptedException {
-        initializeEndpoint();
+  //    @Test
+  public void testOnSubscriptionException() throws InterruptedException {
+    initializeEndpoint();
 
-        //stop
-        endpoint.reset();
-        sender.confirmEquipmentStateIncorrect();
+    //stop
+    endpoint.reset();
+    sender.confirmEquipmentStateIncorrect();
 
-        // restart
+    // restart
 //        expect(endpoint.getState()).andReturn(STATE.NOT_INITIALIZED);
-        expect(factory.createEndpoint(EasyMock.createNiceMock(OPCUADefaultAddress.class))).andReturn(endpoint);
-        expect(conf.getSourceDataTags()).andReturn(sourceDataTags).anyTimes();
-        expect(conf.getSourceCommandTags()).andReturn(sourceCommandTags).anyTimes();
-        expect(conf.getAliveTagId()).andReturn(1L);
-        expect(conf.getSourceDataTag(1L)).andReturn(null);
-        endpoint.initialize(opcAddress);
-        endpoint.addDataTags(sourceDataTags.values());
-        endpoint.addCommandTags(sourceCommandTags.values());
-        endpoint.registerEndpointListener(controller);
-        endpoint.registerEndpointListener(
-                isA(EndpointEquipmentLogListener.class));
-        sender.confirmEquipmentStateOK();
-        endpoint.setStateOperational();
-        endpoint.checkConnection();
-        expectLastCall().anyTimes();
-        //refresh
-        endpoint.refreshDataTags(sourceDataTags.values());
+    expect(factory.createEndpoint(EasyMock.createNiceMock(OPCUADefaultAddress.class))).andReturn(endpoint);
+    expect(conf.getSourceDataTags()).andReturn(sourceDataTags).anyTimes();
+    expect(conf.getSourceCommandTags()).andReturn(sourceCommandTags).anyTimes();
+    expect(conf.getAliveTagId()).andReturn(1L);
+    expect(conf.getSourceDataTag(1L)).andReturn(null);
+    endpoint.initialize(opcAddress);
+    endpoint.addDataTags(sourceDataTags.values());
+    endpoint.addCommandTags(sourceCommandTags.values());
+    endpoint.registerEndpointListener(controller);
+    endpoint.registerEndpointListener(
+            isA(EndpointEquipmentLogListener.class));
+    sender.confirmEquipmentStateOK();
+    endpoint.setStateOperational();
+    endpoint.checkConnection();
+    expectLastCall().anyTimes();
+    //refresh
+    endpoint.refreshDataTags(sourceDataTags.values());
 
-        // next in while loop
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    // next in while loop
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
 
-        replay(endpoint, sender, factory, conf);
-        controller.onSubscriptionException(new Exception());
-        Thread.sleep(100L + 1000L);
-        verify(endpoint, sender, factory, conf);
-    }
+    replay(endpoint, sender, factory, conf);
+    controller.onSubscriptionException(new Exception());
+    Thread.sleep(100L + 1000L);
+    verify(endpoint, sender, factory, conf);
+  }
 
-    @Test
-    public void testFirstEndpointInvalid() throws URISyntaxException {
-        addresses.add(
-                new OPCUADefaultAddress.DefaultBuilder(
-                        "http://host/somepath", 100, 1000).build());
-        expect(conf.getSourceDataTags()).andReturn(sourceDataTags).anyTimes();
-        expect(conf.getSourceCommandTags()).andReturn(sourceCommandTags).anyTimes();
-        expect(conf.getAliveTagId()).andReturn(1L);
-        expect(conf.getSourceDataTag(1L)).andReturn(null);
-        expect(factory.createEndpoint(addresses.get(0))).andReturn(null);
-        expect(factory.createEndpoint(addresses.get(1))).andReturn(endpoint);
+  @Test
+  public void testFirstEndpointInvalid() throws URISyntaxException {
+    addresses.add(
+            new OPCUADefaultAddress.DefaultBuilder(
+                    "http://host/somepath", 100, 1000).build());
+    expect(conf.getSourceDataTags()).andReturn(sourceDataTags).anyTimes();
+    expect(conf.getSourceCommandTags()).andReturn(sourceCommandTags).anyTimes();
+    expect(conf.getAliveTagId()).andReturn(1L);
+    expect(conf.getSourceDataTag(1L)).andReturn(null);
+    expect(factory.createEndpoint(addresses.get(0))).andReturn(null);
+    expect(factory.createEndpoint(addresses.get(1))).andReturn(endpoint);
 
-        replay(factory, conf);
-        controller.startEndpoint();
-        verify(factory, conf);
-    }
+    replay(factory, conf);
+    controller.startEndpoint();
+    verify(factory, conf);
+  }
 
-    /**
-     *
-     */
-    private void initializeEndpoint() {
-        // just to get it to initialized state
-        expect(factory.createEndpoint(opcAddress)).andReturn(endpoint);
-        expect(conf.getSourceDataTags()).andReturn(sourceDataTags).anyTimes();
-        expect(conf.getSourceCommandTags()).andReturn(sourceCommandTags).anyTimes();
-        expect(conf.getAliveTagId()).andReturn(1L);
-        expect(conf.getSourceDataTag(1L)).andReturn(null);
-        replay(factory, conf);
-        controller.startEndpoint();
-        controller.stopStatusChecker();
-        controller.stopAliveTimer();
-        verify(factory, conf);
-        reset(endpoint, sender, factory, conf);
-    }
+  /**
+   *
+   */
+  private void initializeEndpoint() {
+    // just to get it to initialized state
+    expect(factory.createEndpoint(opcAddress)).andReturn(endpoint);
+    expect(conf.getSourceDataTags()).andReturn(sourceDataTags).anyTimes();
+    expect(conf.getSourceCommandTags()).andReturn(sourceCommandTags).anyTimes();
+    expect(conf.getAliveTagId()).andReturn(1L);
+    expect(conf.getSourceDataTag(1L)).andReturn(null);
+    replay(factory, conf);
+    controller.startEndpoint();
+    controller.stopStatusChecker();
+    controller.stopAliveTimer();
+    verify(factory, conf);
+    reset(endpoint, sender, factory, conf);
+  }
 
-    @Test
-    public void testOnTagInvalidException() {
-        ISourceDataTag dataTag = new SourceDataTag(1L, "asd", false);
-        Throwable cause = new Exception("The cause of the problem");
+  @Test
+  public void testOnTagInvalidException() {
+    ISourceDataTag dataTag = new SourceDataTag(1L, "asd", false);
+    Throwable cause = new Exception("The cause of the problem");
 
-        sender.sendInvalidTag(eq(dataTag), eq(SourceDataQuality.DATA_UNAVAILABLE),
-                eq(cause.getMessage()));
+    sender.sendInvalidTag(eq(dataTag), eq(SourceDataQuality.DATA_UNAVAILABLE),
+            eq(cause.getMessage()));
 
-        replay(sender);
-        controller.onTagInvalidException(dataTag, cause);
-        verify(sender);
-    }
+    replay(sender);
+    controller.onTagInvalidException(dataTag, cause);
+    verify(sender);
+  }
 
-    @Test
-    public void testRefresh() {
-        initializeEndpoint();
+  @Test
+  public void testRefresh() {
+    initializeEndpoint();
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        endpoint.refreshDataTags(sourceDataTags.values());
-        expect(conf.getSourceDataTags()).andReturn(sourceDataTags);
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    endpoint.refreshDataTags(sourceDataTags.values());
+    expect(conf.getSourceDataTags()).andReturn(sourceDataTags);
 
-        replay(endpoint, conf);
-        controller.refresh();
-        verify(endpoint, conf);
-    }
+    replay(endpoint, conf);
+    controller.refresh();
+    verify(endpoint, conf);
+  }
 
-    @Test
-    public void testRefreshTag() {
-        initializeEndpoint();
+  @Test
+  public void testRefreshTag() {
+    initializeEndpoint();
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        Collection<ISourceDataTag> tags = new ArrayList<ISourceDataTag>(1);
-        ISourceDataTag tag = new SourceDataTag(1L, "asd", false);
-        tags.add(tag);
-        endpoint.refreshDataTags(tags);
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    Collection<ISourceDataTag> tags = new ArrayList<ISourceDataTag>(1);
+    ISourceDataTag tag = new SourceDataTag(1L, "asd", false);
+    tags.add(tag);
+    endpoint.refreshDataTags(tags);
 
 //        endpoint.checkConnection();
 //        expectLastCall().anyTimes();
 
-        replay(endpoint);
-        controller.refresh(tag);
-        verify(endpoint);
-    }
+    replay(endpoint);
+    controller.refresh(tag);
+    verify(endpoint);
+  }
 
-    @Test
-    public void testRunCommand() throws ConfigurationException {
-        initializeEndpoint();
+  @Test
+  public void testRunCommand() throws ConfigurationException {
+    initializeEndpoint();
 
-        OPCHardwareAddress hardwareAddress = new OPCHardwareAddressImpl("sd");
-        ISourceCommandTag commandTag =
+    OPCHardwareAddress hardwareAddress = new OPCHardwareAddressImpl("sd");
+    ISourceCommandTag commandTag =
             new SourceCommandTag(1L, "asd", 100, 1000, hardwareAddress);
-        SourceCommandTagValue sourceCommandTagValue = new SourceCommandTagValue();
+    SourceCommandTagValue sourceCommandTagValue = new SourceCommandTagValue();
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        endpoint.executeCommand(hardwareAddress, sourceCommandTagValue);
-
-//        endpoint.checkConnection();
-//        expectLastCall().anyTimes();
-
-        replay(endpoint);
-        controller.runCommand(commandTag, sourceCommandTagValue);
-        verify(endpoint);
-    }
-
-    @Test
-    public void testStartStopAliveTimer() {
-        initializeEndpoint();
-
-        expect(conf.getAliveTagId()).andReturn(1L);
-        expect(conf.getSourceDataTag(1L)).andReturn(
-                new SourceDataTag(1L, "asd", true));
-        expect(conf.getAliveTagInterval()).andReturn(1000L);
-
-        replay(conf);
-        controller.startAliveTimer();
-        assertNotNull(controller.getWriter());
-        controller.stopAliveTimer();
-        verify(conf);
-    }
-
-    @Test
-    public void testOnAddCommandTag() {
-        initializeEndpoint();
-
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        ISourceCommandTag commandTag = new SourceCommandTag(1L, "asd");
-        endpoint.addCommandTag(commandTag);
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    endpoint.executeCommand(hardwareAddress, sourceCommandTagValue);
 
 //        endpoint.checkConnection();
 //        expectLastCall().anyTimes();
 
-        replay(endpoint);
-        ChangeReport changeReport = new ChangeReport(1L);
-        controller.onAddCommandTag(commandTag, changeReport);
-        assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
-        verify(endpoint);
-    }
+    replay(endpoint);
+    controller.runCommand(commandTag, sourceCommandTagValue);
+    verify(endpoint);
+  }
 
-    @Test
-    public void testOnRemoveCommandTag() {
-        initializeEndpoint();
+  @Test
+  public void testStartStopAliveTimer() {
+    initializeEndpoint();
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        ISourceCommandTag commandTag = new SourceCommandTag(1L, "asd");
-        endpoint.removeCommandTag(commandTag);
+    expect(conf.getAliveTagId()).andReturn(1L);
+    expect(conf.getSourceDataTag(1L)).andReturn(
+            new SourceDataTag(1L, "asd", true));
+    expect(conf.getAliveTagInterval()).andReturn(1000L);
 
-        endpoint.checkConnection();
-        expectLastCall().anyTimes();
+    replay(conf);
+    controller.startAliveTimer();
+    assertNotNull(controller.getWriter());
+    controller.stopAliveTimer();
+    verify(conf);
+  }
 
-        replay(endpoint);
-        ChangeReport changeReport = new ChangeReport(1L);
-        controller.onRemoveCommandTag(commandTag, changeReport);
-        assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
-        verify(endpoint);
-    }
+  @Test
+  public void testOnAddCommandTag() {
+    initializeEndpoint();
 
-    @Test
-    public void testOnUpdateCommandTagHardwareAddressChanged() throws ConfigurationException {
-        initializeEndpoint();
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    ISourceCommandTag commandTag = new SourceCommandTag(1L, "asd");
+    endpoint.addCommandTag(commandTag);
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        HardwareAddress address = new OPCHardwareAddressImpl("asd");
-        ISourceCommandTag oldTag = new SourceCommandTag(1L, "asd", 100, 1000, address);
-        HardwareAddress address2 = new OPCHardwareAddressImpl("asd2");
-        ISourceCommandTag newTag = new SourceCommandTag(1L, "asd", 100, 1000, address2);
-        endpoint.removeCommandTag(oldTag);
-        endpoint.addCommandTag(newTag);
+//        endpoint.checkConnection();
+//        expectLastCall().anyTimes();
 
-        replay(endpoint);
-        ChangeReport changeReport = new ChangeReport(1L);
-        controller.onUpdateCommandTag(newTag, oldTag, changeReport);
-        assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
-        verify(endpoint);
-    }
+    replay(endpoint);
+    ChangeReport changeReport = new ChangeReport(1L);
+    controller.onAddCommandTag(commandTag, changeReport);
+    assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
+    verify(endpoint);
+  }
 
-    @Test
-    public void testOnUpdateCommandTagNothingChanged() throws ConfigurationException {
-        initializeEndpoint();
+  @Test
+  public void testOnRemoveCommandTag() {
+    initializeEndpoint();
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        HardwareAddress address = new OPCHardwareAddressImpl("asd");
-        ISourceCommandTag oldTag = new SourceCommandTag(1L, "asd", 100, 1000, address);
-        ISourceCommandTag newTag = new SourceCommandTag(1L, "asd", 100, 1000, address);
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    ISourceCommandTag commandTag = new SourceCommandTag(1L, "asd");
+    endpoint.removeCommandTag(commandTag);
 
-        endpoint.checkConnection();
-        expectLastCall().anyTimes();
+    endpoint.checkConnection();
+    expectLastCall().anyTimes();
 
-        replay(endpoint);
-        ChangeReport changeReport = new ChangeReport(1L);
-        controller.onUpdateCommandTag(newTag, oldTag, changeReport);
-        assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
-        verify(endpoint);
-    }
+    replay(endpoint);
+    ChangeReport changeReport = new ChangeReport(1L);
+    controller.onRemoveCommandTag(commandTag, changeReport);
+    assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
+    verify(endpoint);
+  }
 
-    @Test
-    public void testOnAddDataTag() {
-        initializeEndpoint();
+  @Test
+  public void testOnUpdateCommandTagHardwareAddressChanged() throws ConfigurationException {
+    initializeEndpoint();
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED).anyTimes();
-        ISourceDataTag dataTag = new SourceDataTag(1L, "asd", false);
-        endpoint.addDataTag(dataTag);
-        endpoint.refreshDataTags(isA(Collection.class));
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    HardwareAddress address = new OPCHardwareAddressImpl("asd");
+    ISourceCommandTag oldTag = new SourceCommandTag(1L, "asd", 100, 1000, address);
+    HardwareAddress address2 = new OPCHardwareAddressImpl("asd2");
+    ISourceCommandTag newTag = new SourceCommandTag(1L, "asd", 100, 1000, address2);
+    endpoint.removeCommandTag(oldTag);
+    endpoint.addCommandTag(newTag);
 
-        replay(endpoint);
-        ChangeReport changeReport = new ChangeReport(1L);
-        controller.onAddDataTag(dataTag, changeReport);
-        assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
-        verify(endpoint);
-    }
+    replay(endpoint);
+    ChangeReport changeReport = new ChangeReport(1L);
+    controller.onUpdateCommandTag(newTag, oldTag, changeReport);
+    assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
+    verify(endpoint);
+  }
 
-    @Test
-    public void testOnRemoveDataTag() {
-        initializeEndpoint();
+  @Test
+  public void testOnUpdateCommandTagNothingChanged() throws ConfigurationException {
+    initializeEndpoint();
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        ISourceDataTag dataTag = new SourceDataTag(1L, "asd", false);
-        endpoint.removeDataTag(dataTag);
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    HardwareAddress address = new OPCHardwareAddressImpl("asd");
+    ISourceCommandTag oldTag = new SourceCommandTag(1L, "asd", 100, 1000, address);
+    ISourceCommandTag newTag = new SourceCommandTag(1L, "asd", 100, 1000, address);
 
-        replay(endpoint);
-        ChangeReport changeReport = new ChangeReport(1L);
-        controller.onRemoveDataTag(dataTag, changeReport);
-        assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
-        verify(endpoint);
-    }
+    endpoint.checkConnection();
+    expectLastCall().anyTimes();
 
-    @Test
-    public void testOnUpdateDataTagHardwareAddressChanged() throws ConfigurationException {
-        initializeEndpoint();
+    replay(endpoint);
+    ChangeReport changeReport = new ChangeReport(1L);
+    controller.onUpdateCommandTag(newTag, oldTag, changeReport);
+    assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
+    verify(endpoint);
+  }
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        HardwareAddress address = new OPCHardwareAddressImpl("asd");
-        SourceDataTag oldTag = new SourceDataTag(1L, "asd", false);
-        oldTag.setAddress(new DataTagAddress(address));
-        HardwareAddress address2 = new OPCHardwareAddressImpl("asd2");
-        SourceDataTag newTag = new SourceDataTag(1L, "asd", false);
-        newTag.setAddress(new DataTagAddress(address2));
-        endpoint.removeDataTag(oldTag);
-        endpoint.addDataTag(newTag);
+  @Test
+  public void testOnAddDataTag() {
+    initializeEndpoint();
 
-        replay(endpoint);
-        ChangeReport changeReport = new ChangeReport(1L);
-        controller.onUpdateDataTag(newTag, oldTag, changeReport);
-        assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
-        verify(endpoint);
-    }
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED).anyTimes();
+    ISourceDataTag dataTag = new SourceDataTag(1L, "asd", false);
+    endpoint.addDataTag(dataTag);
+    endpoint.refreshDataTags(isA(Collection.class));
 
-    @Test
-    public void testOnUpdateDataTagNothingChanged() throws ConfigurationException {
-        initializeEndpoint();
+    replay(endpoint);
+    ChangeReport changeReport = new ChangeReport(1L);
+    controller.onAddDataTag(dataTag, changeReport);
+    assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
+    verify(endpoint);
+  }
 
-        expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        HardwareAddress address = new OPCHardwareAddressImpl("asd");
-        SourceDataTag oldTag = new SourceDataTag(1L, "asd", false);
-        oldTag.setAddress(new DataTagAddress(address));
-        SourceDataTag newTag = new SourceDataTag(1L, "asd", false);
-        newTag.setAddress(new DataTagAddress(address));
+  @Test
+  public void testOnRemoveDataTag() {
+    initializeEndpoint();
 
-        replay(endpoint);
-        ChangeReport changeReport = new ChangeReport(1L);
-        controller.onUpdateDataTag(newTag, oldTag, changeReport);
-        assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
-        verify(endpoint);
-    }
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    ISourceDataTag dataTag = new SourceDataTag(1L, "asd", false);
+    endpoint.removeDataTag(dataTag);
 
-    @Test
-    public void testStop() throws ConfigurationException {
-        initializeEndpoint();
+    replay(endpoint);
+    ChangeReport changeReport = new ChangeReport(1L);
+    controller.onRemoveDataTag(dataTag, changeReport);
+    assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
+    verify(endpoint);
+  }
 
-        endpoint.reset();
+  @Test
+  public void testOnUpdateDataTagHardwareAddressChanged() throws ConfigurationException {
+    initializeEndpoint();
 
-        replay(endpoint);
-        controller.stop();
-        verify(endpoint);
-    }
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    HardwareAddress address = new OPCHardwareAddressImpl("asd");
+    SourceDataTag oldTag = new SourceDataTag(1L, "asd", false);
+    oldTag.setAddress(new DataTagAddress(address));
+    HardwareAddress address2 = new OPCHardwareAddressImpl("asd2");
+    SourceDataTag newTag = new SourceDataTag(1L, "asd", false);
+    newTag.setAddress(new DataTagAddress(address2));
+    endpoint.removeDataTag(oldTag);
+    endpoint.addDataTag(newTag);
+
+    replay(endpoint);
+    ChangeReport changeReport = new ChangeReport(1L);
+    controller.onUpdateDataTag(newTag, oldTag, changeReport);
+    assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
+    verify(endpoint);
+  }
+
+  @Test
+  public void testOnUpdateDataTagNothingChanged() throws ConfigurationException {
+    initializeEndpoint();
+
+    expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
+    HardwareAddress address = new OPCHardwareAddressImpl("asd");
+    SourceDataTag oldTag = new SourceDataTag(1L, "asd", false);
+    oldTag.setAddress(new DataTagAddress(address));
+    SourceDataTag newTag = new SourceDataTag(1L, "asd", false);
+    newTag.setAddress(new DataTagAddress(address));
+
+    replay(endpoint);
+    ChangeReport changeReport = new ChangeReport(1L);
+    controller.onUpdateDataTag(newTag, oldTag, changeReport);
+    assertEquals(changeReport.getState(), CHANGE_STATE.SUCCESS);
+    verify(endpoint);
+  }
+
+  @Test
+  public void testStop() throws ConfigurationException {
+    initializeEndpoint();
+
+    endpoint.reset();
+
+    replay(endpoint);
+    controller.stop();
+    verify(endpoint);
+  }
 }
