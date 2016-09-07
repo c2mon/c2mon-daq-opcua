@@ -35,7 +35,33 @@
     </dependency>
 
     <!-- 3rd-party dependencies -->
-    <dependency>
+      <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+          <version>${org.slf4j.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>log4j-over-slf4j</artifactId>
+          <version>${org.slf4j.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>jcl-over-slf4j</artifactId>
+          <version>${org.slf4j.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>jul-to-slf4j</artifactId>
+          <version>${org.slf4j.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>org.projectlombok</groupId>
+          <artifactId>lombok</artifactId>
+          <version>[1.16.6,)</version>
+          <scope>provided</scope>
+      </dependency>
+      <dependency>
       <groupId>com.prosys</groupId>
       <artifactId>opc-ua-java-sdk</artifactId>
       <version>1.2.2-2918</version>
