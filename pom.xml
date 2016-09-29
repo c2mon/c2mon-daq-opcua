@@ -11,9 +11,8 @@
 
   <artifactId>c2mon-daq-opcua</artifactId>
   <version>1.8.1-SNAPSHOT</version>
-  <packaging>pom</packaging>
-  <description>DAQ module for acquiring data from OPC UA servers. Also supports the older DCOM and SOAP protocols
-  </description>
+  <packaging>jar</packaging>
+  <description>DAQ module for acquiring data from OPC UA servers with digitalpetri client</description>
 
   <scm>
     <url>https://gitlab.cern.ch/c2mon/c2mon-daq-opcua</url>
