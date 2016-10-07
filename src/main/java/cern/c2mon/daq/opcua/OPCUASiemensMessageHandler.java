@@ -23,7 +23,7 @@ import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAMessageHandler;
 import cern.c2mon.daq.opcua.connection.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.DefaultOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.EndpointControllerSiemens;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
 import cern.c2mon.daq.opcua.connection.common.impl.OPCUASiemensAddress;
 import cern.c2mon.daq.opcua.connection.common.impl.OPCUASiemensAddressParser;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;

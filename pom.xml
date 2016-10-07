@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>cern.c2mon.daq</groupId>
     <artifactId>c2mon-daq-parent</artifactId>
-    <version>1.8.1</version>
+    <version>1.8.2-SNAPSHOT</version>
   </parent>
 
   <artifactId>c2mon-daq-opcua</artifactId>
   <version>1.8.1-SNAPSHOT</version>
-  <packaging>jar</packaging>
-  <description>DAQ module for acquiring data from OPC UA servers. Also supports the older DCOM and SOAP protocols</description>
+  <packaging>pom</packaging>
+  <description>DAQ module for acquiring data from OPC UA servers. Also supports the older DCOM and SOAP protocols
+  </description>
 
   <scm>
     <url>https://gitlab.cern.ch/c2mon/c2mon-daq-opcua</url>
@@ -24,11 +26,8 @@
     <!-- C2MON dependencies -->
     <dependency>
       <groupId>cern.c2mon.daq</groupId>
-      <artifactId>c2mon-daq-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>cern.c2mon.shared</groupId>
-      <artifactId>c2mon-shared-daq</artifactId>
+      <artifactId>c2mon-opc-stack</artifactId>
+      <version>1.8.1-SNAPSHOT</version>
     </dependency>
 
     <!-- 3rd-party dependencies -->
@@ -38,7 +37,7 @@
       <version>1.2.2-2918</version>
       <scope>provided</scope>
     </dependency>
-   <dependency>
+    <dependency>
       <groupId>com.digitalpetri.opcua</groupId>
       <artifactId>ua-client</artifactId>
       <version>1.1.0</version>
@@ -137,14 +136,21 @@
       <version>3.1</version>
     </dependency>
   </dependencies>
-  
+
   <!-- Activate plugin configurations to build a tarball and a docker image -->
   <build>
     <plugins>
-      <plugin><artifactId>maven-dependency-plugin</artifactId></plugin>
-      <plugin><artifactId>maven-assembly-plugin</artifactId></plugin>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+      </plugin>
       <!-- To ignore the Docker build run 'mvn package -DskipDockerBuild -DskipDockerTag' -->
-      <plugin><groupId>com.spotify</groupId><artifactId>docker-maven-plugin</artifactId></plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>docker-maven-plugin</artifactId>
+      </plugin>
     </plugins>
   </build>
 </project>

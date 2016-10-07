@@ -1,16 +1,16 @@
 /******************************************************************************
  * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- * 
+ *
  * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
  * C2MON is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free
  * Software Foundation, either version 3 of the license.
- * 
+ *
  * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
  * more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
@@ -28,11 +28,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAAddress;
 import cern.c2mon.daq.opcua.connection.common.IGroupProvider;
-import cern.c2mon.daq.opcua.connection.common.IItemDefinitionFactory;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpoint;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpointListener;
+import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.common.IItemDefinitionFactory;
+import cern.c2mon.opc.stack.common.IOPCEndpoint;
+import cern.c2mon.opc.stack.common.IOPCEndpointListener;
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
@@ -42,52 +44,52 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 
 /**
  * The abstract OPC endpoint.
- * 
+ *
  * @author Andreas Lang
  *
  * @param <ID> An extension of the {@link ItemDefinition} object. The extension
  * depends on the connection used.
  */
-public abstract class OPCEndpoint<ID extends ItemDefinition< ? > > 
+public abstract class OPCEndpoint<ID extends ItemDefinition< ? >>
         implements IOPCEndpoint {
-      
+
     /**
      * logger of this class.
      */
     private final static Logger LOG = LoggerFactory.getLogger(OPCEndpoint.class);
-  
+
     /**
      * Collection of endpoint listeners registered at this endpoint.
      */
     private final Collection<IOPCEndpointListener> listeners =
         new ConcurrentLinkedQueue<IOPCEndpointListener>();
-    
+
     /**
      * Maps item defintion ids to data tags.
      */
     private final Map<Long, ISourceDataTag> itemDefintionIdsToDataTags =
         new ConcurrentHashMap<Long, ISourceDataTag>();
-    
+
     /**
      * Maps item definiton ids to item definitions.
      */
     private final Map<Long, ID> tagIdsToItemDefinitions = new HashMap<Long, ID>();
-    
+
     /**
      * The Item definition factory.
      */
     private final IItemDefinitionFactory<ID> itemDefinitionFactory;
-    
+
     /**
      * The group provider.
      */
     private final IGroupProvider<ID> groupProvider;
-    
+
     /**
      * The current state of the endpoint.
      */
     private STATE currentState = STATE.NOT_INITIALIZED;
-    
+
     /**
      * logger of this class.
      */
@@ -95,28 +97,28 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
 
     /**
      * Creates a new OPCEndpoint.
-     * 
+     *
      * @param itemAddressFactory The item address factory to use to create the
      * items.
      * @param groupProvider The group provider to use to create the groups.
      */
     public OPCEndpoint(
-            final IItemDefinitionFactory<ID> itemAddressFactory, 
+            final IItemDefinitionFactory<ID> itemAddressFactory,
             final IGroupProvider<ID> groupProvider) {
         this.itemDefinitionFactory = itemAddressFactory;
         this.groupProvider = groupProvider;
     }
-    
+
     /**
      * Returns the current state of the endpoint.
-     * 
+     *
      * @return The current state of the endpoint.
      */
     @Override
     public synchronized STATE getState() {
         return currentState;
     }
-    
+
     @Override
     public synchronized final void setStateOperational() {
       currentState = STATE.OPERATIONAL;
@@ -124,7 +126,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
 
     /**
      * Adds the provided command tags to this endpoint.
-     * 
+     *
      * @param commandTags The tags to add.
      */
     @Override
@@ -134,10 +136,10 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
             addCommandTag(commandTag);
         }
     }
-    
+
     /**
      * Adds the provided command tag to this endpoint.
-     * 
+     *
      * @param commandTag The tag to add.
      */
     @Override
@@ -147,12 +149,12 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
                 commandTag.getId(), hardwareAddress);
         if (address != null)
             tagIdsToItemDefinitions.put(commandTag.getId(), address);
-        
+
     }
-    
+
     /**
      * Removes he command tag from this endpoint.
-     * 
+     *
      * @param commandTag The command tag to remove.
      */
     @Override
@@ -162,14 +164,14 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
 
     /**
      * Adds the provided data tags to the endpoint.
-     * 
+     *
      * @param dataTags The tags to add.
      */
     @Override
     public synchronized void addDataTags(
             final Collection<ISourceDataTag> dataTags) {
         requireState(STATE.INITIALIZED);
-        final Collection<SubscriptionGroup<ID>> subscriptionGroups = 
+        final Collection<SubscriptionGroup<ID>> subscriptionGroups =
             new HashSet<SubscriptionGroup<ID>>();
         for (ISourceDataTag dataTag : dataTags) {
             SubscriptionGroup<ID> subscriptionGroup = processTag(dataTag);
@@ -181,7 +183,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
 
     /**
      * Adds a tag to a subscription group and returns that group.
-     * 
+     *
      * @param dataTag The tag to add.
      * @return The subscription group of this tag.
      */
@@ -191,7 +193,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
                 dataTag.getId(), hardwareAddress);
         SubscriptionGroup<ID> subscriptionGroup = null;
         if (definition != null) {
-            subscriptionGroup = 
+            subscriptionGroup =
                 groupProvider.getOrCreateGroup(dataTag);
             subscriptionGroup.addDefintion(definition);
             itemDefintionIdsToDataTags.put(definition.getId(), dataTag);
@@ -202,10 +204,10 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
         }
         return subscriptionGroup;
     }
-    
+
     /**
      * Called when a data tag should be added to this endpoint.
-     * 
+     *
      * @param sourceDataTag The data tag to add.
      */
     @Override
@@ -214,10 +216,10 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
         SubscriptionGroup<ID> subscriptionGroup = processTag(sourceDataTag);
         onSubscribe(subscriptionGroup);
     }
-    
+
     /**
      * Called when a data tag should be removed from this endpoint.
-     * 
+     *
      * @param dataTag The data tag to remove.
      */
     @Override
@@ -226,7 +228,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
         ID definition = tagIdsToItemDefinitions.remove(dataTag.getId());
         itemDefintionIdsToDataTags.remove(definition.getId());
         if (definition != null) {
-            SubscriptionGroup<ID> subscriptionGroup = 
+            SubscriptionGroup<ID> subscriptionGroup =
                 groupProvider.getOrCreateGroup(dataTag);
             subscriptionGroup.removeDefintion(definition);
             onRemove(subscriptionGroup, definition);
@@ -234,7 +236,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
     }
     /**
      * Refreshes the values for the provided data tags.
-     * 
+     *
      * @param dataTags The data tags whose values shall be refreshed.
      */
     @Override
@@ -252,7 +254,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
 
     /**
      * Executes a command.
-     * 
+     *
      * @param hardwareAddress The configuration of the command to execute.
      * @param command The command to execute.
      */
@@ -261,7 +263,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
             final OPCHardwareAddress hardwareAddress,
             final SourceCommandTagValue command) {
         requireState(STATE.OPERATIONAL);
-        ID itemDefintion = 
+        ID itemDefintion =
             tagIdsToItemDefinitions.get(command.getId());
         if (itemDefintion != null) {
             Object value = TypeConverter.cast(
@@ -269,7 +271,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
             if (value != null)
                 switch (hardwareAddress.getCommandType()) {
                 case METHOD:
-                    onCallMethod(itemDefintion, 
+                    onCallMethod(itemDefintion,
                             command.getValue());
                     break;
                 case CLASSIC:
@@ -298,7 +300,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
     /**
      * Checks the current state and throws an exception if it does not match the
      * argument.
-     * 
+     *
      * @param requiredState The state which is required at this point.
      */
     private void requireState(STATE... requiredStates) {
@@ -307,8 +309,8 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
         if (currentState == requiredState) {
           hasState = true;
         }
-      } 
-      
+      }
+
       if (!hasState)
         throw new OPCCriticalException("Endpoint has wrong state!"
                 + " Should have at least one of the follwing states: " + Arrays.toString(requiredStates));
@@ -316,7 +318,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
 
     /**
      * Registers an endpoint listener.
-     * 
+     *
      * @param endpointListener The listener to add.
      */
     @Override
@@ -324,10 +326,10 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
             final IOPCEndpointListener endpointListener) {
         listeners.add(endpointListener);
     }
-    
+
     /**
      * Unregisters an endpoint listener.
-     * 
+     *
      * @param endpointListener The endpoint listener to remove.
      */
     @Override
@@ -335,22 +337,22 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
             final IOPCEndpointListener endpointListener) {
         listeners.remove(endpointListener);
     }
-    
+
     /**
      * Initializes the endpoint. If it is already initialized it will stop,
      * clear all configuration and listeners and reinitialize.
-     * 
+     *
      * @param address The address to use to initialize the endpoint.
      */
     @Override
     public synchronized void initialize(final AbstractOPCUAAddress address) {
-        if (currentState == STATE.INITIALIZED) { 
+        if (currentState == STATE.INITIALIZED) {
             reset();
         }
         onInit(address);
         currentState = STATE.INITIALIZED;
     }
-    
+
     /**
      * Stops and resets the endpoint completely.
      */
@@ -369,10 +371,10 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
             currentState = STATE.NOT_INITIALIZED;
         }
     }
-    
+
     /**
      * Notifies all endpoint listeners about a value change.
-     * 
+     *
      * @param itemdefintionId The id of the item definition whose value changed.
      * @param timestamp The timestamp of the changed value.
      * @param value The value which changed.
@@ -392,17 +394,17 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
           }
         }
     }
-    
+
     /**
      * Notifies all endpoint listeners about an error connected to an OPCItem.
-     * 
-     * @param itemdefintionId The id of the item defintion which caused the 
+     *
+     * @param itemdefintionId The id of the item defintion which caused the
      * error.
      * @param ex The exception thrown in the endpoint.
      */
     public void notifyEndpointListenersItemError(
             final long itemdefintionId, final Throwable ex) {
-        
+
       ISourceDataTag dataTag = itemDefintionIdsToDataTags.get(itemdefintionId);
       if (dataTag != null) {
         if (!listeners.isEmpty()) {
@@ -415,11 +417,11 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
         }
       }
     }
-    
+
     /**
-     * Notifies all endpoint listeners about an error connected to 
+     * Notifies all endpoint listeners about an error connected to
      * a subscription.
-     * 
+     *
      * @param ex The exception thrown in the endpoint.
      */
     public void notifyEndpointListenersSubscriptionFailed(
@@ -433,10 +435,10 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
         LOG.warn("notifyEndpointListenersSubscriptionFailed() - No endpoint listeners registerd! Nobody gets informed about exeption:", ex);
       }
     }
-    
+
     /**
      * Writes a value to an item and rewrites it after a provided pulse length.
-     * 
+     *
      * @param itemDefintion The item definition which defines where to write.
      * @param pulseLength The pulse length after which the value should be
      * rewritten.
@@ -445,7 +447,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
     private void writeRewrite(final ID itemDefintion,
             final int pulseLength, final Object value) {
         onWrite(itemDefintion, value);
-        
+
         try {
             Thread.sleep(pulseLength);
         } catch (InterruptedException e) {
@@ -464,10 +466,10 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
             }
         }
     }
-    
+
     /**
      * Writes a value to the OPC server.
-     * 
+     *
      * @param address The address which defines where to write.
      * @param value The value to write.
      */
@@ -475,13 +477,13 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
     public synchronized void write(
             final OPCHardwareAddress address, final Object value) {
         requireState(STATE.OPERATIONAL);
-        ID itemDefinition = 
+        ID itemDefinition =
             itemDefinitionFactory.createItemDefinition(1L, address);
         if (itemDefinition != null) {
             onWrite(itemDefinition, value);
         }
     }
-    
+
     @Override
     public synchronized void checkConnection() {
         requireState(STATE.INITIALIZED, STATE.OPERATIONAL);
@@ -491,15 +493,15 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
      * Checks the status of the endpoint.
      */
     protected abstract void checkStatus();
-    
+
     /**
      * This method should be the first to be called. It gives the endpoint
      * all properties which are specific to the endpoint type.
-     * 
+     *
      * @param address The properties specific to this endpoint.
      */
     protected abstract void onInit(AbstractOPCUAAddress address);
-    
+
     /**
      * Stops the endpoint and clears all configuration states.
      */
@@ -507,7 +509,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
 
     /**
      * Writes to an item defined by the item definition.
-     * 
+     *
      * @param itemDefinition The item definition which defines where to write.
      * @param value The value to write.
      */
@@ -515,39 +517,39 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? > >
 
     /**
      * Subscribes a collection of subscription groups.
-     * 
+     *
      * @param subscriptionGroups The subscription groups to subscribe to.
      */
     protected abstract void onSubscribe(
             Collection<SubscriptionGroup<ID>> subscriptionGroups);
-    
+
     /**
      * Subscribes for a subscription group.
-     * 
+     *
      * @param subscriptionGroup The subscription group to subscribe.
      */
     protected abstract void onSubscribe(SubscriptionGroup<ID> subscriptionGroup);
-    
+
     /**
      * Called when a item is removed from a subscription.
-     * 
+     *
      * @param subscriptionGroup The group where the item was removed.
      * @param removedDefinition The description which was removed.
      */
     protected abstract void onRemove(
             final SubscriptionGroup<ID> subscriptionGroup,
             final ID removedDefinition);
-    
+
     /**
      * Refreshes the values of a collection of item definitions.
-     * 
+     *
      * @param itemDefintions The item definitions to refresh.
      */
     protected abstract void onRefresh(Collection<ID> itemDefintions);
-    
+
     /**
      * Executes the command for the provided item definition.
-     * 
+     *
      * @param itemDefintion The item definition for the command.
      * @param value The values used as parameters for the command.
      */

@@ -24,15 +24,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.axis2.AxisFault;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.opcfoundation.xmlda.ItemValue;
 import org.opcfoundation.xmlda.OPCXML_DataAccessStub;
 import org.opcfoundation.xmlda.SubscribePolledRefreshReplyItemList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAAddress;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCommunicationException;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
+import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
 
 /**
  * Polls the OPC server for updates to one subscription. It uses a long poll

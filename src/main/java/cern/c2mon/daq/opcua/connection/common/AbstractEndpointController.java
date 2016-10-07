@@ -31,11 +31,12 @@ import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.common.logger.EquipmentLoggerFactory;
 import cern.c2mon.daq.opcua.EndpointEquipmentLogListener;
 import cern.c2mon.daq.opcua.EndpointTypesUnknownException;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpoint.STATE;
-import cern.c2mon.daq.opcua.connection.common.impl.AliveWriter;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCommunicationException;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCriticalException;
-import cern.c2mon.daq.opcua.connection.common.impl.StatusChecker;
+import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.common.IOPCEndpoint;
+import cern.c2mon.opc.stack.common.impl.AliveWriter;
+import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
+import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.common.impl.StatusChecker;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataQuality;
@@ -267,7 +268,7 @@ public abstract class AbstractEndpointController implements IOPCEndpointListener
      * Makes sure there is a created and initialized endpoint.
      */
     protected void createEndpoint() {
-        if (this.endpoint == null || this.endpoint.getState() == STATE.NOT_INITIALIZED) {
+        if (this.endpoint == null || this.endpoint.getState() == IOPCEndpoint.STATE.NOT_INITIALIZED) {
             AbstractOPCUAAddress address = getNextOPCAddress();
             logger.info("createEndpoint - Trying to create endpoint '" + address.getUriString() + "'");
             this.endpoint = this.opcEndpointFactory.createEndpoint(address);
@@ -445,7 +446,7 @@ public abstract class AbstractEndpointController implements IOPCEndpointListener
             } catch (Exception e) {
                 logger.error("Error restarting subscription for " + getCurrentOPCAddress().getUri().getHost(), e);
             }
-        } while (endpoint.getState() != STATE.OPERATIONAL);
+        } while (endpoint.getState() != IOPCEndpoint.STATE.OPERATIONAL);
         logger.info("triggerEndpointRestart - Exiting OPC Endpoint restart procedure for " + getCurrentOPCAddress().getUri().getHost());
     }
 
@@ -592,7 +593,7 @@ public abstract class AbstractEndpointController implements IOPCEndpointListener
      * Checks if there is an endpoint created. If not an exception is thrown.
      */
     private void requiresEndpoint() {
-        if (this.endpoint == null || this.endpoint.getState() == STATE.NOT_INITIALIZED)
+        if (this.endpoint == null || this.endpoint.getState() == IOPCEndpoint.STATE.NOT_INITIALIZED)
             throw new OPCCriticalException(
                     "No Endpoint was created or Endpoint was not initialized/started.");
     }

@@ -56,11 +56,11 @@ import com.digitalpetri.opcua.stack.core.types.structured.MonitoredItemCreateReq
 import com.digitalpetri.opcua.stack.core.types.structured.MonitoringParameters;
 import com.digitalpetri.opcua.stack.core.types.structured.ReadValueId;
 
-import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
 import cern.c2mon.daq.opcua.connection.common.IGroupProvider;
-import cern.c2mon.daq.opcua.connection.common.IItemDefinitionFactory;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCommunicationException;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.common.IItemDefinitionFactory;
+import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
+import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
 import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
 import cern.c2mon.daq.opcua.connection.common.impl.SubscriptionGroup;
 

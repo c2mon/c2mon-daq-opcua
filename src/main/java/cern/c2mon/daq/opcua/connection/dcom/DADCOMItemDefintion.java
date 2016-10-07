@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.dcom;
 
-import cern.c2mon.daq.opcua.connection.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
 
 /**
  * Item definition for the DCOM endpoint.

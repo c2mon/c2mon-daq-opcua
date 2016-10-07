@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
+
 /**
  * Subscription Group which holds information and items for a subscription.
  * 
@@ -27,7 +29,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  *
  * @param <ID> The item defintion type which is hold by this group.
  */
-public class SubscriptionGroup<ID extends ItemDefinition< ? > > {
+public class SubscriptionGroup<ID extends ItemDefinition< ? >> {
     
     /**
      * Collection of item definitions.

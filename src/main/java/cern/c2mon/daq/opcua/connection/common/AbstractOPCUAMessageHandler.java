@@ -20,9 +20,9 @@ import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.EndpointTypesUnknownException;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCriticalException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
+import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
@@ -105,7 +105,7 @@ public abstract class AbstractOPCUAMessageHandler extends EquipmentMessageHandle
         ISourceDataTag sourceDataTag = 
             getEquipmentConfiguration().getSourceDataTag(dataTagId);
         if (sourceDataTag == null)
-            throw new OPCCriticalException("SourceDataTag with id '" + dataTagId 
+            throw new OPCCriticalException("SourceDataTag with id '" + dataTagId
                     + "' unknown.");
         controller.refresh(sourceDataTag);
     }

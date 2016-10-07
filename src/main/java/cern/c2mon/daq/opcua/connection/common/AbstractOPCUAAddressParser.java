@@ -20,6 +20,8 @@ package cern.c2mon.daq.opcua.connection.common;
 import java.util.List;
 import java.util.Properties;
 
+import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
+
 /**
  * AbstractOPCUAAddressParser abstract class (no implementation of this class)
  *

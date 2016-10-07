@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua;
 
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
 
 /**
  * Exception which is thrown if there are no working endpoint types provided.

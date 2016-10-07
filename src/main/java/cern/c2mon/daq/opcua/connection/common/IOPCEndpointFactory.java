@@ -17,6 +17,8 @@
 package cern.c2mon.daq.opcua.connection.common;
 
 import cern.c2mon.daq.opcua.EndpointTypesUnknownException;
+import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.common.IOPCEndpoint;
 
 /**
  * The factory to create OPCEndpoints.

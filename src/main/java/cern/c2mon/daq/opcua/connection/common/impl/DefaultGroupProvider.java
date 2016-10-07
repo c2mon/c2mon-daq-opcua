@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import cern.c2mon.daq.opcua.connection.common.IGroupProvider;
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
 import cern.c2mon.shared.common.datatag.DataTagDeadband;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 
@@ -33,7 +34,7 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
  *
  * @param <IA>
  */
-public class DefaultGroupProvider< IA extends ItemDefinition< ? > > implements IGroupProvider<IA> {
+public class DefaultGroupProvider< IA extends ItemDefinition< ? >> implements IGroupProvider<IA> {
 
     /**
      * The already created groups in a map. Key is the DeadBandGroupIdentifier

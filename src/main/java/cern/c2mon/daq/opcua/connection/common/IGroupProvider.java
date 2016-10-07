@@ -16,8 +16,8 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common;
 
-import cern.c2mon.daq.opcua.connection.common.impl.ItemDefinition;
 import cern.c2mon.daq.opcua.connection.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 
 /**
@@ -29,7 +29,7 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
  * @param <ID> Subsclass of ItemDefinition. This definition depends on the
  * connection and is therfore parametrized.
  */
-public interface IGroupProvider< ID extends ItemDefinition< ? > > {
+public interface IGroupProvider< ID extends ItemDefinition< ? >> {
 
     /**
      * Gets or creates the group for this source data tag's configuration.

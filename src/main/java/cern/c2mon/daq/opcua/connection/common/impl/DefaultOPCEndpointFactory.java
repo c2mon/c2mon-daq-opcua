@@ -17,8 +17,6 @@
 package cern.c2mon.daq.opcua.connection.common.impl;
 
 import cern.c2mon.daq.opcua.EndpointTypesUnknownException;
-import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAAddress;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpoint;
 import cern.c2mon.daq.opcua.connection.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMEndpoint;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMItemDefintion;
@@ -32,6 +30,8 @@ import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAItemDefintionDigitalpet
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UaItemDefintionFactoryDigitalpetry;
 import cern.c2mon.daq.opcua.connection.ua.prosys.UAEndpointProsys;
 import cern.c2mon.daq.opcua.connection.ua.prosys.UaItemDefintionFactoryProsys;
+import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.common.IOPCEndpoint;
 
 /**
  * The default factory to create OPCEndpoints.

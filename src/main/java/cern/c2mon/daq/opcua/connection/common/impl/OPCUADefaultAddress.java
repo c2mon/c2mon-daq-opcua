@@ -19,8 +19,9 @@ package cern.c2mon.daq.opcua.connection.common.impl;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAAddress;
 import lombok.Getter;
+
+import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
 
 /**
  *

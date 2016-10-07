@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.soap;
 
-import cern.c2mon.daq.opcua.connection.common.impl.ClassicItemDefinitionFactory;
+import cern.c2mon.opc.stack.common.impl.ClassicItemDefinitionFactory;
 
 /**
  * Factory for DASoapItemDefinitions.

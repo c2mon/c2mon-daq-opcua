@@ -18,7 +18,7 @@ package cern.c2mon.daq.opcua.connection.ua;
 
 import org.opcfoundation.ua.builtintypes.NodeId;
 
-import cern.c2mon.daq.opcua.connection.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
 
 /**
  * The OPC UA item definition.

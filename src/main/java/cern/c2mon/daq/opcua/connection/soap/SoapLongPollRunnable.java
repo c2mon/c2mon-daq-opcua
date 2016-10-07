@@ -19,15 +19,9 @@ package cern.c2mon.daq.opcua.connection.soap;
 import java.util.Calendar;
 
 import org.apache.axis2.AxisFault;
-import org.opcfoundation.xmlda.GetStatus;
-import org.opcfoundation.xmlda.GetStatusResponse;
-import org.opcfoundation.xmlda.OPCXML_DataAccessStub;
-import org.opcfoundation.xmlda.ReplyBase;
-import org.opcfoundation.xmlda.SubscribePolledRefreshReplyItemList;
-import org.opcfoundation.xmlda.SubscriptionPolledRefresh;
-import org.opcfoundation.xmlda.SubscriptionPolledRefreshResponse;
+import org.opcfoundation.xmlda.*;
 
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCommunicationException;
+import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
 
 /**
  * The runnable which implements the long poll. If an error happens or 
