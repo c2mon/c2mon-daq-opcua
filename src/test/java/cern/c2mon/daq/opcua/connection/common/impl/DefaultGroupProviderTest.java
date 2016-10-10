@@ -18,6 +18,7 @@ package cern.c2mon.daq.opcua.connection.common.impl;
 
 import org.junit.Test;
 
+import cern.c2mon.opc.stack.common.impl.DefaultGroupProvider;
 import cern.c2mon.opc.stack.common.impl.ItemDefinition;
 import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.DataTagAddress;
@@ -28,7 +29,7 @@ import static org.junit.Assert.*;
 
 public class DefaultGroupProviderTest {
     
-    private DefaultGroupProvider<?> provider = 
+    private DefaultGroupProvider<?> provider =
         new DefaultGroupProvider<ItemDefinition<?>>();
     
     

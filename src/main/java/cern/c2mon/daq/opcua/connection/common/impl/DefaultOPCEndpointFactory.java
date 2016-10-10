@@ -28,6 +28,7 @@ import cern.c2mon.daq.opcua.connection.ua.prosys.UAEndpointProsys;
 import cern.c2mon.daq.opcua.connection.ua.prosys.UaItemDefintionFactoryProsys;
 import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
 import cern.c2mon.opc.stack.common.IOPCEndpoint;
+import cern.c2mon.opc.stack.common.impl.DefaultGroupProvider;
 import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
 
 /**
