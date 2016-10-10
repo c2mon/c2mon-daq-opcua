@@ -19,7 +19,7 @@ package cern.c2mon.daq.opcua;
 import java.util.List;
 
 import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAMessageHandler;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpointFactory;
+import cern.c2mon.opc.stack.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.DefaultOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.EndpointControllerDefault;
 import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;

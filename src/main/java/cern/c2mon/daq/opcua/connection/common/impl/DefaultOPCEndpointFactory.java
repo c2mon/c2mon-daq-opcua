@@ -17,7 +17,7 @@
 package cern.c2mon.daq.opcua.connection.common.impl;
 
 import cern.c2mon.opc.stack.EndpointTypesUnknownException;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpointFactory;
+import cern.c2mon.opc.stack.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMEndpoint;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMItemDefintionFactory;
 import cern.c2mon.daq.opcua.connection.soap.DASoapEndpoint;

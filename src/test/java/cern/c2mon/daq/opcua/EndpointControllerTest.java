@@ -31,8 +31,9 @@ import org.junit.Test;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.logger.EquipmentLoggerFactory;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpointFactory;
+import cern.c2mon.opc.stack.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.EndpointControllerDefault;
+import cern.c2mon.opc.stack.EndpointEquipmentLogListener;
 import cern.c2mon.opc.stack.EndpointTypesUnknownException;
 import cern.c2mon.opc.stack.common.IOPCEndpoint;
 import cern.c2mon.opc.stack.common.IOPCEndpoint.STATE;
