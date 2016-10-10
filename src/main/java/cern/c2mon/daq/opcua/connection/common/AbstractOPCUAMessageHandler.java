@@ -19,6 +19,7 @@ package cern.c2mon.daq.opcua.connection.common;
 import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
+import cern.c2mon.opc.stack.AbstractEndpointController;
 import cern.c2mon.opc.stack.EndpointTypesUnknownException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
