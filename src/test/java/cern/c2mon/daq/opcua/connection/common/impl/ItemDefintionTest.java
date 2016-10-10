@@ -16,11 +16,12 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common.impl;
 
-import static org.junit.Assert.*;
-
 import org.junit.Test;
 
-import cern.c2mon.daq.opcua.connection.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class ItemDefintionTest {
     

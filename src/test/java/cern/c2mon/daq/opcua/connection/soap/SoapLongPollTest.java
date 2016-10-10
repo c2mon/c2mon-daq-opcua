@@ -33,7 +33,7 @@ import org.junit.Test;
 import org.opcfoundation.xmlda.ItemValue;
 import org.opcfoundation.xmlda.SubscribePolledRefreshReplyItemList;
 
-import cern.c2mon.daq.opcua.connection.common.impl.OPCUADefaultAddress;
+import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
 
 public class SoapLongPollTest {
     

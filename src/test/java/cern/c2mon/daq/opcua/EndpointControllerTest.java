@@ -17,16 +17,6 @@
 package cern.c2mon.daq.opcua;
 
 
-import static org.easymock.EasyMock.eq;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.isA;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.reset;
-import static org.easymock.EasyMock.verify;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -41,11 +31,12 @@ import org.junit.Test;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.logger.EquipmentLoggerFactory;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpoint;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpoint.STATE;
 import cern.c2mon.daq.opcua.connection.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.EndpointControllerDefault;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCUADefaultAddress;
+import cern.c2mon.opc.stack.EndpointTypesUnknownException;
+import cern.c2mon.opc.stack.common.IOPCEndpoint;
+import cern.c2mon.opc.stack.common.IOPCEndpoint.STATE;
+import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
 import cern.c2mon.shared.common.ConfigurationException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.command.SourceCommandTag;
@@ -60,6 +51,10 @@ import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
+
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class EndpointControllerTest {
 

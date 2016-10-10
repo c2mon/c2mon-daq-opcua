@@ -18,8 +18,9 @@ package cern.c2mon.daq.opcua.connection.common.impl;
 
 import org.junit.Test;
 
-import cern.c2mon.daq.opcua.connection.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
 import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
+
 import static org.junit.Assert.*;
 
 public class SubscriptionGroupTest {

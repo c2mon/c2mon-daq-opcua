@@ -1,46 +1,34 @@
 /******************************************************************************
  * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- * 
+ *
  * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
  * C2MON is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free
  * Software Foundation, either version 3 of the license.
- * 
+ *
  * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
  * more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.soap;
 
-import static org.easymock.classextension.EasyMock.*;
-
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.rmi.RemoteException;
-import java.util.GregorianCalendar;
 
 import org.easymock.classextension.ConstructorArgs;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.opcfoundation.xmlda.GetStatus;
-import org.opcfoundation.xmlda.GetStatusResponse;
-import org.opcfoundation.xmlda.ItemValue;
-import org.opcfoundation.xmlda.OPCError;
-import org.opcfoundation.xmlda.OPCXML_DataAccessStub;
-import org.opcfoundation.xmlda.ReplyBase;
-import org.opcfoundation.xmlda.SubscribePolledRefreshReplyItemList;
-import org.opcfoundation.xmlda.SubscriptionPolledRefresh;
-import org.opcfoundation.xmlda.SubscriptionPolledRefreshResponse;
+import org.opcfoundation.xmlda.*;
 
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCommunicationException;
-import cern.c2mon.daq.opcua.connection.soap.SoapLongPollRunnable;
+import static org.easymock.classextension.EasyMock.*;
 
 public class SoapLongPollRunnableTest {
-    
+
     private static final String SUBHANDLE = "subhandle";
 
     private static final long SLEEP_TIME = 500L;
@@ -48,9 +36,9 @@ public class SoapLongPollRunnableTest {
     private SoapLongPollRunnable poll;
 
     private OPCXML_DataAccessStub access = createMock(OPCXML_DataAccessStub.class);
-    
+
     private volatile Throwable error;
-    
+
     @Before
     public void setUp() throws SecurityException, NoSuchMethodException {
         poll = createMock(SoapLongPollRunnable.class,
@@ -64,20 +52,20 @@ public class SoapLongPollRunnableTest {
                 SoapLongPollRunnable.class.getMethod(
                         "onError", Throwable.class));
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-            
+
             @Override
             public void uncaughtException(Thread t, Throwable e) {
                 error = e;
             }
         });
     }
-    
+
     @After
     public void tearDown() throws Throwable {
         if (error != null)
             throw error;
     }
-    
+
 //    @Test
 //    public void testStartAndStop() throws RemoteException, InterruptedException {
 //        GetStatusResponse statusResponse = new GetStatusResponse();
@@ -139,5 +127,5 @@ public class SoapLongPollRunnableTest {
         poll.run();
         verify(access, poll);
     }
-    
+
 }

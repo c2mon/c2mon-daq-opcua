@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import cern.c2mon.opc.stack.common.IGroupProvider;
+import cern.c2mon.opc.stack.common.impl.DeadBandGroupIdentifier;
 import cern.c2mon.opc.stack.common.impl.ItemDefinition;
 import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.DataTagDeadband;

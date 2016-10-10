@@ -20,7 +20,7 @@ import java.util.Date;
 
 import cern.c2mon.daq.common.logger.EquipmentLogger;
 import cern.c2mon.daq.common.logger.EquipmentLoggerFactory;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpointListener;
+import cern.c2mon.opc.stack.common.IOPCEndpointListener;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.type.TypeConverter;

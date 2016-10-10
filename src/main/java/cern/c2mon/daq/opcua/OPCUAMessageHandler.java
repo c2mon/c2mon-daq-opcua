@@ -22,9 +22,11 @@ import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAMessageHandler;
 import cern.c2mon.daq.opcua.connection.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.DefaultOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.EndpointControllerDefault;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCUADefaultAddress;
+import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
 import cern.c2mon.daq.opcua.connection.common.impl.OPCUADefaultAddressParser;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
+import cern.c2mon.opc.stack.EndpointTypesUnknownException;
+import cern.c2mon.opc.stack.OPCAUAddressException;
 import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 /**

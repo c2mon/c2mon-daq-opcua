@@ -21,8 +21,8 @@ import static org.easymock.classextension.EasyMock.*;
 import org.junit.Before;
 import org.junit.Test;
 
-import cern.c2mon.daq.opcua.connection.common.impl.ClassicItemDefinitionFactory;
-import cern.c2mon.daq.opcua.connection.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.common.impl.ClassicItemDefinitionFactory;
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
 import cern.c2mon.shared.common.ConfigurationException;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 

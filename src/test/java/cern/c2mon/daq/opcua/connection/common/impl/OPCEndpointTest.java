@@ -16,16 +16,6 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common.impl;
 
-import static org.easymock.EasyMock.capture;
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.eq;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.isA;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.reset;
-import static org.easymock.EasyMock.verify;
-import static org.junit.Assert.assertEquals;
-
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,11 +25,10 @@ import org.easymock.classextension.ConstructorArgs;
 import org.junit.Before;
 import org.junit.Test;
 
-import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAAddress;
-import cern.c2mon.daq.opcua.connection.common.IGroupProvider;
-import cern.c2mon.daq.opcua.connection.common.IItemDefinitionFactory;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpoint;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpointListener;
+import cern.c2mon.opc.stack.common.*;
+import cern.c2mon.opc.stack.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
 import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
 import cern.c2mon.shared.common.ConfigurationException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -51,9 +40,12 @@ import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress.COMMAN
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.assertEquals;
+
 public class OPCEndpointTest {
 
-    private IItemDefinitionFactory<ItemDefinition<String>> factory = 
+    private IItemDefinitionFactory<ItemDefinition<String>> factory =
         createMock(IItemDefinitionFactory.class);
 
     private IGroupProvider provider = createMock(IGroupProvider.class);

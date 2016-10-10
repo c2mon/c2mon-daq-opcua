@@ -16,16 +16,17 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common.impl;
 
-import static org.junit.Assert.assertEquals;
-
 import org.junit.Test;
 
-import cern.c2mon.daq.opcua.EndpointTypesUnknownException;
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpoint;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMEndpoint;
 import cern.c2mon.daq.opcua.connection.soap.DASoapEndpoint;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAEndpointDigitalpetri;
 import cern.c2mon.daq.opcua.connection.ua.prosys.UAEndpointProsys;
+import cern.c2mon.opc.stack.EndpointTypesUnknownException;
+import cern.c2mon.opc.stack.common.IOPCEndpoint;
+import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
+
+import static org.junit.Assert.assertEquals;
 
 public class DefaultOPCEndpointFactoryTest {
 

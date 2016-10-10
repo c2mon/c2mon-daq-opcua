@@ -16,22 +16,19 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common.impl;
 
-import cern.c2mon.daq.opcua.EndpointTypesUnknownException;
+import cern.c2mon.opc.stack.EndpointTypesUnknownException;
 import cern.c2mon.daq.opcua.connection.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMEndpoint;
-import cern.c2mon.daq.opcua.connection.dcom.DADCOMItemDefintion;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMItemDefintionFactory;
 import cern.c2mon.daq.opcua.connection.soap.DASoapEndpoint;
-import cern.c2mon.daq.opcua.connection.soap.DASoapItemDefintion;
 import cern.c2mon.daq.opcua.connection.soap.DASoapItemDefintionFactory;
-import cern.c2mon.daq.opcua.connection.ua.UAItemDefintion;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAEndpointDigitalpetri;
-import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAItemDefintionDigitalpetri;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UaItemDefintionFactoryDigitalpetry;
 import cern.c2mon.daq.opcua.connection.ua.prosys.UAEndpointProsys;
 import cern.c2mon.daq.opcua.connection.ua.prosys.UaItemDefintionFactoryProsys;
 import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
 import cern.c2mon.opc.stack.common.IOPCEndpoint;
+import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
 
 /**
  * The default factory to create OPCEndpoints.
@@ -78,12 +75,12 @@ public class DefaultOPCEndpointFactory implements IOPCEndpointFactory {
           case DA_SOAP_TYPE:
             endpoint = new DASoapEndpoint(
                 new DASoapItemDefintionFactory(),
-                new DefaultGroupProvider<DASoapItemDefintion>());
+                new DefaultGroupProvider<>());
             break;
           case DA_DCOM_TYPE:
             endpoint = new DADCOMEndpoint(
                 new DADCOMItemDefintionFactory(),
-                new DefaultGroupProvider<DADCOMItemDefintion>());
+                new DefaultGroupProvider<>());
             break;
           default:
             throw new EndpointTypesUnknownException();
@@ -101,12 +98,12 @@ public class DefaultOPCEndpointFactory implements IOPCEndpointFactory {
       if (address instanceof OPCUADefaultAddress && ((OPCUADefaultAddress) address).getVendor().equals("prosys")) {
         return new UAEndpointProsys(
             new UaItemDefintionFactoryProsys(),
-            new DefaultGroupProvider<UAItemDefintion>());
+            new DefaultGroupProvider<>());
       }
 
       return new UAEndpointDigitalpetri(
           new UaItemDefintionFactoryDigitalpetry(),
-          new DefaultGroupProvider<UAItemDefintionDigitalpetri>());
+              new DefaultGroupProvider<>());
     }
 
 }
