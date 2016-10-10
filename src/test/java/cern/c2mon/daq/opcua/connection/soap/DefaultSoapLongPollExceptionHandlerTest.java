@@ -25,10 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import cern.c2mon.daq.opcua.connection.common.impl.SubscriptionGroup;
-import cern.c2mon.daq.opcua.connection.soap.DASoapEndpoint;
-import cern.c2mon.daq.opcua.connection.soap.DefaultSoapLongPollExceptionHandler;
-import cern.c2mon.daq.opcua.connection.soap.SoapLongPoll;
+import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
 
 public class DefaultSoapLongPollExceptionHandlerTest {
     

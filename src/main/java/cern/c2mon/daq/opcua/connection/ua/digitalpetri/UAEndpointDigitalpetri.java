@@ -16,22 +16,10 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.ua.digitalpetri;
 
-import static com.digitalpetri.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
-import static com.google.common.collect.Lists.newArrayList;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.opcfoundation.ua.core.MonitoredItemNotification;
-import org.opcfoundation.ua.transport.security.SecurityMode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.digitalpetri.opcua.sdk.client.OpcUaClient;
 import com.digitalpetri.opcua.sdk.client.SessionActivityListener;
@@ -55,14 +43,21 @@ import com.digitalpetri.opcua.stack.core.types.structured.EndpointDescription;
 import com.digitalpetri.opcua.stack.core.types.structured.MonitoredItemCreateRequest;
 import com.digitalpetri.opcua.stack.core.types.structured.MonitoringParameters;
 import com.digitalpetri.opcua.stack.core.types.structured.ReadValueId;
+import org.opcfoundation.ua.core.MonitoredItemNotification;
+import org.opcfoundation.ua.transport.security.SecurityMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
 import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
-import cern.c2mon.daq.opcua.connection.common.IGroupProvider;
+import cern.c2mon.opc.stack.common.IGroupProvider;
 import cern.c2mon.opc.stack.common.IItemDefinitionFactory;
 import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
 import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
-import cern.c2mon.daq.opcua.connection.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
+
+import static com.digitalpetri.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
+import static com.google.common.collect.Lists.newArrayList;
 
 /**
  * The OPCUA endpoint to connect to OPC UA servers.

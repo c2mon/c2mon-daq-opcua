@@ -19,34 +19,18 @@ package cern.c2mon.daq.opcua.connection.soap;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.axis2.AxisFault;
-import org.opcfoundation.xmlda.GetStatus;
-import org.opcfoundation.xmlda.GetStatusResponse;
-import org.opcfoundation.xmlda.ItemValue;
-import org.opcfoundation.xmlda.OPCError;
-import org.opcfoundation.xmlda.OPCXML_DataAccessStub;
-import org.opcfoundation.xmlda.Read;
-import org.opcfoundation.xmlda.ReadRequestItemList;
-import org.opcfoundation.xmlda.ReadResponse;
-import org.opcfoundation.xmlda.Subscribe;
-import org.opcfoundation.xmlda.SubscribeRequestItem;
-import org.opcfoundation.xmlda.SubscribeResponse;
-import org.opcfoundation.xmlda.WriteResponse;
+import org.opcfoundation.xmlda.*;
 
+import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
 import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
-import cern.c2mon.daq.opcua.connection.common.IGroupProvider;
+import cern.c2mon.opc.stack.common.IGroupProvider;
 import cern.c2mon.opc.stack.common.IItemDefinitionFactory;
-import cern.c2mon.opc.stack.common.IOPCEndpointListener;
 import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
 import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
-import cern.c2mon.daq.opcua.connection.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
 
 /**
  * OPC endpoint for OPC XML DA.

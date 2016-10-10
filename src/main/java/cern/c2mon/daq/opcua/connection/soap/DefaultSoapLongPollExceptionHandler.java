@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cern.c2mon.daq.opcua.connection.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
 import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
 /**
  * Default way to handle excpetions in the long poll mechanism. It just restarts

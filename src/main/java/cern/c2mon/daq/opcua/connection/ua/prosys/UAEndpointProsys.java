@@ -64,9 +64,9 @@ import com.prosysopc.ua.client.ServerConnectionException;
 import com.prosysopc.ua.client.Subscription;
 import com.prosysopc.ua.client.UaClient;
 
-import cern.c2mon.daq.opcua.connection.common.IGroupProvider;
 import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
-import cern.c2mon.daq.opcua.connection.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.common.IGroupProvider;
+import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
 import cern.c2mon.daq.opcua.connection.ua.UAItemDefintion;
 import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
 import cern.c2mon.opc.stack.common.IItemDefinitionFactory;
