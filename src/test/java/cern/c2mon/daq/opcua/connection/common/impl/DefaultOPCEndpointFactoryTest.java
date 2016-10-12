@@ -18,7 +18,6 @@ package cern.c2mon.daq.opcua.connection.common.impl;
 
 import org.junit.Test;
 
-import cern.c2mon.daq.opcua.connection.soap.DASoapEndpoint;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAEndpointDigitalpetri;
 import cern.c2mon.opc.stack.connection.EndpointTypesUnknownException;
 import cern.c2mon.opc.stack.connection.common.IOPCEndpoint;
@@ -39,18 +38,8 @@ public class DefaultOPCEndpointFactoryTest {
         assertEquals(endpoint.getClass(), UAEndpointDigitalpetri.class);
     }
 
-    @Test
-    public void testSOAPEndpoint() throws Exception {
-      OPCUADefaultAddress addr = new OPCUADefaultAddress.DefaultBuilder(DefaultOPCEndpointFactory.DA_SOAP_TYPE + "://test", 1232, 123).build();
-      IOPCEndpoint endpoint = factory.createEndpoint(addr);
-        assertEquals(endpoint.getClass(), DASoapEndpoint.class);
-    }
-
     @Test(expected=EndpointTypesUnknownException.class)
     public void testNULLEndpoint() {
         factory.createEndpoint(null);
     }
-
-
-
 }

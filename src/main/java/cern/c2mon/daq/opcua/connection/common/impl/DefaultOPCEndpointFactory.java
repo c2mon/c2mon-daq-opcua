@@ -16,8 +16,6 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common.impl;
 
-import cern.c2mon.daq.opcua.connection.soap.DASoapEndpoint;
-import cern.c2mon.daq.opcua.connection.soap.DASoapItemDefintionFactory;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAEndpointDigitalpetri;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UaItemDefintionFactoryDigitalpetry;
 import cern.c2mon.opc.stack.connection.EndpointTypesUnknownException;
@@ -67,11 +65,6 @@ public class DefaultOPCEndpointFactory implements IOPCEndpointFactory {
     switch (address.getProtocol()) {
       case UA_TCP_TYPE:
         endpoint = createUaTcpEndpoint(address);
-        break;
-      case DA_SOAP_TYPE:
-        endpoint = new DASoapEndpoint(
-                new DASoapItemDefintionFactory(),
-                new DefaultGroupProvider<>());
         break;
       default:
         throw new EndpointTypesUnknownException();
