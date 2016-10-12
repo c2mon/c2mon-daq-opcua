@@ -23,10 +23,10 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cern.c2mon.opc.stack.common.*;
-import cern.c2mon.opc.stack.common.impl.ItemDefinition;
-import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
-import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.connection.common.*;
+import cern.c2mon.opc.stack.connection.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.connection.common.impl.SubscriptionGroup;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;

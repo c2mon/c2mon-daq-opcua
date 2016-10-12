@@ -25,12 +25,12 @@ import org.apache.axis2.AxisFault;
 import org.opcfoundation.xmlda.*;
 
 import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
-import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
-import cern.c2mon.opc.stack.common.IGroupProvider;
-import cern.c2mon.opc.stack.common.IItemDefinitionFactory;
-import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
-import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
-import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.connection.common.IGroupProvider;
+import cern.c2mon.opc.stack.connection.common.IItemDefinitionFactory;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCommunicationException;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.connection.common.impl.SubscriptionGroup;
 
 /**
  * OPC endpoint for OPC XML DA.

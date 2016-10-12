@@ -32,12 +32,6 @@
 
     <!-- 3rd-party dependencies -->
     <dependency>
-      <groupId>com.prosys</groupId>
-      <artifactId>opc-ua-java-sdk</artifactId>
-      <version>1.2.2-2918</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>com.digitalpetri.opcua</groupId>
       <artifactId>ua-client</artifactId>
       <version>1.1.0</version>
@@ -140,6 +134,13 @@
   <!-- Activate plugin configurations to build a tarball and a docker image -->
   <build>
     <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
       </plugin>

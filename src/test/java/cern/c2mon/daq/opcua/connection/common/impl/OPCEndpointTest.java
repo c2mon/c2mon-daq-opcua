@@ -25,11 +25,11 @@ import org.easymock.classextension.ConstructorArgs;
 import org.junit.Before;
 import org.junit.Test;
 
-import cern.c2mon.opc.stack.common.*;
-import cern.c2mon.opc.stack.common.impl.ItemDefinition;
-import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
-import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
-import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.connection.common.*;
+import cern.c2mon.opc.stack.connection.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddress;
+import cern.c2mon.opc.stack.connection.common.impl.SubscriptionGroup;
 import cern.c2mon.shared.common.ConfigurationException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.command.SourceCommandTag;

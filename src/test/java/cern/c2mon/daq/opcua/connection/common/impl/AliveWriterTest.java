@@ -23,8 +23,8 @@ import org.junit.Test;
 
 import cern.c2mon.daq.common.logger.EquipmentLogger;
 import cern.c2mon.daq.common.logger.EquipmentLoggerFactory;
-import cern.c2mon.opc.stack.common.IOPCEndpoint;
-import cern.c2mon.opc.stack.common.impl.AliveWriter;
+import cern.c2mon.opc.stack.connection.common.IOPCEndpoint;
+import cern.c2mon.opc.stack.connection.common.impl.AliveWriter;
 import cern.c2mon.shared.common.ConfigurationException;
 import cern.c2mon.shared.common.datatag.DataTagAddress;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;

@@ -21,7 +21,7 @@ import java.util.Calendar;
 import org.apache.axis2.AxisFault;
 import org.opcfoundation.xmlda.*;
 
-import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCommunicationException;
 
 /**
  * The runnable which implements the long poll. If an error happens or 

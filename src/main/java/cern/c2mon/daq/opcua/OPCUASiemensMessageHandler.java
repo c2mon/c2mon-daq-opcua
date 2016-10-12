@@ -20,15 +20,15 @@ package cern.c2mon.daq.opcua;
 import java.util.List;
 
 import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAMessageHandler;
-import cern.c2mon.opc.stack.common.IOPCEndpointFactory;
+import cern.c2mon.opc.stack.connection.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.DefaultOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.common.impl.EndpointControllerSiemens;
 import cern.c2mon.daq.opcua.connection.common.impl.OPCUASiemensAddress;
 import cern.c2mon.daq.opcua.connection.common.impl.OPCUASiemensAddressParser;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
-import cern.c2mon.opc.stack.EndpointTypesUnknownException;
-import cern.c2mon.opc.stack.OPCAUAddressException;
-import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.connection.EndpointTypesUnknownException;
+import cern.c2mon.opc.stack.connection.OPCAUAddressException;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 
 

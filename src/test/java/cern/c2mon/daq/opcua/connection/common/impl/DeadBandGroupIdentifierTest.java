@@ -20,7 +20,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import cern.c2mon.opc.stack.common.impl.DeadBandGroupIdentifier;
+import cern.c2mon.opc.stack.connection.common.impl.DeadBandGroupIdentifier;
 
 public class DeadBandGroupIdentifierTest {
     

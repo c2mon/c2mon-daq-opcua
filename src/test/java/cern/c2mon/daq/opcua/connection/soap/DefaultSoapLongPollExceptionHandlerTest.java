@@ -25,7 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.connection.common.impl.SubscriptionGroup;
 
 public class DefaultSoapLongPollExceptionHandlerTest {
     

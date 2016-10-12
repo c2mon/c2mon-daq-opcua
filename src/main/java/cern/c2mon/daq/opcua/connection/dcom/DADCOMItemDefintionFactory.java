@@ -17,7 +17,7 @@
 package cern.c2mon.daq.opcua.connection.dcom;
 
 
-import cern.c2mon.opc.stack.common.impl.ClassicItemDefinitionFactory;
+import cern.c2mon.opc.stack.connection.common.impl.ClassicItemDefinitionFactory;
 
 /**
  * Creates DADCOMItemDefinitons.

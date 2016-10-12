@@ -21,10 +21,10 @@ import java.net.URISyntaxException;
 import org.junit.Test;
 import org.opcfoundation.xmlda.OPCXML_DataAccess;
 
-import cern.c2mon.opc.stack.common.IGroupProvider;
-import cern.c2mon.opc.stack.common.IItemDefinitionFactory;
-import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
-import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
+import cern.c2mon.opc.stack.connection.common.IGroupProvider;
+import cern.c2mon.opc.stack.connection.common.IItemDefinitionFactory;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddress;
 
 import static org.easymock.EasyMock.createMock;
 

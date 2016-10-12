@@ -27,8 +27,8 @@ import cern.c2mon.daq.opcua.jintegraInterface.IOPCGroups;
 import cern.c2mon.daq.opcua.jintegraInterface.OPCItem;
 import cern.c2mon.daq.opcua.jintegraInterface.OPCItems;
 import cern.c2mon.daq.opcua.jintegraInterface.OPCServer;
-import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
-import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCommunicationException;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
 
 import com.linar.jintegra.AutomationException;
 

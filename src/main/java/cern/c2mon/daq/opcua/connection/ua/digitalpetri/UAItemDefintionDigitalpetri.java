@@ -19,7 +19,7 @@ package cern.c2mon.daq.opcua.connection.ua.digitalpetri;
 
 import com.digitalpetri.opcua.stack.core.types.builtin.NodeId;
 
-import cern.c2mon.opc.stack.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.connection.common.impl.ItemDefinition;
 
 /**
  * The OPC UA item definition.

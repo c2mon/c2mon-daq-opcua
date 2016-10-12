@@ -22,7 +22,7 @@ import java.net.URISyntaxException;
 
 import lombok.Getter;
 
-import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddress;
 
 /**
  * The OPCUA specific address for siemens

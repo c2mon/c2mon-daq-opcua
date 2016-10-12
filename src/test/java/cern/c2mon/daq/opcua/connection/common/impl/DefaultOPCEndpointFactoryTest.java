@@ -21,10 +21,9 @@ import org.junit.Test;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMEndpoint;
 import cern.c2mon.daq.opcua.connection.soap.DASoapEndpoint;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAEndpointDigitalpetri;
-import cern.c2mon.daq.opcua.connection.ua.prosys.UAEndpointProsys;
-import cern.c2mon.opc.stack.EndpointTypesUnknownException;
-import cern.c2mon.opc.stack.common.IOPCEndpoint;
-import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
+import cern.c2mon.opc.stack.connection.EndpointTypesUnknownException;
+import cern.c2mon.opc.stack.connection.common.IOPCEndpoint;
+import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddress;
 
 import static org.junit.Assert.assertEquals;
 
@@ -39,15 +38,6 @@ public class DefaultOPCEndpointFactoryTest {
         IOPCEndpoint endpoint = factory.createEndpoint(addr);
 
         assertEquals(endpoint.getClass(), UAEndpointDigitalpetri.class);
-    }
-
-    @Test
-    public void testUAEndpointProsys() throws Exception {
-
-        OPCUADefaultAddress addr = new OPCUADefaultAddress.DefaultBuilder(DefaultOPCEndpointFactory.UA_TCP_TYPE + "://test", 1232, 123).vendor("prosys").build();
-        IOPCEndpoint endpoint = factory.createEndpoint(addr);
-
-        assertEquals(endpoint.getClass(), UAEndpointProsys.class);
     }
 
     @Test

@@ -22,9 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import cern.c2mon.opc.stack.OPCAUAddressException;
-import cern.c2mon.opc.stack.common.AbstractOPCUAAddressParser;
-import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.connection.OPCAUAddressException;
+import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddressParser;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
 
 /**
  * The OPCAUASiemensAdress parser extends OPCAUAddressParser and takes a String 

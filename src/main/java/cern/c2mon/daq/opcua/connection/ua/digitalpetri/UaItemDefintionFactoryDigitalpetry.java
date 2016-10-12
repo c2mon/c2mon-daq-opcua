@@ -18,7 +18,7 @@ package cern.c2mon.daq.opcua.connection.ua.digitalpetri;
 
 import com.digitalpetri.opcua.stack.core.types.builtin.NodeId;
 
-import cern.c2mon.opc.stack.common.IItemDefinitionFactory;
+import cern.c2mon.opc.stack.connection.common.IItemDefinitionFactory;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress.ADDRESS_TYPE;

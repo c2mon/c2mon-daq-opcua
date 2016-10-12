@@ -24,9 +24,9 @@ import org.slf4j.LoggerFactory;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.logger.EquipmentLoggerFactory;
-import cern.c2mon.opc.stack.EndpointEquipmentLogListener;
-import cern.c2mon.opc.stack.AbstractEndpointController;
-import cern.c2mon.opc.stack.common.IOPCEndpointFactory;
+import cern.c2mon.opc.stack.connection.EndpointEquipmentLogListener;
+import cern.c2mon.opc.stack.connection.AbstractEndpointController;
+import cern.c2mon.opc.stack.connection.common.IOPCEndpointFactory;
 import cern.c2mon.shared.common.datatag.DataTagAddress;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTag;

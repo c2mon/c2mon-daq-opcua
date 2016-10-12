@@ -25,9 +25,9 @@ import java.util.List;
 
 import org.junit.Test;
 
-import cern.c2mon.opc.stack.common.AbstractOPCUAAddressParser.AddressKeys;
-import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
-import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddressParser;
+import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddressParser.AddressKeys;
+import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddress;
+import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddressParser;
 
 public class OPCAddressParserTest {
 

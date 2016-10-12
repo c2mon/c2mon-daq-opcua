@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.soap;
 
-import cern.c2mon.opc.stack.common.impl.ItemDefinition;
+import cern.c2mon.opc.stack.connection.common.impl.ItemDefinition;
 
 /**
  * The SOAP (OPC XML DA) item definition.

@@ -49,12 +49,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
-import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
-import cern.c2mon.opc.stack.common.IGroupProvider;
-import cern.c2mon.opc.stack.common.IItemDefinitionFactory;
-import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
-import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
-import cern.c2mon.opc.stack.common.impl.SubscriptionGroup;
+import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.connection.common.IGroupProvider;
+import cern.c2mon.opc.stack.connection.common.IItemDefinitionFactory;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCommunicationException;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.connection.common.impl.SubscriptionGroup;
 
 import static com.digitalpetri.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 import static com.google.common.collect.Lists.newArrayList;

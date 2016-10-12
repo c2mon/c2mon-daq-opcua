@@ -30,9 +30,9 @@ import org.opcfoundation.xmlda.SubscribePolledRefreshReplyItemList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
-import cern.c2mon.opc.stack.common.impl.OPCCommunicationException;
-import cern.c2mon.opc.stack.common.impl.OPCCriticalException;
+import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCommunicationException;
+import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
 
 /**
  * Polls the OPC server for updates to one subscription. It uses a long poll

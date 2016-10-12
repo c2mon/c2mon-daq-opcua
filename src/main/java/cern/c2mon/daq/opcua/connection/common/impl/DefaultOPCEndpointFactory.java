@@ -16,20 +16,17 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common.impl;
 
-import cern.c2mon.opc.stack.EndpointTypesUnknownException;
-import cern.c2mon.opc.stack.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMEndpoint;
 import cern.c2mon.daq.opcua.connection.dcom.DADCOMItemDefintionFactory;
 import cern.c2mon.daq.opcua.connection.soap.DASoapEndpoint;
 import cern.c2mon.daq.opcua.connection.soap.DASoapItemDefintionFactory;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAEndpointDigitalpetri;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UaItemDefintionFactoryDigitalpetry;
-import cern.c2mon.daq.opcua.connection.ua.prosys.UAEndpointProsys;
-import cern.c2mon.daq.opcua.connection.ua.prosys.UaItemDefintionFactoryProsys;
-import cern.c2mon.opc.stack.common.AbstractOPCUAAddress;
-import cern.c2mon.opc.stack.common.IOPCEndpoint;
-import cern.c2mon.opc.stack.common.impl.DefaultGroupProvider;
-import cern.c2mon.opc.stack.common.impl.OPCUADefaultAddress;
+import cern.c2mon.opc.stack.connection.EndpointTypesUnknownException;
+import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddress;
+import cern.c2mon.opc.stack.connection.common.IOPCEndpoint;
+import cern.c2mon.opc.stack.connection.common.IOPCEndpointFactory;
+import cern.c2mon.opc.stack.connection.common.impl.DefaultGroupProvider;
 
 /**
  * The default factory to create OPCEndpoints.
@@ -70,9 +67,6 @@ public class DefaultOPCEndpointFactory implements IOPCEndpointFactory {
         }
 
         switch (address.getProtocol()) {
-          case UA_TCP_TYPE:
-            endpoint = createUaTcpEndpoint(address);
-            break;
           case DA_SOAP_TYPE:
             endpoint = new DASoapEndpoint(
                 new DASoapItemDefintionFactory(),
@@ -96,11 +90,11 @@ public class DefaultOPCEndpointFactory implements IOPCEndpointFactory {
      * @return
      */
     private IOPCEndpoint createUaTcpEndpoint(AbstractOPCUAAddress address) {
-      if (address instanceof OPCUADefaultAddress && ((OPCUADefaultAddress) address).getVendor().equals("prosys")) {
-        return new UAEndpointProsys(
-            new UaItemDefintionFactoryProsys(),
-            new DefaultGroupProvider<>());
-      }
+//      if (address instanceof OPCUADefaultAddress && ((OPCUADefaultAddress) address).getVendor().equals("prosys")) {
+//        return new UAEndpointProsys(
+//            new UaItemDefintionFactoryProsys(),
+//            new DefaultGroupProvider<>());
+//      }
 
       return new UAEndpointDigitalpetri(
           new UaItemDefintionFactoryDigitalpetry(),
