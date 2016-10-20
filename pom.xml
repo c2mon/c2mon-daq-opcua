@@ -5,11 +5,11 @@
   <parent>
     <groupId>cern.c2mon.daq</groupId>
     <artifactId>c2mon-daq-parent</artifactId>
-    <version>1.8.2</version>
+    <version>1.8.3-SNAPSHOT</version>
   </parent>
 
   <artifactId>c2mon-daq-opcua</artifactId>
-  <version>1.8.1</version>
+  <version>1.8.2-SNAPSHOT</version>
   <packaging>jar</packaging>
   <description>DAQ module for acquiring data from OPC UA servers. Also supports the older DCOM and SOAP protocols</description>
 
@@ -17,7 +17,7 @@
     <url>https://gitlab.cern.ch/c2mon/c2mon-daq-opcua</url>
     <connection>scm:git:ssh://git@gitlab.cern.ch/c2mon/c2mon-daq-opcua.git</connection>
     <developerConnection>scm:git:ssh://git@gitlab.cern.ch:7999/c2mon/c2mon-daq-opcua.git</developerConnection>
-    <tag>1.8.1</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <dependencies>
