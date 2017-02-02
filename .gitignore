@@ -19,3 +19,7 @@ target/
 hs_err_pid*
 
 activemq-data/
+
+# Maven release plugin
+/pom.xml.releaseBackup
+/release.properties
