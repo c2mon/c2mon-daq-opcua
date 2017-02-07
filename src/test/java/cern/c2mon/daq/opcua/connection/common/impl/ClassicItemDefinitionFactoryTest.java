@@ -16,31 +16,30 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common.impl;
 
-import static org.easymock.classextension.EasyMock.*;
-
+import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 
-import cern.c2mon.daq.opcua.connection.common.impl.ClassicItemDefinitionFactory;
-import cern.c2mon.daq.opcua.connection.common.impl.ItemDefinition;
 import cern.c2mon.shared.common.ConfigurationException;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
+
+import static org.easymock.classextension.EasyMock.*;
 
 public class ClassicItemDefinitionFactoryTest {
     
     private ClassicItemDefinitionFactory<ItemDefinition<String>> factory;
-        
-    
-    @Before
-    public void setUp() throws SecurityException, NoSuchMethodException {
-        factory = createMock(ClassicItemDefinitionFactory.class, 
-                ClassicItemDefinitionFactory.class.getMethod(
-                        "createItemDefinition", Long.TYPE, String.class),
-                ClassicItemDefinitionFactory.class.getMethod(
-                        "createItemDefinition", Long.TYPE, String.class,
-                        String.class) 
-        );
-    }
+
+
+  @Before
+  public void setUp() throws SecurityException, NoSuchMethodException {
+    factory = EasyMock.createMockBuilder(ClassicItemDefinitionFactory.class)
+            .addMockedMethod(ClassicItemDefinitionFactory.class.getMethod(
+                    "createItemDefinition", Long.TYPE, String.class))
+            .addMockedMethod(ClassicItemDefinitionFactory.class.getMethod(
+                    "createItemDefinition", Long.TYPE, String.class,
+                    String.class))
+            .createMock();
+  }
     
     @Test
     public void testCreateItemDefinitonNotRedundant() throws ConfigurationException {

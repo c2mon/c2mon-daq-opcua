@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.easymock.Capture;
+import org.easymock.EasyMock;
 import org.easymock.classextension.ConstructorArgs;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,21 +65,30 @@ public class OPCEndpointTest {
         
     @Before
     public void setUp() throws SecurityException, NoSuchMethodException, URISyntaxException {
-        endpoint = createMock(OPCEndpoint.class,
-                new ConstructorArgs(
-                        OPCEndpoint.class.getConstructor(
-                                IItemDefinitionFactory.class,
-                                IGroupProvider.class), factory, provider),
-                OPCEndpoint.class.getDeclaredMethod("onInit", AbstractOPCUAAddress.class),
-                OPCEndpoint.class.getDeclaredMethod("onSubscribe", Collection.class),
-                OPCEndpoint.class.getDeclaredMethod(
-                        "onWrite", ItemDefinition.class, Object.class),
-                OPCEndpoint.class.getDeclaredMethod(
-                        "onCallMethod", ItemDefinition.class, Object[].class),
-                OPCEndpoint.class.getDeclaredMethod("onRefresh", Collection.class));
+      endpoint = EasyMock.createMockBuilder(OPCEndpoint.class)
+              .withConstructor(OPCEndpoint.class.getConstructor(IItemDefinitionFactory.class, IGroupProvider.class))
+              .withArgs(factory, provider)
+              .addMockedMethod(OPCEndpoint.class.getDeclaredMethod("onInit", AbstractOPCUAAddress.class))
+              .addMockedMethod(OPCEndpoint.class.getDeclaredMethod("onSubscribe", Collection.class))
+              .addMockedMethod(OPCEndpoint.class.getDeclaredMethod("onWrite", ItemDefinition.class, Object.class))
+              .addMockedMethod(OPCEndpoint.class.getDeclaredMethod("onCallMethod", ItemDefinition.class, Object[].class))
+              .addMockedMethod(OPCEndpoint.class.getDeclaredMethod("onRefresh", Collection.class))
+              .createMock();
+//        endpoint = createMock(OPCEndpoint.class,
+//                new ConstructorArgs(
+//                        OPCEndpoint.class.getConstructor(
+//                                IItemDefinitionFactory.class,
+//                                IGroupProvider.class), factory, provider),
+//                OPCEndpoint.class.getDeclaredMethod("onInit", AbstractOPCUAAddress.class),
+//                OPCEndpoint.class.getDeclaredMethod("onSubscribe", Collection.class),
+//                OPCEndpoint.class.getDeclaredMethod(
+//                        "onWrite", ItemDefinition.class, Object.class),
+//                OPCEndpoint.class.getDeclaredMethod(
+//                        "onCallMethod", ItemDefinition.class, Object[].class),
+//                OPCEndpoint.class.getDeclaredMethod("onRefresh", Collection.class));
         
-        address =
-            new OPCUADefaultAddress.DefaultBuilder("http://host/path", 100, 1000)
+        address = new OPCUADefaultAddress.DefaultBuilder("http://host/path",
+                100, 1000)
                 .build();
         endpoint.initialize(address);
         reset(endpoint);

@@ -16,28 +16,16 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.soap;
 
-import static org.easymock.classextension.EasyMock.*;
-
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.rmi.RemoteException;
-import java.util.GregorianCalendar;
 
-import org.easymock.classextension.ConstructorArgs;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.opcfoundation.xmlda.GetStatus;
-import org.opcfoundation.xmlda.GetStatusResponse;
-import org.opcfoundation.xmlda.ItemValue;
-import org.opcfoundation.xmlda.OPCError;
-import org.opcfoundation.xmlda.OPCXML_DataAccessStub;
-import org.opcfoundation.xmlda.ReplyBase;
-import org.opcfoundation.xmlda.SubscribePolledRefreshReplyItemList;
-import org.opcfoundation.xmlda.SubscriptionPolledRefresh;
-import org.opcfoundation.xmlda.SubscriptionPolledRefreshResponse;
+import org.opcfoundation.xmlda.*;
 
-import cern.c2mon.daq.opcua.connection.common.impl.OPCCommunicationException;
-import cern.c2mon.daq.opcua.connection.soap.SoapLongPollRunnable;
+import static org.easymock.classextension.EasyMock.*;
 
 public class SoapLongPollRunnableTest {
     
@@ -53,23 +41,23 @@ public class SoapLongPollRunnableTest {
     
     @Before
     public void setUp() throws SecurityException, NoSuchMethodException {
-        poll = createMock(SoapLongPollRunnable.class,
-                new ConstructorArgs(
-                        SoapLongPollRunnable.class.getConstructor(
-                                Integer.TYPE, Integer.TYPE, String.class,
-                                OPCXML_DataAccessStub.class),
-                                100, 1000, "asd", access ),
-                SoapLongPollRunnable.class.getMethod(
-                        "newItemValues", SubscribePolledRefreshReplyItemList[].class),
-                SoapLongPollRunnable.class.getMethod(
-                        "onError", Throwable.class));
-        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-            
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                error = e;
-            }
-        });
+      poll = EasyMock.createMockBuilder(SoapLongPollRunnable.class)
+              .withConstructor(SoapLongPollRunnable.class.getConstructor(
+                      Integer.TYPE, Integer.TYPE, String.class,
+                      OPCXML_DataAccessStub.class))
+              .withArgs(100, 1000, "asd", access)
+              .addMockedMethod(SoapLongPollRunnable.class.getMethod(
+                      "newItemValues", SubscribePolledRefreshReplyItemList[].class))
+              .addMockedMethod(SoapLongPollRunnable.class.getMethod(
+                      "onError", Throwable.class))
+              .createMock();
+      Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+          error = e;
+        }
+      });
     }
     
     @After
