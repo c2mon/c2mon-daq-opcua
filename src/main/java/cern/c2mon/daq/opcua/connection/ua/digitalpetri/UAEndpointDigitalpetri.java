@@ -48,13 +48,13 @@ import org.opcfoundation.ua.transport.security.SecurityMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cern.c2mon.daq.opc.common.AbstractOPCUAAddress;
+import cern.c2mon.daq.opc.common.AbstractOPCAddress;
 import cern.c2mon.daq.opc.common.IGroupProvider;
 import cern.c2mon.daq.opc.common.IItemDefinitionFactory;
 import cern.c2mon.daq.opc.common.impl.OPCCommunicationException;
 import cern.c2mon.daq.opc.common.impl.OPCCriticalException;
+import cern.c2mon.daq.opc.common.impl.OPCEndpoint;
 import cern.c2mon.daq.opc.common.impl.SubscriptionGroup;
-import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
 
 import static com.digitalpetri.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 import static com.google.common.collect.Lists.newArrayList;
@@ -134,7 +134,7 @@ public class UAEndpointDigitalpetri extends OPCEndpoint<UAItemDefintionDigitalpe
    *          The address for this OPC UA endpoint.
    */
   @Override
-  protected void onInit(final AbstractOPCUAAddress opcAddress) {
+  protected void onInit(final AbstractOPCAddress opcAddress) {
     String uri = opcAddress.getUriString();
     String userName = opcAddress.getUser();
     String password = opcAddress.getPassword();

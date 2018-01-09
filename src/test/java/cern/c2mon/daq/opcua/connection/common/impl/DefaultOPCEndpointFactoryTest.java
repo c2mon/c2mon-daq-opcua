@@ -20,7 +20,7 @@ import org.junit.Test;
 
 import cern.c2mon.daq.opc.EndpointTypesUnknownException;
 import cern.c2mon.daq.opc.common.IOPCEndpoint;
-import cern.c2mon.daq.opc.common.impl.OPCUADefaultAddress;
+import cern.c2mon.daq.opc.common.impl.OPCDefaultAddress;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAEndpointDigitalpetri;
 
 import static org.junit.Assert.assertEquals;
@@ -32,7 +32,7 @@ public class DefaultOPCEndpointFactoryTest {
     @Test
     public void testUAEndpointDefault() throws Exception {
 
-        OPCUADefaultAddress addr = new OPCUADefaultAddress.DefaultBuilder(DefaultOPCEndpointFactory.UA_TCP_TYPE + "://test", 1232, 123).build();
+        OPCDefaultAddress addr = new OPCDefaultAddress.DefaultBuilder(DefaultOPCEndpointFactory.UA_TCP_TYPE + "://test", 1232, 123).build();
         IOPCEndpoint endpoint = factory.createEndpoint(addr);
 
         assertEquals(endpoint.getClass(), UAEndpointDigitalpetri.class);

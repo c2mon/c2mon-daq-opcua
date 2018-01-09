@@ -21,12 +21,12 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 import cern.c2mon.daq.opc.EndpointTypesUnknownException;
-import cern.c2mon.daq.opc.OPCAUAddressException;
+import cern.c2mon.daq.opc.OPCAddressException;
 import cern.c2mon.daq.opc.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opc.common.impl.EndpointControllerDefault;
 import cern.c2mon.daq.opc.common.impl.OPCCriticalException;
-import cern.c2mon.daq.opc.common.impl.OPCUADefaultAddress;
-import cern.c2mon.daq.opc.common.impl.OPCUADefaultAddressParser;
+import cern.c2mon.daq.opc.common.impl.OPCDefaultAddress;
+import cern.c2mon.daq.opc.common.impl.OPCDefaultAddressParser;
 import cern.c2mon.daq.opcua.connection.common.AbstractOPCUAMessageHandler;
 import cern.c2mon.daq.opcua.connection.common.impl.DefaultOPCEndpointFactory;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
@@ -46,7 +46,7 @@ public class OPCUAMessageHandler extends AbstractOPCUAMessageHandler {
      * This parser helps to split up the string provided as equipment address
      * from the core.
      */
-    private final OPCUADefaultAddressParser opcDefaultAddressParser = new OPCUADefaultAddressParser();
+    private final OPCDefaultAddressParser opcDefaultAddressParser = new OPCDefaultAddressParser();
 
     /**
      * Called when the core wants the OPC module to start up and connect to the
@@ -60,7 +60,7 @@ public class OPCUAMessageHandler extends AbstractOPCUAMessageHandler {
         IEquipmentConfiguration config = getEquipmentConfiguration();
         log.debug("connectToDataSource - starting connect to OPC data source");
         try {
-            List<OPCUADefaultAddress> opcuaDefaultAddresses = this.opcDefaultAddressParser.createOPCAddressFromAddressString(config.getAddress());
+            List<OPCDefaultAddress> opcuaDefaultAddresses = this.opcDefaultAddressParser.createOPCAddressFromAddressString(config.getAddress());
             log.debug("connectToDataSource - creating endpoint");
             IOPCEndpointFactory endpointFactory = new DefaultOPCEndpointFactory();
             controller = new EndpointControllerDefault(
@@ -72,7 +72,7 @@ public class OPCUAMessageHandler extends AbstractOPCUAMessageHandler {
             } else {
                 log.debug("connectToDataSource - endpoint started");
             }
-        } catch (OPCAUAddressException e) {
+        } catch (OPCAddressException e) {
             throw new EqIOException(
                     "OPC address configuration string is invalid.", e);
         } catch (EndpointTypesUnknownException e) {

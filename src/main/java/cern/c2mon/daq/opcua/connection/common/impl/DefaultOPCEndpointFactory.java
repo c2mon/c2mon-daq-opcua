@@ -17,7 +17,7 @@
 package cern.c2mon.daq.opcua.connection.common.impl;
 
 import cern.c2mon.daq.opc.EndpointTypesUnknownException;
-import cern.c2mon.daq.opc.common.AbstractOPCUAAddress;
+import cern.c2mon.daq.opc.common.AbstractOPCAddress;
 import cern.c2mon.daq.opc.common.IOPCEndpoint;
 import cern.c2mon.daq.opc.common.IOPCEndpointFactory;
 import cern.c2mon.daq.opc.common.impl.DefaultGroupProvider;
@@ -55,7 +55,7 @@ public class DefaultOPCEndpointFactory implements IOPCEndpointFactory {
    * @return The matching IOPCEndpoint.
    */
   @Override
-  public IOPCEndpoint createEndpoint(AbstractOPCUAAddress address) {
+  public IOPCEndpoint createEndpoint(AbstractOPCAddress address) {
     IOPCEndpoint endpoint;
 
     if (address == null) {
@@ -78,7 +78,7 @@ public class DefaultOPCEndpointFactory implements IOPCEndpointFactory {
    *
    * @return
    */
-  private IOPCEndpoint createUaTcpEndpoint(AbstractOPCUAAddress address) {
+  private IOPCEndpoint createUaTcpEndpoint(AbstractOPCAddress address) {
     return new UAEndpointDigitalpetri(
             new UaItemDefintionFactoryDigitalpetry(),
             new DefaultGroupProvider<>());
