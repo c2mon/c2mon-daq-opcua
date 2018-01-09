@@ -1,16 +1,16 @@
 /******************************************************************************
  * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- * 
+ *
  * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
  * C2MON is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free
  * Software Foundation, either version 3 of the license.
- * 
+ *
  * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
  * more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
@@ -18,21 +18,23 @@ package cern.c2mon.daq.opcua.connection.common.impl;
 
 import org.junit.Test;
 
-import cern.c2mon.opc.stack.connection.common.impl.DefaultGroupProvider;
-import cern.c2mon.opc.stack.connection.common.impl.ItemDefinition;
-import cern.c2mon.opc.stack.connection.common.impl.SubscriptionGroup;
+import cern.c2mon.daq.opc.common.impl.DefaultGroupProvider;
+import cern.c2mon.daq.opc.common.impl.ItemDefinition;
+import cern.c2mon.daq.opc.common.impl.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.DataTagAddress;
 import cern.c2mon.shared.common.datatag.DataTagDeadband;
 import cern.c2mon.shared.common.datatag.SourceDataTag;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
 
 public class DefaultGroupProviderTest {
-    
+
     private DefaultGroupProvider<?> provider =
-        new DefaultGroupProvider<ItemDefinition<?>>();
-    
-    
+        new DefaultGroupProvider<>();
+
+
     @Test
     public void testGetOrCreateGroupSame() {
         SourceDataTag tag = createSourceDataTag(100, 1.1f);
@@ -40,7 +42,7 @@ public class DefaultGroupProviderTest {
         SubscriptionGroup<?> group2 = provider.getOrCreateGroup(tag);
         assertEquals(group, group2);
     }
-    
+
     @Test
     public void testGetOrCreateGroupDifferent() {
         SourceDataTag tag = createSourceDataTag(100, 1.1f);
@@ -56,7 +58,7 @@ public class DefaultGroupProviderTest {
         assertEquals(100, group.getTimeDeadband());
         assertTrue(Math.abs(group.getValueDeadband() - 1.1f) < 0.00000000001f);
     }
-    
+
     @Test
     public void testGetOrCreateGroupTimeDeadbandOnly() {
         SourceDataTag tag = createSourceDataTag(100);
@@ -64,7 +66,7 @@ public class DefaultGroupProviderTest {
         assertEquals(100, group.getTimeDeadband());
         assertTrue(0.0f == group.getValueDeadband());
     }
-    
+
     @Test
     public void testGetOrCreateGroupValueDeadbandOnly() {
         SourceDataTag tag = createSourceDataTag(0, 1.1f);
@@ -84,7 +86,7 @@ public class DefaultGroupProviderTest {
     private SourceDataTag createSourceDataTag(int timeDeadband) {
         DataTagAddress address = new DataTagAddress();
         address.setTimeDeadband(timeDeadband);
-        SourceDataTag tag = 
+        SourceDataTag tag =
             new SourceDataTag(1L, "asd", false, (short)0, "Boolean", address);
         return tag;
     }

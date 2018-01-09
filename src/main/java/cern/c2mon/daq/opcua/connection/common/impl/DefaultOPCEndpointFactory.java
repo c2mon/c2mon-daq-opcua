@@ -16,13 +16,13 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common.impl;
 
+import cern.c2mon.daq.opc.EndpointTypesUnknownException;
+import cern.c2mon.daq.opc.common.AbstractOPCUAAddress;
+import cern.c2mon.daq.opc.common.IOPCEndpoint;
+import cern.c2mon.daq.opc.common.IOPCEndpointFactory;
+import cern.c2mon.daq.opc.common.impl.DefaultGroupProvider;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAEndpointDigitalpetri;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UaItemDefintionFactoryDigitalpetry;
-import cern.c2mon.opc.stack.connection.EndpointTypesUnknownException;
-import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddress;
-import cern.c2mon.opc.stack.connection.common.IOPCEndpoint;
-import cern.c2mon.opc.stack.connection.common.IOPCEndpointFactory;
-import cern.c2mon.opc.stack.connection.common.impl.DefaultGroupProvider;
 
 /**
  * The default factory to create OPCEndpoints.

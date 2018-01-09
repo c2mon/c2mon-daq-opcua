@@ -18,10 +18,10 @@ package cern.c2mon.daq.opcua.connection.common.impl;
 
 import org.junit.Test;
 
+import cern.c2mon.daq.opc.EndpointTypesUnknownException;
+import cern.c2mon.daq.opc.common.IOPCEndpoint;
+import cern.c2mon.daq.opc.common.impl.OPCUADefaultAddress;
 import cern.c2mon.daq.opcua.connection.ua.digitalpetri.UAEndpointDigitalpetri;
-import cern.c2mon.opc.stack.connection.EndpointTypesUnknownException;
-import cern.c2mon.opc.stack.connection.common.IOPCEndpoint;
-import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddress;
 
 import static org.junit.Assert.assertEquals;
 

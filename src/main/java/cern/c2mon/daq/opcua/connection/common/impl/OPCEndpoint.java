@@ -23,10 +23,10 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cern.c2mon.opc.stack.connection.common.*;
-import cern.c2mon.opc.stack.connection.common.impl.ItemDefinition;
-import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
-import cern.c2mon.opc.stack.connection.common.impl.SubscriptionGroup;
+import cern.c2mon.daq.opc.common.*;
+import cern.c2mon.daq.opc.common.impl.ItemDefinition;
+import cern.c2mon.daq.opc.common.impl.OPCCriticalException;
+import cern.c2mon.daq.opc.common.impl.SubscriptionGroup;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
@@ -54,18 +54,18 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? >>
      * Collection of endpoint listeners registered at this endpoint.
      */
     private final Collection<IOPCEndpointListener> listeners =
-        new ConcurrentLinkedQueue<IOPCEndpointListener>();
+        new ConcurrentLinkedQueue<>();
 
     /**
      * Maps item defintion ids to data tags.
      */
     private final Map<Long, ISourceDataTag> itemDefintionIdsToDataTags =
-        new ConcurrentHashMap<Long, ISourceDataTag>();
+        new ConcurrentHashMap<>();
 
     /**
      * Maps item definiton ids to item definitions.
      */
-    private final Map<Long, ID> tagIdsToItemDefinitions = new HashMap<Long, ID>();
+    private final Map<Long, ID> tagIdsToItemDefinitions = new HashMap<>();
 
     /**
      * The Item definition factory.
@@ -164,7 +164,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? >>
             final Collection<ISourceDataTag> dataTags) {
         requireState(STATE.INITIALIZED);
         final Collection<SubscriptionGroup<ID>> subscriptionGroups =
-            new HashSet<SubscriptionGroup<ID>>();
+            new HashSet<>();
         for (ISourceDataTag dataTag : dataTags) {
             SubscriptionGroup<ID> subscriptionGroup = processTag(dataTag);
             if (subscriptionGroup != null)
@@ -235,7 +235,7 @@ public abstract class OPCEndpoint<ID extends ItemDefinition< ? >>
     public synchronized void refreshDataTags(
             final Collection<ISourceDataTag> dataTags) {
         requireState(STATE.OPERATIONAL);
-        final Collection<ID> itemDefintions = new ArrayList<ID>(dataTags.size());
+        final Collection<ID> itemDefintions = new ArrayList<>(dataTags.size());
         for (ISourceDataTag dataTag : dataTags) {
             ID itemDefinition = tagIdsToItemDefinitions.get(dataTag.getId());
             if (itemDefinition != null)

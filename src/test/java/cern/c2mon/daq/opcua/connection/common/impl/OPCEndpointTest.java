@@ -1,16 +1,16 @@
 /******************************************************************************
  * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- * 
+ *
  * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
  * C2MON is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free
  * Software Foundation, either version 3 of the license.
- * 
+ *
  * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
  * more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
@@ -25,11 +25,11 @@ import org.easymock.classextension.ConstructorArgs;
 import org.junit.Before;
 import org.junit.Test;
 
-import cern.c2mon.opc.stack.connection.common.*;
-import cern.c2mon.opc.stack.connection.common.impl.ItemDefinition;
-import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
-import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddress;
-import cern.c2mon.opc.stack.connection.common.impl.SubscriptionGroup;
+import cern.c2mon.daq.opc.common.*;
+import cern.c2mon.daq.opc.common.impl.ItemDefinition;
+import cern.c2mon.daq.opc.common.impl.OPCCriticalException;
+import cern.c2mon.daq.opc.common.impl.OPCUADefaultAddress;
+import cern.c2mon.daq.opc.common.impl.SubscriptionGroup;
 import cern.c2mon.shared.common.ConfigurationException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.command.SourceCommandTag;
@@ -54,7 +54,7 @@ public class OPCEndpointTest {
     private OPCEndpoint<ItemDefinition<String>> endpoint;
 
     private OPCUADefaultAddress address;
-        
+
     @Before
     public void setUp() throws SecurityException, NoSuchMethodException, URISyntaxException {
         endpoint = createMock(OPCEndpoint.class,
@@ -69,18 +69,18 @@ public class OPCEndpointTest {
                 OPCEndpoint.class.getDeclaredMethod(
                         "onCallMethod", ItemDefinition.class, Object[].class),
                 OPCEndpoint.class.getDeclaredMethod("onRefresh", Collection.class));
-        
+
         address =
             new OPCUADefaultAddress.DefaultBuilder("http://host/path", 100, 1000)
                 .build();
         endpoint.initialize(address);
         reset(endpoint);
     }
-    
+
     @Test
     public void testAddDataTagsEmpty() {
-        Collection<ISourceDataTag> dataTags = new ArrayList<ISourceDataTag>();
-        
+        Collection<ISourceDataTag> dataTags = new ArrayList<>();
+
         endpoint.onSubscribe(isA(Collection.class));
 
         replay(endpoint, factory, provider);
@@ -90,7 +90,7 @@ public class OPCEndpointTest {
 
     @Test
     public void testAddDataTags() throws ConfigurationException {
-        Collection<ISourceDataTag> dataTags = new ArrayList<ISourceDataTag>();
+        Collection<ISourceDataTag> dataTags = new ArrayList<>();
         OPCHardwareAddressImpl hwimpl = new OPCHardwareAddressImpl("asd");
         DataTagAddress address = new DataTagAddress(hwimpl);
         SourceDataTag dataTag1 = new SourceDataTag(1L, "asd", false);
@@ -100,21 +100,21 @@ public class OPCEndpointTest {
         dataTag2.setAddress(address);
         dataTags.add(dataTag2);
 
-        ItemDefinition<String> itemAddress = new ItemDefinition<String>(1L, "asd");
+        ItemDefinition<String> itemAddress = new ItemDefinition<>(1L, "asd");
         expect(factory.createItemDefinition(1L, hwimpl)).andReturn(itemAddress);
         expect(factory.createItemDefinition(2L, hwimpl)).andReturn(itemAddress);
-        expect(provider.getOrCreateGroup(dataTag1)).andReturn(new SubscriptionGroup<ItemDefinition<?>>(0, 0.1F));
-        expect(provider.getOrCreateGroup(dataTag2)).andReturn(new SubscriptionGroup<ItemDefinition<?>>(0, 0.1F));
+        expect(provider.getOrCreateGroup(dataTag1)).andReturn(new SubscriptionGroup<>(0, 0.1F));
+        expect(provider.getOrCreateGroup(dataTag2)).andReturn(new SubscriptionGroup<>(0, 0.1F));
         endpoint.onSubscribe(isA(Collection.class));
-        
+
         replay(endpoint, factory, provider);
         endpoint.addDataTags(dataTags);
         verify(endpoint, factory, provider);
     }
-    
+
     @Test
     public void testAddCommandTagsEmpty() {
-        Collection<ISourceCommandTag> commandTags = new ArrayList<ISourceCommandTag>();
+        Collection<ISourceCommandTag> commandTags = new ArrayList<>();
 
         replay(endpoint, factory, provider);
         endpoint.addCommandTags(commandTags);
@@ -123,7 +123,7 @@ public class OPCEndpointTest {
 
     @Test
     public void testAddCommandTags() throws ConfigurationException {
-        Collection<ISourceCommandTag> commandTags = new ArrayList<ISourceCommandTag>();
+        Collection<ISourceCommandTag> commandTags = new ArrayList<>();
         OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("asd");
         SourceCommandTag commandTag1 = new SourceCommandTag(1L, "asd");
         commandTag1.setHardwareAddress(address);
@@ -132,7 +132,7 @@ public class OPCEndpointTest {
         commandTag2.setHardwareAddress(address);
         commandTags.add(commandTag2);
 
-        ItemDefinition<String> itemAddress = new ItemDefinition<String>(1L, "asd");
+        ItemDefinition<String> itemAddress = new ItemDefinition<>(1L, "asd");
         expect(factory.createItemDefinition(1L, address)).andReturn(itemAddress);
         expect(factory.createItemDefinition(2L, address)).andReturn(itemAddress);
 
@@ -140,27 +140,27 @@ public class OPCEndpointTest {
         endpoint.addCommandTags(commandTags);
         verify(endpoint, factory, provider);
     }
-    
+
     @Test
     public void testNotifyEndPointListenersValueChange() throws ConfigurationException {
-        IOPCEndpointListener endpointListener = 
+        IOPCEndpointListener endpointListener =
             createMock(IOPCEndpointListener.class);
-        Collection<ISourceDataTag> dataTags = 
-            new ArrayList<ISourceDataTag>();
+        Collection<ISourceDataTag> dataTags =
+            new ArrayList<>();
         OPCHardwareAddressImpl hwimpl = new OPCHardwareAddressImpl("asd");
         DataTagAddress address = new DataTagAddress(hwimpl);
         SourceDataTag dataTag = new SourceDataTag(1L, "asd", false);
         dataTag.setAddress(address);
         dataTags.add(dataTag);
-        
-        ItemDefinition<String> itemAddress = new ItemDefinition<String>(1L, "asd");
+
+        ItemDefinition<String> itemAddress = new ItemDefinition<>(1L, "asd");
         expect(factory.createItemDefinition(1L, hwimpl)).andReturn(itemAddress);
         expect(provider.getOrCreateGroup(dataTag)).andReturn(
-                new SubscriptionGroup<ItemDefinition<?>>(0, 0.1F));
+                new SubscriptionGroup<>(0, 0.1F));
         // expected once
         endpointListener.onNewTagValue(dataTag, 2L, "value");
         endpoint.onSubscribe(isA(Collection.class));
-        
+
         replay(endpoint, endpointListener, factory, provider);
         endpoint.addDataTags(dataTags);
         endpoint.registerEndpointListener(endpointListener);
@@ -169,28 +169,28 @@ public class OPCEndpointTest {
         endpoint.notifyEndpointListenersValueChange(1L, 2L, "value");
         verify(endpoint, endpointListener, factory, provider);
     }
-    
+
     @Test
     public void testNotifyEndPointListenersItemError() throws ConfigurationException {
-        IOPCEndpointListener endpointListener = 
+        IOPCEndpointListener endpointListener =
             createMock(IOPCEndpointListener.class);
-        Collection<ISourceDataTag> dataTags = 
-            new ArrayList<ISourceDataTag>();
+        Collection<ISourceDataTag> dataTags =
+            new ArrayList<>();
         OPCHardwareAddressImpl hwimpl = new OPCHardwareAddressImpl("asd");
         DataTagAddress address = new DataTagAddress(hwimpl);
         SourceDataTag dataTag = new SourceDataTag(1L, "asd", false);
         dataTag.setAddress(address);
         dataTags.add(dataTag);
-        
-        ItemDefinition<String> itemAddress = new ItemDefinition<String>(1L, "asd");
+
+        ItemDefinition<String> itemAddress = new ItemDefinition<>(1L, "asd");
         expect(factory.createItemDefinition(1L, hwimpl)).andReturn(itemAddress);
         expect(provider.getOrCreateGroup(dataTag)).andReturn(
-                new SubscriptionGroup<ItemDefinition<?>>(0, 0.1F));
+                new SubscriptionGroup<>(0, 0.1F));
         // expected once
         Exception ex = new Exception();
         endpointListener.onTagInvalidException(dataTag, ex);
         endpoint.onSubscribe(isA(Collection.class));
-        
+
         replay(endpoint, endpointListener, factory, provider);
         endpoint.addDataTags(dataTags);
         endpoint.registerEndpointListener(endpointListener);
@@ -199,16 +199,16 @@ public class OPCEndpointTest {
         endpoint.notifyEndpointListenersItemError(1L, ex);
         verify(endpoint, endpointListener, factory, provider);
     }
-    
+
     @Test
     public void testNotifyEndPointListenersSubscriptionError() throws ConfigurationException {
-        IOPCEndpointListener endpointListener = 
+        IOPCEndpointListener endpointListener =
             createMock(IOPCEndpointListener.class);
-        
+
         // expected once
         Exception ex = new Exception();
         endpointListener.onSubscriptionException(ex);
-        
+
         replay(endpointListener);
         endpoint.registerEndpointListener(endpointListener);
         endpoint.notifyEndpointListenersSubscriptionFailed(ex);
@@ -216,10 +216,10 @@ public class OPCEndpointTest {
         endpoint.notifyEndpointListenersSubscriptionFailed(ex);
         verify(endpointListener);
     }
-    
+
     @Test
     public void testRefresh() throws ConfigurationException {
-        Collection<ISourceDataTag> dataTags = new ArrayList<ISourceDataTag>();
+        Collection<ISourceDataTag> dataTags = new ArrayList<>();
         OPCHardwareAddressImpl hwimpl = new OPCHardwareAddressImpl("asd");
         DataTagAddress address = new DataTagAddress(hwimpl);
         SourceDataTag dataTag1 = new SourceDataTag(1L, "asd", false);
@@ -228,17 +228,17 @@ public class OPCEndpointTest {
         SourceDataTag dataTag2 = new SourceDataTag(2L, "asd", false);
         dataTag2.setAddress(address);
         dataTags.add(dataTag2);
-        
-        ItemDefinition<String> itemAddress = new ItemDefinition<String>(1L, "asd");
+
+        ItemDefinition<String> itemAddress = new ItemDefinition<>(1L, "asd");
         expect(factory.createItemDefinition(1L, hwimpl)).andReturn(itemAddress);
         expect(factory.createItemDefinition(2L, hwimpl)).andReturn(itemAddress);
-        expect(provider.getOrCreateGroup(dataTag1)).andReturn(new SubscriptionGroup<ItemDefinition<?>>(0, 0.1F));
-        expect(provider.getOrCreateGroup(dataTag2)).andReturn(new SubscriptionGroup<ItemDefinition<?>>(0, 0.1F));
+        expect(provider.getOrCreateGroup(dataTag1)).andReturn(new SubscriptionGroup<>(0, 0.1F));
+        expect(provider.getOrCreateGroup(dataTag2)).andReturn(new SubscriptionGroup<>(0, 0.1F));
         endpoint.onSubscribe(isA(Collection.class));
         Capture<Collection<ItemDefinition<String>>> capture =
-            new Capture<Collection<ItemDefinition<String>>>();
+            new Capture<>();
         endpoint.onRefresh(capture(capture));
-        
+
         replay(endpoint, factory, provider);
         endpoint.addDataTags(dataTags);
         endpoint.setStateOperational();
@@ -246,10 +246,10 @@ public class OPCEndpointTest {
         verify(endpoint, factory, provider);
         assertEquals(2, capture.getValue().size());
     }
-    
+
     @Test
     public void testRefreshUnknownTags() throws ConfigurationException {
-        Collection<ISourceDataTag> dataTags = new ArrayList<ISourceDataTag>();
+        Collection<ISourceDataTag> dataTags = new ArrayList<>();
         OPCHardwareAddressImpl hwimpl = new OPCHardwareAddressImpl("asd");
         DataTagAddress address = new DataTagAddress(hwimpl);
         SourceDataTag dataTag1 = new SourceDataTag(1L, "asd", false);
@@ -258,18 +258,18 @@ public class OPCEndpointTest {
         SourceDataTag dataTag2 = new SourceDataTag(2L, "asd", false);
         dataTag2.setAddress(address);
         dataTags.add(dataTag2);
-        
+
         Capture<Collection<ItemDefinition<String>>> capture =
-            new Capture<Collection<ItemDefinition<String>>>();
+            new Capture<>();
         endpoint.onRefresh(capture(capture));
-        
+
         replay(endpoint, factory, provider);
         endpoint.setStateOperational();
         endpoint.refreshDataTags(dataTags);
         verify(endpoint, factory, provider);
         assertEquals(0, capture.getValue().size());
     }
-    
+
     @Test
     public void testExecuteCommandWrite() throws ConfigurationException {
         OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("asd");
@@ -279,18 +279,18 @@ public class OPCEndpointTest {
             new SourceCommandTagValue(1L, "asd", 1L, (short) 0, value , "String");
         ISourceCommandTag commandTag =
             new SourceCommandTag(1L, "asd", 100, 1000, address );
-        
+
         expect(factory.createItemDefinition(1L, address))
-            .andReturn(new ItemDefinition<String>(1L, "asd"));
+            .andReturn(new ItemDefinition<>(1L, "asd"));
         endpoint.onWrite(isA(ItemDefinition.class), eq(value));
-        
+
         replay(endpoint, factory);
         endpoint.addCommandTag(commandTag);
         endpoint.setStateOperational();
         endpoint.executeCommand(address, sctValue);
         verify(endpoint, factory);
     }
-    
+
     @Test
     public void testExecuteCommandWriteReWriteForBoolean() throws ConfigurationException, InterruptedException {
         OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("asd", 1);
@@ -300,12 +300,12 @@ public class OPCEndpointTest {
             new SourceCommandTagValue(1L, "asd", 1L, (short) 0, value , "Boolean");
         ISourceCommandTag commandTag =
             new SourceCommandTag(1L, "asd", 100, 1000, address );
-        
+
         expect(factory.createItemDefinition(1L, address))
-            .andReturn(new ItemDefinition<String>(1L, "asd"));
+            .andReturn(new ItemDefinition<>(1L, "asd"));
         endpoint.onWrite(isA(ItemDefinition.class), eq(true));
         endpoint.onWrite(isA(ItemDefinition.class), eq(false));
-        
+
         replay(endpoint, factory);
         endpoint.addCommandTag(commandTag);
         endpoint.setStateOperational();
@@ -313,7 +313,7 @@ public class OPCEndpointTest {
         Thread.sleep(5);
         verify(endpoint, factory);
     }
-    
+
     @Test
     public void testExecuteCommandWriteReWriteForInteger() throws ConfigurationException, InterruptedException {
         OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("asd", 1);
@@ -323,12 +323,12 @@ public class OPCEndpointTest {
             new SourceCommandTagValue(1L, "asd", 1L, (short) 0, value , "Integer");
         ISourceCommandTag commandTag =
             new SourceCommandTag(1L, "asd", 100, 1000, address );
-        
+
         expect(factory.createItemDefinition(1L, address))
-            .andReturn(new ItemDefinition<String>(1L, "asd"));
+            .andReturn(new ItemDefinition<>(1L, "asd"));
         endpoint.onWrite(isA(ItemDefinition.class), eq(value));
         endpoint.onWrite(isA(ItemDefinition.class), eq(Integer.valueOf(0)));
-        
+
         replay(endpoint, factory);
         endpoint.addCommandTag(commandTag);
         endpoint.setStateOperational();
@@ -336,7 +336,7 @@ public class OPCEndpointTest {
         Thread.sleep(5);
         verify(endpoint, factory);
     }
-    
+
     @Test
     public void testExecuteCommandWriteReWriteForString() throws ConfigurationException, InterruptedException {
         OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("asd", 1);
@@ -346,12 +346,12 @@ public class OPCEndpointTest {
             new SourceCommandTagValue(1L, "asd", 1L, (short) 0, value , "String");
         ISourceCommandTag commandTag =
             new SourceCommandTag(1L, "asd", 100, 1000, address );
-        
+
         expect(factory.createItemDefinition(1L, address))
-            .andReturn(new ItemDefinition<String>(1L, "asd"));
+            .andReturn(new ItemDefinition<>(1L, "asd"));
         endpoint.onWrite(isA(ItemDefinition.class), eq(value));
         endpoint.onWrite(isA(ItemDefinition.class), eq(""));
-        
+
         replay(endpoint, factory);
         endpoint.addCommandTag(commandTag);
         endpoint.setStateOperational();
@@ -359,7 +359,7 @@ public class OPCEndpointTest {
         Thread.sleep(5);
         verify(endpoint, factory);
     }
-    
+
     @Test
     public void testExecuteCommandMethod() throws ConfigurationException, InterruptedException {
         OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("asd", 1);
@@ -369,18 +369,18 @@ public class OPCEndpointTest {
             new SourceCommandTagValue(1L, "asd", 1L, (short) 0, value , "Boolean");
         ISourceCommandTag commandTag =
             new SourceCommandTag(1L, "asd", 100, 1000, address );
-        
+
         expect(factory.createItemDefinition(1L, address))
-            .andReturn(new ItemDefinition<String>(1L, "asd"));
+            .andReturn(new ItemDefinition<>(1L, "asd"));
         endpoint.onCallMethod(isA(ItemDefinition.class), eq(true));
-        
+
         replay(endpoint, factory);
         endpoint.addCommandTag(commandTag);
         endpoint.setStateOperational();
         endpoint.executeCommand(address, sctValue);
         verify(endpoint, factory);
     }
-    
+
     @Test(expected=OPCCriticalException.class)
     public void testExecuteCommandParseError() throws ConfigurationException {
         OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("asd", 1);
@@ -390,17 +390,17 @@ public class OPCEndpointTest {
             new SourceCommandTagValue(1L, "asd", 1L, (short) 0, value , "asd");
         ISourceCommandTag commandTag =
             new SourceCommandTag(1L, "asd", 100, 1000, address );
-        
+
         expect(factory.createItemDefinition(1L, address))
-            .andReturn(new ItemDefinition<String>(1L, "asd"));
-        
+            .andReturn(new ItemDefinition<>(1L, "asd"));
+
         replay(factory);
         endpoint.addCommandTag(commandTag);
         verify(factory);
         endpoint.executeCommand(address, sctValue);
-        
+
     }
-    
+
     @Test(expected=OPCCriticalException.class)
     public void testExecuteCommandUnknown() throws ConfigurationException {
         OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("asd", 1);
@@ -408,10 +408,10 @@ public class OPCEndpointTest {
         Object value = true;
         SourceCommandTagValue sctValue =
             new SourceCommandTagValue(1L, "asd", 1L, (short) 0, value , "Boolean");
-        
+
         endpoint.executeCommand(address, sctValue);
     }
-    
+
     @Test(expected=OPCCriticalException.class)
     public void testState() {
         assertEquals(endpoint.getState(), IOPCEndpoint.STATE.INITIALIZED);
@@ -427,7 +427,7 @@ public class OPCEndpointTest {
         // critical exception (wrong state)
         endpoint.executeCommand(null, null);
     }
-    
+
     @Test(expected=OPCCriticalException.class)
     public void testAddRemoveCommandTag() throws ConfigurationException {
         OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("asd", 1);
@@ -437,29 +437,29 @@ public class OPCEndpointTest {
             new SourceCommandTagValue(1L, "asd", 1L, (short) 0, value , "Boolean");
         ISourceCommandTag commandTag =
             new SourceCommandTag(1L, "asd", 100, 1000, address );
-        
+
         expect(factory.createItemDefinition(1L, address))
-            .andReturn(new ItemDefinition<String>(1L, "asd"));
+            .andReturn(new ItemDefinition<>(1L, "asd"));
         endpoint.onCallMethod(isA(ItemDefinition.class), eq(true));
-        
+
         replay(endpoint, factory);
         endpoint.addCommandTag(commandTag);
         endpoint.executeCommand(address, sctValue);
         verify(endpoint, factory);
-        
+
         endpoint.removeCommandTag(commandTag);
         // should now fail
         endpoint.executeCommand(address, sctValue);
     }
-    
+
     @Test
     public void testWrite() throws ConfigurationException {
         OPCHardwareAddressImpl hwimpl = new OPCHardwareAddressImpl("asd");
-        
-        ItemDefinition<String> itemAddress = new ItemDefinition<String>(1L, "asd");
+
+        ItemDefinition<String> itemAddress = new ItemDefinition<>(1L, "asd");
         expect(factory.createItemDefinition(1L, hwimpl)).andReturn(itemAddress);
         endpoint.onWrite(isA(ItemDefinition.class), eq(true));
-        
+
         replay(factory, endpoint);
         endpoint.setStateOperational();
         endpoint.write(hwimpl, true);

@@ -30,21 +30,17 @@ import org.junit.Before;
 import org.junit.Test;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.common.logger.EquipmentLoggerFactory;
-import cern.c2mon.opc.stack.connection.common.IOPCEndpointFactory;
-import cern.c2mon.opc.stack.connection.common.impl.EndpointControllerDefault;
-import cern.c2mon.opc.stack.connection.EndpointEquipmentLogListener;
-import cern.c2mon.opc.stack.connection.EndpointTypesUnknownException;
-import cern.c2mon.opc.stack.connection.common.IOPCEndpoint;
-import cern.c2mon.opc.stack.connection.common.IOPCEndpoint.STATE;
-import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddress;
+import cern.c2mon.daq.opc.EndpointEquipmentLogListener;
+import cern.c2mon.daq.opc.EndpointTypesUnknownException;
+import cern.c2mon.daq.opc.common.IOPCEndpoint;
+import cern.c2mon.daq.opc.common.IOPCEndpoint.STATE;
+import cern.c2mon.daq.opc.common.IOPCEndpointFactory;
+import cern.c2mon.daq.opc.common.impl.EndpointControllerDefault;
+import cern.c2mon.daq.opc.common.impl.OPCUADefaultAddress;
 import cern.c2mon.shared.common.ConfigurationException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.command.SourceCommandTag;
-import cern.c2mon.shared.common.datatag.DataTagAddress;
-import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import cern.c2mon.shared.common.datatag.SourceDataQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTag;
+import cern.c2mon.shared.common.datatag.*;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
@@ -84,15 +80,14 @@ public class EndpointControllerTest {
         opcAddress = new OPCUADefaultAddress.DefaultBuilder(
                 "test://somhost/somepath", 1000, 1000)
                 .build();
-        addresses = new ArrayList<OPCUADefaultAddress>();
+        addresses = new ArrayList<>();
         addresses.add(opcAddress);
         sourceDataTags =
-            new HashMap<Long, ISourceDataTag>();
+            new HashMap<>();
         sourceCommandTags =
-            new HashMap<Long, ISourceCommandTag>();
+            new HashMap<>();
         controller = new EndpointControllerDefault(
-                factory, sender, new EquipmentLoggerFactory("asd", 1L, "asd", "asd", false, false),
-                addresses, conf);
+                factory, sender, addresses, conf);
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
 
             @Override
@@ -234,8 +229,7 @@ public class EndpointControllerTest {
         ISourceDataTag dataTag = new SourceDataTag(1L, "asd", false);
         Throwable cause = new Exception("The cause of the problem");
 
-        sender.sendInvalidTag(eq(dataTag), eq(SourceDataQuality.DATA_UNAVAILABLE),
-                eq(cause.getMessage()));
+        sender.update(eq(1L), eq(new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE, cause.getMessage())));
 
         replay(sender);
         controller.onTagInvalidException(dataTag, cause);
@@ -260,7 +254,7 @@ public class EndpointControllerTest {
         initializeEndpoint();
 
         expect(endpoint.getState()).andReturn(STATE.INITIALIZED);
-        Collection<ISourceDataTag> tags = new ArrayList<ISourceDataTag>(1);
+        Collection<ISourceDataTag> tags = new ArrayList<>(1);
         ISourceDataTag tag = new SourceDataTag(1L, "asd", false);
         tags.add(tag);
         endpoint.refreshDataTags(tags);

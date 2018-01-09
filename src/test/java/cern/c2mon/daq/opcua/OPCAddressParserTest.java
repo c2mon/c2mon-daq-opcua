@@ -16,18 +16,18 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.Test;
 
-import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddressParser.AddressKeys;
-import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddress;
-import cern.c2mon.opc.stack.connection.common.impl.OPCUADefaultAddressParser;
+import cern.c2mon.daq.opc.common.AbstractOPCUAAddressParser.AddressKeys;
+import cern.c2mon.daq.opc.common.impl.OPCUADefaultAddress;
+import cern.c2mon.daq.opc.common.impl.OPCUADefaultAddressParser;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class OPCAddressParserTest {
 

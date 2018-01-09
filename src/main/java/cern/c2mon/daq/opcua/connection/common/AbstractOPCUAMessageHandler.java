@@ -16,9 +16,11 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection.common;
 
+import lombok.extern.slf4j.Slf4j;
+
+import cern.c2mon.daq.opc.AbstractEquipmentMessageHandler;
+import cern.c2mon.daq.opc.common.impl.OPCCriticalException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
-import cern.c2mon.opc.stack.connection.AbstractEquipmentMessageHandler;
-import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 
 /**
@@ -30,6 +32,7 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
  *
  * @author Nacho Vilches
  */
+@Slf4j
 public abstract class AbstractOPCUAMessageHandler extends AbstractEquipmentMessageHandler {
 
   /**
@@ -56,9 +59,9 @@ public abstract class AbstractOPCUAMessageHandler extends AbstractEquipmentMessa
    */
   @Override
   public synchronized void disconnectFromDataSource() throws EqIOException {
-    getEquipmentLogger().debug("disconnecting from OPC data source...");
+    log.debug("disconnecting from OPC data source...");
     controller.stop();
-    getEquipmentLogger().debug("disconnected");
+    log.debug("disconnected");
   }
 
   /**
@@ -68,7 +71,7 @@ public abstract class AbstractOPCUAMessageHandler extends AbstractEquipmentMessa
    */
   @Override
   public synchronized void refreshDataTag(final long dataTagId) {
-    getEquipmentLogger().debug("refreshing data tag " + dataTagId);
+    log.debug("refreshing data tag {}", dataTagId);
     ISourceDataTag sourceDataTag =
             getEquipmentConfiguration().getSourceDataTag(dataTagId);
     if (sourceDataTag == null)

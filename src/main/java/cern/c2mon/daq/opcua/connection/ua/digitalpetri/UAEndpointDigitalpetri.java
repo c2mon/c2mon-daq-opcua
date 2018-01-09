@@ -48,13 +48,13 @@ import org.opcfoundation.ua.transport.security.SecurityMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import cern.c2mon.daq.opc.common.AbstractOPCUAAddress;
+import cern.c2mon.daq.opc.common.IGroupProvider;
+import cern.c2mon.daq.opc.common.IItemDefinitionFactory;
+import cern.c2mon.daq.opc.common.impl.OPCCommunicationException;
+import cern.c2mon.daq.opc.common.impl.OPCCriticalException;
+import cern.c2mon.daq.opc.common.impl.SubscriptionGroup;
 import cern.c2mon.daq.opcua.connection.common.impl.OPCEndpoint;
-import cern.c2mon.opc.stack.connection.common.AbstractOPCUAAddress;
-import cern.c2mon.opc.stack.connection.common.IGroupProvider;
-import cern.c2mon.opc.stack.connection.common.IItemDefinitionFactory;
-import cern.c2mon.opc.stack.connection.common.impl.OPCCommunicationException;
-import cern.c2mon.opc.stack.connection.common.impl.OPCCriticalException;
-import cern.c2mon.opc.stack.connection.common.impl.SubscriptionGroup;
 
 import static com.digitalpetri.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 import static com.google.common.collect.Lists.newArrayList;
