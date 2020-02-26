@@ -16,14 +16,13 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua;
 
-import java.util.Date;
-
-import lombok.extern.slf4j.Slf4j;
-
-import cern.c2mon.daq.opcua.connection.common.IOPCEndpointListener;
+import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.type.TypeConverter;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.Date;
 
 /**
  * Listener for endpoint events. Makes sure all important events are logged.
@@ -31,7 +30,7 @@ import cern.c2mon.shared.common.type.TypeConverter;
  * @author Andreas Lang
  */
 @Slf4j
-public class EndpointEquipmentLogListener implements IOPCEndpointListener {
+public class EndpointEquipmentLogListener implements EndpointListener {
 
   /**
    * Creates a new endpoint log listener.
