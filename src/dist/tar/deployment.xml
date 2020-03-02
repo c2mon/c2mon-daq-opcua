@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <products>
-  <product name="tim2-daq-opcua">
+  <product name="tim2-daq-it">
     
     <application name="default">
-      <deployment installLocation="/opt/tim2-daq-opcua">
+      <deployment installLocation="/opt/tim2-daq-it">
         <backupPolicy keepBackups="2">
           <preserve type="dir" name="tmp"/>
           <preserve type="dir" name="log"/>
@@ -12,8 +12,8 @@
       </deployment>
     </application>
 
-    <application name="tim2-daq-opcua-prod" extends="default">
-      <deployment installLocation="/opt/tim2-daq-opcua">
+    <application name="tim2-daq-it-prod" extends="default">
+      <deployment installLocation="/opt/tim2-daq-it">
         <notification>
           <mail address="tim-admin@cern.ch"/>
         </notification>
@@ -23,8 +23,8 @@
       </deployment>
     </application>
 
-    <application name="tim2-daq-opcua-test" extends="default">
-      <deployment installLocation="/opt/tim2-daq-opcua-test">
+    <application name="tim2-daq-it-test" extends="default">
+      <deployment installLocation="/opt/tim2-daq-it-test">
         <directory name="conf">
           <file name="c2mon-daq.properties" sourceDir="/user/timtest/rep/c2mon/daq" mask="400"/>
         </directory>

@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.daq.opcua.connection.Deadband;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

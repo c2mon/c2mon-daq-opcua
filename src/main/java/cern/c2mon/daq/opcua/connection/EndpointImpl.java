@@ -16,89 +16,52 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.address.EquipmentAddress;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.GroupDefinitionPair;
-import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
+import cern.c2mon.daq.opcua.mapping.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
-import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
-import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
-import org.eclipse.milo.opcua.sdk.client.subscriptions.OpcUaSubscriptionManager;
-import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
-import org.eclipse.milo.opcua.stack.core.AttributeId;
-import org.eclipse.milo.opcua.stack.core.UaException;
-import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
-import org.eclipse.milo.opcua.stack.core.types.builtin.*;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.DataChangeTrigger;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.MonitoringMode;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
-import org.eclipse.milo.opcua.stack.core.types.structured.*;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
-import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
-
-/**
- * Wraps interaction with the Milo Client.
- */
 @Slf4j
 public class EndpointImpl implements Endpoint {
 
-    private static Executor executor = Executors.newCachedThreadPool();
     private final Collection<EndpointListener> listeners = new ConcurrentLinkedQueue<>();
-    private OpcUaClient client;
-    private TagSubscriptionMapper tagSubscriptionMapper;
+    private MiloClientWrapper client;
+    private TagSubscriptionMapper mapper;
 
-    @Getter
-    private EquipmentAddress equipmentAddress;
-
-    public EndpointImpl(TagSubscriptionMapper tagSubscriptionMapper) {
-        this(tagSubscriptionMapper, null);
-    }
-
-    public EndpointImpl(TagSubscriptionMapper tagSubscriptionMapper, final OpcUaClient client) {
-        this.tagSubscriptionMapper = tagSubscriptionMapper;
+    public EndpointImpl (TagSubscriptionMapper mapper, final MiloClientWrapper client) {
+        this.mapper = mapper;
         this.client = client;
     }
 
-    public synchronized void initialize(EquipmentAddress address) {
-        this.equipmentAddress = address;
-        String uri = this.equipmentAddress.getUriString();
-        SecurityPolicy sp = SecurityPolicy.None;
-
+    public synchronized void initialize () {
         try {
-            this.client = createClient(uri, sp)
-                    .thenCompose(OpcUaClient::connect)
-                    .thenApply(OpcUaClient.class::cast)
-                    .get();
-        } catch (Exception e) {
-            this.client = null;
-            throw new OPCCommunicationException("Could not connect to the OPC Server.", e);
+            client.initialize();
+        } catch (ExecutionException | InterruptedException e) {
+            throw new OPCCommunicationException("Could not connect to the client.", e);
         }
     }
 
     @Override
-    public synchronized CompletableFuture<Void> subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) {
+    public synchronized CompletableFuture<Void> subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) {
         if (dataTags.isEmpty()) {
             throw new IllegalArgumentException("No data tags to subscribe.");
         }
 
-        return CompletableFuture.allOf(tagSubscriptionMapper
+        return CompletableFuture.allOf(mapper
                 .toGroups(dataTags)
                 .entrySet()
                 .stream()
@@ -107,194 +70,78 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public synchronized CompletableFuture<Void> subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
-        GroupDefinitionPair pair = tagSubscriptionMapper.toGroup(sourceDataTag);
-        return CompletableFuture.allOf(subscribeToGroup(pair.getSubscriptionGroup(), Collections.singletonList(pair.getItemDefinition())));
-    }
-
-    private CompletableFuture<List<UaMonitoredItem>> subscribeToGroup(SubscriptionGroup group, List<ItemDefinition> definitions){
-            UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription() : createSubscription(group);
-            group.setSubscription(subscription);
-            return subscribeItemDefinitions(subscription, definitions, group.getDeadband());
-    }
-
-    private UaSubscription createSubscription(SubscriptionGroup group) {
-        OpcUaSubscriptionManager subscriptionManager = client.getSubscriptionManager();
+    public synchronized void subscribeTag (@NonNull final ISourceDataTag sourceDataTag) throws OPCCommunicationException {
+        GroupDefinitionPair pair = mapper.toGroup(sourceDataTag);
         try {
-            return subscriptionManager.createSubscription(group.getDeadband().getTime()).get();
+            subscribeToGroup(pair.getSubscriptionGroup(), Collections.singletonList(pair.getItemDefinition())).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw new OPCCommunicationException("Could not create a subscription", e);
+            throw new OPCCommunicationException("Could not subscribe to Tag.", e);
         }
     }
 
-    private CompletableFuture<List<UaMonitoredItem>> subscribeItemDefinitions(UaSubscription subscription, Collection<ItemDefinition> definitions, Deadband deadband) {
-        List<MonitoredItemCreateRequest> requests = definitions
-                .stream()
-                .map(definition -> createItemSubscriptionRequest(definition, deadband))
-                .collect(Collectors.toList());
-        return subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback(definitions));
+    private CompletableFuture<Void> subscribeToGroup (SubscriptionGroup group, List<ItemDefinition> definitions) {
+        UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription() : createSubscription(group);
+        group.setSubscription(subscription);
+
+        return client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback)
+                .thenAccept(this::subscriptionCompletedCallback);
     }
 
-    private BiConsumer<UaMonitoredItem, Integer> itemCreationCallback(Collection<ItemDefinition> definitions) {
-        tagSubscriptionMapper.registerDefinitionsInGroup(definitions);
-        return (item, i) -> item.setValueConsumer(value -> notifyEndpointsAboutMonitoredItemChange(value, item.getClientHandle()));
-    }
-
-    private MonitoredItemCreateRequest createItemSubscriptionRequest(ItemDefinition definition, Deadband deadband) {
-        // What is a sensible value for the queue size? Must be large enough to hold all notifications queued in between publishing cycles.
-        // Currently, we are only keeping the newest value.
-        int queueSize = 0;
-        DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue, uint(deadband.getType()), (double) deadband.getValue());
-
-        MonitoringParameters parameters = new MonitoringParameters(definition.getClientHandle(),
-                (double) deadband.getTime(),
-                ExtensionObject.encode(client.getSerializationContext(), filter),
-                uint(queueSize),
-                true);
-
-        ReadValueId readValueId = new ReadValueId(definition.getAddress(), AttributeId.Value.uid(),null,QualifiedName.NULL_VALUE);
-        return new MonitoredItemCreateRequest(readValueId, MonitoringMode.Reporting, parameters);
+    private UaSubscription createSubscription (SubscriptionGroup group) {
+        return client.createSubscription(group.getDeadband().getTime());
     }
 
     @Override
-    public synchronized CompletableFuture<Void> removeDataTag(final ISourceDataTag dataTag) {
-        GroupDefinitionPair pair = tagSubscriptionMapper.removeTagFromGroup(dataTag);
+    public synchronized CompletableFuture<Void> removeDataTag (final ISourceDataTag dataTag) throws IllegalArgumentException {
+        GroupDefinitionPair pair = mapper.toGroup(dataTag);
         SubscriptionGroup subscriptionGroup = pair.getSubscriptionGroup();
 
         if (!subscriptionGroup.isSubscribed()) {
             throw new IllegalArgumentException("The tag cannot be removed, since the subscription group is not subscribed.");
         }
 
-        return removeItemFromSubscription(pair, subscriptionGroup);
+        return removeItemFromSubscription(pair, subscriptionGroup).thenRun(() -> mapper.removeTagFromGroup(dataTag));
     }
 
-    private CompletableFuture<Void> removeItemFromSubscription(GroupDefinitionPair pair, SubscriptionGroup subscriptionGroup) {
+    private CompletableFuture<Void> removeItemFromSubscription (GroupDefinitionPair pair, SubscriptionGroup subscriptionGroup) {
         UaSubscription subscription = subscriptionGroup.getSubscription();
         return subscriptionGroup.isEmpty() ?
                 removeSubscription(subscriptionGroup, subscription) :
-                removeItemFromSubscription(pair.getItemDefinition(), subscription);
+                client.deleteItemFromSubscription(pair.getItemDefinition().getClientHandle(), subscription);
     }
 
-
-    private CompletableFuture<Void> removeItemFromSubscription(ItemDefinition definitionToRemove, UaSubscription subscription) {
-        List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems()
-                .stream()
-                .filter(uaMonitoredItem -> definitionToRemove.getClientHandle().equals(uaMonitoredItem.getClientHandle()))
-                .collect(Collectors.toList());
-        return CompletableFuture.allOf(subscription.deleteMonitoredItems(itemsToRemove));
-    }
-
-    private CompletableFuture<Void> removeSubscription(SubscriptionGroup subscriptionGroup, UaSubscription subscription) {
+    private CompletableFuture<Void> removeSubscription (SubscriptionGroup subscriptionGroup, UaSubscription subscription) {
         subscriptionGroup.setSubscription(null);
-        return CompletableFuture.allOf(client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()));
+        return client.deleteSubscription(subscription);
     }
 
-    /**
-     * Refreshes the values for the provided data tags.
-     *
-     * @param dataTags The data tags whose values shall be refreshed.
-     */
     @Override
-    public synchronized void refreshDataTags(
-            final Collection<ISourceDataTag> dataTags) {
-        //TODO
+    public synchronized void refreshDataTags (final Collection<ISourceDataTag> dataTags) {
+        for (ISourceDataTag dataTag : dataTags) {
+            NodeId address = mapper.getDefinition(dataTag).getAddress();
+            client.read(address).thenAccept(dataValues -> readCallback(dataValues, dataTag));
+        }
     }
 
-    /**
-     * Registers an endpoint listener.
-     *
-     * @param endpointListener The listener to add.
-     */
     @Override
-    public void registerEndpointListener(
-            final EndpointListener endpointListener) {
+    public void registerEndpointListener (final EndpointListener endpointListener) {
         listeners.add(endpointListener);
     }
 
-    /**
-     * Unregisters an endpoint listener.
-     *
-     * @param endpointListener The endpoint listener to remove.
-     */
     @Override
-    public void unRegisterEndpointListener(
-            final EndpointListener endpointListener) {
+    public void unRegisterEndpointListener (final EndpointListener endpointListener) {
         listeners.remove(endpointListener);
     }
 
-    private CompletableFuture<OpcUaClient> createClient(String uri, SecurityPolicy sp) {
-        return DiscoveryClient
-                .getEndpoints(uri)
-                .thenCompose(endpoints -> {
-                        // TODO Authentication
-                        EndpointDescription endpoint = findEndpointMatchingSecurityPolicy(endpoints, sp);
-                        OpcUaClientConfig config = OpcUaClientConfig.builder().setEndpoint(endpoint).build();
-                    try {
-                        return CompletableFuture.completedFuture(OpcUaClient.create(config));
-                    } catch (UaException e) {
-                        CompletableFuture<OpcUaClient> failedFuture = new CompletableFuture<>();
-                        failedFuture.completeExceptionally(e);
-                        return failedFuture;
-                    }
-                });
-    }
-
-    private EndpointDescription findEndpointMatchingSecurityPolicy(List<EndpointDescription> endpoints, SecurityPolicy sp) {
-        return endpoints.stream()
-                .filter(e -> e.getSecurityPolicyUri().equals(sp.getUri()))
-                .findFirst()
-                .orElseThrow(() -> new OPCCommunicationException("The server does not offer any endpoints matching the configuration."));
-    }
-
-    /**
-     * Stops and resets the endpoint completely.
-     */
     @Override
-    public synchronized void reset() {
-        if (client != null) {
-            client.disconnect();
-            client = null;
-        }
+    public synchronized CompletableFuture<Void> reset () {
         listeners.clear();
-        tagSubscriptionMapper.clear();
+        mapper.clear();
+        return CompletableFuture.runAsync(() -> client.disconnect());
     }
 
-    /**
-     * Writes a value to an item and rewrites it after a provided pulse length.
-     *
-     * @param itemDefintion The item definition which defines where to write.
-     * @param pulseLength   The pulse length after which the value should be
-     *                      rewritten.
-     * @param value         The value to write.
-     */
-    private void writeRewrite(final ItemDefinition itemDefintion,
-                              final int pulseLength, final Object value) {
-        onWrite(itemDefintion, value);
-
-        try {
-            Thread.sleep(pulseLength);
-        } catch (InterruptedException e) {
-            throw new OPCCriticalException("Sleep Interrupted.");
-        } finally {
-            if (value instanceof Boolean) {
-                onWrite(itemDefintion, !((Boolean) value));
-            } else if (value instanceof String) {
-                onWrite(itemDefintion, "");
-            } else {
-                // This applies to all numeric use cases and Bytes
-                onWrite(itemDefintion, value.getClass().cast(0));
-            }
-        }
-    }
-
-    /**
-     * Writes a value to the OPC server. Used only be the AliveWriter
-     *
-     * @param address The address which defines where to write.
-     * @param value   The value to write.
-     */
     @Override
-    public synchronized void write(
+    public synchronized void write (
             final OPCHardwareAddress address, final Object value) {
 //        ItemDefinition itemDefinition = ItemDefinitionFactory.createItemDefinition(1L, address);
 //        if (itemDefinition != null) {
@@ -303,59 +150,50 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public synchronized boolean isConnected() {
-        try {
-            client.getSession().get();
-            return true;
-        } catch (Exception e) {
-            return false;
+    public synchronized boolean isConnected () {
+        return client.isConnected();
+    }
+
+    private void readCallback (List<DataValue> dataValues, ISourceDataTag dataTag) {
+        for (DataValue value : dataValues) {
+            if (value.getStatusCode().isBad()) {
+                notifyEndpointsAboutInvalidTag(dataTag);
+            } else {
+                notifyEndpointsAboutMonitoredItemChange(value, dataTag);
+            }
         }
     }
 
-
-    /**
-     * Writes to an item defined by the item definition.
-     *
-     * @param itemDefinition The item definition which defines where to write.
-     * @param value          The value to write.
-     */
-    protected void onWrite(ItemDefinition itemDefinition, Object value) {
-        NodeId nodeId = itemDefinition.getAddress();
-        Variant v = new Variant(value);
-        try {
-            StatusCode statusCode = client.writeValue(nodeId, new DataValue(v)).get();
-            if (!statusCode.isGood()) {
-                throw new OPCCommunicationException("Write failed");
+    private void subscriptionCompletedCallback (List<UaMonitoredItem> monitoredItems) {
+        for (UaMonitoredItem item : monitoredItems) {
+            ISourceDataTag dataTag = mapper.getTagBy(item.getClientHandle());
+            if (item.getStatusCode().isBad()) {
+                notifyEndpointsAboutInvalidTag(dataTag);
+            } else {
+                mapper.addTagToGroup(dataTag);
             }
-        } catch (Exception e) {
-            throw new OPCCommunicationException(e);
         }
     }
 
-
-    /**
-     * Executes the command for the provided item definition.
-     *
-     * @param itemDefinition The item definition for the command.
-     * @param value         The values used as parameters for the command.
-     */
-    protected void onCallMethod(ItemDefinition itemDefinition, Object... value) {
-
+    private void notifyEndpointsAboutInvalidTag (ISourceDataTag tag) {
+        for (EndpointListener listener : listeners) {
+            SourceDataTagQualityCode tagQuality = DataQualityMapper.getBadNodeIdCode();
+            listener.onTagInvalid(tag, new SourceDataTagQuality(tagQuality));
+        }
     }
 
-    private void notifyEndpointsAboutMonitoredItemChange(final DataValue value, UInteger clientHandle) {
-        ISourceDataTag dataTag = tagSubscriptionMapper.getTagBy(clientHandle);
+    private void notifyEndpointsAboutMonitoredItemChange (final DataValue value, ISourceDataTag tag) {
+        for (EndpointListener listener : listeners) {
+            SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
+            ValueUpdate valueUpdate = new ValueUpdate(value, value.getSourceTime().getUtcTime());
+            listener.onNewTagValue(tag, valueUpdate, new SourceDataTagQuality(tagQuality));
+        }
+    }
 
-        executor.execute(() -> {
-            for (EndpointListener listener: listeners) {
-                if (value.getStatusCode() == StatusCode.GOOD) {
-                    listener.onNewTagValue(dataTag, value.getSourceTime().getUtcTime(), value.getValue().getValue());
-                } else {
-                    listener.onTagInvalidException(dataTag,  new OPCCommunicationException(value.getStatusCode().toString()));
-                }
-
-            }
-
+    private void itemCreationCallback (UaMonitoredItem item, Integer i) {
+        item.setValueConsumer(value -> {
+            ISourceDataTag dataTag = mapper.getTagBy(item.getClientHandle());
+            notifyEndpointsAboutMonitoredItemChange(value, dataTag);
         });
     }
 }

@@ -1,4 +1,4 @@
-package it;
+package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.shared.common.datatag.DataTagAddress;

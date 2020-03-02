@@ -16,7 +16,6 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.daq.opcua.connection.Deadband;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
@@ -30,6 +29,11 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     // TODO: this could be avoided (only useful for clientHandle) -> what is quicker?
     private final Map<ISourceDataTag, ItemDefinition> tag2Definition = new ConcurrentHashMap<>();
+
+    public boolean isSubscribed(ISourceDataTag tag) {
+        SubscriptionGroup group = getGroup(Deadband.of(tag));
+        return group.isSubscribed() && group.contains(getDefinition(tag));
+    }
 
     @Override
     public void clear() {
@@ -52,6 +56,11 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         SubscriptionGroup group = getOrCreateGroup(Deadband.of(tag));
         ItemDefinition definition = getOrMakeDefinitionsFrom(Collections.singletonList(tag)).get(0);
         return GroupDefinitionPair.of(group, definition);
+    }
+
+    @Override
+    public void addTagToGroup(ISourceDataTag tag) {
+        registerDefinitionInGroup(getDefinition(tag));
     }
 
     @Override
@@ -124,7 +133,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         return getGroup(deadband) != null;
     }
 
-    private SubscriptionGroup getGroup(Deadband deadband) {
+    public SubscriptionGroup getGroup(Deadband deadband) {
         return subscriptionGroups.get(deadband);
     }
 

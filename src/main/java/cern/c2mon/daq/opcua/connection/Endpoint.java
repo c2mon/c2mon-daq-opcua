@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.address.EquipmentAddress;
+import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 
@@ -36,17 +36,16 @@ public interface Endpoint {
     /**
      * Returns true if the endpoint is connected to a server, else returns false.
      */
-    boolean isConnected();
+    boolean isConnected ();
 
-    void initialize(EquipmentAddress address);
+    void initialize() throws OPCCommunicationException;
 
     /**
      * Adds a data tag to this endpoint.
      *
      * @param sourceDataTag The data tag to add.
-     * @return
      */
-    CompletableFuture<Void> subscribeTag(ISourceDataTag sourceDataTag);
+    void subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
     
     /**
      * Removes a data tag from this endpoint.
@@ -54,7 +53,7 @@ public interface Endpoint {
      * @param sourceDataTag The data tag to remove.
      * @return
      */
-    CompletableFuture<Void> removeDataTag(ISourceDataTag sourceDataTag);
+    CompletableFuture<Void> removeDataTag(ISourceDataTag sourceDataTag) throws IllegalArgumentException;
 
     /**
      * Adds the provided data tags to the endpoint. The endpoint will send
@@ -100,8 +99,8 @@ public interface Endpoint {
     
     /**
      * Stops everything in the endpoint and clears all configuration states.
+     * @return
      */
-    void reset();
+    CompletableFuture<Void> reset();
 
-    EquipmentAddress getEquipmentAddress();
 }

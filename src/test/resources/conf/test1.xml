@@ -1,0 +1,34 @@
+<EquipmentUnit id="5250" name="E_JMX_JMX1">
+    <handler-class-name>automatically-set-by-test</handler-class-name>
+    <commfault-tag-id>107211</commfault-tag-id>
+
+    <commfault-tag-value>false</commfault-tag-value>
+    <address>URI=opc.tcp://test,opc.tcp://test2;user=user@domain,user2@domain2;password=password,password2;serverRetryTimeout=123;serverTimeout=12;aliveWriter=true</address>
+    <SubEquipmentUnits>
+    </SubEquipmentUnits>
+
+    <DataTags>
+        <DataTag id="54675" name="BE.TEST:TEST1" control="false">
+            <data-type>Integer</data-type>
+            <min-value data-type="Integer">0</min-value>
+            <max-value data-type="Integer">64000</max-value>
+            <DataTagAddress>
+                <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                    <namespace>0</namespace>
+                    <opc-item-name>Device.Datapoint1</opc-item-name>
+                    <command-pulse-length>0</command-pulse-length>
+                    <address-type>STRING</address-type>
+                    <command-type>CLASSIC</command-type>#
+                </HardwareAddress>
+                <time-to-live>3600000</time-to-live>
+                <value-deadband-type>1</value-deadband-type>
+                <value-deadband>1.0</value-deadband>
+                <priority>2</priority>
+                <guaranteed-delivery>false</guaranteed-delivery>
+            </DataTagAddress>
+        </DataTag>
+
+    </DataTags>
+    <CommandTags>
+    </CommandTags>
+</EquipmentUnit>

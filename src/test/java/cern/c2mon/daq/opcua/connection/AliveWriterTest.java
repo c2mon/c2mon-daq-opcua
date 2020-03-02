@@ -17,6 +17,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 
+import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,7 +47,7 @@ public class AliveWriterTest {
   }
 
   @Test
-  public void testRun() {
+  public void testRun() throws EqIOException {
     for (int k = 0; k < 3; k++) {
       for (int i = 0; i < Byte.MAX_VALUE; i++) {
         this.endpointMock.write(this.hardwareAddress, Integer.valueOf(i));

@@ -62,8 +62,8 @@ public class ItemDefinition {
         }
         OPCHardwareAddress opcAddress = (OPCHardwareAddress) hardwareAddress;
 
-        //TODO: before, if getNamespaceId = 0, namespaceIndex would be 2. Why?
         int namespaceIndex = opcAddress.getNamespaceId();
+
         String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
 
         NodeId nodeId = new NodeId(namespaceIndex, opcAddress.getOPCItemName());

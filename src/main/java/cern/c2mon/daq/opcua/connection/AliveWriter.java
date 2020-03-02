@@ -62,7 +62,10 @@ public class AliveWriter extends TimerTask {
    * @param targetTag  The tag which represents the value to write to.
    */
   public AliveWriter(final Endpoint endpoint, final long writeTime,
-                     final ISourceDataTag targetTag) {
+                     final ISourceDataTag targetTag) throws IllegalArgumentException {
+    if (targetTag == null) {
+      throw new IllegalArgumentException("TargetTag must not be null");
+    }
     this.endpoint = endpoint;
     this.writeTime = writeTime;
     this.targetTag = targetTag;
@@ -77,7 +80,7 @@ public class AliveWriter extends TimerTask {
     OPCHardwareAddress hardwareAddress =
             (OPCHardwareAddress) targetTag.getHardwareAddress();
     // We send an Integer since Long could cause problems to the OPC
-    Object castedValue = Integer.valueOf(writeCounter.intValue());
+    Object castedValue = writeCounter.intValue();
     if (log.isDebugEnabled()) {
       log.debug("Writing value: " + castedValue
               + " type: " + castedValue.getClass().getName());

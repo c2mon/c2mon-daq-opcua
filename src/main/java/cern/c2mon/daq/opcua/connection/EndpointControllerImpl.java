@@ -17,9 +17,7 @@
 
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
-import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.exceptions.EndpointTypesUnknownException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -28,53 +26,27 @@ import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 
 @Slf4j
-public class EndpointController implements IDataTagChanger {
-    public static final String UA_TCP_TYPE = "opc.tcp";
+public class EndpointControllerImpl implements EndpointController, IDataTagChanger {
 
-    private List<EquipmentAddress> opcAddresses;
     private Endpoint endpoint;
-    private IEquipmentMessageSender sender;
-    private IEquipmentConfiguration configuration;
+    private IEquipmentConfiguration config;
 
-    public EndpointController (final Endpoint endpoint,
-                               final List<EquipmentAddress> opcAddresses,
-                               final IEquipmentMessageSender sender,
-                               final IEquipmentConfiguration configuration) {
+    public EndpointControllerImpl (final Endpoint endpoint,
+                                   final IEquipmentConfiguration config) {
         this.endpoint = endpoint;
-        this.opcAddresses = opcAddresses;
-        this.sender = sender;
-        this.configuration = configuration;
+        this.config = config;
 
     }
 
-    public void initialize () throws EndpointTypesUnknownException {
-        try {
-            startEndpoint().get();
-        } catch (OPCCommunicationException|InterruptedException|ExecutionException e) {
-            checkConnection();
-        }
-    }
-
-    private CompletableFuture<Void> startEndpoint() throws OPCCommunicationException {
-        return endpoint.reset()
-                .thenRun(() -> endpoint.initialize(getEquipmentAddress()))
-                .whenComplete((aVoid, e) -> {
-                    if (e != null) {
-                        sender.confirmEquipmentStateIncorrect(e.getMessage());
-                    } else {
-                        endpoint.subscribeTags(configuration.getSourceDataTags().values());
-                        sender.confirmEquipmentStateOK("Connected to " + endpoint.getEquipmentAddress());
-                    }
-                });
+    public void initialize () throws EndpointTypesUnknownException, OPCCommunicationException {
+        endpoint.reset();
+        endpoint.initialize();
+        endpoint.subscribeTags(config.getSourceDataTags().values());
     }
 
     public void registerEndpointListener (EndpointListener listener) {
@@ -85,21 +57,25 @@ public class EndpointController implements IDataTagChanger {
         endpoint.reset();
     }
 
-    public void checkConnection () {
+    public void checkConnection () throws OPCCommunicationException {
         if (!endpoint.isConnected()) {
             endpoint.reset()
-                    .thenRun(this::startEndpoint)
+                    .thenRun(this::initialize)
                     .exceptionally(e -> {throw new OPCCommunicationException("Cannot establish connection", e);});
             // TODO refresh?
         }
     }
 
     public synchronized void refreshAllDataTags () {
-        endpoint.refreshDataTags(configuration.getSourceDataTags().values());
+        endpoint.refreshDataTags(config.getSourceDataTags().values());
     }
 
     public synchronized void refreshDataTag (ISourceDataTag sourceDataTag) {
         endpoint.refreshDataTags(Collections.singletonList(sourceDataTag));
+    }
+
+    public String updateAliveWriterAndReport () {
+        return  "Alive Writer is not active -> not updated.";
     }
 
     @Override
@@ -143,11 +119,4 @@ public class EndpointController implements IDataTagChanger {
         }
     }
 
-    private EquipmentAddress getEquipmentAddress () {
-        Optional<EquipmentAddress> matchingAddress = this.opcAddresses.stream().filter(o -> o.getProtocol().equals(UA_TCP_TYPE)).findFirst();
-        if (!matchingAddress.isPresent()) {
-            throw new EndpointTypesUnknownException("No supported protocol found. createEndpoint - Endpoint creation for '" + this.opcAddresses + "' failed. Stop Startup.");
-        }
-        return matchingAddress.get();
-    }
 }

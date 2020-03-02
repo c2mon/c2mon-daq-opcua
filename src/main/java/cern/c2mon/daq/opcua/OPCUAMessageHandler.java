@@ -17,10 +17,12 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.EquipmentMessageHandler;
+import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
-import cern.c2mon.daq.opcua.address.AddressStringParser;
-import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.connection.EndpointController;
+import cern.c2mon.daq.opcua.connection.EndpointControllerFactory;
+import cern.c2mon.daq.opcua.connection.EndpointListenerImpl;
 import cern.c2mon.daq.opcua.exceptions.AddressException;
 import cern.c2mon.daq.opcua.exceptions.EndpointTypesUnknownException;
 import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
@@ -31,17 +33,6 @@ import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
-
-/**
- * The AbstractOPCUAMessageHandler is the entry point of the application. It is created
- * and called by the core. Here the OPC module can access the configuration and
- * register listeners for optional events.
- * <p>
- * Abstract class (no implementation of this class)
- *
- * @author Nacho Vilches
- */
 @Slf4j
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger {
 
@@ -49,11 +40,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    * Delay to restart the DAQ after an equipment change.
    */
   private static final long RESTART_DELAY = 2000L;
-
-  /**
-   * The endpoint controller for this module.
-   */
-  protected EndpointController controller;
+  private EndpointController controller;
 
   /**
    * Called when the core wants the OPC module to start up and connect to the
@@ -63,41 +50,32 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    *                       problem during startup.
    */
   @Override
-  public synchronized void connectToDataSource() throws EqIOException {
+  public synchronized void connectToDataSource () throws EqIOException {
     IEquipmentConfiguration config = getEquipmentConfiguration();
-
-    log.debug("connectToDataSource - starting connect to OPC data source");
+    IEquipmentMessageSender sender = getEquipmentMessageSender();
 
     try {
-      List<EquipmentAddress> equipmentAddresses = AddressStringParser.parse(config.getAddress());
-      log.debug("connectToDataSource - creating endpoint");
+      controller = EndpointControllerFactory.getController(config);
+      controller.initialize();
+    } catch (AddressException e) {
+      throw new EqIOException("OPC address configuration string is invalid.", e);
+    } catch (EndpointTypesUnknownException e) {
+      throw new EqIOException("Not an appropriate OPC-UA protocol.", e);
+    }
 
-      controller = new EndpointController(getEquipmentMessageSender(), equipmentAddresses, config);
-      log.debug("connectToDataSource - starting endpoint");
-      controller.startEndpoint();
-    }
-    catch (AddressException e) {
-      throw new EqIOException(
-              "OPC address configuration string is invalid.", e);
-    }
-    catch (EndpointTypesUnknownException e) {
-      throw new EqIOException(
-              "The configured protocol(s) could not be matched to an endpoint implementation.", e);
-    }
-    catch (OPCCriticalException e) {
-      throw new EqIOException("Endpoint creation failed. Reason: " + e.getMessage(), e);
-    }
-    getEquipmentConfigurationHandler().setDataTagChanger(controller);
+//    controller.registerEndpointListener(new EndpointEquipmentLogListener());
+    controller.registerEndpointListener(new EndpointListenerImpl(sender));
+
+    getEquipmentConfigurationHandler().setDataTagChanger((IDataTagChanger) controller);
     getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
   }
 
   /**
    * Called when the core wants the OPC module to disconnect from the OPC
    * server and discard all configuration.
-   *
    */
   @Override
-  public synchronized void disconnectFromDataSource() {
+  public synchronized void disconnectFromDataSource () {
     log.debug("disconnecting from OPC data source...");
     controller.stop();
     log.debug("disconnected");
@@ -107,15 +85,9 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    * Triggers the refresh of all values directly from the OPC server.
    */
   @Override
-  public synchronized void refreshAllDataTags() {
+  public synchronized void refreshAllDataTags () {
     new Thread(() -> {
-      try {
-        log.debug("refreshAllDataTags() - refreshing data tags");
-        controller.refresh();
-      }
-      catch (Exception e) {
-        log.error("refreshAllDataTags() - Refresh of OPC data failed", e);
-      }
+        controller.refreshAllDataTags();
     }).start();
   }
 
@@ -125,16 +97,12 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    * @param dataTagId The id of the data tag to refresh.
    */
   @Override
-  public synchronized void refreshDataTag(final long dataTagId) {
-    if (log.isDebugEnabled()) {
-      log.debug("refreshing data tag " + dataTagId);
+  public synchronized void refreshDataTag (final long dataTagId) {
+    ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
+    if (sourceDataTag == null) {
+      throw new OPCCriticalException("SourceDataTag with id '" + dataTagId + "' unknown.");
     }
-    ISourceDataTag sourceDataTag =
-            getEquipmentConfiguration().getSourceDataTag(dataTagId);
-    if (sourceDataTag == null)
-      throw new OPCCriticalException("SourceDataTag with id '" + dataTagId
-              + "' unknown.");
-    controller.refresh(sourceDataTag);
+    controller.refreshDataTag(sourceDataTag);
   }
 
 
@@ -146,38 +114,30 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    * @param changeReport              Report object to fill.
    */
   @Override
-  public synchronized void onUpdateEquipmentConfiguration(
+  public synchronized void onUpdateEquipmentConfiguration (
           final IEquipmentConfiguration equipmentConfiguration,
           final IEquipmentConfiguration oldEquipmentConfiguration,
           final ChangeReport changeReport) {
-    if (equipmentConfiguration.getAddress().equals(
-            oldEquipmentConfiguration.getAddress())) {
+    if (equipmentConfiguration.getAddress().equals(oldEquipmentConfiguration.getAddress())) {
       try {
         disconnectFromDataSource();
         Thread.sleep(RESTART_DELAY);
         connectToDataSource();
         changeReport.appendInfo("DAQ restarted.");
-      }
-      catch (EqIOException e) {
+      } catch (EqIOException e) {
         changeReport.appendError("Restart of DAQ failed.");
-      }
-      catch (InterruptedException e) {
+      } catch (InterruptedException e) {
         changeReport.appendError("Restart delay interrupted. DAQ will not connect.");
       }
-    }
-    else if (equipmentConfiguration.getAliveTagId()
-            != oldEquipmentConfiguration.getAliveTagId()
-            || equipmentConfiguration.getAliveTagInterval()
-            != oldEquipmentConfiguration.getAliveTagInterval()) {
-      controller.stopAliveTimer();
-      controller.startAliveTimer();
-      changeReport.appendInfo("Alive Timer updated.");
+    } else if (equipmentConfiguration.getAliveTagId() != oldEquipmentConfiguration.getAliveTagId()
+            || equipmentConfiguration.getAliveTagInterval() != oldEquipmentConfiguration.getAliveTagInterval()) {
+      changeReport.appendInfo(controller.updateAliveWriterAndReport());
     }
     changeReport.setState(CHANGE_STATE.SUCCESS);
   }
 
   @Override
-  public void shutdown() throws EqIOException {
+  public void shutdown () throws EqIOException {
     super.shutdown();
   }
 }

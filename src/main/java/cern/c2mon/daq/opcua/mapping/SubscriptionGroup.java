@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.daq.opcua.connection.Deadband;
+import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -69,6 +69,15 @@ public class SubscriptionGroup{
 
     public boolean contains(ItemDefinition definition) {
         return definitions.contains(definition);
+    }
+
+    public boolean contains(ISourceDataTag tag) {
+        for (ItemDefinition definition : definitions) {
+            if (definition.getTag().equals(tag)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

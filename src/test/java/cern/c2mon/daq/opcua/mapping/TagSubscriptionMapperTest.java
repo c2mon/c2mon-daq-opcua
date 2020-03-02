@@ -16,7 +16,6 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.daq.opcua.connection.Deadband;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.junit.jupiter.api.Test;

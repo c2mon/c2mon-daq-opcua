@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.AllArgsConstructor;

@@ -36,4 +36,8 @@ public class EndpointTypesUnknownException extends OPCCriticalException {
         super("There are no implementations for the selected endpoint types.");
     }
 
+    public EndpointTypesUnknownException(String message) {
+        super(message);
+    }
+
 }

@@ -26,15 +26,20 @@ import java.util.Map;
 
 public interface TagSubscriptionMapper {
 
+    boolean isSubscribed(ISourceDataTag tag);
+
     Map<SubscriptionGroup, List<ItemDefinition>> toGroups(Collection<ISourceDataTag> dataTags);
 
     GroupDefinitionPair toGroup(ISourceDataTag dataTags);
 
     Collection<SubscriptionGroup> getGroups();
 
+    SubscriptionGroup getGroup(Deadband deadband);
+
     void clear();
 
     GroupDefinitionPair removeTagFromGroup(ISourceDataTag dataTag);
+    void addTagToGroup(ISourceDataTag dataTag);
 
     ItemDefinition getDefinition(ISourceDataTag command);
 

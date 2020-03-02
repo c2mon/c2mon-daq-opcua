@@ -5,14 +5,14 @@
   <max-message-delay>1000</max-message-delay>
   <EquipmentUnits>
 <EquipmentUnit id="500001" name="dynopcua.equipment">
-  <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
+  <handler-class-name>cern.c2mon.daq.it.OPCUAMessageHandler</handler-class-name>
   <commfault-tag-id>1000006</commfault-tag-id>
   <commfault-tag-value>false</commfault-tag-value>
   <address>URI=opc.tcp://pitrafficlighteth.cern.ch:4841/open62541;serverTimeout=5000;serverRetryTimeout=10000;aliveWriter=false</address>
   <SubEquipmentUnits>
   </SubEquipmentUnits>
   <DataTags>
-    <DataTag id="1000008" name="opcua://pitrafficlighteth.cern.ch/GreenLED.on" control="false">
+    <DataTag id="1000008" name="it://pitrafficlighteth.cern.ch/GreenLED.on" control="false">
       <mode>1</mode>
       <data-type>java.lang.Object</data-type>
       <DataTagAddress>
@@ -27,7 +27,7 @@
         <guaranteed-delivery>false</guaranteed-delivery>
       </DataTagAddress>
     </DataTag>
-    <DataTag id="1000009" name="opcua://pitrafficlighteth.cern.ch/RedLED.on" control="false">
+    <DataTag id="1000009" name="it://pitrafficlighteth.cern.ch/RedLED.on" control="false">
       <mode>1</mode>
       <data-type>java.lang.Object</data-type>
       <DataTagAddress>

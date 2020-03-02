@@ -1,10 +1,15 @@
 package it;
 
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointImpl;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.testcontainers.containers.GenericContainer;
@@ -12,27 +17,21 @@ import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.net.URISyntaxException;
 import java.util.Collections;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
+@Slf4j
 public abstract class OpcUaInfrastructureBase {
 
     protected static GenericContainer opcUa;
     protected static EquipmentAddress address;
-    protected EndpointImpl endpoint;
-
+    protected Endpoint endpoint;
+    protected TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
+    protected MiloClientWrapper wrapper;
 
     @BeforeEach
     public void setupEndpoint() {
-        endpoint = new EndpointImpl(new TagSubscriptionMapperImpl());
-    }
-
-    @AfterEach
-    public void cleanUp() {
-        endpoint.reset();
-        endpoint = null;
+        wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
+        endpoint = new EndpointImpl(mapper, wrapper);
     }
 
     @BeforeAll
@@ -45,6 +44,7 @@ public abstract class OpcUaInfrastructureBase {
         address = new EquipmentAddress("opc.tcp://" + opcUa.getContainerInfo().getConfig().getHostName() + ":50000",
                 "", "", "", 500, 500, true);
 
+        log.info("Server starting... ");
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.invokeAll(Collections.singletonList(new CheckServerState()), 3000, TimeUnit.MILLISECONDS);
     }
@@ -59,18 +59,23 @@ public abstract class OpcUaInfrastructureBase {
     private static class CheckServerState implements Callable<Boolean> {
         @Override
         public Boolean call() {
-            EndpointImpl endpoint = new EndpointImpl(new TagSubscriptionMapperImpl());
+            Endpoint endpoint = null;
 
             boolean serverRunning = false;
             while (!serverRunning) {
                 try {
-                    endpoint.initialize(address);
+                    endpoint.initialize();
                     serverRunning = endpoint.isConnected();
                 } catch (Exception e) {
-                    // try again, the server needs a second to start
+//                    log.info("Server not yet ready ");
                 }
             }
-            endpoint.reset();
+            try {
+                endpoint.reset().get();
+            } catch (InterruptedException|ExecutionException e) {
+                log.error("Could not restart endpoint." , e);
+            }
+            log.info("Server ready");
             return serverRunning;
         }
     }
