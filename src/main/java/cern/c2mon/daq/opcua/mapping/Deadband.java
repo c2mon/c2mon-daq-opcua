@@ -18,10 +18,11 @@ public class Deadband {
     short type;
 
     public static Deadband of(ISourceDataTag tag) {
-        return new Deadband(
-                tag.getTimeDeadband(),
-                Math.min(minTimeDeadband, tag.getValueDeadband()),
-                tag.getValueDeadbandType());
+        return new Deadband(tag.getTimeDeadband(), tag.getValueDeadbandType(), (short) tag.getValueDeadband());
+    }
+
+    public static Deadband of(int time, float value, short type) {
+        return new Deadband(Math.min(minTimeDeadband, time), value, type);
     }
 
     @Override
