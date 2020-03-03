@@ -1,7 +1,7 @@
 package it;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.EndpointListener;
+import cern.c2mon.daq.opcua.upstream.TagListener;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
@@ -90,7 +90,7 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
         CompletableFuture<Object> future = new CompletableFuture<>();
 
 
-        publisher.subscribe(new EndpointListener() {
+        publisher.subscribe(new TagListener() {
             @Override
             public void onNewTagValue (ISourceDataTag dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
                 log.info("received: {}, {}", dataTag.getName(), valueUpdate);

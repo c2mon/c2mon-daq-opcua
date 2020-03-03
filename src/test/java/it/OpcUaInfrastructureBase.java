@@ -28,7 +28,7 @@ public abstract class OpcUaInfrastructureBase {
 
     @BeforeEach
     public void setupEndpoint() {
-        endpoint = new EndpointImpl(mapper, wrapper, publisher);
+        endpoint = new EndpointImpl(wrapper, mapper, publisher);
     }
 
     @BeforeAll
@@ -57,8 +57,8 @@ public abstract class OpcUaInfrastructureBase {
         @Override
         public Boolean call() {
             Endpoint endpoint = new EndpointImpl(
-                    new TagSubscriptionMapperImpl(),
                     new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None),
+                    new TagSubscriptionMapperImpl(),
                     new EventPublisher());
 
             boolean serverRunning = false;

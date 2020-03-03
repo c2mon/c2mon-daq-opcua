@@ -39,6 +39,7 @@ public interface Endpoint {
     boolean isConnected ();
 
     void initialize() throws OPCCommunicationException;
+    void reconnect() throws OPCCommunicationException;
 
     /**
      * Adds a data tag to this endpoint.
@@ -87,5 +88,7 @@ public interface Endpoint {
      * @return
      */
     CompletableFuture<Void> reset();
+
+    void setClient(MiloClientWrapper client);
 
 }

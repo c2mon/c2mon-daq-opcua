@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.upstream;
 
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
@@ -26,7 +26,7 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
  * @author Andreas Lang
  *
  */
-public interface EndpointListener {
+public interface TagListener {
 
     void onNewTagValue(final ISourceDataTag dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality);
 

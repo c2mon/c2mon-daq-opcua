@@ -20,9 +20,13 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.EndpointTypesUnknownException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.upstream.EquipmentStateListener;
+import cern.c2mon.daq.opcua.upstream.TagListener;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.shared.daq.config.ChangeReport;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
@@ -31,28 +35,27 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 
 @Slf4j
-public class EndpointControllerImpl implements EndpointController, IDataTagChanger {
+@AllArgsConstructor
+public class ControllerImpl implements Controller, IDataTagChanger {
 
+    @Getter
     private Endpoint endpoint;
+
     private IEquipmentConfiguration config;
     private EventPublisher publisher;
 
-    public EndpointControllerImpl (final Endpoint endpoint,
-                                   final IEquipmentConfiguration config,
-                                   final EventPublisher publisher) {
-        this.endpoint = endpoint;
-        this.config = config;
-        this.publisher = publisher;
-    }
-
     public void initialize () throws EndpointTypesUnknownException, OPCCommunicationException {
-        endpoint.reset();
         endpoint.initialize();
         endpoint.subscribeTags(config.getSourceDataTags().values());
     }
 
     @Override
-    public void subscribe (EndpointListener listener) {
+    public void subscribe (TagListener listener) {
+        publisher.subscribe(listener);
+    }
+
+    @Override
+    public void subscribe (EquipmentStateListener listener) {
         publisher.subscribe(listener);
     }
 
@@ -62,18 +65,18 @@ public class EndpointControllerImpl implements EndpointController, IDataTagChang
 
     public void checkConnection () throws OPCCommunicationException {
         if (!endpoint.isConnected()) {
-            endpoint.reset()
-                    .thenRun(this::initialize)
-                    .exceptionally(e -> {throw new OPCCommunicationException("Cannot establish connection", e);});
+            endpoint.reconnect();
             // TODO refresh?
         }
     }
 
     public synchronized void refreshAllDataTags () {
+        checkConnection();
         endpoint.refreshDataTags(config.getSourceDataTags().values());
     }
 
     public synchronized void refreshDataTag (ISourceDataTag sourceDataTag) {
+        checkConnection();
         endpoint.refreshDataTags(Collections.singletonList(sourceDataTag));
     }
 

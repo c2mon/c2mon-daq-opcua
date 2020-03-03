@@ -10,7 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 
 import static org.easymock.EasyMock.*;
 
-public abstract class EndpointControllerTestBase {
+public abstract class ControllerTestBase {
     protected static String ADDRESS_STRING_BASE = "URI=opc.tcp://test;serverRetryTimeout=123;serverTimeout=12;aliveWriter=";
     protected static ISourceDataTag aliveTag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
 

@@ -16,7 +16,7 @@
 // *****************************************************************************/
 //package cern.c2mon.daq.opcua;
 //
-//import cern.c2mon.daq.opcua.connection.EndpointListener;
+//import cern.c2mon.daq.opcua.upstream.EndpointListener;
 //import cern.c2mon.shared.common.datatag.ISourceDataTag;
 //import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 //import cern.c2mon.shared.common.type.TypeConverter;

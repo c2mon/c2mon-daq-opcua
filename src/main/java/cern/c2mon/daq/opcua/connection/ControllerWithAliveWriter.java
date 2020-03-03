@@ -4,14 +4,14 @@ import cern.c2mon.daq.opcua.exceptions.EndpointTypesUnknownException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 
-public class EndpointControllerWithAliveWriter extends EndpointControllerImpl {
+public class ControllerWithAliveWriter extends ControllerImpl {
 
     AliveWriter aliveWriter;
 
-    public EndpointControllerWithAliveWriter (Endpoint endpoint,
-                                              IEquipmentConfiguration config,
-                                              EventPublisher publisher,
-                                              AliveWriter aliveWriter) {
+    public ControllerWithAliveWriter (Endpoint endpoint,
+                                      IEquipmentConfiguration config,
+                                      EventPublisher publisher,
+                                      AliveWriter aliveWriter) {
         super(endpoint, config, publisher);
         this.aliveWriter = aliveWriter;
     }

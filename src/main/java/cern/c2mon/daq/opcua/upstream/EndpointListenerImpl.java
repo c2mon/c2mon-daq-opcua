@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.upstream;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -9,8 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @AllArgsConstructor
-public class EndpointListenerImpl implements EndpointListener {
-
+public class EndpointListenerImpl implements TagListener, EquipmentStateListener {
     IEquipmentMessageSender sender;
 
     /**
@@ -36,4 +35,14 @@ public class EndpointListenerImpl implements EndpointListener {
             log.debug("onTagInvalid - sent for Tag #" + dataTag.getId());
         }
     }
+
+    @Override
+    public void update (EquipmentState state) {
+        if (state == EquipmentState.OK) {
+            sender.confirmEquipmentStateOK(state.message);
+        } else {
+            sender.confirmEquipmentStateIncorrect(state.message);
+        }
+    }
+
 }

@@ -20,17 +20,20 @@ import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
-import cern.c2mon.daq.opcua.connection.EndpointController;
-import cern.c2mon.daq.opcua.connection.EndpointControllerFactory;
-import cern.c2mon.daq.opcua.connection.EndpointListenerImpl;
+import cern.c2mon.daq.opcua.connection.Controller;
+import cern.c2mon.daq.opcua.connection.ControllerFactory;
 import cern.c2mon.daq.opcua.exceptions.AddressException;
 import cern.c2mon.daq.opcua.exceptions.EndpointTypesUnknownException;
 import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
+import cern.c2mon.daq.opcua.upstream.EndpointListenerImpl;
+import cern.c2mon.daq.opcua.upstream.EquipmentStateListener;
+import cern.c2mon.daq.opcua.upstream.TagListener;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -40,7 +43,9 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    * Delay to restart the DAQ after an equipment change.
    */
   private static final long RESTART_DELAY = 2000L;
-  private EndpointController controller;
+
+  @Getter
+  private Controller controller;
 
   /**
    * Called when the core wants the OPC module to start up and connect to the
@@ -55,7 +60,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     IEquipmentMessageSender sender = getEquipmentMessageSender();
 
     try {
-      controller = EndpointControllerFactory.getController(config);
+      controller = ControllerFactory.getController(config);
+      subscribeEndpointListeners(sender);
       controller.initialize();
     } catch (AddressException e) {
       throw new EqIOException("OPC address configuration string is invalid.", e);
@@ -63,11 +69,14 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
       throw new EqIOException("Not an appropriate OPC-UA protocol.", e);
     }
 
-//    controller.registerEndpointListener(new EndpointEquipmentLogListener());
-    controller.subscribe(new EndpointListenerImpl(sender));
-
     getEquipmentConfigurationHandler().setDataTagChanger((IDataTagChanger) controller);
     getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
+  }
+
+  private void subscribeEndpointListeners(IEquipmentMessageSender sender) {
+    EndpointListenerImpl listener = new EndpointListenerImpl(sender);
+    controller.subscribe((TagListener) listener);
+    controller.subscribe((EquipmentStateListener) listener);
   }
 
   /**

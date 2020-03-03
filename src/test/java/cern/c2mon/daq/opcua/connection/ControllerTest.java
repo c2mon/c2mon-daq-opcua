@@ -4,15 +4,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class EndpointControllerTest extends EndpointControllerTestBase {
+public class ControllerTest extends ControllerTestBase {
 
-    private EndpointController controller;
+    private Controller controller;
 
     @BeforeEach
     public void setup() {
         super.setup();
         setupWithAliveTag(true, aliveTag);
-        controller = EndpointControllerFactory.getController(config);
+        controller = ControllerFactory.getController(config);
     }
 
     @AfterEach

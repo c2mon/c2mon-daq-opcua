@@ -20,7 +20,7 @@ import java.util.function.BiConsumer;
 import static org.easymock.EasyMock.createMock;
 
 @Getter
-public class MiloClientWrapperTest implements MiloClientWrapper {
+public class MiloTestClientWrapper implements MiloClientWrapper {
 
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);

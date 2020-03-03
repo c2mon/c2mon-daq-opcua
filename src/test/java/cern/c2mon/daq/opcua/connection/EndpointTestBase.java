@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.testutils.MiloClientWrapperTest;
+import cern.c2mon.daq.opcua.testutils.MiloTestClientWrapper;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
@@ -26,14 +26,14 @@ public abstract class EndpointTestBase {
     TagSubscriptionMapper mapper;
     EventPublisher publisher;
     Endpoint endpoint;
-    MiloClientWrapperTest client;
+    MiloTestClientWrapper client;
 
     @BeforeEach
     public void setup() {
         mapper =  new TagSubscriptionMapperImpl();
-        client = new MiloClientWrapperTest();
+        client = new MiloTestClientWrapper();
         publisher = new EventPublisher();
-        endpoint = new EndpointImpl(mapper, client, publisher);
+        endpoint = new EndpointImpl(client, mapper, publisher);
     }
 
     protected void subscribeTag (ISourceDataTag tag) throws ExecutionException, InterruptedException {
