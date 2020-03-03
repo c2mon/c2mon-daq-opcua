@@ -39,8 +39,12 @@ public class SubscriptionGroup{
         this.deadband = deadband;
     }
 
+    public int size() {
+        return this.definitions.size();
+    }
+
     public boolean isEmpty() {
-        return this.definitions.size() < 1;
+        return this.size() < 1;
     }
 
     public boolean isSubscribed() {

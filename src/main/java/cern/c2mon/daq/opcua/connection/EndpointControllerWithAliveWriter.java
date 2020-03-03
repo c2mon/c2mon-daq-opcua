@@ -9,9 +9,10 @@ public class EndpointControllerWithAliveWriter extends EndpointControllerImpl {
     AliveWriter aliveWriter;
 
     public EndpointControllerWithAliveWriter (Endpoint endpoint,
-                                              IEquipmentConfiguration configuration,
+                                              IEquipmentConfiguration config,
+                                              EventPublisher publisher,
                                               AliveWriter aliveWriter) {
-        super(endpoint, configuration);
+        super(endpoint, config, publisher);
         this.aliveWriter = aliveWriter;
     }
 

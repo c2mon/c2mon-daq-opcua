@@ -23,7 +23,7 @@ public class ConnectivityIT extends OpcUaInfrastructureBase {
         EquipmentAddress badAddress = new EquipmentAddress("opc.tcp://somehost/somepath", 500, 500);
 
         wrapper = new MiloClientWrapperImpl(badAddress.getUriString(), SecurityPolicy.None);
-        endpoint = new EndpointImpl(mapper, wrapper);
+        endpoint = new EndpointImpl(mapper, wrapper, publisher);
         Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize());
     }
 }

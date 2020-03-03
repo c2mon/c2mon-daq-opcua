@@ -22,7 +22,7 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 
 /**
  * Generic listener for an OPCEndpoint.
- * 
+ *
  * @author Andreas Lang
  *
  */

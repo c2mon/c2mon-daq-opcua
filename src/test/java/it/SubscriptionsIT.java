@@ -24,9 +24,12 @@ import java.util.concurrent.TimeUnit;
 public class SubscriptionsIT extends OpcUaInfrastructureBase {
 
     int TIMEOUT = 6000;
+    CompletableFuture<Object> future;
 
     @BeforeEach
     public void setupEndpoint() {
+
+        future = listenForServerResponse(endpoint);
         super.setupEndpoint();
         endpoint.initialize();
         log.info("Client ready");
@@ -50,8 +53,6 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
 
     @Test
     public void subscribingImproperDataTagShouldReturnOnTagInvalid () throws ExecutionException, InterruptedException {
-        CompletableFuture<Object> future = listenForServerResponse(endpoint);
-
         endpoint.subscribeTag(ServerTagFactory.Invalid.createDataTag());
 
         SourceDataTagQuality response = (SourceDataTagQuality) future.get();
@@ -89,7 +90,7 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
         CompletableFuture<Object> future = new CompletableFuture<>();
 
 
-        endpoint.registerEndpointListener(new EndpointListener() {
+        publisher.subscribe(new EndpointListener() {
             @Override
             public void onNewTagValue (ISourceDataTag dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
                 log.info("received: {}, {}", dataTag.getName(), valueUpdate);

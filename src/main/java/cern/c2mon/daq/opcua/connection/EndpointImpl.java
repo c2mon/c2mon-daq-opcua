@@ -17,11 +17,11 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.mapping.*;
+import cern.c2mon.daq.opcua.mapping.GroupDefinitionPair;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
-import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -29,22 +29,25 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Slf4j
 public class EndpointImpl implements Endpoint {
 
-    private final Collection<EndpointListener> listeners = new ConcurrentLinkedQueue<>();
     private MiloClientWrapper client;
     private TagSubscriptionMapper mapper;
+    private EventPublisher events;
 
-    public EndpointImpl (TagSubscriptionMapper mapper, final MiloClientWrapper client) {
+    public EndpointImpl (TagSubscriptionMapper mapper, final MiloClientWrapper client, EventPublisher events) {
         this.mapper = mapper;
         this.client = client;
+        this.events = events;
     }
 
     public synchronized void initialize () {
@@ -61,22 +64,18 @@ public class EndpointImpl implements Endpoint {
             throw new IllegalArgumentException("No data tags to subscribe.");
         }
 
-        return CompletableFuture.allOf(mapper
-                .toGroups(dataTags)
-                .entrySet()
+        return CompletableFuture.allOf(mapper.toGroups(dataTags).entrySet()
                 .stream()
                 .map(e -> subscribeToGroup(e.getKey(), e.getValue()))
-                .toArray(CompletableFuture[]::new));
+                .toArray(CompletableFuture[]::new))
+                .exceptionally(e -> {throw new OPCCommunicationException("Could not subscribe Tags", e);});
     }
 
     @Override
-    public synchronized void subscribeTag (@NonNull final ISourceDataTag sourceDataTag) throws OPCCommunicationException {
+    public synchronized CompletableFuture<Void> subscribeTag (@NonNull final ISourceDataTag sourceDataTag) throws OPCCommunicationException {
         GroupDefinitionPair pair = mapper.toGroup(sourceDataTag);
-        try {
-            subscribeToGroup(pair.getSubscriptionGroup(), Collections.singletonList(pair.getItemDefinition())).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new OPCCommunicationException("Could not subscribe to Tag.", e);
-        }
+        return subscribeToGroup(pair.getSubscriptionGroup(), Collections.singletonList(pair.getItemDefinition()))
+                .exceptionally(e -> {throw new OPCCommunicationException("Could not subscribe Tags", e);});
     }
 
     private CompletableFuture<Void> subscribeToGroup (SubscriptionGroup group, List<ItemDefinition> definitions) {
@@ -84,7 +83,7 @@ public class EndpointImpl implements Endpoint {
         group.setSubscription(subscription);
 
         return client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback)
-                .thenAccept(this::subscriptionCompletedCallback);
+                    .thenAccept(this::subscriptionCompletedCallback);
     }
 
     private UaSubscription createSubscription (SubscriptionGroup group) {
@@ -100,14 +99,16 @@ public class EndpointImpl implements Endpoint {
             throw new IllegalArgumentException("The tag cannot be removed, since the subscription group is not subscribed.");
         }
 
-        return removeItemFromSubscription(pair, subscriptionGroup).thenRun(() -> mapper.removeTagFromGroup(dataTag));
-    }
-
-    private CompletableFuture<Void> removeItemFromSubscription (GroupDefinitionPair pair, SubscriptionGroup subscriptionGroup) {
         UaSubscription subscription = subscriptionGroup.getSubscription();
-        return subscriptionGroup.isEmpty() ?
-                removeSubscription(subscriptionGroup, subscription) :
-                client.deleteItemFromSubscription(pair.getItemDefinition().getClientHandle(), subscription);
+        UInteger clientHandle = pair.getItemDefinition().getClientHandle();
+
+        CompletableFuture<Void> future = client.deleteItemFromSubscription(clientHandle, subscription)
+                .thenRun(() -> mapper.removeTagFromGroup(dataTag));
+        
+        if (subscriptionGroup.size() < 1) {
+            return future.thenCompose(aVoid -> removeSubscription(subscriptionGroup, subscription));
+        }
+        return future;
     }
 
     private CompletableFuture<Void> removeSubscription (SubscriptionGroup subscriptionGroup, UaSubscription subscription) {
@@ -124,18 +125,8 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public void registerEndpointListener (final EndpointListener endpointListener) {
-        listeners.add(endpointListener);
-    }
-
-    @Override
-    public void unRegisterEndpointListener (final EndpointListener endpointListener) {
-        listeners.remove(endpointListener);
-    }
-
-    @Override
     public synchronized CompletableFuture<Void> reset () {
-        listeners.clear();
+        events.clear();
         mapper.clear();
         return CompletableFuture.runAsync(() -> client.disconnect());
     }
@@ -154,13 +145,9 @@ public class EndpointImpl implements Endpoint {
         return client.isConnected();
     }
 
-    private void readCallback (List<DataValue> dataValues, ISourceDataTag dataTag) {
+    private void readCallback (List<DataValue> dataValues, ISourceDataTag tag) {
         for (DataValue value : dataValues) {
-            if (value.getStatusCode().isBad()) {
-                notifyEndpointsAboutInvalidTag(dataTag);
-            } else {
-                notifyEndpointsAboutMonitoredItemChange(value, dataTag);
-            }
+            events.notify(value.getStatusCode(), tag, value);
         }
     }
 
@@ -168,32 +155,16 @@ public class EndpointImpl implements Endpoint {
         for (UaMonitoredItem item : monitoredItems) {
             ISourceDataTag dataTag = mapper.getTagBy(item.getClientHandle());
             if (item.getStatusCode().isBad()) {
-                notifyEndpointsAboutInvalidTag(dataTag);
-            } else {
+                events.invalidTag(dataTag);
+            }
+            else {
                 mapper.addTagToGroup(dataTag);
             }
         }
     }
 
-    private void notifyEndpointsAboutInvalidTag (ISourceDataTag tag) {
-        for (EndpointListener listener : listeners) {
-            SourceDataTagQualityCode tagQuality = DataQualityMapper.getBadNodeIdCode();
-            listener.onTagInvalid(tag, new SourceDataTagQuality(tagQuality));
-        }
-    }
-
-    private void notifyEndpointsAboutMonitoredItemChange (final DataValue value, ISourceDataTag tag) {
-        for (EndpointListener listener : listeners) {
-            SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
-            ValueUpdate valueUpdate = new ValueUpdate(value, value.getSourceTime().getUtcTime());
-            listener.onNewTagValue(tag, valueUpdate, new SourceDataTagQuality(tagQuality));
-        }
-    }
-
     private void itemCreationCallback (UaMonitoredItem item, Integer i) {
-        item.setValueConsumer(value -> {
-            ISourceDataTag dataTag = mapper.getTagBy(item.getClientHandle());
-            notifyEndpointsAboutMonitoredItemChange(value, dataTag);
-        });
+        ISourceDataTag tag = mapper.getTagBy(item.getClientHandle());
+        item.setValueConsumer(value -> events.notify(item.getStatusCode(), tag, value));
     }
 }

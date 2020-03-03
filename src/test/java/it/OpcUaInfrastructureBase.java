@@ -1,10 +1,7 @@
 package it;
 
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
-import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.EndpointImpl;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.connection.*;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -26,12 +23,12 @@ public abstract class OpcUaInfrastructureBase {
     protected static EquipmentAddress address;
     protected Endpoint endpoint;
     protected TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
-    protected MiloClientWrapper wrapper;
+    protected MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
+    protected EventPublisher publisher = new EventPublisher();
 
     @BeforeEach
     public void setupEndpoint() {
-        wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
-        endpoint = new EndpointImpl(mapper, wrapper);
+        endpoint = new EndpointImpl(mapper, wrapper, publisher);
     }
 
     @BeforeAll
@@ -59,7 +56,10 @@ public abstract class OpcUaInfrastructureBase {
     private static class CheckServerState implements Callable<Boolean> {
         @Override
         public Boolean call() {
-            Endpoint endpoint = null;
+            Endpoint endpoint = new EndpointImpl(
+                    new TagSubscriptionMapperImpl(),
+                    new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None),
+                    new EventPublisher());
 
             boolean serverRunning = false;
             while (!serverRunning) {

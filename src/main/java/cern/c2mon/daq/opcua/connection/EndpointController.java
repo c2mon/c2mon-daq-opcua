@@ -13,7 +13,7 @@ public interface EndpointController {
     String UA_TCP_TYPE = "opc.tcp";
 
     void initialize() throws EndpointTypesUnknownException, OPCCommunicationException;
-    void registerEndpointListener(EndpointListener listener);
+    void subscribe (EndpointListener listener);
     void stop();
     void checkConnection();
     void refreshAllDataTags();

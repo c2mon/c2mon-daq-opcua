@@ -19,17 +19,19 @@ public class EndpointControllerFactory {
         EquipmentAddress address = EndpointController.getEquipmentAddress(equipmentAddresses);
 
         MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
-        Endpoint endpoint = new EndpointImpl(new TagSubscriptionMapperImpl(), wrapper);
+
+        EventPublisher publisher = new EventPublisher();
+        Endpoint endpoint = new EndpointImpl(new TagSubscriptionMapperImpl(), wrapper, publisher);
 
         if (equipmentAddresses.get(0).isAliveWriterEnabled()) {
             try {
                 AliveWriter aliveWriter = createAliveWriter(config, endpoint);
-                return new EndpointControllerWithAliveWriter(endpoint, config, aliveWriter);
+                return new EndpointControllerWithAliveWriter(endpoint, config, publisher, aliveWriter);
             } catch (IllegalArgumentException e) {
                 log.error("Creating the AliveWriter skipped. ", e);
             }
         }
-        return new EndpointControllerImpl(endpoint, config);
+        return new EndpointControllerImpl(endpoint, config, publisher);
     }
 
     private static AliveWriter createAliveWriter (IEquipmentConfiguration config, Endpoint endpoint) throws IllegalArgumentException {

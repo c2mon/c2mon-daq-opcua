@@ -12,9 +12,9 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
 
 import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
 
 public abstract class EndpointTestBase {
 
@@ -24,6 +24,7 @@ public abstract class EndpointTestBase {
     protected ISourceDataTag tagWithDeadband = ServerTagFactory.RandomBoolean.createDataTag(deadband);
 
     TagSubscriptionMapper mapper;
+    EventPublisher publisher;
     Endpoint endpoint;
     MiloClientWrapperTest client;
 
@@ -31,21 +32,24 @@ public abstract class EndpointTestBase {
     public void setup() {
         mapper =  new TagSubscriptionMapperImpl();
         client = new MiloClientWrapperTest();
-        endpoint = new EndpointImpl(mapper, client);
+        publisher = new EventPublisher();
+        endpoint = new EndpointImpl(mapper, client, publisher);
     }
 
-    protected void subscribeTags (ISourceDataTag... tags) {
-        endpoint.subscribeTags(Arrays.asList(tags));
+    protected void subscribeTag (ISourceDataTag tag) throws ExecutionException, InterruptedException {
+        endpoint.subscribeTag(tag).get();
     }
 
-    protected void mockGoodSubscriptionStatusCode (ISourceDataTag... dataTags) {
-        UaMonitoredItem monitoredItem = client.getMonitoredItem();
+    protected void subscribeTags (ISourceDataTag... tags) throws ExecutionException, InterruptedException {
+        endpoint.subscribeTags(Arrays.asList(tags)).get();
+    }
 
-        expect(monitoredItem.getStatusCode()).andReturn(StatusCode.GOOD).times(dataTags.length);
-        for (ISourceDataTag tag : dataTags) {
+    protected void mockSubscriptionStatusCode (UaMonitoredItem monitoredItem, StatusCode code, ISourceDataTag... tags) {
+        if(tags.length == 0) return;
+        expect(monitoredItem.getStatusCode()).andReturn(code).times(tags.length);
+        for (ISourceDataTag tag : tags) {
             UInteger clientHandle = mapper.getDefinition(tag).getClientHandle();
             expect(monitoredItem.getClientHandle()).andReturn(clientHandle).once();
         }
-        replay(monitoredItem);
     }
 }

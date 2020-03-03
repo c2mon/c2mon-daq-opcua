@@ -64,7 +64,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     }
 
 //    controller.registerEndpointListener(new EndpointEquipmentLogListener());
-    controller.registerEndpointListener(new EndpointListenerImpl(sender));
+    controller.subscribe(new EndpointListenerImpl(sender));
 
     getEquipmentConfigurationHandler().setDataTagChanger((IDataTagChanger) controller);
     getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);

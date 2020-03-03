@@ -44,8 +44,9 @@ public interface Endpoint {
      * Adds a data tag to this endpoint.
      *
      * @param sourceDataTag The data tag to add.
+     * @return
      */
-    void subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
+    CompletableFuture<Void> subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
     
     /**
      * Removes a data tag from this endpoint.
@@ -81,22 +82,6 @@ public interface Endpoint {
      */
     void write(final OPCHardwareAddress address, final Object value);
 
-    /**
-     * Registers an endpoint listener. The endpoint will inform this listener
-     * about changes.
-     * 
-     * @param endpointListener The listener to add.
-     */
-    void registerEndpointListener(EndpointListener endpointListener);
-
-    /**
-     * Unregisters an endpoint listener. The listener will no longer be informed
-     * about updates.
-     * 
-     * @param endpointListener The listener to remove.
-     */
-    void unRegisterEndpointListener(EndpointListener endpointListener);
-    
     /**
      * Stops everything in the endpoint and clears all configuration states.
      * @return

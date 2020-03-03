@@ -35,12 +35,14 @@ public class EndpointControllerImpl implements EndpointController, IDataTagChang
 
     private Endpoint endpoint;
     private IEquipmentConfiguration config;
+    private EventPublisher publisher;
 
     public EndpointControllerImpl (final Endpoint endpoint,
-                                   final IEquipmentConfiguration config) {
+                                   final IEquipmentConfiguration config,
+                                   final EventPublisher publisher) {
         this.endpoint = endpoint;
         this.config = config;
-
+        this.publisher = publisher;
     }
 
     public void initialize () throws EndpointTypesUnknownException, OPCCommunicationException {
@@ -49,8 +51,9 @@ public class EndpointControllerImpl implements EndpointController, IDataTagChang
         endpoint.subscribeTags(config.getSourceDataTags().values());
     }
 
-    public void registerEndpointListener (EndpointListener listener) {
-        this.endpoint.registerEndpointListener(listener);
+    @Override
+    public void subscribe (EndpointListener listener) {
+        publisher.subscribe(listener);
     }
 
     public synchronized void stop () {

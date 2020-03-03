@@ -6,14 +6,18 @@
   <parent>
     <groupId>cern.c2mon.daq</groupId>
     <artifactId>c2mon-daq-parent</artifactId>
-    <version>1.8.29</version>
+    <version>1.9.2</version>
   </parent>
 
   <artifactId>c2mon-daq-opcua</artifactId>
-  <version>1.8.2-SNAPSHOT</version>
+  <version>1.9.2-SNAPSHOT</version>
   <packaging>jar</packaging>
   <description>DAQ module for acquiring data from OPC UA servers. Also supports the older DCOM and SOAP protocols
   </description>
+
+  <properties>
+    <guava.version>26.0-jre</guava.version>
+  </properties>
 
   <scm>
     <url>https://gitlab.cern.ch/c2mon/c2mon-daq-opcua</url>
@@ -22,11 +26,24 @@
     <tag>HEAD</tag>
   </scm>
 
+  <repositories>
+    <repository>
+      <id>cern-nexus</id>
+      <name>CERN Central Nexus</name>
+      <url>https://nexus.web.cern.ch/nexus/content/groups/public</url>
+    </repository>
+  </repositories>
+
   <dependencies>
     <!-- C2MON dependencies -->
     <dependency>
       <groupId>cern.c2mon.daq</groupId>
       <artifactId>c2mon-daq-core</artifactId>
+      <version>1.9.2</version>
+    </dependency>
+    <dependency>
+      <groupId>cern.c2mon.daq</groupId>
+      <artifactId>c2mon-daq-test</artifactId>
     </dependency>
     <dependency>
       <groupId>cern.c2mon.shared</groupId>
@@ -35,29 +52,23 @@
 
     <!-- 3rd-party dependencies -->
     <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.milo</groupId>
+      <artifactId>sdk-client</artifactId>
+      <version>0.3.7</version>
+    </dependency>
+    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.prosys</groupId>
-      <artifactId>opc-ua-java-sdk</artifactId>
-      <version>1.2.2-2918</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.digitalpetri.opcua</groupId>
-      <artifactId>ua-client</artifactId>
-      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.opcfoundation</groupId>
       <artifactId>ua-stack</artifactId>
       <version>1.01.311.2</version>
-    </dependency>
-    <dependency>
-      <groupId>com.intrinsyc</groupId>
-      <artifactId>j-integra-reduced-logging</artifactId>
-      <version>2.11</version>
     </dependency>
     <dependency>
       <groupId>org.apache.axis2</groupId>
@@ -119,25 +130,41 @@
       <artifactId>commons-discovery</artifactId>
       <version>0.4</version>
     </dependency>
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-    </dependency>
 
     <!-- Test dependencies -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.6.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
+      <version>4.2</version>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymockclassextension</artifactId>
     </dependency>
+    <dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-core</artifactId>
+    <version>3.2.4</version>
+    <scope>test</scope>
+  </dependency>
+    <dependency>
+    <groupId>org.testcontainers</groupId>
+    <artifactId>testcontainers</artifactId>
+    <version>1.12.5</version>
+    <scope>test</scope>
+  </dependency>
+      <dependency>
+          <groupId>org.powermock</groupId>
+          <artifactId>powermock-api-easymock</artifactId>
+          <version>2.0.5</version>
+          <scope>test</scope>
+      </dependency>
   </dependencies>
 
   <!-- Activate plugin configurations to build a tarball and a docker image -->
@@ -149,8 +176,29 @@
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
       </plugin>
-      <!-- To ignore the Docker build run 'mvn package -DskipDockerBuild -DskipDockerTag' -->
-      <plugin><groupId>com.spotify</groupId><artifactId>docker-maven-plugin</artifactId></plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.0.0-M4</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>5.5.2</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+        </configuration>
+
+      </plugin>
     </plugins>
   </build>
 </project>
