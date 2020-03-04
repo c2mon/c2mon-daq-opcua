@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.exceptions.EndpointTypesUnknownException;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 
 public class ControllerWithAliveWriter extends ControllerImpl {
@@ -16,7 +15,7 @@ public class ControllerWithAliveWriter extends ControllerImpl {
         this.aliveWriter = aliveWriter;
     }
 
-    public void initialize () throws EndpointTypesUnknownException, OPCCommunicationException {
+    public void initialize () throws ConfigurationException {
         super.initialize();
         aliveWriter.startWriter();
     }

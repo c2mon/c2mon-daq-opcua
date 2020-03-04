@@ -17,13 +17,15 @@
 
 package cern.c2mon.daq.opcua.address;
 
-import cern.c2mon.daq.opcua.exceptions.AddressException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import lombok.NonNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.*;
 
 public class AddressStringParser {
 
@@ -42,18 +44,18 @@ public class AddressStringParser {
      *
      * @return The EquipmentAddress object with the properties as given in the address String.
      */
-    public static List<EquipmentAddress> parse(final String address) {
+    public static List<EquipmentAddress> parse(final String address) throws ConfigurationException {
         List<EquipmentAddress> addresses;
         try {
             Properties properties = parsePropertiesFromString(address);
             addresses = createAddressesFromProperties(properties);
         } catch (URISyntaxException e) {
-            throw new AddressException("Syntax of OPC URI is incorrect ", e);
+            throw new ConfigurationException(ADDRESS_URI, e);
         }
         return addresses;
     }
 
-    private static List<EquipmentAddress> createAddressesFromProperties(Properties properties) throws URISyntaxException {
+    private static List<EquipmentAddress> createAddressesFromProperties(Properties properties) throws URISyntaxException, ConfigurationException {
         return EquipmentPropertyParser.of(properties).parse();
     }
 
@@ -101,12 +103,12 @@ public class AddressStringParser {
             this.aliveWriterEnabled = aliveWriterEnabled;
         }
 
-        public static EquipmentPropertyParser of(Properties properties) {
+        public static EquipmentPropertyParser of(Properties properties) throws ConfigurationException {
             checkProperties(properties);
             return new EquipmentPropertyParser(properties);
         }
 
-        private static void checkProperties(Properties properties) {
+        private static void checkProperties(Properties properties) throws ConfigurationException {
             ArrayList<String> propertyList = (ArrayList<String>) Collections.list(properties.propertyNames());
             Set<String> requiredKeySet = Arrays.stream(RequiredKeys.values())
                     .map(RequiredKeys::name)
@@ -119,19 +121,19 @@ public class AddressStringParser {
             checkForInvalidKeys(propertyList, requiredKeySet, optionalKeySet);
         }
 
-        private static void checkForRequiredKeys(ArrayList<String> properties, Set<String> requiredKeySet) {
+        private static void checkForRequiredKeys(ArrayList<String> properties, Set<String> requiredKeySet) throws ConfigurationException {
             boolean containsRequiredKeys = properties.containsAll(requiredKeySet);
             if (!containsRequiredKeys) {
-                throw new AddressException("The address does not contain all required properties.");
+                throw new ConfigurationException(ADDRESS_MISSING_PROPERTIES);
             }
         }
 
-        private static void checkForInvalidKeys(ArrayList<String> properties, Set<String> requiredKeySet, Set<String> optionalKeySet) {
+        private static void checkForInvalidKeys(ArrayList<String> properties, Set<String> requiredKeySet, Set<String> optionalKeySet) throws ConfigurationException {
             properties.removeAll(requiredKeySet);
             properties.removeAll(optionalKeySet);
             boolean containsInvalidKeys = !properties.isEmpty();
             if (containsInvalidKeys) {
-                throw new AddressException("The address does contains invalid properties.");
+                throw new ConfigurationException(ADDRESS_INVALID_PROPERTIES);
             }
         }
 

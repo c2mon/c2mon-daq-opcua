@@ -1,6 +1,8 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import lombok.SneakyThrows;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.Test;
@@ -67,21 +69,21 @@ public class EndpointSubscribeTagsTest extends EndpointTestBase{
     }
 
     @Test
-    public void badStatusCodeShouldUnsubscribeDataTag() throws ExecutionException, InterruptedException {
+    public void badStatusCodeShouldUnsubscribeDataTag() throws ExecutionException, InterruptedException, ConfigurationException {
         mockStatusCodes(new ISourceDataTag[]{}, new ISourceDataTag[]{tag1});
         subscribeTags(tag1);
         assertFalse(mapper.isSubscribed(tag1));
     }
 
     @Test
-    public void twoTagsWithBadSubscriptionStatusCodesShouldUnsubscribeBoth() throws ExecutionException, InterruptedException {
+    public void twoTagsWithBadSubscriptionStatusCodesShouldUnsubscribeBoth() throws ExecutionException, InterruptedException, ConfigurationException {
         mockStatusCodes(new ISourceDataTag[]{}, new ISourceDataTag[]{tag1, tag2});
         subscribeTags(tag1, tag2);
         assertFalse(mapper.isSubscribed(tag1) || mapper.isSubscribed(tag2));
     }
 
     @Test
-    public void twoTagsWithOneBadStatusCodeShouldUnsubscribeOne() throws ExecutionException, InterruptedException {
+    public void twoTagsWithOneBadStatusCodeShouldUnsubscribeOne() throws ExecutionException, InterruptedException, ConfigurationException {
         mockStatusCodes(new ISourceDataTag[]{tag1}, new ISourceDataTag[]{tag2});
         subscribeTags(tag1, tag2);
         assertTrue(mapper.isSubscribed(tag1) && !mapper.isSubscribed(tag2));
@@ -106,7 +108,8 @@ public class EndpointSubscribeTagsTest extends EndpointTestBase{
         assertTrue(!mapper.isSubscribed(tag1) && mapper.isSubscribed(tag2));
     }
 
-    protected void subscribeTagsAndMockGoodStatusCode (ISourceDataTag... tags) throws ExecutionException, InterruptedException {
+    @SneakyThrows
+    protected void subscribeTagsAndMockGoodStatusCode (ISourceDataTag... tags)  {
         mockStatusCodes(tags, new ISourceDataTag[]{});
         super.subscribeTags(tags);
     }

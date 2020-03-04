@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
@@ -19,7 +20,7 @@ public abstract class ControllerTestBase {
     IEquipmentConfiguration config;
 
     @BeforeEach
-    public void setup() {
+    public void setup() throws ConfigurationException {
         config = createMock(IEquipmentConfiguration.class);
         expect(config.getAliveTagId()).andReturn(1L).anyTimes();
         expect(config.getAliveTagInterval()).andReturn(13L).anyTimes();

@@ -18,7 +18,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
-import cern.c2mon.daq.opcua.exceptions.EndpointTypesUnknownException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.upstream.EquipmentStateListener;
 import cern.c2mon.daq.opcua.upstream.TagListener;
@@ -44,7 +44,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     private IEquipmentConfiguration config;
     private EventPublisher publisher;
 
-    public void initialize () throws EndpointTypesUnknownException, OPCCommunicationException {
+    public void initialize () throws ConfigurationException {
         endpoint.initialize();
         endpoint.subscribeTags(config.getSourceDataTags().values());
     }

@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
@@ -40,7 +41,7 @@ public abstract class EndpointTestBase {
         endpoint.subscribeTag(tag).get();
     }
 
-    protected void subscribeTags (ISourceDataTag... tags) throws ExecutionException, InterruptedException {
+    protected void subscribeTags (ISourceDataTag... tags) throws ExecutionException, InterruptedException, ConfigurationException {
         endpoint.subscribeTags(Arrays.asList(tags)).get();
     }
 

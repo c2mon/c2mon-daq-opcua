@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
-import cern.c2mon.daq.opcua.exceptions.AddressException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -15,7 +15,7 @@ import java.util.List;
 @Slf4j
 public class ControllerFactory {
 
-    public static Controller getController (IEquipmentConfiguration config) throws AddressException {
+    public static Controller getController (IEquipmentConfiguration config) throws ConfigurationException {
 
         List<EquipmentAddress> equipmentAddresses = AddressStringParser.parse(config.getAddress());
         EquipmentAddress address = Controller.getEquipmentAddress(equipmentAddresses);

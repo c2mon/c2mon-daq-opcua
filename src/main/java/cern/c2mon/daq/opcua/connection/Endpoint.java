@@ -16,6 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
@@ -23,72 +24,22 @@ import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Defines an OPC endpoint. An OPC endpoint has exactly the functionality
- * required for the TIM system. It is used to abstract from the different
- * connection types and their libraries.
- * 
- * @author Andreas Lang
- *
- */
+
 public interface Endpoint {
 
-    /**
-     * Returns true if the endpoint is connected to a server, else returns false.
-     */
     boolean isConnected ();
-
-    void initialize() throws OPCCommunicationException;
-    void reconnect() throws OPCCommunicationException;
-
-    /**
-     * Adds a data tag to this endpoint.
-     *
-     * @param sourceDataTag The data tag to add.
-     * @return
-     */
-    CompletableFuture<Void> subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
-    
-    /**
-     * Removes a data tag from this endpoint.
-     *
-     * @param sourceDataTag The data tag to remove.
-     * @return
-     */
-    CompletableFuture<Void> removeDataTag(ISourceDataTag sourceDataTag) throws IllegalArgumentException;
-
-    /**
-     * Adds the provided data tags to the endpoint. The endpoint will send
-     * updates for all added data tags.
-     *
-     * @param dataTags The data tags from which updates should be received.
-     * @return
-     */
-    CompletableFuture<Void> subscribeTags(Collection<ISourceDataTag> dataTags);
-    
-    /**
-     * Refreshes the values for the provided data tags. This will work only 
-     * for already added data tags.
-     * 
-     * @param dataTags The data tags which should be updated.
-     */
-    void refreshDataTags(Collection<ISourceDataTag> dataTags);
-
-    
-    /**
-     * Writes to the specified address in the OPC.
-     * 
-     * @param address The address to write to.
-     * @param value The value to write.
-     */
-    void write(final OPCHardwareAddress address, final Object value);
-
-    /**
-     * Stops everything in the endpoint and clears all configuration states.
-     * @return
-     */
+    void initialize () throws OPCCommunicationException;
+    CompletableFuture<Void> reconnect() throws OPCCommunicationException;
     CompletableFuture<Void> reset();
 
+    CompletableFuture<Void> subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException;
+    CompletableFuture<Void> subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
+    CompletableFuture<Void> removeDataTag(ISourceDataTag sourceDataTag) throws IllegalArgumentException;
+
+    void refreshDataTags(Collection<ISourceDataTag> dataTags);
+    void write(final OPCHardwareAddress address, final Object value);
+
+    //for injection during testing
     void setClient(MiloClientWrapper client);
 
 }

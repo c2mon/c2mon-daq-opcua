@@ -22,8 +22,6 @@ import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.connection.Controller;
 import cern.c2mon.daq.opcua.connection.ControllerFactory;
-import cern.c2mon.daq.opcua.exceptions.AddressException;
-import cern.c2mon.daq.opcua.exceptions.EndpointTypesUnknownException;
 import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
 import cern.c2mon.daq.opcua.upstream.EndpointListenerImpl;
 import cern.c2mon.daq.opcua.upstream.EquipmentStateListener;
@@ -59,15 +57,9 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     IEquipmentConfiguration config = getEquipmentConfiguration();
     IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-    try {
-      controller = ControllerFactory.getController(config);
-      subscribeEndpointListeners(sender);
-      controller.initialize();
-    } catch (AddressException e) {
-      throw new EqIOException("OPC address configuration string is invalid.", e);
-    } catch (EndpointTypesUnknownException e) {
-      throw new EqIOException("Not an appropriate OPC-UA protocol.", e);
-    }
+    controller = ControllerFactory.getController(config);
+    subscribeEndpointListeners(sender);
+    controller.initialize();
 
     getEquipmentConfigurationHandler().setDataTagChanger((IDataTagChanger) controller);
     getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
@@ -86,7 +78,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   @Override
   public synchronized void disconnectFromDataSource () {
     log.debug("disconnecting from OPC data source...");
-    controller.stop();
+    if (controller != null) controller.stop();
     log.debug("disconnected");
   }
 

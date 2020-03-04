@@ -16,11 +16,12 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.daq.opcua.exceptions.AddressException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
@@ -54,11 +55,12 @@ public class ItemDefinition {
         this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());
     }
 
+    @SneakyThrows
     public static ItemDefinition of(final ISourceDataTag tag) {
         HardwareAddress hardwareAddress = tag.getHardwareAddress();
 
         if (!(hardwareAddress instanceof OPCHardwareAddress)) {
-            throw new AddressException("The hardware address is not of type OPCHardwareAddress and cannot be handled");
+            throw new ConfigurationException(ConfigurationException.Cause.HARDWARE_ADDRESS_UNKNOWN);
         }
         OPCHardwareAddress opcAddress = (OPCHardwareAddress) hardwareAddress;
 

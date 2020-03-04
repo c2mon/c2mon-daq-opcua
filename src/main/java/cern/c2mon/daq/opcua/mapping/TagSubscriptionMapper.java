@@ -39,6 +39,7 @@ public interface TagSubscriptionMapper {
     void clear();
 
     GroupDefinitionPair removeTagFromGroup(ISourceDataTag dataTag);
+
     void addTagToGroup(ISourceDataTag dataTag);
 
     ItemDefinition getDefinition(ISourceDataTag command);

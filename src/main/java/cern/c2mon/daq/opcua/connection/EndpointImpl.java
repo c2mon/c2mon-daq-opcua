@@ -16,6 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.GroupDefinitionPair;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
@@ -26,8 +27,8 @@ import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.Setter;
-import lombok.var;
 import lombok.extern.slf4j.Slf4j;
+import lombok.var;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -40,8 +41,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static cern.c2mon.daq.opcua.upstream.EquipmentStateListener.EquipmentState.CONNECTION_FAIL;
-import static cern.c2mon.daq.opcua.upstream.EquipmentStateListener.EquipmentState.OK;
+import static cern.c2mon.daq.opcua.upstream.EquipmentStateListener.EquipmentState.*;
 
 @Slf4j
 @AllArgsConstructor
@@ -52,8 +52,9 @@ public class EndpointImpl implements Endpoint {
     private TagSubscriptionMapper mapper;
     private EventPublisher events;
 
-    public synchronized void reconnect () {
-        reset().thenRun(this::initialize); //TODO add restart functionality
+    public CompletableFuture<Void> reconnect () {
+        events.notifyEquipmentState(CONNECTION_LOST);
+        return reset().thenRun(this::initialize); //TODO refresh?
     }
 
     public synchronized void initialize () {
@@ -61,15 +62,16 @@ public class EndpointImpl implements Endpoint {
             client.initialize();
             events.notifyEquipmentState(OK);
         } catch (ExecutionException | InterruptedException e) {
-            events.notifyEquipmentState(CONNECTION_FAIL);
-            throw new OPCCommunicationException(CONNECTION_FAIL.message, e);
+            events.notifyEquipmentState(CONNECTION_FAILED);
+            throw new OPCCommunicationException(CONNECTION_FAILED.message, e);
         }
     }
 
+
     @Override
-    public synchronized CompletableFuture<Void> subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) {
+    public synchronized CompletableFuture<Void> subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException {
         if (dataTags.isEmpty()) {
-            throw new IllegalArgumentException("No data tags to subscribe.");
+            throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
         }
         return CompletableFuture.allOf(mapper.toGroups(dataTags).entrySet()
                 .stream()
@@ -86,15 +88,13 @@ public class EndpointImpl implements Endpoint {
     }
 
     private CompletableFuture<Void> subscribeToGroup (SubscriptionGroup group, List<ItemDefinition> definitions) {
-        UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription() : createSubscription(group);
+        UaSubscription subscription = (group.isSubscribed()) ?
+                group.getSubscription() :
+                client.createSubscription(group.getDeadband().getTime());
         group.setSubscription(subscription);
 
         return client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback)
                     .thenAccept(this::subscriptionCompletedCallback);
-    }
-
-    private UaSubscription createSubscription (SubscriptionGroup group) {
-        return client.createSubscription(group.getDeadband().getTime());
     }
 
     @Override

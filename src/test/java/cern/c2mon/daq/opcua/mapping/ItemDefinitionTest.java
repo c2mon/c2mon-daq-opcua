@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.daq.opcua.exceptions.AddressException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.address.impl.DBHardwareAddressImpl;
 import org.junit.jupiter.api.Test;
 
@@ -18,11 +18,11 @@ public class ItemDefinitionTest extends MappingBase {
         dataTagAddress.setHardwareAddress(new DBHardwareAddressImpl("Primary"));
         tag = makeSourceDataTag(1L, dataTagAddress);
 
-        assertThrows(AddressException.class, () -> ItemDefinition.of(tag));
+        assertThrows(ConfigurationException.class, () -> ItemDefinition.of(tag));
     }
 
     @Test
-    public void hardwareAddressCreatesSameItemDefinitionSpecs() {
+    public void hardwareAddressCreatesSameItemDefinitionSpecs() throws ConfigurationException {
         ItemDefinition itemDefinition = ItemDefinition.of(tag);
 
         assertEquals(opcHardwareAddress.getOPCItemName(), itemDefinition.getAddress().getIdentifier());
@@ -31,7 +31,7 @@ public class ItemDefinitionTest extends MappingBase {
     }
 
     @Test
-    public void redundantHardwareAddressCreatesRedundantItemDefinition() {
+    public void redundantHardwareAddressCreatesRedundantItemDefinition() throws ConfigurationException {
         opcHardwareAddress.setOpcRedundantItemName("Redundant");
         dataTagAddress.setHardwareAddress(opcHardwareAddress);
         tag = makeSourceDataTag(1L, dataTagAddress);
@@ -43,12 +43,12 @@ public class ItemDefinitionTest extends MappingBase {
     }
 
     @Test
-    public void sameTagShouldResultInSameDefinition() {
+    public void sameTagShouldResultInSameDefinition() throws ConfigurationException {
         assertEquals(ItemDefinition.of(tag), ItemDefinition.of(tag));
     }
 
     @Test
-    public void differentTagIdShouldResultInDifferentDefinitions() {
+    public void differentTagIdShouldResultInDifferentDefinitions() throws ConfigurationException {
         assertNotEquals(ItemDefinition.of(tag), ItemDefinition.of(tagWithSameDeadband));
     }
 
