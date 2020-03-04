@@ -23,9 +23,6 @@ import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.connection.Controller;
 import cern.c2mon.daq.opcua.connection.ControllerFactory;
 import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
-import cern.c2mon.daq.opcua.upstream.EndpointListenerImpl;
-import cern.c2mon.daq.opcua.upstream.EquipmentStateListener;
-import cern.c2mon.daq.opcua.upstream.TagListener;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
@@ -57,19 +54,13 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     IEquipmentConfiguration config = getEquipmentConfiguration();
     IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-    controller = ControllerFactory.getController(config);
-    subscribeEndpointListeners(sender);
+    controller = ControllerFactory.getController(config, sender);
     controller.initialize();
 
     getEquipmentConfigurationHandler().setDataTagChanger((IDataTagChanger) controller);
     getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
   }
 
-  private void subscribeEndpointListeners(IEquipmentMessageSender sender) {
-    EndpointListenerImpl listener = new EndpointListenerImpl(sender);
-    controller.subscribe((TagListener) listener);
-    controller.subscribe((EquipmentStateListener) listener);
-  }
 
   /**
    * Called when the core wants the OPC module to disconnect from the OPC

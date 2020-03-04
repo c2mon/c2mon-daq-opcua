@@ -24,12 +24,15 @@ import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
-
+/**
+ * Interface in between C2MON tags and the opc endpoint.
+ * Notifies C2MON of OPCUA events through the EventPublisher.
+ * Passes commands to the client through the MiloClientWrapper.
+ */
 public interface Endpoint {
 
     boolean isConnected ();
-    void initialize () throws OPCCommunicationException;
-    CompletableFuture<Void> reconnect() throws OPCCommunicationException;
+    void initialize (boolean connectionLost) throws OPCCommunicationException;
     CompletableFuture<Void> reset();
 
     CompletableFuture<Void> subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException;

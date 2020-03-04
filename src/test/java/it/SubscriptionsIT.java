@@ -31,7 +31,7 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
 
         future = listenForServerResponse(endpoint);
         super.setupEndpoint();
-        endpoint.initialize();
+        endpoint.initialize(false);
         log.info("Client ready");
     }
 

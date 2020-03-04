@@ -17,8 +17,8 @@
 
 package cern.c2mon.daq.opcua.address;
 
+import cern.c2mon.daq.opcua.address.EquipmentAddress.ServerAddress;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import lombok.NonNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -44,19 +44,13 @@ public class AddressStringParser {
      *
      * @return The EquipmentAddress object with the properties as given in the address String.
      */
-    public static List<EquipmentAddress> parse(final String address) throws ConfigurationException {
-        List<EquipmentAddress> addresses;
+    public static EquipmentAddress parse(final String address) throws ConfigurationException {
         try {
             Properties properties = parsePropertiesFromString(address);
-            addresses = createAddressesFromProperties(properties);
+            return EquipmentPropertyParser.of(properties).parse();
         } catch (URISyntaxException e) {
             throw new ConfigurationException(ADDRESS_URI, e);
         }
-        return addresses;
-    }
-
-    private static List<EquipmentAddress> createAddressesFromProperties(Properties properties) throws URISyntaxException, ConfigurationException {
-        return EquipmentPropertyParser.of(properties).parse();
     }
 
     private static Properties parsePropertiesFromString(final String address) {
@@ -89,18 +83,9 @@ public class AddressStringParser {
             this.uri = properties.getProperty(RequiredKeys.URI.name());
             this.serverTimeout = Integer.parseInt(properties.getProperty(RequiredKeys.serverTimeout.name()));
             this.serverRetryTimeout = Integer.parseInt(properties.getProperty(RequiredKeys.serverRetryTimeout.name()));
-            this.usersAtDomain = properties.getProperty(OptionalKeys.user.name(), null);
-            this.password = properties.getProperty(OptionalKeys.password.name(), null);
+            this.usersAtDomain = properties.getProperty(OptionalKeys.user.name(), "");
+            this.password = properties.getProperty(OptionalKeys.password.name(), "");
             this.aliveWriterEnabled = Boolean.parseBoolean(properties.getProperty(OptionalKeys.aliveWriter.name(), "true"));
-        }
-
-        public EquipmentPropertyParser(@NonNull String uri, String usersAtDomain, String password, @NonNull int serverTimeout, @NonNull int serverRetryTimeout, boolean aliveWriterEnabled) {
-            this.uri = uri;
-            this.usersAtDomain = usersAtDomain;
-            this.password = password;
-            this.serverTimeout = serverTimeout;
-            this.serverRetryTimeout = serverRetryTimeout;
-            this.aliveWriterEnabled = aliveWriterEnabled;
         }
 
         public static EquipmentPropertyParser of(Properties properties) throws ConfigurationException {
@@ -137,41 +122,45 @@ public class AddressStringParser {
             }
         }
 
-        public List<EquipmentAddress> parse() throws URISyntaxException {
-            List<EquipmentAddress> addresses = new ArrayList<>();
-            for (int i = 0; i < this.uri.split(",").length; i++) {
-                addresses.add(reduceToIndex(i).toEquipmentAddress());
+        public EquipmentAddress parse() throws URISyntaxException, ConfigurationException {
+            return new EquipmentAddress(parseServerAddresses(), serverTimeout, serverRetryTimeout, aliveWriterEnabled);
+        }
+
+        private List<ServerAddress> parseServerAddresses() throws URISyntaxException {
+            List<ServerAddress> addresses = new ArrayList<>();
+
+            String[] uris = splitBy(this.uri, ",");
+            String[] usersAtDomain = splitBy(this.usersAtDomain, ",");
+            String[] passwords = splitBy(this.password, ",");
+
+            for (int i = 0; i < uris.length; i++) {
+                if (i < usersAtDomain.length && i < passwords.length) {
+                    addresses.add(new ServerAddress(new URI(uris[i].trim()),
+                            extractUser(usersAtDomain[i]),
+                            extractDomain(usersAtDomain[i]),
+                            passwords[i].trim()));
+                }
+                else {
+                    addresses.add(new ServerAddress(new URI(uris[i].trim())));
+                }
             }
             return addresses;
         }
 
-        private EquipmentPropertyParser reduceToIndex(int n) {
-            assert  this.uri != null;
-            if (this.usersAtDomain != null && this.password != null) {
-                return new EquipmentPropertyParser(uri.split(",")[n].trim(),
-                        usersAtDomain.split(",")[n].trim(),
-                        password.split(",")[n].trim(),
-                        serverTimeout, serverRetryTimeout, aliveWriterEnabled);
-            }
-            else return new EquipmentPropertyParser(uri.split(",")[n].trim(),
-                    this.usersAtDomain, this.password, serverTimeout, serverRetryTimeout, aliveWriterEnabled);
+        private static String[] splitBy (String stringToSplit, String delimiter) {
+            return stringToSplit.split(delimiter);
         }
 
-        private EquipmentAddress toEquipmentAddress() throws URISyntaxException {
-            return new EquipmentAddress(new URI(this.uri), extractFirstUser(), extractFirstDomain(), this.password,
-                    this.serverTimeout, this.serverRetryTimeout, this.aliveWriterEnabled);
+        private static String extractUser (String userAtDomain) {
+            return getUserAtDomainElement(userAtDomain, 0);
         }
 
-        private String extractFirstUser() {
-            return containsUserAndDomain() ? this.usersAtDomain.split("@")[0] : null;
+        private static String extractDomain (String userAtDomain) {
+            return getUserAtDomainElement(userAtDomain, 1);
         }
 
-        private String extractFirstDomain() {
-            return containsUserAndDomain() ? this.usersAtDomain.split("@")[1] : null;
-        }
-
-        private boolean containsUserAndDomain() {
-            return this.usersAtDomain != null && this.usersAtDomain.contains("@");
+        private static String getUserAtDomainElement(String userAtDomain, int i) {
+            return (userAtDomain != null && userAtDomain.contains("@")) ? splitBy(userAtDomain, "@")[i].trim() : null;
         }
     }
 }

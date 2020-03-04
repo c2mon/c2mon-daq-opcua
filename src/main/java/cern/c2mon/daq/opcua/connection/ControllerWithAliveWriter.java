@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 
@@ -10,8 +11,9 @@ public class ControllerWithAliveWriter extends ControllerImpl {
     public ControllerWithAliveWriter (Endpoint endpoint,
                                       IEquipmentConfiguration config,
                                       EventPublisher publisher,
+                                      IEquipmentMessageSender sender,
                                       AliveWriter aliveWriter) {
-        super(endpoint, config, publisher);
+        super(endpoint, config, publisher, sender);
         this.aliveWriter = aliveWriter;
     }
 

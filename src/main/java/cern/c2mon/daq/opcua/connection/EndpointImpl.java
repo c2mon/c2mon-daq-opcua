@@ -50,12 +50,9 @@ public class EndpointImpl implements Endpoint {
     private TagSubscriptionMapper mapper;
     private EventPublisher events;
 
-    public CompletableFuture<Void> reconnect () {
-        events.notifyEquipmentState(CONNECTION_LOST);
-        return reset().thenRun(this::initialize); //TODO refresh?
-    }
+    public void initialize (boolean connectionLost) {
+        if (connectionLost) events.notifyEquipmentState(CONNECTION_LOST);
 
-    public synchronized void initialize () {
         try {
             client.initialize();
             events.notifyEquipmentState(OK);
@@ -71,7 +68,7 @@ public class EndpointImpl implements Endpoint {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
         }
-        return CompletableFuture.allOf(mapper.toGroupsWithDefinitions(dataTags).entrySet()
+        return CompletableFuture.allOf(mapper.maptoGroupsWithDefinitions(dataTags).entrySet()
                 .stream()
                 .map(e -> subscribeToGroup(e.getKey(), e.getValue()))
                 .toArray(CompletableFuture[]::new))
@@ -159,7 +156,7 @@ public class EndpointImpl implements Endpoint {
 
     private void subscriptionCompletedCallback (List<UaMonitoredItem> monitoredItems) {
         for (UaMonitoredItem item : monitoredItems) {
-            ISourceDataTag dataTag = mapper.getTagBy(item.getClientHandle());
+            ISourceDataTag dataTag = mapper.getTag(item.getClientHandle());
             if (item.getStatusCode().isBad()) {
                 events.invalidTag(dataTag);
             }
@@ -170,7 +167,7 @@ public class EndpointImpl implements Endpoint {
     }
 
     private void itemCreationCallback (UaMonitoredItem item, Integer i) {
-        ISourceDataTag tag = mapper.getTagBy(item.getClientHandle());
+        ISourceDataTag tag = mapper.getTag(item.getClientHandle());
         item.setValueConsumer(value -> events.notifyTagEvent(item.getStatusCode(), tag, value));
     }
 }

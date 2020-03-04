@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
@@ -10,15 +11,16 @@ import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 
-import java.util.List;
-
 @Slf4j
 public class ControllerFactory {
 
-    public static Controller getController (IEquipmentConfiguration config) throws ConfigurationException {
+    public static Controller getController (IEquipmentConfiguration config, IEquipmentMessageSender sender) throws ConfigurationException {
 
-        List<EquipmentAddress> equipmentAddresses = AddressStringParser.parse(config.getAddress());
-        EquipmentAddress address = Controller.getEquipmentAddress(equipmentAddresses);
+        EquipmentAddress equipmentAddress = AddressStringParser.parse(config.getAddress());
+        if (!equipmentAddress.supportsProtocol(Controller.UA_TCP_TYPE)) {
+            throw new ConfigurationException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN);
+        }
+        EquipmentAddress.ServerAddress address = equipmentAddress.getServerAddressWithProtocol(Controller.UA_TCP_TYPE);
 
         MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
         TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
@@ -26,15 +28,15 @@ public class ControllerFactory {
 
         Endpoint endpoint = new EndpointImpl(wrapper, mapper, publisher);
 
-        if (equipmentAddresses.get(0).isAliveWriterEnabled()) {
+        if (equipmentAddress.isAliveWriterEnabled()) {
             try {
                 AliveWriter aliveWriter = createAliveWriter(config, endpoint);
-                return new ControllerWithAliveWriter(endpoint, config, publisher, aliveWriter);
+                return new ControllerWithAliveWriter(endpoint, config, publisher, sender, aliveWriter);
             } catch (IllegalArgumentException e) {
                 log.error("Creating the AliveWriter skipped. ", e);
             }
         }
-        return new ControllerImpl(endpoint, config, publisher);
+        return new ControllerImpl(endpoint, config, publisher, sender);
     }
 
     private static AliveWriter createAliveWriter (IEquipmentConfiguration config, Endpoint endpoint) throws IllegalArgumentException {

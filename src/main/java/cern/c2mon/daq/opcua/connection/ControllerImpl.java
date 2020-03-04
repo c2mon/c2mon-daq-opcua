@@ -17,9 +17,11 @@
 
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EquipmentStateListener;
 import cern.c2mon.daq.opcua.upstream.TagListener;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -40,43 +42,39 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     @Getter
     private Endpoint endpoint;
-
     private IEquipmentConfiguration config;
     private EventPublisher publisher;
+    private IEquipmentMessageSender sender;
 
     public void initialize () throws ConfigurationException {
-        endpoint.initialize();
+        initialize(false);
+    }
+
+    public void initialize (boolean connectionLost) throws ConfigurationException {
+        EndpointListener endpointListener = new EndpointListener(sender);
+        publisher.subscribe((TagListener) endpointListener);
+        publisher.subscribe((EquipmentStateListener) endpointListener);
+        endpoint.initialize(connectionLost);
         endpoint.subscribeTags(config.getSourceDataTags().values());
-    }
-
-    @Override
-    public void subscribe (TagListener listener) {
-        publisher.subscribe(listener);
-    }
-
-    @Override
-    public void subscribe (EquipmentStateListener listener) {
-        publisher.subscribe(listener);
     }
 
     public synchronized void stop () {
         endpoint.reset();
     }
 
-    public void checkConnection () throws OPCCommunicationException {
+    public void checkConnection () throws OPCCommunicationException, ConfigurationException {
         if (!endpoint.isConnected()) {
-            endpoint.reconnect();
-            // TODO refresh?
+            endpoint.reset();
+            initialize(true);
+            refreshAllDataTags();
         }
     }
 
     public synchronized void refreshAllDataTags () {
-        checkConnection();
         endpoint.refreshDataTags(config.getSourceDataTags().values());
     }
 
     public synchronized void refreshDataTag (ISourceDataTag sourceDataTag) {
-        checkConnection();
         endpoint.refreshDataTags(Collections.singletonList(sourceDataTag));
     }
 
@@ -86,7 +84,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     @Override
     public void onAddDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        tryAndReport(changeReport, "DataTag added", () -> {
+        doAndReport(changeReport, "DataTag added", () -> {
             endpoint.subscribeTag(sourceDataTag);
             refreshDataTag(sourceDataTag);
         });
@@ -94,7 +92,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     @Override
     public void onRemoveDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        tryAndReport(changeReport, "DataTag removed", () -> endpoint.removeDataTag(sourceDataTag));
+        doAndReport(changeReport, "DataTag removed", () -> endpoint.removeDataTag(sourceDataTag));
     }
 
     @Override
@@ -102,7 +100,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         if (sourceDataTag.getHardwareAddress().equals(oldSourceDataTag.getHardwareAddress())) {
             completeSuccessFullyWithMessage(changeReport, "No changes for OPC necessary.");
         } else {
-            tryAndReport(changeReport, "DataTag updated", () -> {
+            doAndReport(changeReport, "DataTag updated", () -> {
                 endpoint.removeDataTag(oldSourceDataTag);
                 endpoint.subscribeTag(sourceDataTag);
             });
@@ -114,7 +112,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         changeReport.setState(SUCCESS);
     }
 
-    private void tryAndReport (ChangeReport changeReport, String message, Runnable runnable) {
+    private void doAndReport (ChangeReport changeReport, String message, Runnable runnable) {
         try {
             checkConnection();
             runnable.run();

@@ -16,7 +16,6 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -43,10 +42,6 @@ public class SubscriptionGroup{
         return this.definitions.size();
     }
 
-    public boolean isEmpty() {
-        return this.size() < 1;
-    }
-
     public boolean isSubscribed() {
         return this.subscription != null;
     }
@@ -67,21 +62,8 @@ public class SubscriptionGroup{
         this.definitions.remove(itemDefinition);
     }
 
-    public void clear() {
-        this.definitions.clear();
-    }
-
     public boolean contains(ItemDefinition definition) {
         return definitions.contains(definition);
-    }
-
-    public boolean contains(ISourceDataTag tag) {
-        for (ItemDefinition definition : definitions) {
-            if (definition.getTag().equals(tag)) {
-                return true;
-            }
-        }
-        return false;
     }
 
 }

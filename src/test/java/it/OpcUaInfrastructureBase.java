@@ -1,6 +1,5 @@
 package it;
 
-import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.connection.*;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
@@ -20,14 +19,15 @@ import java.util.concurrent.*;
 public abstract class OpcUaInfrastructureBase {
 
     protected static GenericContainer opcUa;
-    protected static EquipmentAddress address;
+    protected static String address;
     protected Endpoint endpoint;
     protected TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
-    protected MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
+    protected MiloClientWrapper wrapper;
     protected EventPublisher publisher = new EventPublisher();
 
     @BeforeEach
     public void setupEndpoint() {
+        wrapper = new MiloClientWrapperImpl(address, SecurityPolicy.None);
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
     }
 
@@ -38,8 +38,8 @@ public abstract class OpcUaInfrastructureBase {
                 .withCommand("--unsecuretransport")
                 .withNetworkMode("host");
         opcUa.start();
-        address = new EquipmentAddress("opc.tcp://" + opcUa.getContainerInfo().getConfig().getHostName() + ":50000",
-                "", "", "", 500, 500, true);
+
+        address = "opc.tcp://" + opcUa.getContainerInfo().getConfig().getHostName() + ":50000";
 
         log.info("Server starting... ");
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -57,14 +57,14 @@ public abstract class OpcUaInfrastructureBase {
         @Override
         public Boolean call() {
             Endpoint endpoint = new EndpointImpl(
-                    new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None),
+                    new MiloClientWrapperImpl(address, SecurityPolicy.None),
                     new TagSubscriptionMapperImpl(),
                     new EventPublisher());
 
             boolean serverRunning = false;
             while (!serverRunning) {
                 try {
-                    endpoint.initialize();
+                    endpoint.initialize(false);
                     serverRunning = endpoint.isConnected();
                 } catch (Exception e) {
 //                    log.info("Server not yet ready ");

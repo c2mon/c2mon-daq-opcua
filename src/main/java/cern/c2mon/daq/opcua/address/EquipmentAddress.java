@@ -18,23 +18,70 @@
 package cern.c2mon.daq.opcua.address;
 
 import cern.c2mon.daq.opcua.connection.AliveWriter;
-import lombok.AllArgsConstructor;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import lombok.Getter;
+import lombok.NonNull;
 
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Objects;
 
 @Getter
-@AllArgsConstructor
 public class EquipmentAddress {
 
-    private URI uri;
-    private String user;
-    private String domain;
-    private String password;
-    private int serverTimeout;
-    private int serverRetryTimeout;
+    @Getter
+    public static class ServerAddress {
+        private URI uri;
+        private String user;
+        private String domain;
+        private String password;
+
+        ServerAddress (@NonNull URI uri) {
+            this.uri = uri;
+            this.user = null;
+            this.domain = null;
+            this.password = null;
+        }
+
+        ServerAddress (@NonNull URI uri, String user, String domain, String password) {
+            this.uri = uri;
+            this.user = cleanArg(user);
+            this.domain = cleanArg(domain);
+            this.password = cleanArg(password);
+        }
+
+        private String cleanArg (String arg) {
+            return arg == null || arg.trim().isEmpty() ? null: arg;
+        }
+
+        public String getProtocol() {
+            return uri.getScheme();
+        }
+
+        public String getUriString () {
+            return uri.toString();
+        }
+
+        @Override
+        public boolean equals (Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ServerAddress that = (ServerAddress) o;
+            return Objects.equals(getUriString(), that.getUriString()) &&
+                    Objects.equals(user, that.user) &&
+                    Objects.equals(domain, that.domain) &&
+                    Objects.equals(password, that.password);
+        }
+
+        @Override
+        public int hashCode () {
+            return Objects.hash(getUriString(), user, domain, password);
+        }
+    }
+
+    private final List<ServerAddress> addresses;
+    private final int serverTimeout;
+    private final int serverRetryTimeout;
 
     /**
      * If, set to false, then the Alive WriterTask is not started.
@@ -46,58 +93,46 @@ public class EquipmentAddress {
      */
     private boolean aliveWriterEnabled;
 
-    public EquipmentAddress(String uri, int serverTimeout, int serverRetryTimeout) throws URISyntaxException {
-        this.uri = new URI(uri);
-        this.serverTimeout = serverTimeout;
-        this.serverRetryTimeout = serverRetryTimeout;
-    }
-
-    public EquipmentAddress(String uri,
-                            String user,
-                            String domain,
-                            String password,
-                            int serverTimeout,
-                            int serverRetryTimeout,
-                            boolean aliveWriterEnabled) throws URISyntaxException {
-        this.uri = new URI(uri);
-        this.user = user;
-        this.domain = domain;
-        this.password = password;
+    public EquipmentAddress(List<ServerAddress> addresses, int serverTimeout, int serverRetryTimeout, boolean aliveWriterEnabled) throws ConfigurationException {
+        if (addresses.isEmpty())
+            throw new ConfigurationException(ConfigurationException.Cause.MISSING_URI);
+        this.addresses = addresses;
         this.serverTimeout = serverTimeout;
         this.serverRetryTimeout = serverRetryTimeout;
         this.aliveWriterEnabled = aliveWriterEnabled;
     }
 
-    /**
-     * @return the Uri as a String
-     */
-    public String getUriString() {
-        return uri.toString();
+    public ServerAddress getServerAddressWithProtocol(String protocol) throws IllegalArgumentException {
+        for(ServerAddress address : addresses) {
+            if (address.getProtocol().equals(protocol)) {
+                return address;
+            }
+        }
+        throw new IllegalArgumentException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN.message);
     }
 
-    /**
-     * @return the protocol
-     */
-    public String getProtocol() {
-        return uri.getScheme();
+    public boolean supportsProtocol (String uri) {
+        for(ServerAddress address : addresses) {
+            if (address.getProtocol().equals(uri)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals (Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof EquipmentAddress)) return false;
         EquipmentAddress that = (EquipmentAddress) o;
-        return Objects.equals(getUri(), that.getUri()) &&
-                getServerTimeout() == that.getServerTimeout() &&
+        return getServerTimeout() == that.getServerTimeout() &&
                 getServerRetryTimeout() == that.getServerRetryTimeout() &&
                 isAliveWriterEnabled() == that.isAliveWriterEnabled() &&
-                Objects.equals(getUser(), that.getUser()) &&
-                Objects.equals(getPassword(), that.getPassword()) &&
-                Objects.equals(getDomain(), that.getDomain());
+                getAddresses().equals(that.getAddresses());
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(getUri(), getServerTimeout(), getServerRetryTimeout(), getUser(), getPassword());
+    public int hashCode () {
+        return Objects.hash(getAddresses(), getServerTimeout(), getServerRetryTimeout(), isAliveWriterEnabled());
     }
 }

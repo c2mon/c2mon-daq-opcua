@@ -82,14 +82,14 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void tagsToGroupsShouldReturnAsManyGroupsAsDistinctDeadbands() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.toGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithSameDeadband));
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithSameDeadband));
 
         assertEquals(2, pairs.size());
     }
 
     @Test
     public void tagsToGroupsShouldCombineTagsWithSameDeadbands() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.toGroupsWithDefinitions(Arrays.asList(tag, tagWithSameDeadband));
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithSameDeadband));
 
         SubscriptionGroup groupWithTwoTags = mapper.getGroup(tag);
         List<ISourceDataTag> pairedTags = pairs
@@ -102,7 +102,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void tagsToGroupsShouldSeparateTagsWithDifferentDeadbands() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.toGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband));
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband));
 
         SubscriptionGroup group1 = mapper.getGroup(tag);
         SubscriptionGroup group2 = mapper.getGroup(tagWithDifferentDeadband);
@@ -113,7 +113,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void tagsToGroupsShouldNotAddTagsToGroups() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.toGroupsWithDefinitions(Collections.singletonList(tag));
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Collections.singletonList(tag));
         assertFalse(pairs.keySet().stream().anyMatch(group -> group.contains(ItemDefinition.of(tag))));
     }
 
@@ -132,7 +132,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
     public void removeTagFromGroupShouldDeleteCorrespondingDefinition() {
         SubscriptionGroup group = mapper.getGroup(tag);
         ItemDefinition definition = mapper.getDefinition(tag);
-        mapper.registerDefinitionsInGroup(Collections.singletonList(definition));
+        mapper.addDefinitionsToGroups(Collections.singletonList(definition));
 
         mapper.removeTagFromGroup(tag);
 
@@ -141,7 +141,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void getGroupsShouldReturnAllPreviouslyReturnedGroups() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.toGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithDifferentDeadband));
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithDifferentDeadband));
 
         Collection<SubscriptionGroup> groups = mapper.getGroups();
 
@@ -173,7 +173,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
     public void registerDefinitionInGroupShouldAddDefinitonToGroup() {
         SubscriptionGroup group = mapper.getGroup(tag);
         ItemDefinition definition = mapper.getDefinition(tag);
-        mapper.registerDefinitionsInGroup(Collections.singletonList(definition));
+        mapper.addDefinitionsToGroups(Collections.singletonList(definition));
 
         assertTrue(group.contains(definition));
     }
@@ -181,9 +181,9 @@ public class TagSubscriptionMapperTest extends MappingBase {
     @Test
     public void registerDefinitionTwiceShouldThrowError() {
         ItemDefinition definition = mapper.getDefinition(tag);
-        mapper.registerDefinitionsInGroup(Collections.singletonList(definition));
+        mapper.addDefinitionsToGroups(Collections.singletonList(definition));
 
-        assertThrows(IllegalArgumentException.class, () -> mapper.registerDefinitionsInGroup(Collections.singletonList(definition)));
+        assertThrows(IllegalArgumentException.class, () -> mapper.addDefinitionsToGroups(Collections.singletonList(definition)));
     }
 
     @Test
@@ -191,9 +191,9 @@ public class TagSubscriptionMapperTest extends MappingBase {
         SubscriptionGroup group = mapper.getGroup(tag);
         ItemDefinition definition = mapper.getDefinition(tag);
 
-        mapper.registerDefinitionsInGroup(Collections.singletonList(definition));
+        mapper.addDefinitionsToGroups(Collections.singletonList(definition));
         mapper.removeTagFromGroup(tag);
-        mapper.registerDefinitionsInGroup(Collections.singletonList(definition));
+        mapper.addDefinitionsToGroups(Collections.singletonList(definition));
 
         assertTrue(group.contains(definition));
     }
@@ -204,7 +204,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
         ItemDefinition definition = mapper.getDefinition(tag);
         ItemDefinition definitionWithSameDeadband = mapper.getDefinition(tagWithSameDeadband);
 
-        mapper.registerDefinitionsInGroup(Arrays.asList(definition, definitionWithSameDeadband));
+        mapper.addDefinitionsToGroups(Arrays.asList(definition, definitionWithSameDeadband));
 
         assertTrue(group.contains(definition));
         assertTrue(group.contains(definitionWithSameDeadband));
@@ -212,14 +212,14 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void getTagByRandomClientHandleShouldThrowError() {
-        assertThrows(IllegalArgumentException.class, () -> mapper.getTagBy(UInteger.valueOf(2)));
+        assertThrows(IllegalArgumentException.class, () -> mapper.getTag(UInteger.valueOf(2)));
     }
 
     @Test
     public void getTagByClientHandleShouldReturnProperTag() {
         ItemDefinition definition = mapper.getDefinition(tag);
 
-        ISourceDataTag getTagBy = mapper.getTagBy(definition.getClientHandle());
+        ISourceDataTag getTagBy = mapper.getTag(definition.getClientHandle());
 
         assertEquals(tag, getTagBy);
     }

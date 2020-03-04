@@ -31,19 +31,13 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     // TODO: this could be avoided (only useful for clientHandle) -> what is quicker?
     private final Map<ISourceDataTag, ItemDefinition> tag2Definition = new ConcurrentHashMap<>();
 
-    public boolean isSubscribed(ISourceDataTag tag) {
-        SubscriptionGroup group = getGroup(Deadband.of(tag));
-        return group.isSubscribed() && group.contains(getDefinition(tag));
+    @Override
+    public Collection<SubscriptionGroup> getGroups() {
+        return subscriptionGroups.values();
     }
 
     @Override
-    public void clear() {
-        subscriptionGroups.clear();
-        tag2Definition.clear();
-    }
-
-    @Override
-    public Map<SubscriptionGroup, List<ItemDefinition>> toGroupsWithDefinitions (Collection<ISourceDataTag> tags) {
+    public Map<SubscriptionGroup, List<ItemDefinition>> maptoGroupsWithDefinitions (Collection<ISourceDataTag> tags) {
         return tags
                 .stream()
                 .collect(groupingBy(Deadband::of))
@@ -58,8 +52,37 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
+    public ItemDefinition getDefinition(ISourceDataTag tag) {
+        if (tag2Definition.containsKey(tag)) {
+            return tag2Definition.get(tag);
+        } else {
+            ItemDefinition definition = ItemDefinition.of(tag);
+            tag2Definition.put(tag, definition);
+            return definition;
+        }
+    }
+
+    @Override
+    public ISourceDataTag getTag (UInteger clientHandle) {
+        return findDefinitionWithClientHandle(clientHandle).getTag();
+    }
+
+    @Override
+    public void addDefinitionsToGroups (Collection<ItemDefinition> definitions) {
+        definitions
+                .stream()
+                .collect(groupingBy(itemDefinition -> Deadband.of(itemDefinition.getTag())))
+                .forEach((deadband, definitionList) -> definitionList.forEach(i -> getOrCreateGroup(deadband).add(i)));
+    }
+
+    @Override
+    public void addDefinitionToGroup (ItemDefinition definition) {
+        getOrCreateGroup(Deadband.of(definition.getTag())).add(definition);
+    }
+
+    @Override
     public void addTagToGroup(ISourceDataTag tag) {
-        registerDefinitionInGroup(getDefinition(tag));
+        addDefinitionToGroup(getDefinition(tag));
     }
 
     @Override
@@ -77,35 +100,33 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public Collection<SubscriptionGroup> getGroups() {
-        return subscriptionGroups.values();
+    public boolean isSubscribed(ISourceDataTag tag) {
+        SubscriptionGroup group = getExistingGroup(Deadband.of(tag));
+        return group != null && group.isSubscribed() && group.contains(getDefinition(tag));
     }
 
     @Override
-    public ItemDefinition getDefinition(ISourceDataTag tag) {
-        return getOrMakeDefinitionFrom(tag);
+    public void clear() {
+        subscriptionGroups.clear();
+        tag2Definition.clear();
     }
 
-    @Override
-    public void registerDefinitionInGroup(ItemDefinition definition) {
-        getGroupBy(definition).add(definition);
+    private SubscriptionGroup getOrCreateGroup(Deadband deadband) {
+        if (groupExists(deadband)) {
+            return getExistingGroup(deadband);
+        } else {
+            SubscriptionGroup group = new SubscriptionGroup(deadband);
+            subscriptionGroups.put(deadband, group);
+            return group;
+        }
     }
 
-    @Override
-    public void registerDefinitionsInGroup(Collection<ItemDefinition> definitions) {
-        definitions
-                .stream()
-                .collect(groupingBy(itemDefinition -> Deadband.of(itemDefinition.getTag())))
-                .forEach((deadband, definitionList) -> definitionList.forEach(i -> getOrCreateGroup(deadband).add(i)));
+    private boolean groupExists (Deadband deadband) {
+        return getExistingGroup(deadband) != null;
     }
 
-    @Override
-    public ISourceDataTag getTagBy(UInteger clientHandle) {
-        return findDefinitionWithClientHandle(clientHandle).getTag();
-    }
-
-    private SubscriptionGroup getGroupBy(ItemDefinition definition) {
-        return getOrCreateGroup(Deadband.of(definition.getTag()));
+    private SubscriptionGroup getExistingGroup (Deadband deadband) {
+        return subscriptionGroups.get(deadband);
     }
 
     private ItemDefinition findDefinitionWithClientHandle(UInteger clientHandle){
@@ -121,40 +142,13 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         return definitionWithMatchingHandle.get();
     }
 
-    private SubscriptionGroup getOrCreateGroup(Deadband deadband) {
-        return hasGroup(deadband) ? getGroup(deadband) : createGroup(deadband);
-    }
-
-    private boolean hasGroup(Deadband deadband) {
-        return getGroup(deadband) != null;
-    }
-
-    public SubscriptionGroup getGroup(Deadband deadband) {
-        return subscriptionGroups.get(deadband);
-    }
-
-    private SubscriptionGroup createGroup(Deadband deadband) {
-        SubscriptionGroup group = new SubscriptionGroup(deadband);
-        subscriptionGroups.put(deadband, group);
-        return group;
-    }
-
     private List<ItemDefinition> getOrMakeDefinitionsFrom(Collection<ISourceDataTag> tags) {
         List<ItemDefinition> result = new ArrayList<>();
         for(ISourceDataTag tag : tags) {
-            result.add(getOrMakeDefinitionFrom(tag));
+            result.add(getDefinition(tag));
         }
         return result;
 
     }
 
-    private ItemDefinition getOrMakeDefinitionFrom(ISourceDataTag tag) {
-        if (tag2Definition.containsKey(tag)) {
-            return tag2Definition.get(tag);
-        } else {
-            ItemDefinition definition = ItemDefinition.of(tag);
-            tag2Definition.put(tag, definition);
-            return definition;
-        }
-    }
 }

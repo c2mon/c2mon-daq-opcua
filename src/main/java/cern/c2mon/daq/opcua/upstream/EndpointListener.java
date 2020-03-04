@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @AllArgsConstructor
-public class EndpointListenerImpl implements TagListener, EquipmentStateListener {
+public class EndpointListener implements TagListener, EquipmentStateListener {
     IEquipmentMessageSender sender;
 
     /**
