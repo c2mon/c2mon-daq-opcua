@@ -21,7 +21,8 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.*;
 
 public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
@@ -42,20 +43,18 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public Map<SubscriptionGroup, List<ItemDefinition>> toGroups(Collection<ISourceDataTag> tags) {
+    public Map<SubscriptionGroup, List<ItemDefinition>> toGroupsWithDefinitions (Collection<ISourceDataTag> tags) {
         return tags
                 .stream()
-                .collect(Collectors.groupingBy(Deadband::of))
+                .collect(groupingBy(Deadband::of))
                 .entrySet()
                 .stream()
-                .collect(Collectors.toMap(e -> getOrCreateGroup(e.getKey()), e -> getOrMakeDefinitionsFrom(e.getValue())));
+                .collect(toMap(e -> getOrCreateGroup(e.getKey()), e -> getOrMakeDefinitionsFrom(e.getValue())));
     }
 
     @Override
-    public GroupDefinitionPair toGroup(ISourceDataTag tag) {
-        SubscriptionGroup group = getOrCreateGroup(Deadband.of(tag));
-        ItemDefinition definition = getOrMakeDefinitionsFrom(Collections.singletonList(tag)).get(0);
-        return GroupDefinitionPair.of(group, definition);
+    public SubscriptionGroup getGroup (ISourceDataTag tag) {
+        return getOrCreateGroup(Deadband.of(tag));
     }
 
     @Override
@@ -64,20 +63,17 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public GroupDefinitionPair removeTagFromGroup(ISourceDataTag dataTag) {
+    public void removeTagFromGroup(ISourceDataTag dataTag) {
         ItemDefinition definition = tag2Definition.remove(dataTag);
         if (definition == null) {
             throw new IllegalArgumentException("The tag cannot be removed, since it has not been added to the endpoint.");
         }
-        GroupDefinitionPair pair = toGroup(dataTag);
-        SubscriptionGroup subscriptionGroup = pair.getSubscriptionGroup();
-        ItemDefinition itemDefinition = pair.getItemDefinition();
+        SubscriptionGroup subscriptionGroup = getGroup(dataTag);
 
-        if (!subscriptionGroup.contains(itemDefinition)) {
+        if (!subscriptionGroup.contains(definition)) {
             throw new IllegalArgumentException("The tag cannot be removed, since it has not been registered in a subscription group.");
         }
-        subscriptionGroup.remove(itemDefinition);
-        return pair;
+        subscriptionGroup.remove(definition);
     }
 
     @Override
@@ -99,7 +95,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     public void registerDefinitionsInGroup(Collection<ItemDefinition> definitions) {
         definitions
                 .stream()
-                .collect(Collectors.groupingBy(itemDefinition -> Deadband.of(itemDefinition.getTag())))
+                .collect(groupingBy(itemDefinition -> Deadband.of(itemDefinition.getTag())))
                 .forEach((deadband, definitionList) -> definitionList.forEach(i -> getOrCreateGroup(deadband).add(i)));
     }
 

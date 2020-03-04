@@ -18,7 +18,6 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.mapping.GroupDefinitionPair;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
@@ -28,7 +27,6 @@ import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import lombok.var;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -73,7 +71,7 @@ public class EndpointImpl implements Endpoint {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
         }
-        return CompletableFuture.allOf(mapper.toGroups(dataTags).entrySet()
+        return CompletableFuture.allOf(mapper.toGroupsWithDefinitions(dataTags).entrySet()
                 .stream()
                 .map(e -> subscribeToGroup(e.getKey(), e.getValue()))
                 .toArray(CompletableFuture[]::new))
@@ -82,8 +80,10 @@ public class EndpointImpl implements Endpoint {
 
     @Override
     public synchronized CompletableFuture<Void> subscribeTag (@NonNull final ISourceDataTag sourceDataTag) throws OPCCommunicationException {
-        var pair = mapper.toGroup(sourceDataTag);
-        return subscribeToGroup(pair.getSubscriptionGroup(), Collections.singletonList(pair.getItemDefinition()))
+        SubscriptionGroup group = mapper.getGroup(sourceDataTag);
+        ItemDefinition definition = mapper.getDefinition(sourceDataTag);
+
+        return subscribeToGroup(group, Collections.singletonList(definition))
                 .exceptionally(e -> {throw new OPCCommunicationException("Could not subscribe Tags", e);});
     }
 
@@ -99,15 +99,14 @@ public class EndpointImpl implements Endpoint {
 
     @Override
     public synchronized CompletableFuture<Void> removeDataTag (final ISourceDataTag dataTag) throws IllegalArgumentException {
-        GroupDefinitionPair pair = mapper.toGroup(dataTag);
-        SubscriptionGroup subscriptionGroup = pair.getSubscriptionGroup();
+        SubscriptionGroup subscriptionGroup = mapper.getGroup(dataTag);
 
         if (!subscriptionGroup.isSubscribed()) {
             throw new IllegalArgumentException("The tag cannot be removed, since the subscription group is not subscribed.");
         }
 
         UaSubscription subscription = subscriptionGroup.getSubscription();
-        UInteger clientHandle = pair.getItemDefinition().getClientHandle();
+        UInteger clientHandle = mapper.getDefinition(dataTag).getClientHandle();
 
         CompletableFuture<Void> future = client.deleteItemFromSubscription(clientHandle, subscription)
                 .thenRun(() -> mapper.removeTagFromGroup(dataTag));

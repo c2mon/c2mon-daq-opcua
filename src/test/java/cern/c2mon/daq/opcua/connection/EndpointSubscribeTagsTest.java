@@ -17,7 +17,7 @@ public class EndpointSubscribeTagsTest extends EndpointTestBase{
 
     @Test
     public void subscribeTagsWithEmptyCollectionShouldThrowError() {
-        assertThrows(IllegalArgumentException.class, () -> endpoint.subscribeTags(Collections.emptyList()));
+        assertThrows(ConfigurationException.class, () -> endpoint.subscribeTags(Collections.emptyList()));
     }
 
     @Test

@@ -28,9 +28,9 @@ public interface TagSubscriptionMapper {
 
     boolean isSubscribed(ISourceDataTag tag);
 
-    Map<SubscriptionGroup, List<ItemDefinition>> toGroups(Collection<ISourceDataTag> dataTags);
+    Map<SubscriptionGroup, List<ItemDefinition>> toGroupsWithDefinitions (Collection<ISourceDataTag> dataTags);
 
-    GroupDefinitionPair toGroup(ISourceDataTag dataTags);
+    SubscriptionGroup getGroup (ISourceDataTag dataTags);
 
     Collection<SubscriptionGroup> getGroups();
 
@@ -38,7 +38,7 @@ public interface TagSubscriptionMapper {
 
     void clear();
 
-    GroupDefinitionPair removeTagFromGroup(ISourceDataTag dataTag);
+    void removeTagFromGroup(ISourceDataTag dataTag);
 
     void addTagToGroup(ISourceDataTag dataTag);
 
