@@ -48,7 +48,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigShouldSendOKCommfault () throws EqIOException, InterruptedException {
-        SenderCapture capture = new SenderCapture(messageSender);
+        CommfaultSenderCapture capture = new CommfaultSenderCapture(messageSender);
 
         handler.connectToDataSource();
         Thread.sleep(2000);
@@ -67,7 +67,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Test
     @UseConf("commfault_incorrect.xml")
     public void improperConfigShouldSendIncorrectCommfault () {
-        SenderCapture capture = new SenderCapture(messageSender);
+        CommfaultSenderCapture capture = new CommfaultSenderCapture(messageSender);
 
         try {
             handler.connectToDataSource();
@@ -84,8 +84,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Test
     @UseConf("commfault_incorrect.xml")
     public void improperConfigShouldSendThrowError () {
-        new SenderCapture(messageSender);
-        assertThrows(OPCCommunicationException.class, () -> handler.connectToDataSource());
+        new CommfaultSenderCapture(messageSender);
+        assertThrows(ConfigurationException.class, () -> handler.connectToDataSource());
     }
 
     @Test
@@ -94,13 +94,13 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         assertThrows(ConfigurationException.class, () -> handler.connectToDataSource());
     }
 
-    private static class SenderCapture {
+    private static class CommfaultSenderCapture {
         Capture<Long> id = newCapture();
         Capture<String> tagName = newCapture();
         Capture<Boolean> val = newCapture();
         Capture<String> msg= newCapture();
 
-        SenderCapture (IProcessMessageSender sender) {
+        CommfaultSenderCapture (IProcessMessageSender sender) {
             sender.sendCommfaultTag(captureLong(id), capture(tagName), captureBoolean(val), capture(msg));
             expectLastCall().once();
             replay(sender);
@@ -112,5 +112,6 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
             assertEquals(msg, this.msg.getValue());
         }
     }
+
 
 }

@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.downstream.EndpointSubscriptionListener;
+import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.Getter;
@@ -14,7 +15,6 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
 
 import static org.easymock.EasyMock.createMock;
@@ -26,7 +26,17 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
     UaSubscription subscription = createMock(UaSubscription.class);
 
     @Override
-    public void initialize () throws ExecutionException, InterruptedException {
+    public void initialize () {
+    }
+
+    @Override
+    public void connect () {
+
+    }
+
+    @Override
+    public void addEndpointSubscriptionListener (EndpointSubscriptionListener listener) {
+
     }
 
     @Override
@@ -52,6 +62,11 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
     public CompletableFuture<List<DataValue>> read (NodeId nodeIds) {
         DataValue dataValue = new DataValue(StatusCode.GOOD);
         return CompletableFuture.completedFuture(Collections.singletonList(dataValue));
+    }
+
+    @Override
+    public CompletableFuture<StatusCode> write (NodeId nodeId, DataValue value) {
+        return CompletableFuture.completedFuture(StatusCode.GOOD);
     }
 
     @Override

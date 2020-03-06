@@ -25,6 +25,7 @@ import java.util.List;
 
 public class SubscriptionGroup{
 
+    @Getter
     private final List<ItemDefinition> definitions = new ArrayList<>();
 
     @Getter
@@ -56,6 +57,11 @@ public class SubscriptionGroup{
         }
 
         this.definitions.add(itemDefinition);
+    }
+
+    public void reset() {
+        definitions.clear();
+        subscription = null;
     }
 
     public void remove(final ItemDefinition itemDefinition) {

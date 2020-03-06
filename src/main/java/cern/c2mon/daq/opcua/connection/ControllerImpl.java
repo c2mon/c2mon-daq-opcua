@@ -17,13 +17,11 @@
 
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
+import cern.c2mon.daq.opcua.downstream.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.upstream.EndpointListener;
-import cern.c2mon.daq.opcua.upstream.EquipmentStateListener;
-import cern.c2mon.daq.opcua.upstream.TagListener;
+import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.shared.daq.config.ChangeReport;
@@ -43,17 +41,14 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     @Getter
     private Endpoint endpoint;
     private IEquipmentConfiguration config;
+    @Getter
     private EventPublisher publisher;
-    private IEquipmentMessageSender sender;
 
     public void initialize () throws ConfigurationException {
         initialize(false);
     }
 
-    public void initialize (boolean connectionLost) throws ConfigurationException {
-        EndpointListener endpointListener = new EndpointListener(sender);
-        publisher.subscribe((TagListener) endpointListener);
-        publisher.subscribe((EquipmentStateListener) endpointListener);
+    private void initialize (boolean connectionLost) throws ConfigurationException {
         endpoint.initialize(connectionLost);
         endpoint.subscribeTags(config.getSourceDataTags().values());
     }

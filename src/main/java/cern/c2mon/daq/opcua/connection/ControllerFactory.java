@@ -3,9 +3,15 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
+import cern.c2mon.daq.opcua.downstream.Endpoint;
+import cern.c2mon.daq.opcua.downstream.EndpointImpl;
+import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
+import cern.c2mon.daq.opcua.downstream.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.upstream.EndpointListener;
+import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import lombok.extern.slf4j.Slf4j;
@@ -22,26 +28,35 @@ public class ControllerFactory {
         }
         EquipmentAddress.ServerAddress address = equipmentAddress.getServerAddressWithProtocol(Controller.UA_TCP_TYPE);
 
-        MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
+        MiloClientWrapper wrapper = null;
+        wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
         TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
-        EventPublisher publisher = new EventPublisher();
+        EventPublisher publisher = createPublisherWithListeners(sender);
 
         Endpoint endpoint = new EndpointImpl(wrapper, mapper, publisher);
 
         if (equipmentAddress.isAliveWriterEnabled()) {
             try {
                 AliveWriter aliveWriter = createAliveWriter(config, endpoint);
-                return new ControllerWithAliveWriter(endpoint, config, publisher, sender, aliveWriter);
-            } catch (IllegalArgumentException e) {
+                return new ControllerWithAliveWriter(endpoint, config, publisher, aliveWriter);
+            } catch (ConfigurationException e) {
                 log.error("Creating the AliveWriter skipped. ", e);
             }
         }
-        return new ControllerImpl(endpoint, config, publisher, sender);
+        return new ControllerImpl(endpoint, config, publisher);
     }
 
-    private static AliveWriter createAliveWriter (IEquipmentConfiguration config, Endpoint endpoint) throws IllegalArgumentException {
+    private static AliveWriter createAliveWriter (IEquipmentConfiguration config, Endpoint endpoint) throws ConfigurationException {
         ISourceDataTag aliveTag = config.getSourceDataTag(config.getAliveTagId());
         return new AliveWriter(endpoint, config.getAliveTagInterval() / 2, aliveTag);
+    }
+
+    public static EventPublisher createPublisherWithListeners (IEquipmentMessageSender sender) {
+        EventPublisher publisher = new EventPublisher();
+        EndpointListener endpointListener = new EndpointListener(sender);
+        publisher.subscribeToTagEvents(endpointListener);
+        publisher.subscribeToEquipmentStateEvents(endpointListener);
+        return  publisher;
     }
 
 }

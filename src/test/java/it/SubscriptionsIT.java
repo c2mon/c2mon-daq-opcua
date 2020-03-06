@@ -1,6 +1,6 @@
 package it;
 
-import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.downstream.Endpoint;
 import cern.c2mon.daq.opcua.upstream.TagListener;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -27,7 +27,7 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
     CompletableFuture<Object> future;
 
     @BeforeEach
-    public void setupEndpoint() {
+    public void setupEndpoint() throws ExecutionException, InterruptedException {
 
         future = listenForServerResponse(endpoint);
         super.setupEndpoint();
@@ -89,8 +89,7 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
     private CompletableFuture<Object> listenForServerResponse(Endpoint endpoint, float valueDeadband) {
         CompletableFuture<Object> future = new CompletableFuture<>();
 
-
-        publisher.subscribe(new TagListener() {
+        publisher.subscribeToTagEvents(new TagListener() {
             @Override
             public void onNewTagValue (ISourceDataTag dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
                 log.info("received: {}, {}", dataTag.getName(), valueUpdate);

@@ -14,13 +14,14 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import lombok.AllArgsConstructor;
@@ -31,6 +32,8 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
@@ -51,10 +54,12 @@ public class EndpointImpl implements Endpoint {
     private EventPublisher events;
 
     public void initialize (boolean connectionLost) {
-        if (connectionLost) events.notifyEquipmentState(CONNECTION_LOST);
-
+        if (connectionLost) {
+            events.notifyEquipmentState(CONNECTION_LOST);
+        }
         try {
             client.initialize();
+            client.connect();
             events.notifyEquipmentState(OK);
         } catch (ExecutionException | InterruptedException e) {
             events.notifyEquipmentState(CONNECTION_FAILED);
@@ -62,6 +67,17 @@ public class EndpointImpl implements Endpoint {
         }
     }
 
+    @Override
+    public void recreateSubscription (UaSubscription subscription) {
+        client.deleteSubscription(subscription)
+                .thenCompose(aVoid -> {
+                    SubscriptionGroup group = mapper.getGroup(subscription);
+                    List<ItemDefinition> definitions = group.getDefinitions();
+                    group.reset();
+                    return subscribeToGroup(group, definitions);
+                })
+                .exceptionally(e -> {throw new OPCCommunicationException("Could not recreate subscription", e);});
+    }
 
     @Override
     public synchronized CompletableFuture<Void> subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException {
@@ -129,18 +145,15 @@ public class EndpointImpl implements Endpoint {
 
     @Override
     public synchronized CompletableFuture<Void> reset () {
-        events.clear();
         mapper.clear();
         return CompletableFuture.runAsync(() -> client.disconnect());
     }
 
     @Override
-    public synchronized void write (
-            final OPCHardwareAddress address, final Object value) {
-//        ItemDefinition itemDefinition = ItemDefinitionFactory.createItemDefinition(1L, address);
-//        if (itemDefinition != null) {
-//            onWrite(itemDefinition, value);
-//        }
+    public synchronized CompletableFuture<StatusCode> write (final OPCHardwareAddress address, final Object value) {
+        NodeId nodeId = ItemDefinition.toNodeId(address);
+        DataValue dataValue = new DataValue(new Variant(value));
+        return client.write(nodeId, dataValue);
     }
 
     @Override

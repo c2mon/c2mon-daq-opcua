@@ -12,12 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 public class EndpointListener implements TagListener, EquipmentStateListener {
     IEquipmentMessageSender sender;
 
-    /**
-     * Implementation of the IOPCEndpointListener interface. The endpoint
-     * controller will forward updates to the core (EquipmentMessageSender).
-     *
-     */
-
     @Override
     public void onNewTagValue(final ISourceDataTag dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality) {
         this.sender.update(dataTag.getId(), valueUpdate, quality);

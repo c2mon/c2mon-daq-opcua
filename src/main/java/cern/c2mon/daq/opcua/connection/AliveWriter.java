@@ -16,6 +16,8 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.downstream.Endpoint;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -26,11 +28,24 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.MISSING_TARGET_TAG;
+
 /**
  * Regularly writes to a value in the OPC server to simulate an alive.
  *
  * @author Andreas Lang
  */
+
+/**
+ * OPC-UA has a built-in keep-alive functionality, sending keep-alive messages to the client's subscription
+ * listener @see{@link cern.c2mon.daq.opcua.downstream.EndpointSubscriptionListener}  when there are no monitored items to send to the client to indicate that the server is active.
+ * The only way that an active and initialized client does not receive this keep-alive is if it doesn't have any active
+ * subscriptions and monitored items.
+ *
+ * TODO: Should we keep the AliveWriter for these cases, i.e. to stimulate an alive of the client to the server for
+ * clients that don't have any active subscriptions?
+ */
+
 @Slf4j
 public class AliveWriter extends TimerTask {
   /**
@@ -61,11 +76,11 @@ public class AliveWriter extends TimerTask {
    * @param writeTime  The time between two write operations.
    * @param targetTag  The tag which represents the value to write to.
    */
-  public AliveWriter(final Endpoint endpoint, final long writeTime,
-                     final ISourceDataTag targetTag) throws IllegalArgumentException {
+  public AliveWriter(final Endpoint endpoint, final long writeTime, final ISourceDataTag targetTag) throws ConfigurationException {
     if (targetTag == null) {
-      throw new IllegalArgumentException("TargetTag must not be null");
+      throw new ConfigurationException(MISSING_TARGET_TAG);
     }
+
     this.endpoint = endpoint;
     this.writeTime = writeTime;
     this.targetTag = targetTag;
@@ -77,14 +92,11 @@ public class AliveWriter extends TimerTask {
    */
   @Override
   public void run() {
-    OPCHardwareAddress hardwareAddress =
-            (OPCHardwareAddress) targetTag.getHardwareAddress();
+    OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) targetTag.getHardwareAddress();
+
     // We send an Integer since Long could cause problems to the OPC
     Object castedValue = writeCounter.intValue();
-    if (log.isDebugEnabled()) {
-      log.debug("Writing value: " + castedValue
-              + " type: " + castedValue.getClass().getName());
-    }
+    if (log.isDebugEnabled()) { log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName()); }
     try {
       endpoint.write(hardwareAddress, castedValue);
       writeCounter.incrementAndGet();

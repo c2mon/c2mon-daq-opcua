@@ -1,0 +1,56 @@
+<EquipmentUnit id="5250" name="TEST1">
+    <handler-class-name>automatically-set-by-test</handler-class-name>
+    <commfault-tag-id>107211</commfault-tag-id>
+    <commfault-tag-value>true</commfault-tag-value>
+
+    <alive-tag-id>216215</alive-tag-id>
+    <alive-interval>60000</alive-interval>
+
+    <address>URI=opc.tcp://pcbe16475:50000;serverRetryTimeout=500;serverTimeout=12;aliveWriter=true</address>
+    <SubEquipmentUnits>
+    </SubEquipmentUnits>
+
+    <DataTags>
+        <DataTag id="1" name="BE.TEST:TEST1" control="false">
+            <data-type>Integer</data-type>
+            <min-value data-type="Integer">0</min-value>
+            <max-value data-type="Integer">64000</max-value>
+            <DataTagAddress>
+                <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                    <namespace>2</namespace>
+                    <opc-item-name>RandomSignedInt32</opc-item-name>
+                    <command-pulse-length>0</command-pulse-length>
+                    <address-type>STRING</address-type>
+                    <command-type>CLASSIC</command-type>#
+                </HardwareAddress>
+                <time-to-live>3600000</time-to-live>
+                <value-deadband-type>1</value-deadband-type>
+                <value-deadband>1.0</value-deadband>
+                <priority>2</priority>
+                <guaranteed-delivery>false</guaranteed-delivery>
+            </DataTagAddress>
+        </DataTag>
+        <DataTag id="216215" name="BE.TEST:ALIVETAG" control="false">
+            <data-type>Integer</data-type>
+            <min-value data-type="Integer">0</min-value>
+            <max-value data-type="Integer">64000</max-value>
+            <DataTagAddress>
+                <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                    <namespace>2</namespace>
+                    <opc-item-name>RandomSignedInt32</opc-item-name>
+                    <command-pulse-length>0</command-pulse-length>
+                    <address-type>STRING</address-type>
+                    <command-type>CLASSIC</command-type>#
+                </HardwareAddress>
+                <time-to-live>3600000</time-to-live>
+                <value-deadband-type>1</value-deadband-type>
+                <value-deadband>1.0</value-deadband>
+                <priority>2</priority>
+                <guaranteed-delivery>false</guaranteed-delivery>
+            </DataTagAddress>
+        </DataTag>
+
+    </DataTags>
+    <CommandTags>
+    </CommandTags>
+</EquipmentUnit>

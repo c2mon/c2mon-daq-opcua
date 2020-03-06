@@ -14,18 +14,20 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
+import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Interface in between C2MON tags and the opc endpoint.
+ * Interfaces between C2MON tags and the opc endpoint.
  * Notifies C2MON of OPCUA events through the EventPublisher.
  * Passes commands to the client through the MiloClientWrapper.
  */
@@ -40,7 +42,9 @@ public interface Endpoint {
     CompletableFuture<Void> removeDataTag(ISourceDataTag sourceDataTag) throws IllegalArgumentException;
 
     void refreshDataTags(Collection<ISourceDataTag> dataTags);
-    void write(final OPCHardwareAddress address, final Object value);
+    CompletableFuture<StatusCode> write(final OPCHardwareAddress address, final Object value);
+
+    void recreateSubscription(UaSubscription subscription);
 
     //for injection during testing
     void setClient(MiloClientWrapper client);

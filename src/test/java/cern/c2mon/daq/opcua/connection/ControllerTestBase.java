@@ -1,13 +1,20 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.opcua.downstream.Endpoint;
+import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.testutils.MiloTestClientWrapper;
+import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
-import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
-import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.easymock.EasyMock.*;
 
@@ -16,14 +23,21 @@ public abstract class ControllerTestBase {
     protected static ISourceDataTag aliveTag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
 
     IEquipmentMessageSender sender = createMock(IEquipmentMessageSender.class);
-    OpcUaClient client = createMock(OpcUaClient.class);
     IEquipmentConfiguration config;
+    MiloClientWrapper wrapper = new MiloTestClientWrapper();
+    TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
+    Endpoint endpoint;
 
     @BeforeEach
     public void setup() throws ConfigurationException {
         config = createMock(IEquipmentConfiguration.class);
         expect(config.getAliveTagId()).andReturn(1L).anyTimes();
         expect(config.getAliveTagInterval()).andReturn(13L).anyTimes();
+
+        Map<Long, ISourceDataTag> sourceTags = new HashMap<>();
+        sourceTags.put(2L, ServerTagFactory.RandomUnsignedInt32.createDataTag());
+        sourceTags.put(3L, ServerTagFactory.RandomBoolean.createDataTag());
+        expect(config.getSourceDataTags()).andReturn(sourceTags).anyTimes();
     }
 
     @AfterEach

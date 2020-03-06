@@ -65,16 +65,20 @@ public class ItemDefinition {
         OPCHardwareAddress opcAddress = (OPCHardwareAddress) hardwareAddress;
 
         int namespaceIndex = opcAddress.getNamespaceId();
-
         String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
-
         NodeId nodeId = new NodeId(namespaceIndex, opcAddress.getOPCItemName());
+
         if (redundantOPCItemName != null && !redundantOPCItemName.trim().equals("")) {
             NodeId redundantNodeId = new NodeId(namespaceIndex, redundantOPCItemName);
             return new ItemDefinition(tag, nodeId, redundantNodeId);
         } else {
             return new ItemDefinition(tag, nodeId);
         }
+    }
+
+    public static NodeId toNodeId(OPCHardwareAddress opcAddress) {
+        int namespaceIndex = opcAddress.getNamespaceId();
+        return new NodeId(namespaceIndex, opcAddress.getOPCItemName());
     }
 
     /**

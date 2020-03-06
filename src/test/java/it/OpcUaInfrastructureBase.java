@@ -1,8 +1,12 @@
 package it;
 
-import cern.c2mon.daq.opcua.connection.*;
+import cern.c2mon.daq.opcua.downstream.Endpoint;
+import cern.c2mon.daq.opcua.downstream.EndpointImpl;
+import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
+import cern.c2mon.daq.opcua.downstream.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.junit.jupiter.api.AfterAll;
@@ -26,7 +30,7 @@ public abstract class OpcUaInfrastructureBase {
     protected EventPublisher publisher = new EventPublisher();
 
     @BeforeEach
-    public void setupEndpoint() {
+    public void setupEndpoint() throws ExecutionException, InterruptedException {
         wrapper = new MiloClientWrapperImpl(address, SecurityPolicy.None);
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
     }
@@ -55,7 +59,7 @@ public abstract class OpcUaInfrastructureBase {
 
     private static class CheckServerState implements Callable<Boolean> {
         @Override
-        public Boolean call() {
+        public Boolean call() throws ExecutionException, InterruptedException {
             Endpoint endpoint = new EndpointImpl(
                     new MiloClientWrapperImpl(address, SecurityPolicy.None),
                     new TagSubscriptionMapperImpl(),

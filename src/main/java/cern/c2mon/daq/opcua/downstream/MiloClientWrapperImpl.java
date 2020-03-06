@@ -1,21 +1,18 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
-import org.eclipse.milo.opcua.sdk.client.subscriptions.OpcUaSubscriptionManager;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
 import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
-import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
-import org.eclipse.milo.opcua.stack.core.types.builtin.ExtensionObject;
-import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.QualifiedName;
+import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DataChangeTrigger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MonitoringMode;
@@ -31,6 +28,7 @@ import java.util.function.BiConsumer;
 
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
+@Slf4j
 public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     private String uri;
@@ -44,19 +42,30 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     public void initialize () throws ExecutionException, InterruptedException {
         client = MiloClientWrapperImpl.createClient(uri, sp)
-                .thenCompose(OpcUaClient::connect)
-                .thenApply(OpcUaClient.class::cast)
                 .get();
+    }
+
+    public void connect() {
+        client.connect();
+    }
+
+    public void addEndpointSubscriptionListener(EndpointSubscriptionListener listener) {
+        client.getSubscriptionManager().addSubscriptionListener(listener);
     }
 
     public void disconnect() {
         client.disconnect();
     }
 
+    /**
+     *
+     * @param timeDeadband The subscription's publishing interval in milliseconds.
+     *                     If 0, the Server will use the fastest supported interval
+     * @return
+     */
     public UaSubscription createSubscription(int timeDeadband) {
-        OpcUaSubscriptionManager subscriptionManager = client.getSubscriptionManager();
         try {
-            return subscriptionManager.createSubscription(timeDeadband).get();
+            return client.getSubscriptionManager().createSubscription(timeDeadband).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new OPCCommunicationException("Could not create a subscription", e);
         }
@@ -101,6 +110,10 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     public CompletableFuture<List<DataValue>> read(NodeId nodeIds) {
         return client.readValues(0, TimestampsToReturn.Both, Collections.singletonList(nodeIds));
+    }
+
+    public CompletableFuture<StatusCode> write (NodeId nodeId, DataValue value) {
+        return client.writeValue(nodeId, value);
     }
 
     private MonitoredItemCreateRequest createItemSubscriptionRequest(ItemDefinition definition, Deadband deadband) {
