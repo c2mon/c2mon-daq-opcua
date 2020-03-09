@@ -32,20 +32,14 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static cern.c2mon.daq.opcua.upstream.EquipmentStateListener.EquipmentState.*;
 
-/**
- * We have a one-to-one mapping in between Endpoint and Server. We cannot trust the server to handle concurrency properly.
- * Therefore, let's keep things synchronous.
- */
+
 @Slf4j
 @AllArgsConstructor
 public class EndpointImpl implements Endpoint {
@@ -55,7 +49,7 @@ public class EndpointImpl implements Endpoint {
     private TagSubscriptionMapper mapper;
     private EventPublisher events;
 
-    public void initialize (boolean connectionLost) {
+    public void initialize (boolean connectionLost) throws OPCCommunicationException {
         if (connectionLost) {
             events.notifyEquipmentState(CONNECTION_LOST);
         }
@@ -63,19 +57,15 @@ public class EndpointImpl implements Endpoint {
             client.initialize();
             client.connect();
             events.notifyEquipmentState(OK);
-        } catch (ExecutionException | InterruptedException e) {
+        } catch (OPCCommunicationException e) {
             events.notifyEquipmentState(CONNECTION_FAILED);
-            throw new OPCCommunicationException(CONNECTION_FAILED.message, e);
+            throw e;
         }
     }
 
     @Override
     public void recreateSubscription (UaSubscription subscription) {
-        try {
-            client.deleteSubscription(subscription).get();
-        } catch (InterruptedException|ExecutionException e) {
-            throw new OPCCommunicationException("Could not delete subscription", e);
-        }
+        client.deleteSubscription(subscription);
         SubscriptionGroup group = mapper.getGroup(subscription);
         List<ItemDefinition> definitions = group.getDefinitions();
         group.reset();
@@ -104,16 +94,12 @@ public class EndpointImpl implements Endpoint {
                 client.createSubscription(group.getDeadband().getTime());
         group.setSubscription(subscription);
 
-        try {
-            client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback)
-                        .thenAccept(this::subscriptionCompletedCallback).get();
-        } catch (InterruptedException|ExecutionException e) {
-            throw new OPCCommunicationException("Could not subscribe Tags", e);
-        }
+        List<UaMonitoredItem> items = client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback);
+        subscriptionCompletedCallback(items);
     }
 
     @Override
-    public synchronized CompletableFuture<Void> removeDataTag (final ISourceDataTag dataTag) throws IllegalArgumentException {
+    public synchronized void removeDataTag (final ISourceDataTag dataTag) throws IllegalArgumentException {
         SubscriptionGroup subscriptionGroup = mapper.getGroup(dataTag);
 
         if (!subscriptionGroup.isSubscribed()) {
@@ -123,54 +109,39 @@ public class EndpointImpl implements Endpoint {
         UaSubscription subscription = subscriptionGroup.getSubscription();
         UInteger clientHandle = mapper.getDefinition(dataTag).getClientHandle();
 
-        CompletableFuture<Void> future = client.deleteItemFromSubscription(clientHandle, subscription)
-                .thenRun(() -> mapper.removeTagFromGroup(dataTag));
+        client.deleteItemFromSubscription(clientHandle, subscription);
+        mapper.removeTagFromGroup(dataTag);
         
         if (subscriptionGroup.size() < 1) {
-            return future.thenCompose(aVoid -> removeSubscription(subscriptionGroup, subscription));
+            subscriptionGroup.reset();
+            client.deleteSubscription(subscription);
         }
-        return future;
-    }
-
-    private CompletableFuture<Void> removeSubscription (SubscriptionGroup subscriptionGroup, UaSubscription subscription) {
-        subscriptionGroup.setSubscription(null);
-        return client.deleteSubscription(subscription);
     }
 
     @Override
     public synchronized void refreshDataTags (final Collection<ISourceDataTag> dataTags) {
         for (ISourceDataTag dataTag : dataTags) {
             NodeId address = mapper.getDefinition(dataTag).getAddress();
-            client.read(address).thenAccept(dataValues -> readCallback(dataValues, dataTag));
+            client.read(address).forEach(value -> events.notifyTagEvent(value.getStatusCode(), dataTag, value));
         }
     }
 
     @Override
     public synchronized void reset () {
         mapper.clear();
-        try {
-            client.disconnect();
-        } catch (ExecutionException | InterruptedException e) {
-            throw new OPCCommunicationException("Cannot disconnect from server", e);
-        }
+        client.disconnect();
     }
 
     @Override
-    public synchronized CompletableFuture<StatusCode> write (final OPCHardwareAddress address, final Object value) {
+    public synchronized void write (final OPCHardwareAddress address, final Object value) {
         NodeId nodeId = ItemDefinition.toNodeId(address);
         DataValue dataValue = new DataValue(new Variant(value));
-        return client.write(nodeId, dataValue);
+        client.write(nodeId, dataValue);
     }
 
     @Override
     public synchronized boolean isConnected () {
         return client.isConnected();
-    }
-
-    private void readCallback (List<DataValue> dataValues, ISourceDataTag tag) {
-        for (DataValue value : dataValues) {
-            events.notifyTagEvent(value.getStatusCode(), tag, value);
-        }
     }
 
     private void subscriptionCompletedCallback (List<UaMonitoredItem> monitoredItems) {

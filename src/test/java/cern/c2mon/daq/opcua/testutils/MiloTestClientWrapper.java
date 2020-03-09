@@ -14,7 +14,6 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 import static org.easymock.EasyMock.createMock;
@@ -49,24 +48,22 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
     }
 
     @Override
-    public CompletableFuture<Void> deleteSubscription (UaSubscription subscription) {
-        return CompletableFuture.completedFuture(null);
+    public void deleteSubscription (UaSubscription subscription) { }
+
+    @Override
+    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<ItemDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
+        return Collections.nCopies(definitions.size(), monitoredItem);
     }
 
     @Override
-    public CompletableFuture<List<UaMonitoredItem>> subscribeItemDefinitions (UaSubscription subscription, List<ItemDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
-        return CompletableFuture.completedFuture(Collections.nCopies(definitions.size(), monitoredItem));
-    }
-
-    @Override
-    public CompletableFuture<List<DataValue>> read (NodeId nodeIds) {
+    public List<DataValue> read (NodeId nodeIds) {
         DataValue dataValue = new DataValue(StatusCode.GOOD);
-        return CompletableFuture.completedFuture(Collections.singletonList(dataValue));
+        return Collections.singletonList(dataValue);
     }
 
     @Override
-    public CompletableFuture<StatusCode> write (NodeId nodeId, DataValue value) {
-        return CompletableFuture.completedFuture(StatusCode.GOOD);
+    public StatusCode write (NodeId nodeId, DataValue value) {
+        return StatusCode.GOOD;
     }
 
     @Override
@@ -74,7 +71,5 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
         return true;
     }
 
-    public CompletableFuture<Void> deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
-        return CompletableFuture.completedFuture(null);
-    }
+    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) { }
 }

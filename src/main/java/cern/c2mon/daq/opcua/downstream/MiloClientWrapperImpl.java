@@ -22,10 +22,10 @@ import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
 
+import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 @Slf4j
@@ -40,22 +40,35 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         this.sp = sp;
     }
 
-    public void initialize () throws ExecutionException, InterruptedException {
-        client = MiloClientWrapperImpl.createClient(uri, sp)
-                .get();
+    public void initialize () {
+        try {
+            client = MiloClientWrapperImpl.createClient(uri, sp);
+        } catch (ExecutionException | InterruptedException | UaException e) {
+            throw new OPCCommunicationException(CREATE_CLIENT, e);
+        }
     }
 
-    public void connect() throws ExecutionException, InterruptedException {
-        client = (OpcUaClient) client.connect().get();
+    public void connect() throws OPCCommunicationException {
+        try {
+            client = (OpcUaClient) client.connect().get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new OPCCommunicationException(CONNECT, e);
+        }
     }
 
     public void addEndpointSubscriptionListener(EndpointSubscriptionListener listener) {
         client.getSubscriptionManager().addSubscriptionListener(listener);
     }
 
-    public void disconnect() throws ExecutionException, InterruptedException {
+    public void disconnect() throws OPCCommunicationException {
         //TODO: find a more elegant way to do this that works with the test MessageHandlerTest framework
-        if (client != null) client = client.disconnect().get();
+        if (client != null) {
+            try {
+                client = client.disconnect().get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new OPCCommunicationException(DISCONNECT, e);
+            }
+        }
     }
 
     /**
@@ -64,16 +77,20 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
      *                     If 0, the Server will use the fastest supported interval
      * @return
      */
-    public UaSubscription createSubscription(int timeDeadband) {
+    public UaSubscription createSubscription(int timeDeadband) throws OPCCommunicationException {
         try {
             return client.getSubscriptionManager().createSubscription(timeDeadband).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw new OPCCommunicationException("Could not create a subscription", e);
+            throw new OPCCommunicationException(CREATE_SUBSCRIPTION, e);
         }
     }
 
-    public CompletableFuture<Void> deleteSubscription(UaSubscription subscription) {
-        return CompletableFuture.allOf(client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()));
+    public void deleteSubscription(UaSubscription subscription) throws OPCCommunicationException {
+        try {
+            client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new OPCCommunicationException(DELETE_SUBSCRIPTION, e);
+        }
     }
 
     public boolean isConnected() {
@@ -88,33 +105,49 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         }
     }
 
-    public CompletableFuture<Void> deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
+    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCCommunicationException {
         List<UaMonitoredItem> itemsToRemove = new ArrayList<>();
         for (UaMonitoredItem uaMonitoredItem : subscription.getMonitoredItems()) {
             if (clientHandle.equals(uaMonitoredItem.getClientHandle())) {
                 itemsToRemove.add(uaMonitoredItem);
             }
         }
-        return CompletableFuture.allOf(subscription.deleteMonitoredItems(itemsToRemove));
+        try {
+            subscription.deleteMonitoredItems(itemsToRemove).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new OPCCommunicationException(DELETE_MONITORED_ITEM, e);
+        }
     }
 
-    public CompletableFuture<List<UaMonitoredItem>> subscribeItemDefinitions (UaSubscription subscription,
+    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription,
                                                                               List<ItemDefinition> definitions,
                                                                               Deadband deadband,
-                                                                              BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
+                                                                              BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCCommunicationException {
         List<MonitoredItemCreateRequest> requests = new ArrayList<>();
         for(ItemDefinition definition : definitions) {
             requests.add(createItemSubscriptionRequest(definition, deadband));
         }
-        return subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback);
+        try {
+            return subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new OPCCommunicationException(SUBSCRIBE_TAGS, e);
+        }
     }
 
-    public CompletableFuture<List<DataValue>> read(NodeId nodeIds) {
-        return client.readValues(0, TimestampsToReturn.Both, Collections.singletonList(nodeIds));
+    public List<DataValue> read(NodeId nodeIds) throws OPCCommunicationException {
+        try {
+            return client.readValues(0, TimestampsToReturn.Both, Collections.singletonList(nodeIds)).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new OPCCommunicationException(READ, e);
+        }
     }
 
-    public CompletableFuture<StatusCode> write (NodeId nodeId, DataValue value) {
-        return client.writeValue(nodeId, value);
+    public StatusCode write (NodeId nodeId, DataValue value) throws OPCCommunicationException {
+        try {
+            return client.writeValue(nodeId, value).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new OPCCommunicationException(WRITE, e);
+        }
     }
 
     private MonitoredItemCreateRequest createItemSubscriptionRequest(ItemDefinition definition, Deadband deadband) {
@@ -134,18 +167,9 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         return ExtensionObject.encode(client.getSerializationContext(), filter);
     }
 
-    private static CompletableFuture<OpcUaClient> createClient (String uri, SecurityPolicy sp) throws OPCCommunicationException, ExecutionException, InterruptedException {
-        return DiscoveryClient
-                .getEndpoints(uri)
-                .thenCompose(endpoints -> {
-                    try {
-                        return CompletableFuture.completedFuture(OpcUaClient.create(buildConfiguration(endpoints, sp)));
-                    } catch (UaException e) {
-                        CompletableFuture<OpcUaClient> failedFuture = new CompletableFuture<>();
-                        failedFuture.completeExceptionally(new OPCCommunicationException("Could not create the client", e));
-                        return failedFuture;
-                    }
-                });
+    private static OpcUaClient createClient (String uri, SecurityPolicy sp) throws OPCCommunicationException, ExecutionException, InterruptedException, UaException {
+        List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
+        return OpcUaClient.create(buildConfiguration(endpointDescriptions, sp));
     }
 
     private static OpcUaClientConfig buildConfiguration(final List<EndpointDescription> endpoints, SecurityPolicy sp) {
@@ -157,7 +181,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         return endpoints.stream()
                 .filter(e -> e.getSecurityPolicyUri().equals(sp.getUri()))
                 .findFirst()
-                .orElseThrow(() -> new OPCCommunicationException("The server does not offer any endpoints matching the configuration."));
+                .orElseThrow(() -> new OPCCommunicationException(ENDPOINTS));
     }
 
 }

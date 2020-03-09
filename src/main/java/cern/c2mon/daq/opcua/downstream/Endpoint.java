@@ -21,10 +21,8 @@ import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
 import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Interfaces between C2MON tags and the opc endpoint.
@@ -39,10 +37,10 @@ public interface Endpoint {
 
     void subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException;
     void subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
-    CompletableFuture<Void> removeDataTag(ISourceDataTag sourceDataTag) throws IllegalArgumentException;
+    void removeDataTag(ISourceDataTag sourceDataTag) throws IllegalArgumentException;
 
     void refreshDataTags(Collection<ISourceDataTag> dataTags);
-    CompletableFuture<StatusCode> write(final OPCHardwareAddress address, final Object value);
+    void write(final OPCHardwareAddress address, final Object value);
 
     void recreateSubscription(UaSubscription subscription);
 

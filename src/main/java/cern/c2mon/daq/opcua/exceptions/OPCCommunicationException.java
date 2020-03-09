@@ -16,6 +16,8 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.exceptions;
 
+import lombok.AllArgsConstructor;
+
 /**
  * Exception while communicating with the OPC server. This exception can be due
  * to a temporary reason (network down). It might work to retry after this
@@ -26,45 +28,28 @@ package cern.c2mon.daq.opcua.exceptions;
  */
 public class OPCCommunicationException extends RuntimeException {
 
-    /**
-     * Default serial version id.
-     */
-    private static final long serialVersionUID = 1L;
+    @AllArgsConstructor
+    public enum Cause {
+        CREATE_CLIENT("Could not create the OPC UA Client"),
+        CONNECT("Could not connect to the OPC UA Server"),
+        DISCONNECT("Could not disconnect from the OPC UA Server"),
+        CREATE_SUBSCRIPTION("Could not create a subscription"),
+        DELETE_SUBSCRIPTION("Could not delete the subscription"),
+        DELETE_MONITORED_ITEM("Could not disconnect delete monitored items from the subscription"),
+        SUBSCRIBE_TAGS("Could not subscribe tags"),
+        READ("Could not read node values"),
+        WRITE("Could not write to nodes"),
+        ENDPOINTS("The server does not offer any endpoints matching the configuration");
 
-    /**
-     * Creates a new OPCCommunicationException.
-     */
-    public OPCCommunicationException() {
-        super();
+        public final String message;
+
     }
 
-    /**
-     * Creates a new OPCCommunicationException.
-     * 
-     * @param message Message with additional information.
-     */
-    public OPCCommunicationException(final String message) {
-        super(message);
+    public OPCCommunicationException(final Cause type, final Exception e) {
+        super(type.message, e);
     }
 
-    /**
-     * Creates a new OPCCommunicationException.
-     * 
-     * @param cause Throwable which caused the exception.
-     */
-    public OPCCommunicationException(final Throwable cause) {
-        super(cause);
+    public OPCCommunicationException(final Cause type) {
+        super(type.message);
     }
-
-    /**
-     * Creates a new OPCCommunicationException.
-     * 
-     * @param message Message with additional information.
-     * @param cause Throwable which caused the exception.
-     */
-    public OPCCommunicationException(final String message,
-            final Throwable cause) {
-        super(message, cause);
-    }
-
 }
