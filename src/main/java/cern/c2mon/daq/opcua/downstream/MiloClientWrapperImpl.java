@@ -45,16 +45,17 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
                 .get();
     }
 
-    public void connect() {
-        client.connect();
+    public void connect() throws ExecutionException, InterruptedException {
+        client = (OpcUaClient) client.connect().get();
     }
 
     public void addEndpointSubscriptionListener(EndpointSubscriptionListener listener) {
         client.getSubscriptionManager().addSubscriptionListener(listener);
     }
 
-    public void disconnect() {
-        client.disconnect();
+    public void disconnect() throws ExecutionException, InterruptedException {
+        //TODO: find a more elegant way to do this that works with the test MessageHandlerTest framework
+        if (client != null) client = client.disconnect().get();
     }
 
     /**

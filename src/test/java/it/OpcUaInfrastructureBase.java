@@ -59,7 +59,7 @@ public abstract class OpcUaInfrastructureBase {
 
     private static class CheckServerState implements Callable<Boolean> {
         @Override
-        public Boolean call() throws ExecutionException, InterruptedException {
+        public Boolean call() {
             Endpoint endpoint = new EndpointImpl(
                     new MiloClientWrapperImpl(address, SecurityPolicy.None),
                     new TagSubscriptionMapperImpl(),
@@ -74,11 +74,7 @@ public abstract class OpcUaInfrastructureBase {
 //                    log.info("Server not yet ready ");
                 }
             }
-            try {
-                endpoint.reset().get();
-            } catch (InterruptedException|ExecutionException e) {
-                log.error("Could not restart endpoint." , e);
-            }
+            endpoint.reset();
             log.info("Server ready");
             return serverRunning;
         }

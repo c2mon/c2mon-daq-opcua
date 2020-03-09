@@ -36,14 +36,16 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static cern.c2mon.daq.opcua.upstream.EquipmentStateListener.EquipmentState.*;
 
+/**
+ * We have a one-to-one mapping in between Endpoint and Server. We cannot trust the server to handle concurrency properly.
+ * Therefore, let's keep things synchronous.
+ */
 @Slf4j
 @AllArgsConstructor
 public class EndpointImpl implements Endpoint {
@@ -69,45 +71,45 @@ public class EndpointImpl implements Endpoint {
 
     @Override
     public void recreateSubscription (UaSubscription subscription) {
-        client.deleteSubscription(subscription)
-                .thenCompose(aVoid -> {
-                    SubscriptionGroup group = mapper.getGroup(subscription);
-                    List<ItemDefinition> definitions = group.getDefinitions();
-                    group.reset();
-                    return subscribeToGroup(group, definitions);
-                })
-                .exceptionally(e -> {throw new OPCCommunicationException("Could not recreate subscription", e);});
+        try {
+            client.deleteSubscription(subscription).get();
+        } catch (InterruptedException|ExecutionException e) {
+            throw new OPCCommunicationException("Could not delete subscription", e);
+        }
+        SubscriptionGroup group = mapper.getGroup(subscription);
+        List<ItemDefinition> definitions = group.getDefinitions();
+        group.reset();
+        subscribeToGroup(group, definitions);
     }
 
     @Override
-    public synchronized CompletableFuture<Void> subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException {
+    public synchronized void subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
         }
-        return CompletableFuture.allOf(mapper.maptoGroupsWithDefinitions(dataTags).entrySet()
-                .stream()
-                .map(e -> subscribeToGroup(e.getKey(), e.getValue()))
-                .toArray(CompletableFuture[]::new))
-                .exceptionally(e -> {throw new OPCCommunicationException("Could not subscribe Tags", e);});
+        mapper.maptoGroupsWithDefinitions(dataTags).forEach(this::subscribeToGroup);
     }
 
     @Override
-    public synchronized CompletableFuture<Void> subscribeTag (@NonNull final ISourceDataTag sourceDataTag) throws OPCCommunicationException {
+    public synchronized void subscribeTag (@NonNull final ISourceDataTag sourceDataTag) throws OPCCommunicationException {
         SubscriptionGroup group = mapper.getGroup(sourceDataTag);
         ItemDefinition definition = mapper.getDefinition(sourceDataTag);
 
-        return subscribeToGroup(group, Collections.singletonList(definition))
-                .exceptionally(e -> {throw new OPCCommunicationException("Could not subscribe Tags", e);});
+        subscribeToGroup(group, Collections.singletonList(definition));
     }
 
-    private CompletableFuture<Void> subscribeToGroup (SubscriptionGroup group, List<ItemDefinition> definitions) {
+    private void subscribeToGroup (SubscriptionGroup group, List<ItemDefinition> definitions) {
         UaSubscription subscription = (group.isSubscribed()) ?
                 group.getSubscription() :
                 client.createSubscription(group.getDeadband().getTime());
         group.setSubscription(subscription);
 
-        return client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback)
-                    .thenAccept(this::subscriptionCompletedCallback);
+        try {
+            client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback)
+                        .thenAccept(this::subscriptionCompletedCallback).get();
+        } catch (InterruptedException|ExecutionException e) {
+            throw new OPCCommunicationException("Could not subscribe Tags", e);
+        }
     }
 
     @Override
@@ -144,9 +146,13 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public synchronized CompletableFuture<Void> reset () {
+    public synchronized void reset () {
         mapper.clear();
-        return CompletableFuture.runAsync(() -> client.disconnect());
+        try {
+            client.disconnect();
+        } catch (ExecutionException | InterruptedException e) {
+            throw new OPCCommunicationException("Cannot disconnect from server", e);
+        }
     }
 
     @Override

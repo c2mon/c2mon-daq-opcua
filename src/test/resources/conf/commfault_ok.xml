@@ -6,7 +6,7 @@
     <alive-tag-id>216215</alive-tag-id>
     <alive-interval>60000</alive-interval>
 
-    <address>URI=opc.tcp://pcbe16475:50000;serverRetryTimeout=500;serverTimeout=12;aliveWriter=true</address>
+    <address>URI=opc.tcp://pcbe16475:50000;serverRetryTimeout=500;serverTimeout=12;aliveWriter=false</address>
     <SubEquipmentUnits>
     </SubEquipmentUnits>
 
@@ -49,7 +49,6 @@
                 <guaranteed-delivery>false</guaranteed-delivery>
             </DataTagAddress>
         </DataTag>
-
     </DataTags>
     <CommandTags>
     </CommandTags>

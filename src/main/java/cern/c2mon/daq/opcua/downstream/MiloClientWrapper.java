@@ -16,8 +16,8 @@ import java.util.function.BiConsumer;
 
 public interface MiloClientWrapper {
     void initialize() throws ExecutionException, InterruptedException;
-    void connect();
-    void disconnect();
+    void connect() throws ExecutionException, InterruptedException;
+    void disconnect() throws ExecutionException, InterruptedException;
     boolean isConnected();
     void addEndpointSubscriptionListener(EndpointSubscriptionListener listener);
 

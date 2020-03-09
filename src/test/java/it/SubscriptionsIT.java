@@ -36,7 +36,7 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
     }
 
     @AfterEach
-    public void cleanUp() {
+    public void cleanUp() throws ExecutionException, InterruptedException {
         endpoint.reset();
         endpoint = null;
     }

@@ -14,7 +14,6 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.util.Arrays;
-import java.util.concurrent.ExecutionException;
 
 import static org.easymock.EasyMock.expect;
 
@@ -38,12 +37,12 @@ public abstract class EndpointTestBase {
         endpoint = new EndpointImpl(client, mapper, publisher);
     }
 
-    protected void subscribeTag (ISourceDataTag tag) throws ExecutionException, InterruptedException {
-        endpoint.subscribeTag(tag).get();
+    protected void subscribeTag (ISourceDataTag tag) {
+        endpoint.subscribeTag(tag);
     }
 
-    protected void subscribeTags (ISourceDataTag... tags) throws ExecutionException, InterruptedException, ConfigurationException {
-        endpoint.subscribeTags(Arrays.asList(tags)).get();
+    protected void subscribeTags (ISourceDataTag... tags) throws ConfigurationException {
+        endpoint.subscribeTags(Arrays.asList(tags));
     }
 
     protected void mockSubscriptionStatusCode (UaMonitoredItem monitoredItem, StatusCode code, ISourceDataTag... tags) {

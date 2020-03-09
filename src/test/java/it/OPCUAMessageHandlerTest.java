@@ -41,9 +41,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     }
 
     @Override
-    protected void afterTest () throws Exception {
-//        handler.disconnectFromDataSource();
-    }
+    protected void afterTest () throws Exception { }
+
 
     @Test
     @UseConf("commfault_ok.xml")
@@ -85,7 +84,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @UseConf("commfault_incorrect.xml")
     public void improperConfigShouldSendThrowError () {
         new CommfaultSenderCapture(messageSender);
-        assertThrows(ConfigurationException.class, () -> handler.connectToDataSource());
+        assertThrows(OPCCommunicationException.class, () -> handler.connectToDataSource());
     }
 
     @Test

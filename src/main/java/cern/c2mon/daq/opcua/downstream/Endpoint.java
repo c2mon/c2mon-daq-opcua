@@ -35,10 +35,10 @@ public interface Endpoint {
 
     boolean isConnected ();
     void initialize (boolean connectionLost) throws OPCCommunicationException;
-    CompletableFuture<Void> reset();
+    void reset();
 
-    CompletableFuture<Void> subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException;
-    CompletableFuture<Void> subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
+    void subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException;
+    void subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
     CompletableFuture<Void> removeDataTag(ISourceDataTag sourceDataTag) throws IllegalArgumentException;
 
     void refreshDataTags(Collection<ISourceDataTag> dataTags);

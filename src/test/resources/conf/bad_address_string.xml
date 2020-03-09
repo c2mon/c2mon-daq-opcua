@@ -17,7 +17,7 @@
                     <opc-item-name>RandomSignedInt32</opc-item-name>
                     <command-pulse-length>0</command-pulse-length>
                     <address-type>STRING</address-type>
-                    <command-type>CLASSIC</command-type>#
+                    <command-type>CLASSIC</command-type>
                 </HardwareAddress>
                 <time-to-live>3600000</time-to-live>
                 <value-deadband-type>1</value-deadband-type>
