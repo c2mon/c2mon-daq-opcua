@@ -28,6 +28,7 @@ import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import lombok.var;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -35,7 +36,9 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 import static cern.c2mon.daq.opcua.upstream.EquipmentStateListener.EquipmentState.*;
 
@@ -89,31 +92,30 @@ public class EndpointImpl implements Endpoint {
     }
 
     private void subscribeToGroup (SubscriptionGroup group, List<ItemDefinition> definitions) {
-        UaSubscription subscription = (group.isSubscribed()) ?
-                group.getSubscription() :
-                client.createSubscription(group.getDeadband().getTime());
+        UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription()
+                : client.createSubscription(group.getDeadband().getTime());
         group.setSubscription(subscription);
 
-        List<UaMonitoredItem> items = client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback);
-        subscriptionCompletedCallback(items);
+        var monitoredItems = client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback);
+        completeSubscription(monitoredItems);
     }
 
     @Override
     public synchronized void removeDataTag (final ISourceDataTag dataTag) throws IllegalArgumentException {
-        SubscriptionGroup subscriptionGroup = mapper.getGroup(dataTag);
+        SubscriptionGroup group = mapper.getGroup(dataTag);
 
-        if (!subscriptionGroup.isSubscribed()) {
+        if (!group.isSubscribed()) {
             throw new IllegalArgumentException("The tag cannot be removed, since the subscription group is not subscribed.");
         }
 
-        UaSubscription subscription = subscriptionGroup.getSubscription();
+        UaSubscription subscription = group.getSubscription();
         UInteger clientHandle = mapper.getDefinition(dataTag).getClientHandle();
 
         client.deleteItemFromSubscription(clientHandle, subscription);
         mapper.removeTagFromGroup(dataTag);
         
-        if (subscriptionGroup.size() < 1) {
-            subscriptionGroup.reset();
+        if (group.size() < 1) {
+            group.reset();
             client.deleteSubscription(subscription);
         }
     }
@@ -144,7 +146,7 @@ public class EndpointImpl implements Endpoint {
         return client.isConnected();
     }
 
-    private void subscriptionCompletedCallback (List<UaMonitoredItem> monitoredItems) {
+    private void completeSubscription (List<UaMonitoredItem> monitoredItems) {
         for (UaMonitoredItem item : monitoredItems) {
             ISourceDataTag dataTag = mapper.getTag(item.getClientHandle());
             if (item.getStatusCode().isBad()) {

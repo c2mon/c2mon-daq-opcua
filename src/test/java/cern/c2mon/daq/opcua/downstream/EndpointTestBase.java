@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import java.util.Arrays;
 
 import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 
 public abstract class EndpointTestBase {
 
@@ -45,7 +46,22 @@ public abstract class EndpointTestBase {
         endpoint.subscribeTags(Arrays.asList(tags));
     }
 
-    protected void mockSubscriptionStatusCode (UaMonitoredItem monitoredItem, StatusCode code, ISourceDataTag... tags) {
+    protected void mockStatusCodesAndClientHandles (ISourceDataTag[] goodTags, ISourceDataTag[] badTags) {
+        UaMonitoredItem monitoredItem = client.getMonitoredItem();
+        mockStatusCodeAndClientHandle(monitoredItem, StatusCode.GOOD, goodTags);
+        mockStatusCodeAndClientHandle(monitoredItem, StatusCode.BAD, badTags);
+        replay(monitoredItem);
+    }
+
+    protected void mockGoodStatusCodesAndClientHandles (ISourceDataTag... goodTags) {
+        mockStatusCodesAndClientHandles(goodTags, new ISourceDataTag[]{});
+    }
+
+    protected void mockBadStatusCodesAndClientHandles (ISourceDataTag... badTags) {
+        mockStatusCodesAndClientHandles(new ISourceDataTag[]{}, badTags);
+    }
+
+    protected void mockStatusCodeAndClientHandle (UaMonitoredItem monitoredItem, StatusCode code, ISourceDataTag... tags) {
         if(tags.length == 0) return;
         expect(monitoredItem.getStatusCode()).andReturn(code).times(tags.length);
         for (ISourceDataTag tag : tags) {
