@@ -4,17 +4,15 @@ stages:
 - sonar
 
 services:
-  - docker:dind
+  # To obtain a Docker daemon, request a Docker-in-Docker service
+  - docker:19.03.1-dind
   
 
 variables:
-  # Instruct Testcontainers to use the daemon of DinD.
-  DOCKER_HOST: "tcp://docker:2375"
-  # Improve performance with overlayfs.
-  DOCKER_DRIVER: overlay2
-
+  DOCKER_TLS_CERTDIR: "/certs"
+      
 image: 
-  name: gitlab-registry.cern.ch/industrial-controls/sw-infra/cc7-maven:jdk-11-mvn-3.6-1
+  name: gitlab-registry.cern.ch/industrial-controls/sw-infra/mvn-dind:3.6.2-19.3.0-jdk11
   entrypoint: [""]   
 
 
