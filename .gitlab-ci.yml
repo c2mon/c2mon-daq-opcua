@@ -6,7 +6,8 @@ stages:
 services:
   - docker:dind
   
-tag : docker-privileged
+tags: 
+  - docker-privileged
 
 variables:
   # Instruct Testcontainers to use the daemon of DinD.
