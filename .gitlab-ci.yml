@@ -9,8 +9,8 @@ services:
   
 
 variables:
-  DOCKER_TLS_CERTDIR: ""
-  DOCKER_HOST: "tcp://docker:2375/"
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_HOST: "tcp://docker:2376/"
       
 image: 
   name: gitlab-registry.cern.ch/industrial-controls/sw-infra/mvn-dind:3.6.2-19.3.0-jdk11
@@ -23,6 +23,7 @@ build_and_publish:
   tags: 
     - docker-privileged
   script: 
+    - docker info
     - mvn -q -U -B -T4 clean deploy --settings settings.xml
   only:
     - master
@@ -33,6 +34,7 @@ build:
   tags: 
     - docker-privileged
   script:
+    - docker info
     - mvn -q -U -B clean test -DskipDockerBuild -DskipDockerTag --settings settings.xml
   except:
     - master
