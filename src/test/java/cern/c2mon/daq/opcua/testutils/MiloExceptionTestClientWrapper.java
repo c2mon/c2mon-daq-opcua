@@ -1,11 +1,10 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.downstream.EndpointSubscriptionListener;
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
+import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.Getter;
-import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -13,27 +12,25 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 import static org.easymock.EasyMock.createMock;
 
-@Getter @Setter
-public class MiloTestClientWrapper implements MiloClientWrapper {
+@Getter
+public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
 
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
-    boolean returnGoodStatusCodes = true;
 
     @Override
     public void initialize () {
+        throw new OPCCommunicationException(OPCCommunicationException.Cause.CREATE_CLIENT);
     }
 
     @Override
     public void connect () {
+        throw new OPCCommunicationException(OPCCommunicationException.Cause.CONNECT);
 
     }
 
@@ -44,32 +41,31 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
 
     @Override
     public void disconnect () {
+        throw new OPCCommunicationException(OPCCommunicationException.Cause.DISCONNECT);
     }
 
     @Override
     public UaSubscription createSubscription (int timeDeadband) {
-        return subscription;
+        throw new OPCCommunicationException(OPCCommunicationException.Cause.CREATE_SUBSCRIPTION);
     }
 
     @Override
-    public void deleteSubscription (UaSubscription subscription) { }
+    public void deleteSubscription (UaSubscription subscription) {
+        throw new OPCCommunicationException(OPCCommunicationException.Cause.DELETE_SUBSCRIPTION);}
 
     @Override
     public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<ItemDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
-        final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
-        executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
-        return Collections.nCopies(definitions.size(), monitoredItem);
+        throw new OPCCommunicationException(OPCCommunicationException.Cause.SUBSCRIBE_TAGS);
     }
 
     @Override
     public List<DataValue> read (NodeId nodeIds) {
-        StatusCode code = returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
-        return Collections.singletonList(new DataValue(code));
+        throw new OPCCommunicationException(OPCCommunicationException.Cause.READ);
     }
 
     @Override
     public StatusCode write (NodeId nodeId, DataValue value) {
-        return StatusCode.GOOD;
+        throw new OPCCommunicationException(OPCCommunicationException.Cause.WRITE);
     }
 
     @Override
@@ -77,5 +73,7 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
         return true;
     }
 
-    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) { }
+    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
+        throw new OPCCommunicationException(OPCCommunicationException.Cause.DELETE_MONITORED_ITEM);
+    }
 }
