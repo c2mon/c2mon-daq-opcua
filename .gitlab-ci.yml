@@ -3,6 +3,11 @@ stages:
 - deploy
 - sonar
 
+image: 
+  name: gitlab-registry.cern.ch/industrial-controls/sw-infra/cc7-maven:jdk-11-mvn-3.6-1
+  entrypoint: [""]   
+
+
 # Fully build and publish master branch
 build_and_publish:
   stage: deploy
