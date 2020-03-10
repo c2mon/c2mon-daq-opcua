@@ -37,13 +37,9 @@ import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.MISSI
  */
 
 /**
- * OPC-UA has a built-in keep-alive functionality, sending keep-alive messages to the client's subscription
- * listener @see{@link cern.c2mon.daq.opcua.downstream.EndpointSubscriptionListener}  when there are no monitored items to send to the client to indicate that the server is active.
- * The only way that an active and initialized client does not receive this keep-alive is if it doesn't have any active
- * subscriptions and monitored items.
- *
- * TODO: Should we keep the AliveWriter for these cases, i.e. to stimulate an alive of the client to the server for
- * clients that don't have any active subscriptions?
+ * Not to be confused with OPC UA's built-in functionality. The built-in keepalive only asserts that the server is
+ * running. The SubEquipment behind the Server may be down. The AliveWriter checks the state of the SubEquipment by
+ * writing a counter to it.
  */
 
 @Slf4j

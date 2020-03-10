@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.*;
 
-public class AddressStringParser {
+public abstract class AddressStringParser {
 
     /**
      * Creates a properties object which has the properties defined in the

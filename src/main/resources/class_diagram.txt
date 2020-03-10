@@ -1,0 +1,153 @@
+@startuml
+
+title OPC UA DAQ Module
+package DAQCore { }
+package Milo { }
+
+note "either or" as N1
+ControllerWithAliveWriter .. N1
+N1 .. ControllerImpl
+
+OPCUAMessageHandler -left- DAQCore
+OPCUAMessageHandler "*" -> "1" ControllerFactory
+ControllerFactory "1" -> "*" EventPublisher: creates
+ControllerFactory "1" -> "*" Endpoint: creates
+ControllerFactory "1" -> "*" ControllerImpl: creates
+ControllerFactory "1" -> "*" ControllerWithAliveWriter: creates
+ControllerFactory "1" -> "*" MiloClientWrapper: creates
+ControllerFactory "1" -> "*" TagSubscriptionMapper: creates
+ControllerFactory "*" -up-> "1" AddressStringParser
+AddressStringParser "1" -> "*" EquipmentAddress: creates
+ControllerImpl "1" -> "0..1" Endpoint
+ControllerWithAliveWriter "1" -> "0..1" Endpoint
+EndpointImpl "1" *--> "1" MiloClientWrapper
+EndpointImpl "1" *--> "1" TagSubscriptionMapper
+EndpointImpl "1" *--> "1" EventPublisher
+MiloClientWrapper -down-> Milo: wraps
+
+abstract class AddressStringParser {
+  +EquipmentAddress parse(String address)
+}
+
+class EquipmentAddress {
+  +List<ServerAddress> addresses
+  +int serverTimeout
+  +int serverRetryTimeout
+  +ServerAddress getAddressWithProtocol(String protocol)
+  +boolean suppportsProtocol(String uri)
+}
+
+class OPCUAMessageHandler implements IEquipmentConfigurationChanger {
+  +Controller controller
+  +void connectToDataSource()
+  +void disconnectFromDataSource()
+  +void refreshAllDataTags()
+  +void refreshDataTag(long dataTagId)
+}
+
+interface IEquipmentConfigurationChanger {
+  +void onUpdateEquipmentConfiguration(...)
+}
+
+abstract class ControllerFactory {
+  +static Controller getController(...)
+  +static EventPublisher createPublisherWithListeners(...)
+}
+
+interface Controller {
+  +void initialize()
+  +void stop()
+  +void checkConnection()
+  +void refreshAllDataTags(ISourceDataTag tag)
+  +String updateAliveWriterAndReport()
+}
+
+class ControllerImpl implements Controller, IDataTagChanger {
+  +Endpoint endpoint
+  +IEquipmentConfiguration config
+  +EventPublisher publisher
+}
+
+class ControllerWithAliveWriter extends ControllerImpl {
+  +AliveWriter aliveWriter
+}
+
+interface IDataTagChanger {
+  +void onAddDataTag(ISourceDataTag var1, ChangeReport var2)
+  +void onRemoveDataTag(ISourceDataTag var1, ChangeReport var2)
+  +void onUpdateDataTag(ISourceDataTag var1, ISourceDataTag var2, ChangeReport var3)
+}
+
+interface Endpoint {
+  +boolean isConnected()
+  +void initialize (boolean connectionLost)
+  +void reset()
+  +void subscribeTags(Collection<ISourceDataTag> dataTags)
+  +void subscribeTag(ISourceDataTag sourceDataTag)
+  +void removeDataTag(ISourceDataTag sourceDataTag)
+  +void refreshDataTags(Collection<ISourceDataTag> dataTags)
+  +void write(OPCHardwareAddress, Object value)
+  +void recreateSubscription(UaSubscription subscription)
+}
+
+class EndpointImpl implements Endpoint {
+  +MiloClientWrapper client
+  +TagSubscriptionMapper mapper
+  +EventPublisher events
+}
+
+interface MiloClientWrapper {
+  +void initialize()
+  +void connect()
+  +void disconnect()
+  +boolean isConnected()
+  +UaSubscription createSubscription(int timeDeadband)
+  +void deleteSubscription(UaSubscription subscription)
+  +void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription)
+  +List<UaMonitoredItem> subscribeItemDefinitions (...)
+  +List<DataValue> read(NodeId nodeIds)
+  +StatusCode write(NodeId nodeId, DataValue value)
+}
+
+interface TagSubscriptionMapper {
+  +Collection<SubscriptionGroup> getGroups()
+  +Map<SubscriptionGroup, List<ItemDefinition>> maptoGroupsWithDefinitions (Collection<ISourceDataTag> dataTags)
+  +SubscriptionGroup getGroup (ISourceDataTag dataTags)
+  +SubscriptionGroup getGroup (UaSubscription subscription)
+  +ItemDefinition getDefinition(ISourceDataTag dataTag)
+  +ISourceDataTag getTag (UInteger clientHandle)
+  +void addDefinitionsToGroups (Collection<ItemDefinition> definitions)
+  +void addDefinitionToGroup (ItemDefinition definition)
+  +void addTagToGroup (ISourceDataTag dataTag)
+  +void removeTagFromGroup (ISourceDataTag dataTag)
+  +void clear()
+  +boolean isSubscribed(ISourceDataTag tag);
+}
+
+class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
+  +Map<Deadband, SubscriptionGroup> subscriptionGroups
+  +Map<ISourceDataTag, ItemDefinition> tag2Definition
+}
+
+class EventPublisher {
+  +void subscribeToTagEvents(TagListener listener)
+  +void subscribeToEquipmentStateEvents(EquipmentStateListener listener)
+  +void unsubscribeFromTagEvents (TagListener listener)
+  +void unsubscribeFromEquipmentStateEvents (EquipmentStateListener listener)
+  +void invalidTag(ISourceDataTag tag)
+  +void itemChange(ISourceDataTag tag, final DataValue value)
+  +void notifyTagEvent (StatusCode statusCode, ISourceDataTag tag, DataValue value)
+  +void notifyEquipmentState(EquipmentStateListener.EquipmentState state)
+  +void clear()
+}
+
+interface TagListener {
+  +void onNewTagValue(...)
+  +void onTagInvalid(...)
+}
+
+interface EquipmentStateListener {
+  +void update(EquipmentState state)
+}
+
+@enduml

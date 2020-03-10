@@ -21,7 +21,6 @@ import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.downstream.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.shared.daq.config.ChangeReport;
@@ -41,8 +40,6 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     @Getter
     private Endpoint endpoint;
     private IEquipmentConfiguration config;
-    @Getter
-    private EventPublisher publisher;
 
     public void initialize () throws ConfigurationException {
         initialize(false);

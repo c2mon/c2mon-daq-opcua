@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 
 @Slf4j
-public class ControllerFactory {
+public abstract class ControllerFactory {
 
     public static Controller getController (IEquipmentConfiguration config, IEquipmentMessageSender sender) throws ConfigurationException {
 
@@ -28,8 +28,7 @@ public class ControllerFactory {
         }
         EquipmentAddress.ServerAddress address = equipmentAddress.getServerAddressWithProtocol(Controller.UA_TCP_TYPE);
 
-        MiloClientWrapper wrapper = null;
-        wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
+        MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
         TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
         EventPublisher publisher = createPublisherWithListeners(sender);
 
@@ -38,12 +37,12 @@ public class ControllerFactory {
         if (equipmentAddress.isAliveWriterEnabled()) {
             try {
                 AliveWriter aliveWriter = createAliveWriter(config, endpoint);
-                return new ControllerWithAliveWriter(endpoint, config, publisher, aliveWriter);
+                return new ControllerWithAliveWriter(endpoint, config, aliveWriter);
             } catch (ConfigurationException e) {
                 log.error("Creating the AliveWriter skipped. ", e);
             }
         }
-        return new ControllerImpl(endpoint, config, publisher);
+        return new ControllerImpl(endpoint, config);
     }
 
     private static AliveWriter createAliveWriter (IEquipmentConfiguration config, Endpoint endpoint) throws ConfigurationException {

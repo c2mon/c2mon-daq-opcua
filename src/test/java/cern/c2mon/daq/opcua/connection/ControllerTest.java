@@ -19,7 +19,7 @@ public class ControllerTest extends ControllerTestBase {
         publisher = new EventPublisher();
 
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
-        controller = new ControllerImpl(endpoint, config, publisher);
+        controller = new ControllerImpl(endpoint, config);
     }
 
 
