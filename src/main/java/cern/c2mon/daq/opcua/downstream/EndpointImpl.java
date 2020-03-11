@@ -95,7 +95,7 @@ public class EndpointImpl implements Endpoint {
                 : client.createSubscription(group.getDeadband().getTime());
         group.setSubscription(subscription);
 
-        var monitoredItems = client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback);
+        List<UaMonitoredItem> monitoredItems = client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback);
         completeSubscription(monitoredItems);
     }
 
