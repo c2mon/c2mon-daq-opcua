@@ -4,22 +4,25 @@ title OPC UA DAQ Module
 package DAQCore { }
 package Milo { }
 
-note "either or" as N1
+note "xor" as N1
 ControllerWithAliveWriter .. N1
 N1 .. ControllerImpl
+
+
 
 OPCUAMessageHandler -left- DAQCore
 OPCUAMessageHandler "*" -> "1" ControllerFactory
 ControllerFactory "1" -> "*" EventPublisher: creates
-ControllerFactory "1" -> "*" Endpoint: creates
+ControllerFactory "1" -> "*" EndpointImpl: creates
 ControllerFactory "1" -> "*" ControllerImpl: creates
 ControllerFactory "1" -> "*" ControllerWithAliveWriter: creates
-ControllerFactory "1" -> "*" MiloClientWrapper: creates
-ControllerFactory "1" -> "*" TagSubscriptionMapper: creates
+ControllerFactory "1" -> "*" MiloClientWrapperImpl: creates
+ControllerFactory "1" -> "*" TagSubscriptionMapperImpl: creates
 ControllerFactory "*" -up-> "1" AddressStringParser
 AddressStringParser "1" -> "*" EquipmentAddress: creates
-ControllerImpl "1" -> "0..1" Endpoint
-ControllerWithAliveWriter "1" -> "0..1" Endpoint
+ControllerImpl "1" -> "1" Endpoint
+ControllerWithAliveWriter "1" -> "1" Endpoint
+ControllerWithAliveWriter "1" -> "1" AliveWriter
 EndpointImpl "1" *--> "1" MiloClientWrapper
 EndpointImpl "1" *--> "1" TagSubscriptionMapper
 EndpointImpl "1" *--> "1" EventPublisher
@@ -38,7 +41,7 @@ class EquipmentAddress {
 }
 
 class OPCUAMessageHandler implements IEquipmentConfigurationChanger {
-  +Controller controller
+  -Controller controller
   +void connectToDataSource()
   +void disconnectFromDataSource()
   +void refreshAllDataTags()
@@ -63,13 +66,23 @@ interface Controller {
 }
 
 class ControllerImpl implements Controller, IDataTagChanger {
-  +Endpoint endpoint
-  +IEquipmentConfiguration config
-  +EventPublisher publisher
+  -Endpoint endpoint
+  -IEquipmentConfiguration config
 }
 
 class ControllerWithAliveWriter extends ControllerImpl {
   +AliveWriter aliveWriter
+}
+
+class AliveWriter {
+  -Timer timer
+  -Endpoint endpoint
+  -long writeTime
+  -ISourceDataTag targetTag
+  -AtomicInteger writeCounter
+  +void run()
+  +void startWriter()
+  +void stopWriter()
 }
 
 interface IDataTagChanger {
@@ -91,9 +104,9 @@ interface Endpoint {
 }
 
 class EndpointImpl implements Endpoint {
-  +MiloClientWrapper client
-  +TagSubscriptionMapper mapper
-  +EventPublisher events
+  -MiloClientWrapper client
+  -TagSubscriptionMapper mapper
+  -EventPublisher events
 }
 
 interface MiloClientWrapper {
@@ -107,6 +120,12 @@ interface MiloClientWrapper {
   +List<UaMonitoredItem> subscribeItemDefinitions (...)
   +List<DataValue> read(NodeId nodeIds)
   +StatusCode write(NodeId nodeId, DataValue value)
+}
+
+class MiloClientWrapperImpl implements MiloClientWrapper {
+  -String uri
+  -SecurityPolicy sp
+  -OpcUaClient client
 }
 
 interface TagSubscriptionMapper {
@@ -125,8 +144,8 @@ interface TagSubscriptionMapper {
 }
 
 class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
-  +Map<Deadband, SubscriptionGroup> subscriptionGroups
-  +Map<ISourceDataTag, ItemDefinition> tag2Definition
+  -Map<Deadband, SubscriptionGroup> subscriptionGroups
+  -Map<ISourceDataTag, ItemDefinition> tag2Definition
 }
 
 class EventPublisher {

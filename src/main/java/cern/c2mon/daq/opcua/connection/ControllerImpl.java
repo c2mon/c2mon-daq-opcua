@@ -76,7 +76,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     @Override
     public void onAddDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        doAndReport(changeReport, "DataTag added", () -> {
+        doAndReport(changeReport, ReportMessages.TAG_ADDED.message, () -> {
             endpoint.subscribeTag(sourceDataTag);
             refreshDataTag(sourceDataTag);
         });
@@ -84,24 +84,19 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     @Override
     public void onRemoveDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        doAndReport(changeReport, "DataTag removed", () -> endpoint.removeDataTag(sourceDataTag));
+        doAndReport(changeReport, ReportMessages.TAG_REMOVED.message, () -> endpoint.removeDataTag(sourceDataTag));
     }
 
     @Override
     public void onUpdateDataTag (final ISourceDataTag sourceDataTag, final ISourceDataTag oldSourceDataTag, final ChangeReport changeReport) {
         if (sourceDataTag.getHardwareAddress().equals(oldSourceDataTag.getHardwareAddress())) {
-            completeSuccessFullyWithMessage(changeReport, "No changes for OPC necessary.");
+            completeSuccessFullyWithMessage(changeReport, ReportMessages.NO_UPDATE_REQUIRED.message);
         } else {
-            doAndReport(changeReport, "DataTag updated", () -> {
+            doAndReport(changeReport, ReportMessages.TAG_UPDATED.message, () -> {
                 endpoint.removeDataTag(oldSourceDataTag);
                 endpoint.subscribeTag(sourceDataTag);
             });
         }
-    }
-
-    private void completeSuccessFullyWithMessage (ChangeReport changeReport, String message) {
-        changeReport.appendInfo(message);
-        changeReport.setState(SUCCESS);
     }
 
     private void doAndReport (ChangeReport changeReport, String message, Runnable runnable) {
@@ -115,4 +110,8 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         }
     }
 
+    private void completeSuccessFullyWithMessage (ChangeReport changeReport, String message) {
+        changeReport.appendInfo(message);
+        changeReport.setState(SUCCESS);
+    }
 }

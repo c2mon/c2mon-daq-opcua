@@ -1,35 +1,28 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.downstream.EndpointImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.upstream.EventPublisher;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ControllerTest extends ControllerTestBase {
 
-    protected Controller controller;
-    EventPublisher publisher;
-
     @BeforeEach
-    public void setup() throws ConfigurationException {
-        super.setup();
-        setupWithAliveTag(true, aliveTag);
-
-        publisher = new EventPublisher();
-
-        endpoint = new EndpointImpl(wrapper, mapper, publisher);
-        controller = new ControllerImpl(endpoint, config);
+    public void setupMocker() {
+        mocker.replay();
     }
 
+    @Test
+    public void initializeShouldSubscribeTags() throws ConfigurationException {
+        controller.initialize();
+        sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.isSubscribed(dataTag)));
+    }
 
-    @AfterEach
-    public void teardown() {
-        super.teardown();
+    @Test
+    public void stopShouldResetEndpoint() throws ConfigurationException {
+        controller.initialize();
         controller.stop();
-        controller = null;
+        Assertions.assertTrue(mapper.getGroups().isEmpty());
     }
-
-
 
 }
