@@ -75,7 +75,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
      *
      * @param timeDeadband The subscription's publishing interval in milliseconds.
      *                     If 0, the Server will use the fastest supported interval
-     * @return
+     * @return the newly created subscription
      */
     public UaSubscription createSubscription(int timeDeadband) throws OPCCommunicationException {
         try {
