@@ -3,10 +3,27 @@ stages:
 - deploy
 - sonar
 
+services:
+  # To obtain a Docker daemon, request a Docker-in-Docker service
+  - docker:19.03.1-dind
+  
+
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_HOST: "tcp://docker:2375/"
+      
+image: 
+  name: gitlab-registry.cern.ch/industrial-controls/sw-infra/mvn-dind:3.6.2-19.3.0-jdk11
+  entrypoint: [""]   
+
+
 # Fully build and publish master branch
 build_and_publish:
   stage: deploy
+  tags: 
+    - docker-privileged
   script: 
+    - docker info
     - mvn -q -U -B -T4 clean deploy --settings settings.xml
   only:
     - master
@@ -14,7 +31,10 @@ build_and_publish:
 # Just run tests on feature branches
 build:
   stage: build
+  tags: 
+    - docker-privileged
   script:
+    - docker info
     - mvn -q -U -B clean test -DskipDockerBuild -DskipDockerTag --settings settings.xml
   except:
     - master
