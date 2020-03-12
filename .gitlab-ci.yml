@@ -35,7 +35,7 @@ build:
     - docker-privileged
   script:
     - docker info
-    - mvn -q -U -B clean test -DskipDockerBuild -DskipDockerTag --settings settings.xml
+    - mvn -U -B clean test -DskipDockerBuild -DskipDockerTag --settings settings.xml
   except:
     - master
 
