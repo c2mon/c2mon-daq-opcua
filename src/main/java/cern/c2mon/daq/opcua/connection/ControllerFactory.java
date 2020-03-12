@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.downstream.Endpoint;
@@ -10,7 +9,6 @@ import cern.c2mon.daq.opcua.downstream.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
@@ -20,7 +18,7 @@ import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 @Slf4j
 public abstract class ControllerFactory {
 
-    public static Controller getController (IEquipmentConfiguration config, IEquipmentMessageSender sender) throws ConfigurationException {
+    public static Controller getController (IEquipmentConfiguration config) throws ConfigurationException {
 
         EquipmentAddress equipmentAddress = AddressStringParser.parse(config.getAddress());
         if (!equipmentAddress.supportsProtocol(Controller.UA_TCP_TYPE)) {
@@ -30,7 +28,7 @@ public abstract class ControllerFactory {
 
         MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
         TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
-        EventPublisher publisher = createPublisherWithListeners(sender);
+        EventPublisher publisher = new EventPublisher();
 
         Endpoint endpoint = new EndpointImpl(wrapper, mapper, publisher);
 
@@ -49,13 +47,4 @@ public abstract class ControllerFactory {
         ISourceDataTag aliveTag = config.getSourceDataTag(config.getAliveTagId());
         return new AliveWriter(endpoint, config.getAliveTagInterval() / 2, aliveTag);
     }
-
-    public static EventPublisher createPublisherWithListeners (IEquipmentMessageSender sender) {
-        EventPublisher publisher = new EventPublisher();
-        EndpointListener endpointListener = new EndpointListener(sender);
-        publisher.subscribeToTagEvents(endpointListener);
-        publisher.subscribeToEquipmentStateEvents(endpointListener);
-        return  publisher;
-    }
-
 }

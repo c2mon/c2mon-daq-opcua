@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.downstream;
 
-import cern.c2mon.daq.opcua.upstream.TagListener;
+import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -72,7 +73,10 @@ public class EndpointTagEventsTest extends EndpointTestBase {
     }
 
     private void listenForTagEvent () {
-        publisher.subscribeToTagEvents(new TagListener() {
+        publisher.subscribe(new EndpointListener() {
+            @Override
+            public void update (EquipmentState state) { }
+
             @Override
             public void onNewTagValue (ISourceDataTag dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
                 newTagValueFuture.complete(dataTag);
@@ -81,6 +85,11 @@ public class EndpointTagEventsTest extends EndpointTestBase {
             @Override
             public void onTagInvalid (ISourceDataTag dataTag, SourceDataTagQuality quality) {
                 tagInvalidFuture.complete(dataTag);
+            }
+
+            @Override
+            public void initialize (IEquipmentMessageSender sender) {
+
             }
         });
     }

@@ -1,8 +1,13 @@
 package cern.c2mon.daq.opcua.downstream;
 
+import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.testutils.MiloExceptionTestClientWrapper;
-import cern.c2mon.daq.opcua.upstream.EquipmentStateListener.EquipmentState;
+import cern.c2mon.daq.opcua.upstream.EndpointListener;
+import cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState;
+import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +20,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static cern.c2mon.daq.opcua.upstream.EquipmentStateListener.EquipmentState.*;
+import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.*;
 import static org.junit.Assert.assertEquals;
 
 public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
@@ -23,7 +28,7 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
     CompletableFuture<Object> future = new CompletableFuture<>();
 
     @BeforeEach
-    public void setup() {
+    public void setup () {
         super.setup();
         listenForEquipmentState();
     }
@@ -36,7 +41,7 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
     }
 
     @Test
-    public void badStatusCodesShouldSendOK() throws ExecutionException, InterruptedException {
+    public void badStatusCodesShouldSendOK () throws ExecutionException, InterruptedException {
         mocker.mockStatusCode(StatusCode.BAD, tag1);
         endpoint.initialize(false);
         assertEquals(Collections.singletonList(OK), future.get());
@@ -65,10 +70,28 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
 
     private void listenForEquipmentState () {
         List<EquipmentState> states = new ArrayList<>();
-        publisher.subscribeToEquipmentStateEvents(value -> {
-            states.add(value);
-            if (!value.equals(CONNECTION_LOST)) {
-                future.complete(states);
+        publisher.subscribe(new EndpointListener() {
+            @Override
+            public void update (EquipmentState state) {
+                states.add(state);
+                if (!state.equals(CONNECTION_LOST)) {
+                    future.complete(states);
+                }
+            }
+
+            @Override
+            public void onNewTagValue (ISourceDataTag dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
+
+            }
+
+            @Override
+            public void onTagInvalid (ISourceDataTag dataTag, SourceDataTagQuality quality) {
+
+            }
+
+            @Override
+            public void initialize (IEquipmentMessageSender sender) {
+
             }
         });
     }

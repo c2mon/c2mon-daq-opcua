@@ -1,3 +1,19 @@
+/******************************************************************************
+ * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
+ * 
+ * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
+ * C2MON is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the license.
+ * 
+ * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
+ * more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************/
 package cern.c2mon.daq.opcua.upstream;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
@@ -5,38 +21,23 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
-@AllArgsConstructor
-public class EndpointListener implements TagListener, EquipmentStateListener {
-    IEquipmentMessageSender sender;
+public interface EndpointListener {
 
-    @Override
-    public void onNewTagValue(final ISourceDataTag dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality) {
-        this.sender.update(dataTag.getId(), valueUpdate, quality);
+    @AllArgsConstructor
+    enum EquipmentState {
+        OK("Successfully connected"),
+        CONNECTION_FAILED("Cannot establish connection to the server"),
+        CONNECTION_LOST("Connection to server has been lost. Reconnecting...");
 
-        if (log.isDebugEnabled()) {
-            log.debug("onNewTagValue - Tag value " + valueUpdate + " sent for Tag #" + dataTag.getId());
-        }
+        public final String message;
     }
 
-    @Override
-    public void onTagInvalid (ISourceDataTag dataTag, final SourceDataTagQuality quality) {
-        this.sender.update(dataTag.getId(), quality);
+    void update (EquipmentState state);
 
-        if (log.isDebugEnabled()) {
-            log.debug("onTagInvalid - sent for Tag #" + dataTag.getId());
-        }
-    }
+    void onNewTagValue(final ISourceDataTag dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality);
 
-    @Override
-    public void update (EquipmentState state) {
-        if (state == EquipmentState.OK) {
-            sender.confirmEquipmentStateOK(state.message);
-        } else {
-            sender.confirmEquipmentStateIncorrect(state.message);
-        }
-    }
+    void onTagInvalid(final ISourceDataTag dataTag, final SourceDataTagQuality quality);
 
+    void initialize(IEquipmentMessageSender sender);
 }

@@ -21,6 +21,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
@@ -39,7 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import static cern.c2mon.daq.opcua.upstream.EquipmentStateListener.EquipmentState.*;
+import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.*;
 
 
 @Slf4j
@@ -49,20 +50,25 @@ public class EndpointImpl implements Endpoint {
     @Setter
     private MiloClientWrapper client;
     private TagSubscriptionMapper mapper;
-    private EventPublisher events;
+    private EventPublisher publisher;
 
     public void initialize (boolean connectionLost) throws OPCCommunicationException {
         if (connectionLost) {
-            events.notifyEquipmentState(CONNECTION_LOST);
+            publisher.notifyEquipmentState(CONNECTION_LOST);
         }
         try {
             client.initialize();
             client.connect();
-            events.notifyEquipmentState(OK);
+            publisher.notifyEquipmentState(OK);
         } catch (OPCCommunicationException e) {
-            events.notifyEquipmentState(CONNECTION_FAILED);
+            publisher.notifyEquipmentState(CONNECTION_FAILED);
             throw e;
         }
+    }
+
+    @Override
+    public void subscribe (EndpointListener listener) {
+        publisher.subscribe(listener);
     }
 
     @Override
@@ -123,7 +129,7 @@ public class EndpointImpl implements Endpoint {
     public synchronized void refreshDataTags (final Collection<ISourceDataTag> dataTags) {
         for (ISourceDataTag dataTag : dataTags) {
             NodeId address = mapper.getDefinition(dataTag).getAddress();
-            client.read(address).forEach(value -> events.notifyTagEvent(value.getStatusCode(), dataTag, value));
+            client.read(address).forEach(value -> publisher.notifyTagEvent(value.getStatusCode(), dataTag, value));
         }
     }
 
@@ -149,7 +155,7 @@ public class EndpointImpl implements Endpoint {
         for (UaMonitoredItem item : monitoredItems) {
             ISourceDataTag dataTag = mapper.getTag(item.getClientHandle());
             if (item.getStatusCode().isBad()) {
-                events.invalidTag(dataTag);
+                publisher.invalidTag(dataTag);
             }
             else {
                 mapper.addTagToGroup(dataTag);
@@ -159,6 +165,6 @@ public class EndpointImpl implements Endpoint {
 
     private void itemCreationCallback (UaMonitoredItem item, Integer i) {
         ISourceDataTag tag = mapper.getTag(item.getClientHandle());
-        item.setValueConsumer(value -> events.notifyTagEvent(item.getStatusCode(), tag, value));
+        item.setValueConsumer(value -> publisher.notifyTagEvent(item.getStatusCode(), tag, value));
     }
 }

@@ -29,28 +29,28 @@ public class ControllerFactoryTest {
     @Test
     public void createControllerWithoutAliveWriter() throws ConfigurationException {
         setupWithAddressAndAliveTag(config, ADDRESS_PROTOCOL_TCP + ADDRESS_BASE, false, aliveTag);
-        Controller controller = ControllerFactory.getController(config, sender);
+        Controller controller = ControllerFactory.getController(config);
         Assertions.assertTrue(controller instanceof ControllerImpl);
     }
 
     @Test
     public void createControllerWithAliveWriter() throws ConfigurationException {
         setupWithAddressAndAliveTag(config,ADDRESS_PROTOCOL_TCP + ADDRESS_BASE, true, aliveTag);
-        Controller controller = ControllerFactory.getController(config, sender);
+        Controller controller = ControllerFactory.getController(config);
         Assertions.assertTrue(controller instanceof ControllerWithAliveWriter);
     }
 
     @Test
     public void withInvalidAliveSourceTagShouldCreateControllerWithoutAliveWriter () throws ConfigurationException {
         setupWithAddressAndAliveTag(config,ADDRESS_PROTOCOL_TCP + ADDRESS_BASE, true, null);
-        Controller controller = ControllerFactory.getController(config, sender);
+        Controller controller = ControllerFactory.getController(config);
         Assertions.assertTrue(controller instanceof ControllerImpl);
     }
 
     @Test
-    public void nonOpcUaAddressShouldThrowError() throws ConfigurationException {
+    public void nonOpcUaAddressShouldThrowError() {
         setupWithAddressAndAliveTag(config, ADDRESS_PROTOCOL_INVALID + ADDRESS_BASE, true, null);
-        Assertions.assertThrows(ConfigurationException.class, () -> ControllerFactory.getController(config, sender));
+        Assertions.assertThrows(ConfigurationException.class, () -> ControllerFactory.getController(config));
 
     }
 }

@@ -14,34 +14,25 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 @NoArgsConstructor
 public class EventPublisher {
 
-    ConcurrentLinkedQueue<TagListener> tagListeners = new ConcurrentLinkedQueue<>();
-    ConcurrentLinkedQueue<EquipmentStateListener> stateListeners = new ConcurrentLinkedQueue<>();
+    ConcurrentLinkedQueue<EndpointListener> listeners = new ConcurrentLinkedQueue<>();
 
-    public void subscribeToTagEvents (final TagListener listener) {
-        tagListeners.add(listener);
+    public void subscribe (final EndpointListener listener) {
+        listeners.add(listener);
     }
 
-    public void subscribeToEquipmentStateEvents (final EquipmentStateListener listener) {
-        stateListeners.add(listener);
-    }
-
-    public void unsubscribeFromTagEvents (final TagListener listener) {
-        tagListeners.remove(listener);
-    }
-
-    public void unsubscribeFromEquipmentStateEvents (final EquipmentStateListener listener) {
-        stateListeners.remove(listener);
+    public void unsubscribe (final EndpointListener listener) {
+        listeners.remove(listener);
     }
 
     public void invalidTag(ISourceDataTag tag) {
-        for (TagListener listener : tagListeners) {
+        for (EndpointListener listener : listeners) {
             SourceDataTagQualityCode tagQuality = DataQualityMapper.getBadNodeIdCode();
             listener.onTagInvalid(tag, new SourceDataTagQuality(tagQuality));
         }
     }
 
     private void itemChange(ISourceDataTag tag, final DataValue value) {
-        for (TagListener listener : tagListeners) {
+        for (EndpointListener listener : listeners) {
             SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
             ValueUpdate valueUpdate = new ValueUpdate(value, value.getSourceTime().getUtcTime());
             listener.onNewTagValue(tag, valueUpdate, new SourceDataTagQuality(tagQuality));
@@ -56,14 +47,13 @@ public class EventPublisher {
         }
     }
 
-    public void notifyEquipmentState(EquipmentStateListener.EquipmentState state) {
-        for (EquipmentStateListener listener: stateListeners ) {
+    public void notifyEquipmentState(EndpointListener.EquipmentState state) {
+        for (EndpointListener listener : listeners) {
             listener.update(state);
         }
     }
 
     public void clear() {
-        tagListeners.clear();
-        stateListeners.clear();
+        listeners.clear();
     }
 }

@@ -18,6 +18,7 @@ package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -34,6 +35,7 @@ public interface Endpoint {
     boolean isConnected ();
     void initialize (boolean connectionLost) throws OPCCommunicationException;
     void reset();
+    void subscribe (EndpointListener listener);
 
     void subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException;
     void subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
@@ -46,5 +48,4 @@ public interface Endpoint {
 
     //for injection during testing
     void setClient(MiloClientWrapper client);
-
 }

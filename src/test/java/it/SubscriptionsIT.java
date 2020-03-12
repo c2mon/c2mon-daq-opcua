@@ -1,8 +1,10 @@
 package it;
 
+import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.downstream.Endpoint;
-import cern.c2mon.daq.opcua.upstream.TagListener;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.upstream.EndpointListener;
+import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
@@ -62,7 +64,7 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
     @Test
     public void subscribeAndSetDeadband() {
         float valueDeadband = 50;
-        CompletableFuture<Object> future = listenForServerResponse(endpoint, valueDeadband);
+        CompletableFuture<Object> future = listenForServerResponse(publisher, valueDeadband);
         ISourceDataTag dataTag = ServerTagFactory.DipData.createDataTag(valueDeadband, (short) DeadbandType.Absolute.getValue(), 0);
 
         endpoint.subscribeTag(dataTag);
@@ -82,14 +84,19 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
     }
 
     private CompletableFuture<Object> listenForServerResponse(Endpoint endpoint) {
-        return listenForServerResponse(endpoint, 0.0f);
+        return listenForServerResponse(publisher, 0.0f);
     }
 
 
-    private CompletableFuture<Object> listenForServerResponse(Endpoint endpoint, float valueDeadband) {
+    private static CompletableFuture<Object> listenForServerResponse(EventPublisher publisher, float valueDeadband) {
         CompletableFuture<Object> future = new CompletableFuture<>();
 
-        publisher.subscribeToTagEvents(new TagListener() {
+        publisher.subscribe(new EndpointListener() {
+            @Override
+            public void update (EquipmentState state) {
+
+            }
+
             @Override
             public void onNewTagValue (ISourceDataTag dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
                 log.info("received: {}, {}", dataTag.getName(), valueUpdate);
@@ -105,11 +112,16 @@ public class SubscriptionsIT extends OpcUaInfrastructureBase {
                 log.info("is invalid: {}", dataTag.getName());
                 future.complete(quality);
             }
+
+            @Override
+            public void initialize (IEquipmentMessageSender sender) {
+
+            }
         });
         return future;
     }
 
-    private boolean approximatelyEqual(float a, double b)
+    private static boolean approximatelyEqual(float a, double b)
     {
         return Math.abs(a-b) <= ( (Math.abs(a) < Math.abs(b) ? Math.abs(b) : Math.abs(a)) * 0.1);
     }

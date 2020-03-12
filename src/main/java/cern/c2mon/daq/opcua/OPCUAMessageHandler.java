@@ -23,12 +23,15 @@ import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.connection.Controller;
 import cern.c2mon.daq.opcua.connection.ControllerFactory;
 import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
+import cern.c2mon.daq.opcua.upstream.EndpointListener;
+import cern.c2mon.daq.opcua.upstream.EndpointListenerImpl;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -42,6 +45,10 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   @Getter
   private Controller controller;
 
+  @Setter
+  EndpointListener endpointListener = new EndpointListenerImpl();
+
+
   /**
    * Called when the core wants the OPC module to start up and connect to the
    * OPC server.
@@ -54,7 +61,9 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     IEquipmentConfiguration config = getEquipmentConfiguration();
     IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-    controller = ControllerFactory.getController(config, sender);
+    endpointListener.initialize(sender);
+    controller = ControllerFactory.getController(config);
+    controller.subscribe(endpointListener);
     controller.initialize();
 
     getEquipmentConfigurationHandler().setDataTagChanger((IDataTagChanger) controller);
