@@ -6,18 +6,14 @@
   <parent>
     <groupId>cern.c2mon.daq</groupId>
     <artifactId>c2mon-daq-parent</artifactId>
-    <version>1.9.2</version>
+    <version>1.9.3-SNAPSHOT</version>
   </parent>
 
   <artifactId>c2mon-daq-opcua</artifactId>
-  <version>1.9.2-SNAPSHOT</version>
+  <version>1.9.3-SNAPSHOT</version>
   <packaging>jar</packaging>
   <description>DAQ module for acquiring data from OPC UA servers. Also supports the older DCOM and SOAP protocols
   </description>
-
-  <properties>
-    <guava.version>26.0-jre</guava.version>
-  </properties>
 
   <scm>
     <url>https://gitlab.cern.ch/c2mon/c2mon-daq-opcua</url>
@@ -25,6 +21,11 @@
     <developerConnection>scm:git:ssh://git@gitlab.cern.ch:7999/c2mon/c2mon-daq-opcua.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
+
+
+  <properties>
+    <guava.version>26.0-jre</guava.version>
+  </properties>
 
   <repositories>
     <repository>
@@ -59,76 +60,11 @@
     <dependency>
       <groupId>org.eclipse.milo</groupId>
       <artifactId>sdk-client</artifactId>
-      <version>0.3.7</version>
+      <version>0.3.8</version>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opcfoundation</groupId>
-      <artifactId>ua-stack</artifactId>
-      <version>1.01.311.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.axis2</groupId>
-      <artifactId>axis2</artifactId>
-      <version>1.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.axis2</groupId>
-      <artifactId>axis2-transport-http</artifactId>
-      <version>1.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.axis2</groupId>
-      <artifactId>axis2-transport-local</artifactId>
-      <version>1.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.axis2</groupId>
-      <artifactId>axis2-jaxws</artifactId>
-      <version>1.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ws.commons.axiom</groupId>
-      <artifactId>axiom-api</artifactId>
-      <version>1.2.12</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ws.commons.axiom</groupId>
-      <artifactId>axiom-impl</artifactId>
-      <version>1.2.12</version>
-    </dependency>
-    <dependency>
-      <groupId>axis</groupId>
-      <artifactId>axis-wsdl4j</artifactId>
-      <version>1.5.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ws.commons.schema</groupId>
-      <artifactId>XmlSchema</artifactId>
-      <version>1.4.7</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.neethi</groupId>
-      <artifactId>neethi</artifactId>
-      <version>3.0.1</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>1.5</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-httpclient</groupId>
-      <artifactId>commons-httpclient</artifactId>
-      <version>3.1</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-discovery</groupId>
-      <artifactId>commons-discovery</artifactId>
-      <version>0.4</version>
     </dependency>
 
     <!-- Test dependencies -->
@@ -148,23 +84,11 @@
       <artifactId>easymockclassextension</artifactId>
     </dependency>
     <dependency>
-    <groupId>org.mockito</groupId>
-    <artifactId>mockito-core</artifactId>
-    <version>3.2.4</version>
-    <scope>test</scope>
-  </dependency>
-    <dependency>
     <groupId>org.testcontainers</groupId>
     <artifactId>testcontainers</artifactId>
     <version>1.13.0</version>
     <scope>test</scope>
   </dependency>
-      <dependency>
-          <groupId>org.powermock</groupId>
-          <artifactId>powermock-api-easymock</artifactId>
-          <version>2.0.5</version>
-          <scope>test</scope>
-      </dependency>
   </dependencies>
 
   <!-- Activate plugin configurations to build a tarball and a docker image -->
@@ -175,6 +99,13 @@
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <source>${java.version}</source>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
