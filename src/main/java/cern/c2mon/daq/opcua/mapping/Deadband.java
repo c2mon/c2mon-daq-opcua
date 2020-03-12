@@ -11,7 +11,7 @@ import java.util.Objects;
 @NoArgsConstructor
 @Getter
 public class Deadband {
-    public static int minTimeDeadband = 500;
+    public static final int minTimeDeadband = 500;
 
     int time;
     float value;

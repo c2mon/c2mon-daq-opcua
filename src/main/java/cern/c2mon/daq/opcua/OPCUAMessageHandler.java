@@ -122,13 +122,14 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     if (equipmentConfiguration.getAddress().equals(oldEquipmentConfiguration.getAddress())) {
       try {
         disconnectFromDataSource();
-        Thread.sleep(RESTART_DELAY);
+        wait(RESTART_DELAY);
         connectToDataSource();
         changeReport.appendInfo("DAQ restarted.");
       } catch (EqIOException e) {
         changeReport.appendError("Restart of DAQ failed.");
       } catch (InterruptedException e) {
         changeReport.appendError("Restart delay interrupted. DAQ will not connect.");
+        Thread.currentThread().interrupt();
       }
     } else if (equipmentConfiguration.getAliveTagId() != oldEquipmentConfiguration.getAliveTagId()
             || equipmentConfiguration.getAliveTagInterval() != oldEquipmentConfiguration.getAliveTagInterval()) {
