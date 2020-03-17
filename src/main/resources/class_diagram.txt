@@ -4,29 +4,41 @@ title OPC UA DAQ Module
 package DAQCore { }
 package Milo { }
 
-note "xor" as N1
-ControllerWithAliveWriter .. N1
-N1 .. ControllerImpl
+note "or: ControllerWithAliveWriter" as N1
+ControllerImpl .. N1
 
 
 
 OPCUAMessageHandler -left- DAQCore
 OPCUAMessageHandler "*" -> "1" ControllerFactory
-ControllerFactory "1" -> "*" EventPublisher: creates
-ControllerFactory "1" -> "*" EndpointImpl: creates
-ControllerFactory "1" -> "*" ControllerImpl: creates
-ControllerFactory "1" -> "*" ControllerWithAliveWriter: creates
-ControllerFactory "1" -> "*" MiloClientWrapperImpl: creates
-ControllerFactory "1" -> "*" TagSubscriptionMapperImpl: creates
+OPCUAMessageHandler "1" -down-> "1" EndpointListenerImpl: creates
+'ControllerFactory "1" -> "*" EventPublisher: creates
+'ControllerFactory "1" -right-> "*" EndpointImpl: creates
+'ControllerFactory "1" -> "*" ControllerImpl: creates
+
+'ControllerFactory "1" -> "*" ControllerWithAliveWriter: creates
+
+'ControllerFactory "1" --> "*" MiloClientWrapperImpl: creates
+'ControllerFactory "1" -down-> "*" TagSubscriptionMapperImpl: creates
 ControllerFactory "*" -up-> "1" AddressStringParser
-AddressStringParser "1" -> "*" EquipmentAddress: creates
-ControllerImpl "1" -> "1" Endpoint
-ControllerWithAliveWriter "1" -> "1" Endpoint
-ControllerWithAliveWriter "1" -> "1" AliveWriter
+AddressStringParser "1" -up-> "*" EquipmentAddress: creates
+ControllerImpl "1" -left-> "1" Endpoint
+ControllerImpl "1" -down-> "1" AliveWriter: optional
+
+'ControllerWithAliveWriter "1" -> "1" Endpoint
+'ControllerWithAliveWriter "1" -> "1" AliveWriter
+
+EndpointImpl .right.|> Endpoint
 EndpointImpl "1" *--> "1" MiloClientWrapper
 EndpointImpl "1" *--> "1" TagSubscriptionMapper
 EndpointImpl "1" *--> "1" EventPublisher
+
+MiloClientWrapperImpl ..|> MiloClientWrapper
 MiloClientWrapper -down-> Milo: wraps
+
+EndpointListenerImpl ..|> EndpointListener
+EndpointListener "*" <-- "1" EventPublisher: notifies
+
 
 abstract class AddressStringParser {
   +EquipmentAddress parse(String address)
@@ -60,6 +72,7 @@ abstract class ControllerFactory {
 interface Controller {
   +void initialize()
   +void stop()
+  +void stop()
   +void checkConnection()
   +void refreshAllDataTags(ISourceDataTag tag)
   +String updateAliveWriterAndReport()
@@ -70,9 +83,9 @@ class ControllerImpl implements Controller, IDataTagChanger {
   -IEquipmentConfiguration config
 }
 
-class ControllerWithAliveWriter extends ControllerImpl {
+/'class ControllerWithAliveWriter extends ControllerImpl {
   +AliveWriter aliveWriter
-}
+}'/
 
 class AliveWriter {
   -Timer timer
@@ -103,7 +116,7 @@ interface Endpoint {
   +void recreateSubscription(UaSubscription subscription)
 }
 
-class EndpointImpl implements Endpoint {
+class EndpointImpl {
   -MiloClientWrapper client
   -TagSubscriptionMapper mapper
   -EventPublisher events
@@ -122,7 +135,7 @@ interface MiloClientWrapper {
   +StatusCode write(NodeId nodeId, DataValue value)
 }
 
-class MiloClientWrapperImpl implements MiloClientWrapper {
+class MiloClientWrapperImpl {
   -String uri
   -SecurityPolicy sp
   -OpcUaClient client
@@ -149,10 +162,8 @@ class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 }
 
 class EventPublisher {
-  +void subscribeToTagEvents(TagListener listener)
-  +void subscribeToEquipmentStateEvents(EquipmentStateListener listener)
-  +void unsubscribeFromTagEvents (TagListener listener)
-  +void unsubscribeFromEquipmentStateEvents (EquipmentStateListener listener)
+  +void subscribe(EndpointListener listener)
+  +void unsubscribe (EndpointListener listener)
   +void invalidTag(ISourceDataTag tag)
   +void itemChange(ISourceDataTag tag, final DataValue value)
   +void notifyTagEvent (StatusCode statusCode, ISourceDataTag tag, DataValue value)
@@ -160,12 +171,9 @@ class EventPublisher {
   +void clear()
 }
 
-interface TagListener {
+interface EndpointListener {
   +void onNewTagValue(...)
   +void onTagInvalid(...)
-}
-
-interface EquipmentStateListener {
   +void update(EquipmentState state)
 }
 
