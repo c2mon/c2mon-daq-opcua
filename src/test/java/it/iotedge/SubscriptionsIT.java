@@ -1,4 +1,4 @@
-package it;
+package it.iotedge;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.downstream.Endpoint;
@@ -16,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
@@ -23,22 +24,23 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class SubscriptionsIT extends OpcUaInfrastructureBase {
+@ExtendWith(EdgeConnectionResolver.class)
+public class SubscriptionsIT extends EdgeITBase {
 
     int TIMEOUT = 6000;
     CompletableFuture<Object> future;
 
     @BeforeEach
-    public void setupEndpoint() throws ExecutionException, InterruptedException {
+    public void setupEndpoint(String address) {
 
         future = listenForServerResponse(endpoint);
-        super.setupEndpoint();
+        super.setupEndpoint(address);
         endpoint.initialize(false);
         log.info("Client ready");
     }
 
     @AfterEach
-    public void cleanUp() throws ExecutionException, InterruptedException {
+    public void cleanUp() {
         endpoint.reset();
         endpoint = null;
     }

@@ -13,6 +13,7 @@ import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
+import it.iotedge.EdgeConnectionResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.easymock.Capture;
 import org.junit.AfterClass;
@@ -35,15 +36,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     OPCUAMessageHandler handler;
+    EdgeConnectionResolver connectionResolver;
 
     @BeforeClass
-    public static void setupServer () throws Exception {
-        OpcUaInfrastructureBase.setupServer();
+    private void startServer() throws InterruptedException {
+        // Since GenericMessageHandlerTest.class uses Junit 4, we cannot use a EdgeConnectionResolver
+        // as an extension.
+        // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
+        connectionResolver = new EdgeConnectionResolver();
+        connectionResolver.initialize();
     }
 
     @AfterClass
-    public static void tearDownServer () throws Exception {
-        OpcUaInfrastructureBase.tearDownServer();
+    private void stopServer() {
+        connectionResolver.close();
     }
 
     @Override
