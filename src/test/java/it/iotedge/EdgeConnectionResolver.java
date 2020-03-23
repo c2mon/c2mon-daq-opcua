@@ -1,5 +1,6 @@
 package it.iotedge;
 
+import cern.c2mon.daq.opcua.downstream.NoSecurityCertifier;
 import it.ConnectionResolverBase;
 import it.ServerStartupCheckerThread;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ public class EdgeConnectionResolver extends ConnectionResolverBase {
 
     @Override
     public void beforeAll(ExtensionContext context) throws InterruptedException {
+        this.certifier = new NoSecurityCertifier();
         super.beforeAll(context, "edgeDockerImage");
     }
 

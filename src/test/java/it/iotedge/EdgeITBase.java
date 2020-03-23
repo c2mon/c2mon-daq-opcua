@@ -1,14 +1,10 @@
 package it.iotedge;
 
-import cern.c2mon.daq.opcua.downstream.Endpoint;
-import cern.c2mon.daq.opcua.downstream.EndpointImpl;
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.downstream.*;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.util.Map;
@@ -23,7 +19,7 @@ public abstract class EdgeITBase {
 
     @BeforeEach
     public void setupEndpoint(Map<String, String> addresses) {
-        wrapper = new MiloClientWrapperImpl(addresses.get(EdgeConnectionResolver.ADDRESS_KEY), SecurityPolicy.None);
+        wrapper = new MiloSelfSignedClientWrapperImpl(addresses.get(EdgeConnectionResolver.ADDRESS_KEY), new NoSecurityCertifier());
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
     }
 }

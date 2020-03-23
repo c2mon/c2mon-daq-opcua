@@ -1,23 +1,24 @@
 package it;
 
-import cern.c2mon.daq.opcua.downstream.Endpoint;
-import cern.c2mon.daq.opcua.downstream.EndpointImpl;
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.downstream.*;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
-import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @AllArgsConstructor
 public class ServerStartupCheckerThread implements Runnable {
     private String address;
+    private Certifier certifier;
     @Getter
     private Thread thread;
 
-    public ServerStartupCheckerThread(String address) {
+    public ServerStartupCheckerThread(String address, Certifier certifier) {
         this.address = address;
+        this.certifier = certifier;
         thread = new Thread(this, address);
         thread.start();
     }
@@ -26,7 +27,7 @@ public class ServerStartupCheckerThread implements Runnable {
     @Override
     public void run() {
         Endpoint endpoint = new EndpointImpl(
-                new MiloClientWrapperImpl(address, SecurityPolicy.None),
+                new MiloSelfSignedClientWrapperImpl(address, certifier),
                 new TagSubscriptionMapperImpl(),
                 new EventPublisher());
 
@@ -38,6 +39,7 @@ public class ServerStartupCheckerThread implements Runnable {
                     serverRunning = endpoint.isConnected();
                 } catch (Exception e) {
                     Thread.sleep(100);
+                    log.debug("Server not yet ready");
                     //Server not yet ready
                 }
             }

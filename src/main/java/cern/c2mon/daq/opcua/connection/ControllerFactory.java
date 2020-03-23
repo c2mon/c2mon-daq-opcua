@@ -2,10 +2,7 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
-import cern.c2mon.daq.opcua.downstream.Endpoint;
-import cern.c2mon.daq.opcua.downstream.EndpointImpl;
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.downstream.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
@@ -26,7 +23,7 @@ public abstract class ControllerFactory {
         }
         EquipmentAddress.ServerAddress address = equipmentAddress.getServerAddressWithProtocol(Controller.UA_TCP_TYPE);
 
-        MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), SecurityPolicy.None);
+        MiloClientWrapper wrapper = new MiloSelfSignedClientWrapperImpl(address.getUriString(), new NoSecurityCertifier());
         TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
         EventPublisher publisher = new EventPublisher();
 

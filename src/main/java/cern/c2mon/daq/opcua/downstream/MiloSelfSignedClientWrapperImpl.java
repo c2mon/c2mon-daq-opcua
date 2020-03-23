@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
+import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
@@ -15,6 +16,7 @@ import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DataChangeTrigger;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MonitoringMode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
@@ -29,20 +31,21 @@ import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 @Slf4j
-public class MiloClientWrapperImpl implements MiloClientWrapper {
+public class MiloSelfSignedClientWrapperImpl implements MiloClientWrapper {
 
     private String uri;
-    private SecurityPolicy sp;
     private OpcUaClient client;
 
-    public MiloClientWrapperImpl (String uri, SecurityPolicy sp) {
+    private Certifier cert;
+
+    public MiloSelfSignedClientWrapperImpl(String uri, Certifier cert) {
         this.uri = uri;
-        this.sp = sp;
+        this.cert = cert;
     }
 
     public void initialize () {
         try {
-            client = MiloClientWrapperImpl.createClient(uri, sp);
+            client = createClient();
         } catch (ExecutionException | InterruptedException | UaException e) {
             throw new OPCCommunicationException(CREATE_CLIENT, e);
         }
@@ -167,21 +170,58 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         return ExtensionObject.encode(client.getSerializationContext(), filter);
     }
 
-    private static OpcUaClient createClient (String uri, SecurityPolicy sp) throws OPCCommunicationException, ExecutionException, InterruptedException, UaException {
+    private OpcUaClient createClient() throws OPCCommunicationException, ExecutionException, InterruptedException, UaException {
         List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
-        return OpcUaClient.create(buildConfiguration(endpointDescriptions, sp));
+        return OpcUaClient.create(buildConfiguration(endpointDescriptions));
     }
 
-    private static OpcUaClientConfig buildConfiguration(final List<EndpointDescription> endpoints, SecurityPolicy sp) {
-        EndpointDescription endpoint = filterEndpoints(endpoints, sp);
-        return OpcUaClientConfig.builder().setEndpoint(endpoint).build();
+    private OpcUaClientConfig buildConfiguration(final List<EndpointDescription> endpoints) {
+        EndpointDescription endpoint = chooseEndpoint(endpoints, cert.getSecurityPolicy(), cert.getMessageSecurityMode());
+        OpcUaClientConfigBuilder builder = OpcUaClientConfig.builder()
+                .setApplicationName(LocalizedText.english("C2MON OPC UA DAQ Process"))
+                .setRequestTimeout(uint(5000))
+                .setEndpoint(endpoint);
+         return cert.configureSecuritySettings(builder).build();
     }
-
-    private static EndpointDescription filterEndpoints (List<EndpointDescription> endpoints, SecurityPolicy sp) throws OPCCommunicationException {
+    private static EndpointDescription chooseEndpoint (List<EndpointDescription> endpoints, SecurityPolicy sp, MessageSecurityMode minMessageSecurityMode) throws OPCCommunicationException {
         return endpoints.stream()
                 .filter(e -> e.getSecurityPolicyUri().equals(sp.getUri()))
                 .findFirst()
                 .orElseThrow(() -> new OPCCommunicationException(ENDPOINTS));
+    }
+
+    private static EndpointDescription chooseEndpointOld(List<EndpointDescription> endpoints, SecurityPolicy minSecurityPolicy, MessageSecurityMode minMessageSecurityMode) {
+
+        EndpointDescription bestFound = null;
+        SecurityPolicy bestFoundSecurityPolicy = null;
+        for (EndpointDescription endpoint : endpoints) {
+            SecurityPolicy endpointSecurityPolicy;
+            try {
+                endpointSecurityPolicy = SecurityPolicy.fromUri(endpoint.getSecurityPolicyUri());
+            } catch (UaException e) {
+                continue;
+            }
+            if (minSecurityPolicy.compareTo(endpointSecurityPolicy) <= 0) {
+                if (minMessageSecurityMode.compareTo(endpoint.getSecurityMode()) <= 0) {
+                    // Found endpoint which fulfills minimum requirements
+                    if (bestFound == null) {
+                        bestFound = endpoint;
+                        bestFoundSecurityPolicy = endpointSecurityPolicy;
+                    } else {
+                        if (bestFoundSecurityPolicy.compareTo(endpointSecurityPolicy) < 0) {
+                            // Found endpoint that has higher security than previously found one
+                            bestFound = endpoint;
+                            bestFoundSecurityPolicy = endpointSecurityPolicy;
+                        }
+                    }
+                }
+            }
+        }
+        if (bestFound == null) {
+            throw new OPCCommunicationException(ENDPOINTS);
+        } else {
+            return bestFound;
+        }
     }
 
 }

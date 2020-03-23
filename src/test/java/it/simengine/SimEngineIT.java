@@ -1,22 +1,18 @@
 package it.simengine;
 
-import cern.c2mon.daq.opcua.downstream.Endpoint;
-import cern.c2mon.daq.opcua.downstream.EndpointImpl;
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.downstream.*;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
-import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
 @ExtendWith(SimConnectionResolver.class)
 public class SimEngineIT {
-
 
     private static TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
     private static MiloClientWrapper pilotWrapper;
@@ -28,18 +24,16 @@ public class SimEngineIT {
 
      @BeforeAll
     public static void setup(Map<String, String> serverAddresses) {
-
-        pilotWrapper = new MiloClientWrapperImpl(serverAddresses.get("pilot"), SecurityPolicy.None);
-        simEngineWrapper = new MiloClientWrapperImpl(serverAddresses.get("simEngine"), SecurityPolicy.None);
+        pilotWrapper = new MiloSelfSignedClientWrapperImpl(serverAddresses.get("pilot"), new NoSecurityCertifier());
+        simEngineWrapper = new MiloSelfSignedClientWrapperImpl(serverAddresses.get("simEngine"), new NoSecurityCertifier());
         pilot = new EndpointImpl(pilotWrapper, mapper, publisher);
         simEngine = new EndpointImpl(simEngineWrapper, mapper, publisher);
     }
 
-    // TODO: must authenticate with certificate
-    public void testConnection(Map<String, String> serverAddresses) {
+    //TODO: must authenticate with certificate
+    @Test
+    public void testPilotConnection(Map<String, String> serverAddresses) {
         pilot.initialize(false);
         Assertions.assertDoesNotThrow(()-> pilot.isConnected());
     }
-
-
 }

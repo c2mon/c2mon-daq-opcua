@@ -1,5 +1,6 @@
 package it;
 
+import cern.c2mon.daq.opcua.downstream.Certifier;
 import org.junit.jupiter.api.extension.*;
 import org.testcontainers.containers.GenericContainer;
 
@@ -13,6 +14,8 @@ public abstract class ConnectionResolverBase implements BeforeAllCallback, Exten
     private static boolean started = false;
 
     protected static Map<String, String> serverAddresses = new HashMap<>();
+
+    protected Certifier certifier;
 
     public void beforeAll(ExtensionContext context, String callbackHook) throws InterruptedException {
         if (!started) {
@@ -46,9 +49,10 @@ public abstract class ConnectionResolverBase implements BeforeAllCallback, Exten
     }
 
     protected ServerStartupCheckerThread scheduleServerCheckAndExtractAddress(int port, String key) {
-        final String address = "opc.tcp://" + image.getContainerInfo().getConfig().getHostName() + ":" + port;
+        String hostName = image.getContainerInfo().getConfig().getHostName().toLowerCase();
+        final String address = "opc.tcp://" + hostName + ":" + port;
         serverAddresses.put(key, address);
-        return new ServerStartupCheckerThread(address);
+        return new ServerStartupCheckerThread(address, certifier);
     }
 
 }
