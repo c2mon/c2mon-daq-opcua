@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.junit.jupiter.api.BeforeEach;
 
+import java.util.Map;
+
 @Slf4j
 public abstract class EdgeITBase {
 
@@ -20,8 +22,8 @@ public abstract class EdgeITBase {
     protected EventPublisher publisher = new EventPublisher();
 
     @BeforeEach
-    public void setupEndpoint(String address) {
-        wrapper = new MiloClientWrapperImpl(address, SecurityPolicy.None);
+    public void setupEndpoint(Map<String, String> addresses) {
+        wrapper = new MiloClientWrapperImpl(addresses.get(EdgeConnectionResolver.ADDRESS_KEY), SecurityPolicy.None);
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
     }
 }

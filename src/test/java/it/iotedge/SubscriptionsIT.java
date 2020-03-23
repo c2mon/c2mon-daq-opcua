@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -31,10 +32,9 @@ public class SubscriptionsIT extends EdgeITBase {
     CompletableFuture<Object> future;
 
     @BeforeEach
-    public void setupEndpoint(String address) {
-
+    public void setupEndpoint(Map<String, String> addresses) {
         future = listenForServerResponse(endpoint);
-        super.setupEndpoint(address);
+        super.setupEndpoint(addresses);
         endpoint.initialize(false);
         log.info("Client ready");
     }

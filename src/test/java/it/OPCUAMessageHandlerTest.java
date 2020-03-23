@@ -36,10 +36,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     OPCUAMessageHandler handler;
-    EdgeConnectionResolver connectionResolver;
+    static EdgeConnectionResolver connectionResolver;
 
     @BeforeClass
-    private void startServer() throws InterruptedException {
+    public static void startServer() throws InterruptedException {
         // Since GenericMessageHandlerTest.class uses Junit 4, we cannot use a EdgeConnectionResolver
         // as an extension.
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
@@ -48,7 +48,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     }
 
     @AfterClass
-    private void stopServer() {
+    public static void stopServer() {
         connectionResolver.close();
     }
 
