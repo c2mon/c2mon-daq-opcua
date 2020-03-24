@@ -10,7 +10,6 @@ import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 
 @Slf4j
 public abstract class ControllerFactory {
@@ -23,7 +22,7 @@ public abstract class ControllerFactory {
         }
         EquipmentAddress.ServerAddress address = equipmentAddress.getServerAddressWithProtocol(Controller.UA_TCP_TYPE);
 
-        MiloClientWrapper wrapper = new MiloSelfSignedClientWrapperImpl(address.getUriString(), new NoSecurityCertifier());
+        MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), new NoSecurityCertifier());
         TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
         EventPublisher publisher = new EventPublisher();
 

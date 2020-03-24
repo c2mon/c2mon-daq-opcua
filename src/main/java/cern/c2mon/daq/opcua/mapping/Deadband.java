@@ -11,7 +11,7 @@ import java.util.Objects;
 @NoArgsConstructor
 @Getter
 public class Deadband {
-    public static final int minTimeDeadband = 500;
+    public static final int MIN_TIME_DEADBAND = 500;
 
     int time;
     float value;
@@ -22,7 +22,7 @@ public class Deadband {
     }
 
     public static Deadband of(int time, float value, short type) {
-        return new Deadband(Math.max(minTimeDeadband, time), value, type);
+        return new Deadband(Math.max(MIN_TIME_DEADBAND, time), value, type);
     }
 
     @Override

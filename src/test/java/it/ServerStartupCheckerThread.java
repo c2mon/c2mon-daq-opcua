@@ -26,13 +26,13 @@ public class ServerStartupCheckerThread implements Runnable {
     @SneakyThrows
     @Override
     public void run() {
-        Endpoint endpoint = new EndpointImpl(
-                new MiloSelfSignedClientWrapperImpl(address, certifier),
-                new TagSubscriptionMapperImpl(),
-                new EventPublisher());
-
-        boolean serverRunning = false;
         synchronized (this) {
+            Endpoint endpoint = new EndpointImpl(
+                    new MiloClientWrapperImpl(address, certifier),
+                    new TagSubscriptionMapperImpl(),
+                    new EventPublisher());
+
+            boolean serverRunning = false;
             while (!serverRunning) {
                 try {
                     endpoint.initialize(false);

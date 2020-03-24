@@ -39,7 +39,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     static EdgeConnectionResolver connectionResolver;
 
     @BeforeClass
-    public static void startServer() throws InterruptedException {
+    public static void startServer() throws InterruptedException, TimeoutException, ExecutionException {
         // Since GenericMessageHandlerTest.class uses Junit 4, we cannot use a EdgeConnectionResolver
         // as an extension.
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5

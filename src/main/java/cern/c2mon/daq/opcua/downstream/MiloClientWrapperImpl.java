@@ -11,7 +11,6 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
-import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
@@ -31,14 +30,14 @@ import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 @Slf4j
-public class MiloSelfSignedClientWrapperImpl implements MiloClientWrapper {
+public class MiloClientWrapperImpl implements MiloClientWrapper {
 
-    private String uri;
     private OpcUaClient client;
 
+    private final String uri;
     private final Certifier cert;
 
-    public MiloSelfSignedClientWrapperImpl(String uri, Certifier cert) {
+    public MiloClientWrapperImpl(String uri, Certifier cert) {
         this.uri = uri;
         this.cert = cert;
     }
@@ -46,7 +45,7 @@ public class MiloSelfSignedClientWrapperImpl implements MiloClientWrapper {
     public void initialize () {
         try {
             client = createClient();
-        } catch (ExecutionException | InterruptedException | UaException e) {
+        } catch (Exception e) {
             throw new OPCCommunicationException(CREATE_CLIENT, e);
         }
     }
@@ -104,6 +103,7 @@ public class MiloSelfSignedClientWrapperImpl implements MiloClientWrapper {
             client.getSession().get();
             return true;
         } catch (Exception e) {
+            log.info("Client not connected.");
             return false;
         }
     }
@@ -170,12 +170,12 @@ public class MiloSelfSignedClientWrapperImpl implements MiloClientWrapper {
         return ExtensionObject.encode(client.getSerializationContext(), filter);
     }
 
-    private OpcUaClient createClient() throws OPCCommunicationException, ExecutionException, InterruptedException, UaException {
+    private OpcUaClient createClient() throws Exception {
         List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
         return OpcUaClient.create(buildConfiguration(endpointDescriptions));
     }
 
-    private OpcUaClientConfig buildConfiguration(final List<EndpointDescription> endpoints) {
+    private OpcUaClientConfig buildConfiguration(final List<EndpointDescription> endpoints) throws Exception {
         EndpointDescription endpoint = chooseEndpoint(endpoints, cert.getSecurityPolicy(), cert.getMessageSecurityMode());
         OpcUaClientConfigBuilder builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english("C2MON OPC UA DAQ Process"))
@@ -183,45 +183,10 @@ public class MiloSelfSignedClientWrapperImpl implements MiloClientWrapper {
                 .setEndpoint(endpoint);
          return cert.configureSecuritySettings(builder).build();
     }
-    private static EndpointDescription chooseEndpoint (List<EndpointDescription> endpoints, SecurityPolicy sp, MessageSecurityMode minMessageSecurityMode) throws OPCCommunicationException {
+    private static EndpointDescription chooseEndpoint (List<EndpointDescription> endpoints, SecurityPolicy sp, MessageSecurityMode minMessageSecurityMode) {
         return endpoints.stream()
                 .filter(e -> e.getSecurityPolicyUri().equals(sp.getUri()))
                 .findFirst()
                 .orElseThrow(() -> new OPCCommunicationException(ENDPOINTS));
     }
-
-    private static EndpointDescription chooseEndpointOld(List<EndpointDescription> endpoints, SecurityPolicy minSecurityPolicy, MessageSecurityMode minMessageSecurityMode) {
-
-        EndpointDescription bestFound = null;
-        SecurityPolicy bestFoundSecurityPolicy = null;
-        for (EndpointDescription endpoint : endpoints) {
-            SecurityPolicy endpointSecurityPolicy;
-            try {
-                endpointSecurityPolicy = SecurityPolicy.fromUri(endpoint.getSecurityPolicyUri());
-            } catch (UaException e) {
-                continue;
-            }
-            if (minSecurityPolicy.compareTo(endpointSecurityPolicy) <= 0) {
-                if (minMessageSecurityMode.compareTo(endpoint.getSecurityMode()) <= 0) {
-                    // Found endpoint which fulfills minimum requirements
-                    if (bestFound == null) {
-                        bestFound = endpoint;
-                        bestFoundSecurityPolicy = endpointSecurityPolicy;
-                    } else {
-                        if (bestFoundSecurityPolicy.compareTo(endpointSecurityPolicy) < 0) {
-                            // Found endpoint that has higher security than previously found one
-                            bestFound = endpoint;
-                            bestFoundSecurityPolicy = endpointSecurityPolicy;
-                        }
-                    }
-                }
-            }
-        }
-        if (bestFound == null) {
-            throw new OPCCommunicationException(ENDPOINTS);
-        } else {
-            return bestFound;
-        }
-    }
-
 }

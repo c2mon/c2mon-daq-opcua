@@ -13,32 +13,32 @@ import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 
+/**
+ * Provides the security configurations for an endpoint with Security Policy Basic128Rsa15,
+ * generates a new self-signed certificate on every call
+ */
+//TODO wrap in custom exception
 @Slf4j
 public class SelfSignedCertifier implements Certifier {
 
-    private IdentityProvider identityProvider;
     protected KeyPair keyPair;
     protected X509Certificate certificate;
 
-    private String certificatePath = "opcua.cert";
-
     @Override
-    public OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder) {
+    public OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder) throws Exception {
         return builder.setCertificate(getClientCertificate())
                 .setKeyPair(getKeyPair())
                 .setIdentityProvider(getIdentityProvider());
     }
 
-    @Override
-    public X509Certificate getClientCertificate() {
+    private X509Certificate getClientCertificate() throws Exception {
         if (certificate == null) {
             generateSelfSignedCertificate();
         }
         return certificate;
     }
 
-    @Override
-    public KeyPair getKeyPair() {
+    private KeyPair getKeyPair() throws Exception {
         if (keyPair == null) {
             generateSelfSignedCertificate();
         }
@@ -52,37 +52,36 @@ public class SelfSignedCertifier implements Certifier {
 
     @Override
     public SecurityPolicy getSecurityPolicy() {
-        return SecurityPolicy.Basic256Sha256;
+        return SecurityPolicy.Basic128Rsa15;
     }
 
-    @Override
-    public IdentityProvider getIdentityProvider() {
+    private IdentityProvider getIdentityProvider() {
         return new AnonymousProvider();
     }
 
-    protected void generateSelfSignedCertificate() {
+    protected void generateSelfSignedCertificate() throws Exception {
         //Generate self-signed certificate
         try {
             keyPair = SelfSignedCertificateGenerator.generateRsaKeyPair(2048);
         } catch (NoSuchAlgorithmException n) {
             log.error("Could not generate RSA Key Pair.", n);
-            System.exit(1);
+            throw n;
         }
 
         SelfSignedCertificateBuilder builder = new SelfSignedCertificateBuilder(keyPair)
-                .setCommonName("Eclipse Milo Example Client")
-                .setOrganization("digitalpetri")
-                .setOrganizationalUnit("dev")
-                .setLocalityName("Folsom")
-                .setStateName("CA")
-                .setCountryCode("US")
-                .setApplicationUri("urn:eclipse:milo:examples:client");
+                .setCommonName("C2MON DAQ OPCUA")
+                .setOrganization("CERN")
+                .setOrganizationalUnit("C2MON team")
+                .setLocalityName("Geneva")
+                .setStateName("Geneva")
+                .setCountryCode("CH")
+                .setApplicationUri("urn:cern:c2mon:daq:opcua");
 
         try {
             certificate = builder.build();
         } catch (Exception e) {
             log.error("Could not build certificate.", e);
-            System.exit(1);
+            throw e;
         }
     }
 }

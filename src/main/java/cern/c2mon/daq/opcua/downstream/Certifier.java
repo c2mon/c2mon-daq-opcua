@@ -1,19 +1,32 @@
 package cern.c2mon.daq.opcua.downstream;
 
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
-import org.eclipse.milo.opcua.sdk.client.api.identity.IdentityProvider;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
+import java.security.NoSuchAlgorithmException;
 
+/**
+ * Interface for access of the configurations of the various endpoint security policies
+ */
 public interface Certifier {
 
-    OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder);
-    X509Certificate getClientCertificate();
-    KeyPair getKeyPair();
+    /**
+     * Set the respective security configurations of an OpcUaClientConfigBuilder.
+     * @param builder The builder object to modify according to the respective security policy
+     * @return the modified builder
+     */
+    OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder) throws Exception;
+
+    /**
+     * The Message Security Mode describes the security level for exchanges messages
+     * @return the Message Security Mode of the respective security configuration
+     */
     MessageSecurityMode getMessageSecurityMode();
+
+    /**
+     * The Security Policy is the name for the security algorithm and key length
+     * @return the Security Policy of the respective security configuration
+     */
     SecurityPolicy getSecurityPolicy();
-    IdentityProvider getIdentityProvider();
 }

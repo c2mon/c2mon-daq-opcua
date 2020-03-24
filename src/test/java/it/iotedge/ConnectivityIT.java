@@ -1,7 +1,7 @@
 package it.iotedge;
 
 import cern.c2mon.daq.opcua.downstream.EndpointImpl;
-import cern.c2mon.daq.opcua.downstream.MiloSelfSignedClientWrapperImpl;
+import cern.c2mon.daq.opcua.downstream.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.downstream.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import org.junit.jupiter.api.Assertions;
@@ -21,7 +21,7 @@ public class ConnectivityIT extends EdgeITBase {
 
     @Test
     public void connectToBadServer() throws ExecutionException, InterruptedException {
-        wrapper = new MiloSelfSignedClientWrapperImpl("opc.tcp://somehost/somepath", new NoSecurityCertifier());
+        wrapper = new MiloClientWrapperImpl("opc.tcp://somehost/somepath", new NoSecurityCertifier());
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(false));
     }

@@ -19,7 +19,7 @@ public abstract class EdgeITBase {
 
     @BeforeEach
     public void setupEndpoint(Map<String, String> addresses) {
-        wrapper = new MiloSelfSignedClientWrapperImpl(addresses.get(EdgeConnectionResolver.ADDRESS_KEY), new NoSecurityCertifier());
+        wrapper = new MiloClientWrapperImpl(addresses.get(EdgeConnectionResolver.ADDRESS_KEY), new NoSecurityCertifier());
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
     }
 }
