@@ -36,7 +36,7 @@ public class MiloSelfSignedClientWrapperImpl implements MiloClientWrapper {
     private String uri;
     private OpcUaClient client;
 
-    private Certifier cert;
+    private final Certifier cert;
 
     public MiloSelfSignedClientWrapperImpl(String uri, Certifier cert) {
         this.uri = uri;
