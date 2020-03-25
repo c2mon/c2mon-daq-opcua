@@ -2,7 +2,6 @@ package it.simengine;
 
 import cern.c2mon.daq.opcua.downstream.NoSecurityCertifier;
 import it.ConnectionResolverBase;
-import it.ServerStartupCheckerThread;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.testcontainers.containers.GenericContainer;
@@ -20,19 +19,18 @@ public class SimConnectionResolver extends ConnectionResolverBase {
         super.beforeAll(context, "simEngineDockerImage");
     }
 
-    public void initialize() throws InterruptedException {
+    public void initialize() {
+        // Without testcontainers started with:
+        // docker run --net=host --expose=4840-4940 --expose=8800-8900 --env "SIMCONFIG=sim_BASIC.short.xml" gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3
         image = new GenericContainer("gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3")
-                .waitingFor(Wait.forListeningPort())
-                .withCommand("--expose=4840-4940 --expose=8800-8900 --env 'SIMCONFIG=sim_BASIC.short.xml'")
+                .waitingFor(Wait.forLogMessage(".*Server opened endpoints for following URLs:.*", 2))
+                .withCommand("--env 'SIMCONFIG=sim_BASIC.short.xml'")
                 .withNetworkMode("host");
         image.start();
 
         log.info("Servers starting... ");
-        ServerStartupCheckerThread pilotChecker = scheduleServerCheckAndExtractAddress(8890, "pilot");
-        ServerStartupCheckerThread simEngineChecker = scheduleServerCheckAndExtractAddress(4841, "simEngine");
-
-        pilotChecker.getThread().join(3000);
-        simEngineChecker.getThread().join(3000);
+        extractAddress(8890, "pilot");
+        extractAddress(4841, "simEngine");
         log.info("Servers ready");
     }
 

@@ -7,10 +7,11 @@ import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
-//@ExtendWith(SimConnectionResolver.class)
+@ExtendWith(SimConnectionResolver.class)
 public class SimEngineIT {
 
     private static TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
@@ -21,7 +22,7 @@ public class SimEngineIT {
     private static Endpoint simEngine;
 
 
-//    @BeforeAll
+    @BeforeAll
     public static void setupTestcontainers(Map<String, String> serverAddresses) {
         pilotWrapper = new MiloClientWrapperImpl(serverAddresses.get("pilot"), new NoSecurityCertifier());
         simEngineWrapper = new MiloClientWrapperImpl(serverAddresses.get("simEngine"), new NoSecurityCertifier());
@@ -29,7 +30,7 @@ public class SimEngineIT {
         simEngine = new EndpointImpl(simEngineWrapper, mapper, publisher);
     }
 
-    @BeforeAll
+//    @BeforeAll
     public static void setup() {
         pilotWrapper = new MiloClientWrapperImpl("opc.tcp://localhost:8890", new NoSecurityCertifier());
         simEngineWrapper = new MiloClientWrapperImpl("opc.tcp://localhost:4841", new NoSecurityCertifier());

@@ -48,11 +48,9 @@ public abstract class ConnectionResolverBase implements BeforeAllCallback, Exten
         return context.getRoot().getStore(ExtensionContext.Namespace.GLOBAL);
     }
 
-    protected ServerStartupCheckerThread scheduleServerCheckAndExtractAddress(int port, String key) {
+    protected void extractAddress(int port, String key) {
         String hostName = image.getContainerInfo().getConfig().getHostName().toLowerCase();
         final String address = "opc.tcp://" + hostName + ":" + port;
         serverAddresses.put(key, address);
-        return new ServerStartupCheckerThread(address, certifier);
     }
-
 }

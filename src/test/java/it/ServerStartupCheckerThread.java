@@ -20,31 +20,31 @@ public class ServerStartupCheckerThread implements Runnable {
         this.address = address;
         this.certifier = certifier;
         thread = new Thread(this, address);
+        System.out.println("Create thread");
         thread.start();
     }
 
     @SneakyThrows
     @Override
     public void run() {
-        synchronized (this) {
-            Endpoint endpoint = new EndpointImpl(
-                    new MiloClientWrapperImpl(address, certifier),
-                    new TagSubscriptionMapperImpl(),
-                    new EventPublisher());
+        Endpoint endpoint = new EndpointImpl(
+                new MiloClientWrapperImpl(address, certifier),
+                new TagSubscriptionMapperImpl(),
+                new EventPublisher());
 
-            boolean serverRunning = false;
+        boolean serverRunning = false;
+        synchronized (this) {
             while (!serverRunning) {
                 try {
+                    Thread.sleep(100);
                     endpoint.initialize(false);
                     serverRunning = endpoint.isConnected();
                 } catch (Exception e) {
-                    Thread.sleep(100);
-                    log.debug("Server not yet ready");
+                    System.out.println("Server not yet ready");
                     //Server not yet ready
                 }
+                endpoint.reset();
             }
-            endpoint.reset();
-            notify();
         }
     }
 }
