@@ -11,6 +11,7 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
+import org.eclipse.milo.opcua.stack.core.Stack;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
@@ -67,6 +68,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         if (client != null) {
             try {
                 client = client.disconnect().get();
+                Stack.releaseSharedResources();
             } catch (InterruptedException | ExecutionException e) {
                 throw new OPCCommunicationException(DISCONNECT, e);
             }

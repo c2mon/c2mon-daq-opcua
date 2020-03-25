@@ -49,7 +49,7 @@ public abstract class ConnectionResolverBase implements BeforeAllCallback, Exten
     }
 
     protected void extractAddress(int port, String key) {
-        String hostName = image.getContainerInfo().getConfig().getHostName().toLowerCase();
+        String hostName = image.getContainerIpAddress();
         final String address = "opc.tcp://" + hostName + ":" + port;
         serverAddresses.put(key, address);
     }

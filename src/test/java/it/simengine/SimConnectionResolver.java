@@ -13,6 +13,10 @@ import org.testcontainers.containers.wait.strategy.Wait;
 @Slf4j
 public class SimConnectionResolver extends ConnectionResolverBase {
 
+    private static int PILOT_PORT = 8890;
+    private static int SIMENGINE_PORT = 4841;
+
+
     @Override
     public void beforeAll(ExtensionContext context) throws InterruptedException {
         this.certifier = new NoSecurityCertifier();
@@ -24,13 +28,13 @@ public class SimConnectionResolver extends ConnectionResolverBase {
         // docker run --net=host --expose=4840-4940 --expose=8800-8900 --env "SIMCONFIG=sim_BASIC.short.xml" gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3
         image = new GenericContainer("gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3")
                 .waitingFor(Wait.forLogMessage(".*Server opened endpoints for following URLs:.*", 2))
-                .withCommand("--env 'SIMCONFIG=sim_BASIC.short.xml'")
+                .withEnv("SIMCONFIG", "sim_BASIC.short.xml")
                 .withNetworkMode("host");
         image.start();
 
         log.info("Servers starting... ");
-        extractAddress(8890, "pilot");
-        extractAddress(4841, "simEngine");
+        extractAddress(PILOT_PORT, "pilot");
+        extractAddress(SIMENGINE_PORT, "simEngine");
         log.info("Servers ready");
     }
 
