@@ -47,6 +47,9 @@ public class OPCCommunicationException extends RuntimeException {
 
     public OPCCommunicationException(final Cause type, final Exception e) {
         super(type.message, e);
+        if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     public OPCCommunicationException(final Cause type) {

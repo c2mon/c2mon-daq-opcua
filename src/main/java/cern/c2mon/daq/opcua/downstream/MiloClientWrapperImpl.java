@@ -30,6 +30,9 @@ import java.util.function.BiConsumer;
 import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
+/**
+ * The implementation of custom wrapper for the OPC UA milo client
+ */
 @Slf4j
 public class MiloClientWrapperImpl implements MiloClientWrapper {
 
@@ -38,6 +41,11 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
     private final String uri;
     private final Certifier cert;
 
+    /**
+     * Creates a new instance of a wrapper for the Eclipse milo OPC UA client
+     * @param uri the endpoint uri that the client will connect to
+     * @param cert the certifier policy that the client and endpoint will adhere to
+     */
     public MiloClientWrapperImpl(String uri, Certifier cert) {
         this.uri = uri;
         this.cert = cert;

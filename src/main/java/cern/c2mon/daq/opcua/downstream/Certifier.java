@@ -4,8 +4,6 @@ import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 
-import java.security.NoSuchAlgorithmException;
-
 /**
  * Interface for access of the configurations of the various endpoint security policies
  */
@@ -16,7 +14,7 @@ public interface Certifier {
      * @param builder The builder object to modify according to the respective security policy
      * @return the modified builder
      */
-    OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder) throws Exception;
+    OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder);
 
     /**
      * The Message Security Mode describes the security level for exchanges messages

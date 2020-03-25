@@ -5,6 +5,9 @@ import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 
+/**
+ * Provides the security configurations to communicate with an endpoint insecurely without authentication.
+ */
 @Slf4j
 public class NoSecurityCertifier implements  Certifier{
 

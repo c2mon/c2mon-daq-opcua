@@ -30,7 +30,7 @@ public class SubscriptionGroup{
 
     @Getter
     @Setter
-    private volatile UaSubscription subscription;
+    private UaSubscription subscription;
 
     @Getter
     private final Deadband deadband;

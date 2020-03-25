@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.downstream;
 
+import cern.c2mon.daq.opcua.exceptions.CertificateBuilderException;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.sdk.client.api.identity.AnonymousProvider;
@@ -17,7 +18,6 @@ import java.security.cert.X509Certificate;
  * Provides the security configurations for an endpoint with Security Policy Basic128Rsa15,
  * generates a new self-signed certificate on every call
  */
-//TODO wrap in custom exception
 @Slf4j
 public class SelfSignedCertifier implements Certifier {
 
@@ -25,20 +25,20 @@ public class SelfSignedCertifier implements Certifier {
     protected X509Certificate certificate;
 
     @Override
-    public OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder) throws Exception {
+    public OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder){
         return builder.setCertificate(getClientCertificate())
                 .setKeyPair(getKeyPair())
                 .setIdentityProvider(getIdentityProvider());
     }
 
-    private X509Certificate getClientCertificate() throws Exception {
+    private X509Certificate getClientCertificate() {
         if (certificate == null) {
             generateSelfSignedCertificate();
         }
         return certificate;
     }
 
-    private KeyPair getKeyPair() throws Exception {
+    private KeyPair getKeyPair() {
         if (keyPair == null) {
             generateSelfSignedCertificate();
         }
@@ -59,13 +59,12 @@ public class SelfSignedCertifier implements Certifier {
         return new AnonymousProvider();
     }
 
-    protected void generateSelfSignedCertificate() throws Exception {
+    protected void generateSelfSignedCertificate() {
         //Generate self-signed certificate
         try {
             keyPair = SelfSignedCertificateGenerator.generateRsaKeyPair(2048);
-        } catch (NoSuchAlgorithmException n) {
-            log.error("Could not generate RSA Key Pair.", n);
-            throw n;
+        } catch (NoSuchAlgorithmException e) {
+            throw new CertificateBuilderException(CertificateBuilderException.Cause.RSA_KEYPAIR, e);
         }
 
         SelfSignedCertificateBuilder builder = new SelfSignedCertificateBuilder(keyPair)
@@ -80,8 +79,7 @@ public class SelfSignedCertifier implements Certifier {
         try {
             certificate = builder.build();
         } catch (Exception e) {
-            log.error("Could not build certificate.", e);
-            throw e;
+            throw new CertificateBuilderException(CertificateBuilderException.Cause.CERTIFICATE_BUILDER, e);
         }
     }
 }
