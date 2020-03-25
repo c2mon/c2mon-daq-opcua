@@ -13,12 +13,13 @@ import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import it.iotedge.EdgeConnectionResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.easymock.Capture;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -35,21 +36,44 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @UseHandler(OPCUAMessageHandler.class)
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
-    OPCUAMessageHandler handler;
-    static EdgeConnectionResolver connectionResolver;
+    private static ConnectionResolver resolver;
+    OPCUAMessageHandler handler;;
+
+    EndpointListener listener = new EndpointListener() {
+        @Override
+        public void update (EquipmentState state) {
+            log.info("update State: {}", state);
+        }
+
+        @Override
+        public void onNewTagValue (ISourceDataTag dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
+            log.info("onNewTagValue: dataTag {}, valueUpdate {}, quality {}", dataTag, valueUpdate, quality);
+        }
+
+        @Override
+        public void onTagInvalid (ISourceDataTag dataTag, SourceDataTagQuality quality) {
+            log.info("onNewTagValue: dataTag {}, quality {}", dataTag, quality);
+        }
+
+        @Override
+        public void initialize (IEquipmentMessageSender sender) {}
+    };
 
     @BeforeClass
-    public static void startServer() throws InterruptedException, TimeoutException, ExecutionException {
-        // Since GenericMessageHandlerTest.class uses Junit 4, we cannot use a EdgeConnectionResolver
-        // as an extension.
+    public static void startServer() {
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
-        connectionResolver = new EdgeConnectionResolver();
-        connectionResolver.initialize();
+        GenericContainer image = new GenericContainer("mcr.microsoft.com/iotedge/opc-plc")
+                .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
+                .withCommand("--unsecuretransport")
+                .withNetworkMode("host");
+
+        resolver = new ConnectionResolver(image);
+        resolver.initialize();
     }
 
     @AfterClass
     public static void stopServer() {
-        connectionResolver.close();
+        resolver.close();
     }
 
     @Override
@@ -94,12 +118,11 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         capture.verifyCapture(107211L,
                 handler.getEquipmentConfiguration().getName()+":COMM_FAULT",
                 CONNECTION_FAILED.message);
-
     }
 
     @Test
     @UseConf("commfault_incorrect.xml")
-    public void improperConfigShouldSendThrowError () {
+    public void improperConfigShouldThrowError () {
         new CommfaultSenderCapture(messageSender);
         assertThrows(OPCCommunicationException.class, () -> handler.connectToDataSource());
     }
@@ -110,28 +133,6 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         assertThrows(ConfigurationException.class, () -> handler.connectToDataSource());
     }
 
-
-    EndpointListener listener = new EndpointListener() {
-        @Override
-        public void update (EquipmentState state) {
-            log.info("update State: {}", state);
-        }
-
-        @Override
-        public void onNewTagValue (ISourceDataTag dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
-            log.info("onNewTagValue: dataTag {}, valueUpdate {}, quality {}", dataTag, valueUpdate, quality);
-        }
-
-        @Override
-        public void onTagInvalid (ISourceDataTag dataTag, SourceDataTagQuality quality) {
-            log.info("onNewTagValue: dataTag {}, quality {}", dataTag, quality);
-        }
-
-        @Override
-        public void initialize (IEquipmentMessageSender sender) {}
-    };
-
-
     @Test
     @UseConf("simengine_two_tag.xml")
     public void subscribeTagShouldReturnStateOK() throws EqIOException, InterruptedException, ExecutionException, TimeoutException {
@@ -141,8 +142,6 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         handler.connectToDataSource();
 //        future.get(10, TimeUnit.SECONDS);
     }
-
-
 
     private static class CommfaultSenderCapture {
         Capture<Long> id = newCapture();

@@ -1,7 +1,10 @@
 package it.iotedge;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.opcua.downstream.Endpoint;
+import cern.c2mon.daq.opcua.downstream.*;
+import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
@@ -9,32 +12,54 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
+import it.ConnectionResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.junit.Assert;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.*;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-@ExtendWith(EdgeConnectionResolver.class)
-public class SubscriptionsIT extends EdgeITBase {
+public class EdgeIT {
 
-    int TIMEOUT = 6000;
-    CompletableFuture<Object> future;
+    private static int PORT = 50000;
+    private static int TIMEOUT = 6000;
+    private CompletableFuture<Object> future;
+
+    private Endpoint endpoint;
+    private TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
+    private MiloClientWrapper wrapper;
+    private EventPublisher publisher = new EventPublisher();
+    private static ConnectionResolver resolver;
+
+    @BeforeAll
+    public static void startServer() {
+        GenericContainer image = new GenericContainer("mcr.microsoft.com/iotedge/opc-plc")
+                .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
+                .withCommand("--unsecuretransport")
+                .withNetworkMode("host");
+
+        resolver = new ConnectionResolver(image);
+        resolver.initialize();
+    }
+
+    @AfterAll
+    public static void stopServer() {
+        resolver.close();
+        resolver = null;
+    }
 
     @BeforeEach
-    public void setupEndpoint(Map<String, String> addresses) {
+    public void setupEndpoint() {
         future = listenForServerResponse(endpoint);
-        super.setupEndpoint(addresses);
+        wrapper = new MiloClientWrapperImpl(resolver.getURI(PORT), new NoSecurityCertifier());
+        endpoint = new EndpointImpl(wrapper, mapper, publisher);
         endpoint.initialize(false);
         log.info("Client ready");
     }
@@ -43,6 +68,19 @@ public class SubscriptionsIT extends EdgeITBase {
     public void cleanUp() {
         endpoint.reset();
         endpoint = null;
+    }
+
+
+    @Test
+    public void connectToRunningServer() {
+        Assertions.assertDoesNotThrow(()-> endpoint.isConnected());
+    }
+
+    @Test
+    public void connectToBadServer() {
+        wrapper = new MiloClientWrapperImpl("opc.tcp://somehost/somepath", new NoSecurityCertifier());
+        endpoint = new EndpointImpl(wrapper, mapper, publisher);
+        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(false));
     }
 
     @Test
