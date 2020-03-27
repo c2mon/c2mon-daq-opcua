@@ -147,10 +147,10 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
         SourceCommandTagValue value = new SourceCommandTagValue();
         value.setValue(1);
+        value.setDataType("java.lang.Integer");
         value.setId(0L);
 
-
-        // TODO handler.runCommand(value);
+        handler.runCommand(value);
     }
 
 

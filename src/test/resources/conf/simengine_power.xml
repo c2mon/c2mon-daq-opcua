@@ -28,15 +28,13 @@
         <CommandTag id="0" name="Power">
             <mode>2</mode>
             <data-type>java.lang.Integer</data-type>
-            <CommandTagAddress>
                 <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
                     <namespace>2</namespace>
                     <opc-item-name>simSY4527.Board00.Chan000.Pw</opc-item-name>
                     <command-pulse-length>0</command-pulse-length>
                     <address-type>STRING</address-type>
-                    <command-type>CLASSIC</command-type>#
+                    <command-type>CLASSIC</command-type>
                 </HardwareAddress>
-            </CommandTagAddress>
         </CommandTag>
     </CommandTags>
 </EquipmentUnit>
