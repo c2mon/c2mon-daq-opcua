@@ -41,7 +41,6 @@ public class MiloMocker {
         mockClientHandle(client.getMonitoredItem(), tags);
     }
 
-
     protected void mockClientHandle (UaMonitoredItem monitoredItem, Collection<ISourceDataTag> tags) {
         if(tags.size() == 0) return;
         for (ISourceDataTag tag : tags) {

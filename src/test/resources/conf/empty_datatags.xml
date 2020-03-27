@@ -2,7 +2,7 @@
     <handler-class-name>automatically-set-by-test</handler-class-name>
     <commfault-tag-id>107211</commfault-tag-id>
     <commfault-tag-value>true</commfault-tag-value>
-    <address>URI=opc.tcp://localhost:50000;serverRetryTimeout=500;serverTimeout=12;aliveWriter=true</address>
+    <address>URI=opc.tcp://localhost:8890;serverRetryTimeout=500;serverTimeout=12;aliveWriter=true</address>
     <SubEquipmentUnits>
     </SubEquipmentUnits>
     <DataTags>

@@ -1,17 +1,15 @@
 package it.iotedge;
 
-import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.downstream.*;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
-import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
-import cern.c2mon.shared.common.datatag.ValueUpdate;
 import it.ConnectionResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
@@ -57,7 +55,7 @@ public class EdgeIT {
 
     @BeforeEach
     public void setupEndpoint() {
-        future = listenForServerResponse(endpoint);
+        future = listenForServerResponse();
         wrapper = new MiloClientWrapperImpl(resolver.getURI(PORT), new NoSecurityCertifier());
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         endpoint.initialize(false);
@@ -85,7 +83,7 @@ public class EdgeIT {
 
     @Test
     public void subscribingProperDataTagShouldReturnValue() {
-        CompletableFuture<Object> future = listenForServerResponse(endpoint);
+        CompletableFuture<Object> future = listenForServerResponse();
 
         endpoint.subscribeTag(ServerTagFactory.RandomUnsignedInt32.createDataTag());
 
@@ -104,7 +102,7 @@ public class EdgeIT {
     @Test
     public void subscribeAndSetDeadband() {
         float valueDeadband = 50;
-        CompletableFuture<Object> future = listenForServerResponse(publisher, valueDeadband);
+        CompletableFuture<Object> future = ServerTestListener.listenForTagResponse(publisher, valueDeadband);
         ISourceDataTag dataTag = ServerTagFactory.DipData.createDataTag(valueDeadband, (short) DeadbandType.Absolute.getValue(), 0);
 
         endpoint.subscribeTag(dataTag);
@@ -115,7 +113,7 @@ public class EdgeIT {
 
     @Test
     public void refreshProperTag () {
-        CompletableFuture<Object> future = listenForServerResponse(endpoint);
+        CompletableFuture<Object> future = listenForServerResponse();
 
         endpoint.refreshDataTags(Collections.singletonList(ServerTagFactory.RandomUnsignedInt32.createDataTag()));
 
@@ -123,47 +121,8 @@ public class EdgeIT {
         Assert.assertNotNull(o);
     }
 
-    private CompletableFuture<Object> listenForServerResponse(Endpoint endpoint) {
-        return listenForServerResponse(publisher, 0.0f);
-    }
-
-
-    private static CompletableFuture<Object> listenForServerResponse(EventPublisher publisher, float valueDeadband) {
-        CompletableFuture<Object> future = new CompletableFuture<>();
-
-        publisher.subscribe(new EndpointListener() {
-            @Override
-            public void update (EquipmentState state) {
-
-            }
-
-            @Override
-            public void onNewTagValue (ISourceDataTag dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
-                log.info("received: {}, {}", dataTag.getName(), valueUpdate);
-                if (approximatelyEqual(dataTag.getValueDeadband(), valueDeadband)) {
-                    future.complete(quality);
-                } else {
-                    future.completeExceptionally(new Throwable("ValueDeadband was not observed by the Server!"));
-                }
-            }
-
-            @Override
-            public void onTagInvalid (ISourceDataTag dataTag, SourceDataTagQuality quality) {
-                log.info("is invalid: {}", dataTag.getName());
-                future.complete(quality);
-            }
-
-            @Override
-            public void initialize (IEquipmentMessageSender sender) {
-
-            }
-        });
-        return future;
-    }
-
-    private static boolean approximatelyEqual(float a, double b)
-    {
-        return Math.abs(a-b) <= ( (Math.abs(a) < Math.abs(b) ? Math.abs(b) : Math.abs(a)) * 0.1);
+    private CompletableFuture<Object> listenForServerResponse() {
+        return ServerTestListener.listenForTagResponse(publisher, 0.0f);
     }
 
 }

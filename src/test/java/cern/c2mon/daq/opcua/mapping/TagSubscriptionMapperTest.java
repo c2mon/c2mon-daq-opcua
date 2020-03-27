@@ -30,16 +30,16 @@ public class TagSubscriptionMapperTest extends MappingBase {
     @Test
     public void tagToNewGroupDoesNotAddDefinitionToGroup() {
         SubscriptionGroup group = mapper.getGroup(tag);
-        ItemDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definition = mapper.getDefinition(tag);
 
         assertFalse(group.contains(definition));
     }
 
     @Test
     public void tagToNewGroupCreatesProperDefinition() {
-        ItemDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definition = mapper.getDefinition(tag);
 
-        assertEquals(ItemDefinition.of(tag), definition);
+        assertEquals(DataTagDefinition.of(tag), definition);
     }
 
     @Test
@@ -59,8 +59,8 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void secondExecutionOfTagToDefinitionShouldReturnPriorDefinition() {
-        ItemDefinition definition1 = mapper.getDefinition(tag);
-        ItemDefinition definition2 = mapper.getDefinition(tag);
+        DataTagDefinition definition1 = mapper.getDefinition(tag);
+        DataTagDefinition definition2 = mapper.getDefinition(tag);
 
         assertEquals(definition1, definition2);
     }
@@ -82,27 +82,27 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void tagsToGroupsShouldReturnAsManyGroupsAsDistinctDeadbands() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithSameDeadband));
+        Map<SubscriptionGroup, List<DataTagDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithSameDeadband));
 
         assertEquals(2, pairs.size());
     }
 
     @Test
     public void tagsToGroupsShouldCombineTagsWithSameDeadbands() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithSameDeadband));
+        Map<SubscriptionGroup, List<DataTagDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithSameDeadband));
 
         SubscriptionGroup groupWithTwoTags = mapper.getGroup(tag);
         List<ISourceDataTag> pairedTags = pairs
                 .get(groupWithTwoTags)
                 .stream()
-                .map(ItemDefinition::getTag).collect(Collectors.toList());
+                .map(DataTagDefinition::getTag).collect(Collectors.toList());
 
         assertEquals(Arrays.asList(tag, tagWithSameDeadband), pairedTags);
     }
 
     @Test
     public void tagsToGroupsShouldSeparateTagsWithDifferentDeadbands() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband));
+        Map<SubscriptionGroup, List<DataTagDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband));
 
         SubscriptionGroup group1 = mapper.getGroup(tag);
         SubscriptionGroup group2 = mapper.getGroup(tagWithDifferentDeadband);
@@ -113,8 +113,8 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void tagsToGroupsShouldNotAddTagsToGroups() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Collections.singletonList(tag));
-        assertFalse(pairs.keySet().stream().anyMatch(group -> group.contains(ItemDefinition.of(tag))));
+        Map<SubscriptionGroup, List<DataTagDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Collections.singletonList(tag));
+        assertFalse(pairs.keySet().stream().anyMatch(group -> group.contains(DataTagDefinition.of(tag))));
     }
 
     @Test
@@ -131,7 +131,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
     @Test
     public void removeTagFromGroupShouldDeleteCorrespondingDefinition() {
         SubscriptionGroup group = mapper.getGroup(tag);
-        ItemDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definition = mapper.getDefinition(tag);
         mapper.addDefinitionsToGroups(Collections.singletonList(definition));
 
         mapper.removeTagFromGroup(tag);
@@ -141,7 +141,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void getGroupsShouldReturnAllPreviouslyReturnedGroups() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithDifferentDeadband));
+        Map<SubscriptionGroup, List<DataTagDefinition>> pairs = mapper.maptoGroupsWithDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithDifferentDeadband));
 
         Collection<SubscriptionGroup> groups = mapper.getGroups();
 
@@ -151,14 +151,14 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void getDefinitionShouldReturnDefinitionWithCorrespondingTagReference() {
-        ItemDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definition = mapper.getDefinition(tag);
 
         assertEquals(tag, definition.getTag());
     }
 
     @Test
     public void getDefinitionWithSameTagShouldReturnSameDefinitionTwice() {
-        ItemDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definition = mapper.getDefinition(tag);
 
         assertEquals(definition.getTag(), mapper.getDefinition(tag).getTag());
     }
@@ -172,7 +172,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
     @Test
     public void registerDefinitionInGroupShouldAddDefinitonToGroup() {
         SubscriptionGroup group = mapper.getGroup(tag);
-        ItemDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definition = mapper.getDefinition(tag);
         mapper.addDefinitionsToGroups(Collections.singletonList(definition));
 
         assertTrue(group.contains(definition));
@@ -180,7 +180,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void registerDefinitionTwiceShouldThrowError() {
-        ItemDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definition = mapper.getDefinition(tag);
         mapper.addDefinitionsToGroups(Collections.singletonList(definition));
 
         assertThrows(IllegalArgumentException.class, () -> mapper.addDefinitionsToGroups(Collections.singletonList(definition)));
@@ -189,7 +189,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
     @Test
     public void registerRemoveRegisterDefinitionShouldAddDefinitionToGroup() {
         SubscriptionGroup group = mapper.getGroup(tag);
-        ItemDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definition = mapper.getDefinition(tag);
 
         mapper.addDefinitionsToGroups(Collections.singletonList(definition));
         mapper.removeTagFromGroup(tag);
@@ -201,8 +201,8 @@ public class TagSubscriptionMapperTest extends MappingBase {
     @Test
     public void registerDefinitionsInGroupShouldAddAllDefinitionsToGroup() {
         SubscriptionGroup group = mapper.getGroup(tag);
-        ItemDefinition definition = mapper.getDefinition(tag);
-        ItemDefinition definitionWithSameDeadband = mapper.getDefinition(tagWithSameDeadband);
+        DataTagDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definitionWithSameDeadband = mapper.getDefinition(tagWithSameDeadband);
 
         mapper.addDefinitionsToGroups(Arrays.asList(definition, definitionWithSameDeadband));
 
@@ -217,7 +217,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void getTagByClientHandleShouldReturnProperTag() {
-        ItemDefinition definition = mapper.getDefinition(tag);
+        DataTagDefinition definition = mapper.getDefinition(tag);
 
         ISourceDataTag getTagBy = mapper.getTag(definition.getClientHandle());
 

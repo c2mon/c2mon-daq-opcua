@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.opcua.downstream.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.Deadband;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import lombok.Getter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -54,7 +54,7 @@ public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
         throw new OPCCommunicationException(OPCCommunicationException.Cause.DELETE_SUBSCRIPTION);}
 
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<ItemDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
+    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
         throw new OPCCommunicationException(OPCCommunicationException.Cause.SUBSCRIBE_TAGS);
     }
 
@@ -64,7 +64,7 @@ public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
     }
 
     @Override
-    public StatusCode write (NodeId nodeId, DataValue value) {
+    public StatusCode write (NodeId nodeId, Object value) {
         throw new OPCCommunicationException(OPCCommunicationException.Cause.WRITE);
     }
 

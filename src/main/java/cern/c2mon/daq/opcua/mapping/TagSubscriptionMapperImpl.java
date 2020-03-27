@@ -16,6 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
@@ -29,8 +30,8 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     private final Map<Deadband, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
 
-    // TODO: this could be avoided (only useful for clientHandle) -> what is quicker?
-    private final Map<ISourceDataTag, ItemDefinition> tag2Definition = new ConcurrentHashMap<>();
+    private final Map<ISourceDataTag, DataTagDefinition> tag2Definition = new ConcurrentHashMap<>();
+    private final Map<ISourceCommandTag, CommandTagDefinition> command2Definition = new ConcurrentHashMap<>();
 
     @Override
     public Collection<SubscriptionGroup> getGroups() {
@@ -38,7 +39,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public Map<SubscriptionGroup, List<ItemDefinition>> maptoGroupsWithDefinitions (Collection<ISourceDataTag> tags) {
+    public Map<SubscriptionGroup, List<DataTagDefinition>> maptoGroupsWithDefinitions (Collection<ISourceDataTag> tags) {
         return tags
                 .stream()
                 .collect(groupingBy(Deadband::of))
@@ -64,11 +65,11 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
 
     @Override
-    public ItemDefinition getDefinition(ISourceDataTag tag) {
+    public DataTagDefinition getDefinition(ISourceDataTag tag) {
         if (tag2Definition.containsKey(tag)) {
             return tag2Definition.get(tag);
         } else {
-            ItemDefinition definition = ItemDefinition.of(tag);
+            DataTagDefinition definition = DataTagDefinition.of(tag);
             tag2Definition.put(tag, definition);
             return definition;
         }
@@ -80,7 +81,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public void addDefinitionsToGroups (Collection<ItemDefinition> definitions) {
+    public void addDefinitionsToGroups (Collection<DataTagDefinition> definitions) {
         definitions
                 .stream()
                 .collect(groupingBy(itemDefinition -> Deadband.of(itemDefinition.getTag())))
@@ -88,7 +89,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public void addDefinitionToGroup (ItemDefinition definition) {
+    public void addDefinitionToGroup (DataTagDefinition definition) {
         getOrCreateGroup(Deadband.of(definition.getTag())).add(definition);
     }
 
@@ -99,7 +100,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public void removeTagFromGroup(ISourceDataTag dataTag) {
-        ItemDefinition definition = tag2Definition.remove(dataTag);
+        DataTagDefinition definition = tag2Definition.remove(dataTag);
         if (definition == null) {
             throw new IllegalArgumentException("The tag cannot be removed, since it has not been added to the endpoint.");
         }
@@ -123,6 +124,17 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         tag2Definition.clear();
     }
 
+    @Override
+    public CommandTagDefinition getDefinition(ISourceCommandTag tag) {
+        if (command2Definition.containsKey(tag)) {
+            return command2Definition.get(tag);
+        } else {
+            CommandTagDefinition definition = CommandTagDefinition.of(tag);
+            command2Definition.put(tag, definition);
+            return definition;
+        }
+    }
+
     private SubscriptionGroup getOrCreateGroup(Deadband deadband) {
         if (groupExists(deadband)) {
             return getExistingGroup(deadband);
@@ -141,8 +153,8 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         return subscriptionGroups.get(deadband);
     }
 
-    private ItemDefinition findDefinitionWithClientHandle(UInteger clientHandle){
-        Optional<ItemDefinition> definitionWithMatchingHandle = tag2Definition
+    private DataTagDefinition findDefinitionWithClientHandle(UInteger clientHandle){
+        Optional<DataTagDefinition> definitionWithMatchingHandle = tag2Definition
                 .values()
                 .stream()
                 .filter(def -> def.getClientHandle().equals(clientHandle))
@@ -154,9 +166,9 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         return definitionWithMatchingHandle.get();
     }
 
-    private List<ItemDefinition> getOrMakeDefinitionsFrom(Collection<ISourceDataTag> tags) {
-        List<ItemDefinition> result = new ArrayList<>();
-        for(ISourceDataTag tag : tags) {
+    private List<DataTagDefinition> getOrMakeDefinitionsFrom(Collection<ISourceDataTag> tags) {
+        List<DataTagDefinition> result = new ArrayList<>();
+        for (ISourceDataTag tag : tags) {
             result.add(getDefinition(tag));
         }
         return result;

@@ -9,21 +9,21 @@ import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
+import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
+import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
 import org.easymock.Capture;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ADDRESS_MISSING_PROPERTIES;
 import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.CONNECTION_FAILED;
@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     private static ConnectionResolver resolver;
-    OPCUAMessageHandler handler;;
+    OPCUAMessageHandler handler;
 
     EndpointListener listener = new EndpointListener() {
         @Override
@@ -56,15 +56,20 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         }
 
         @Override
+        public void onWriteResponse(StatusCode statusCode, ISourceCommandTag tag) {
+
+        }
+
+        @Override
         public void initialize (IEquipmentMessageSender sender) {}
     };
 
     @BeforeClass
     public static void startServer() {
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
-        GenericContainer image = new GenericContainer("mcr.microsoft.com/iotedge/opc-plc")
-                .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
-                .withCommand("--unsecuretransport")
+        GenericContainer image = new GenericContainer("gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3")
+                .waitingFor(Wait.forLogMessage(".*Server opened endpoints for following URLs:.*", 2))
+                .withEnv("SIMCONFIG", "sim_BASIC.short.xml")
                 .withNetworkMode("host");
 
         resolver = new ConnectionResolver(image);
@@ -133,15 +138,21 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         assertThrows(ConfigurationException.class, () -> handler.connectToDataSource());
     }
 
-    @Test
-    @UseConf("simengine_two_tag.xml")
-    public void subscribeTagShouldReturnStateOK() throws EqIOException, InterruptedException, ExecutionException, TimeoutException {
-        CompletableFuture<Object> future = new CompletableFuture<>();
 
-        handler.setEndpointListener(listener);
+    @Test
+    @UseConf("simengine_power.xml")
+    public void testWrite() throws EqIOException, EqCommandTagException {
+        new CommfaultSenderCapture(messageSender);
         handler.connectToDataSource();
-//        future.get(10, TimeUnit.SECONDS);
+
+        SourceCommandTagValue value = new SourceCommandTagValue();
+        value.setValue(1);
+        value.setId(0L);
+
+
+        // TODO handler.runCommand(value);
     }
+
 
     private static class CommfaultSenderCapture {
         Capture<Long> id = newCapture();
@@ -161,6 +172,4 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
             assertEquals(msg, this.msg.getValue());
         }
     }
-
-
 }

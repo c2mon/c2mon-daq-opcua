@@ -22,8 +22,10 @@ import cern.c2mon.daq.opcua.downstream.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
+import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -103,6 +105,12 @@ public class ControllerImpl implements Controller, IDataTagChanger {
                 endpoint.subscribeTag(sourceDataTag);
             });
         }
+    }
+
+    @Override
+    public void runCommand(ISourceCommandTag tag, SourceCommandTagValue value) throws ConfigurationException {
+        endpoint.executeCommand(tag, value);
+
     }
 
     private void doAndReport (ChangeReport changeReport, String message, Runnable runnable) {

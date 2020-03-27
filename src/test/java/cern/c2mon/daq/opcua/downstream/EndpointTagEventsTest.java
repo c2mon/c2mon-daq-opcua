@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -85,6 +86,11 @@ public class EndpointTagEventsTest extends EndpointTestBase {
             @Override
             public void onTagInvalid (ISourceDataTag dataTag, SourceDataTagQuality quality) {
                 tagInvalidFuture.complete(dataTag);
+            }
+
+            @Override
+            public void onWriteResponse(StatusCode statusCode, ISourceCommandTag tag) {
+
             }
 
             @Override

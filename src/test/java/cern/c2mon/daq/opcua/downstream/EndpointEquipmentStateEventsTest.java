@@ -5,6 +5,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.testutils.MiloExceptionTestClientWrapper;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -86,6 +87,11 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
 
             @Override
             public void onTagInvalid (ISourceDataTag dataTag, SourceDataTagQuality quality) {
+
+            }
+
+            @Override
+            public void onWriteResponse(StatusCode statusCode, ISourceCommandTag tag) {
 
             }
 

@@ -26,7 +26,7 @@ import java.util.List;
 public class SubscriptionGroup{
 
     @Getter
-    private final List<ItemDefinition> definitions = new ArrayList<>();
+    private final List<DataTagDefinition> definitions = new ArrayList<>();
 
     @Getter
     @Setter
@@ -47,16 +47,16 @@ public class SubscriptionGroup{
         return this.subscription != null;
     }
 
-    public void add(final ItemDefinition itemDefinition) {
-        if (this.definitions.contains(itemDefinition)) {
+    public void add(final DataTagDefinition dataTagDefinition) {
+        if (this.definitions.contains(dataTagDefinition)) {
             throw new IllegalArgumentException("The item definition has already been subscribed.");
         }
 
-        if (!Deadband.of(itemDefinition.getTag()).equals(deadband)) {
+        if (!Deadband.of(dataTagDefinition.getTag()).equals(deadband)) {
             throw new IllegalArgumentException("This item does not belong to this group.");
         }
 
-        this.definitions.add(itemDefinition);
+        this.definitions.add(dataTagDefinition);
     }
 
     public void reset() {
@@ -64,11 +64,11 @@ public class SubscriptionGroup{
         subscription = null;
     }
 
-    public void remove(final ItemDefinition itemDefinition) {
-        this.definitions.remove(itemDefinition);
+    public void remove(final DataTagDefinition dataTagDefinition) {
+        this.definitions.remove(dataTagDefinition);
     }
 
-    public boolean contains(ItemDefinition definition) {
+    public boolean contains(DataTagDefinition definition) {
         return definitions.contains(definition);
     }
 

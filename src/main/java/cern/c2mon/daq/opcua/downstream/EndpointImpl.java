@@ -18,22 +18,26 @@ package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.CommandTagDefinition;
+import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
+import cern.c2mon.shared.common.type.TypeConverter;
+import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
-import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
@@ -50,6 +54,8 @@ public class EndpointImpl implements Endpoint {
     @Setter
     private MiloClientWrapper client;
     private TagSubscriptionMapper mapper;
+
+    @Getter
     private EventPublisher publisher;
 
     public void initialize (boolean connectionLost) throws OPCCommunicationException {
@@ -75,7 +81,7 @@ public class EndpointImpl implements Endpoint {
     public void recreateSubscription (UaSubscription subscription) {
         client.deleteSubscription(subscription);
         SubscriptionGroup group = mapper.getGroup(subscription);
-        List<ItemDefinition> definitions = group.getDefinitions();
+        List<DataTagDefinition> definitions = group.getDefinitions();
         group.reset();
         subscribeToGroup(group, definitions);
     }
@@ -91,12 +97,12 @@ public class EndpointImpl implements Endpoint {
     @Override
     public synchronized void subscribeTag (@NonNull final ISourceDataTag sourceDataTag) throws OPCCommunicationException {
         SubscriptionGroup group = mapper.getGroup(sourceDataTag);
-        ItemDefinition definition = mapper.getDefinition(sourceDataTag);
+        DataTagDefinition definition = mapper.getDefinition(sourceDataTag);
 
         subscribeToGroup(group, Collections.singletonList(definition));
     }
 
-    private void subscribeToGroup (SubscriptionGroup group, List<ItemDefinition> definitions) {
+    private void subscribeToGroup (SubscriptionGroup group, List<DataTagDefinition> definitions) {
         UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription()
                 : client.createSubscription(group.getDeadband().getTime());
         group.setSubscription(subscription);
@@ -140,10 +146,36 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public synchronized void write (final OPCHardwareAddress address, final Object value) {
-        NodeId nodeId = ItemDefinition.toNodeId(address);
-        DataValue dataValue = new DataValue(new Variant(value));
-        client.write(nodeId, dataValue);
+    public void executeCommand(ISourceCommandTag tag, SourceCommandTagValue command) throws ConfigurationException {
+        CommandTagDefinition def = mapper.getDefinition(tag);
+        Object value = TypeConverter.cast(command.getValue(), command.getDataType());
+        if (value == null) {
+            throw new ConfigurationException(ConfigurationException.Cause.COMMAND_VALUE_ERROR);
+        }
+
+        OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
+        switch (hardwareAddress.getCommandType()) {
+            case METHOD:
+                log.debug("Not yet implemented");
+                break;
+            case CLASSIC:
+                int pulseLength = hardwareAddress.getCommandPulseLength();
+                if (pulseLength > 0) {
+                    log.debug("Not yet implemented");
+                } else {
+                    StatusCode write = client.write(def.getAddress(), value);
+                    publisher.notifyWriteEvent(write, tag);
+                }
+                break;
+            default:
+                throw new ConfigurationException(ConfigurationException.Cause.COMMAND_TYPE_UNKNOWN);
+        }
+    }
+
+    @Override
+    public synchronized StatusCode write (final OPCHardwareAddress address, final Object value) {
+        NodeId nodeId = DataTagDefinition.toNodeId(address);
+        return client.write(nodeId, value);
     }
 
     @Override

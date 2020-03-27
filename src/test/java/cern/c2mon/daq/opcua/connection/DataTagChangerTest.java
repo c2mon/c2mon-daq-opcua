@@ -16,7 +16,7 @@ import java.util.Collections;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 
-public class DataTagChangerTest extends  ControllerTestBase {
+public class DataTagChangerTest extends ControllerTestBase {
 
     private IDataTagChanger tagChanger;
     ChangeReport changeReport;

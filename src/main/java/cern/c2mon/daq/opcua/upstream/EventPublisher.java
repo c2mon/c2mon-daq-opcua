@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.upstream;
 
 import cern.c2mon.daq.opcua.mapping.DataQualityMapper;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
@@ -45,6 +46,10 @@ public class EventPublisher {
         } else {
             itemChange(tag, value);
         }
+    }
+
+    public void notifyWriteEvent (StatusCode statusCode, ISourceCommandTag tag) {
+        listeners.forEach(l -> l.onWriteResponse(statusCode, tag));
     }
 
     public void notifyEquipmentState(EndpointListener.EquipmentState state) {

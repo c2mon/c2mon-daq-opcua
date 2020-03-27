@@ -1,12 +1,24 @@
 package it.simengine;
 
 import cern.c2mon.daq.opcua.downstream.*;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
+import cern.c2mon.shared.common.command.SourceCommandTag;
+import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
+import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
+import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import it.ConnectionResolver;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.*;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class SimEngineIT {
 
@@ -61,5 +73,28 @@ public class SimEngineIT {
     public void testSimEngineConnection() {
         simEngine.initialize(false);
         Assertions.assertDoesNotThrow(()-> simEngine.isConnected());
+    }
+
+    @Test
+    public void writeValue() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
+        simEngine.initialize(false);
+        CompletableFuture<Object> writeResponse = ServerTestListener.listenForWriteResponse(simEngine.getPublisher());
+
+        SourceCommandTag commandTag = new SourceCommandTag(0L, "Power");
+        OPCHardwareAddressImpl hw = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw");
+        hw.setNamespace(2);
+        hw.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.CLASSIC);
+
+        commandTag.setHardwareAddress(hw);
+//        SourceCommandTagValue val = new SourceCommandTagValue(commandTag.getId(), commandTag.getName(), 1L, (short) 1, new DataValue(new Variant(1), null, null), "org.eclipse.milo.opcua.stack.core.types.builtin.DataValue");
+        //StatusCode write = simEngineWrapper.write(ItemDefinition.toNodeId(hw), new DataValue(new Variant(1), null, null));
+        SourceCommandTagValue val = new SourceCommandTagValue();
+        val.setValue(1);
+        val.setDataType("Integer");
+        simEngine.executeCommand(commandTag, val);
+
+        Object o = writeResponse.get(3000, TimeUnit.MILLISECONDS);
+        Assertions.assertEquals(StatusCode.GOOD, o);
+
     }
 }

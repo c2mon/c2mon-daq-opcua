@@ -14,7 +14,9 @@ public class ConfigurationException extends EqIOException {
         HARDWARE_ADDRESS_UNKNOWN("The hardware address is not of type OPCHardwareAddress and cannot be handled"),
         MISSING_URI("The equipment address does not have an URI"),
         MISSING_TARGET_TAG("TargetTag must not be null"),
-        DATATAGS_EMPTY("No data tags to subscribe");
+        DATATAGS_EMPTY("No data tags to subscribe"),
+        COMMAND_TYPE_UNKNOWN("The provided command type is unknown"),
+        COMMAND_VALUE_ERROR("Provided command value could not be processed. Check data type and value.");
 
         public final String message;
 

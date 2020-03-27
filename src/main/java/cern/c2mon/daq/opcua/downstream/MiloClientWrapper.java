@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.Deadband;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -30,10 +30,11 @@ public interface MiloClientWrapper {
 
     void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCCommunicationException;
     List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription,
-                                                                       List<ItemDefinition> definitions,
+                                                                       List<DataTagDefinition> definitions,
                                                                        Deadband deadband,
                                                                        BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCCommunicationException;
     List<DataValue> read(NodeId nodeIds)  throws OPCCommunicationException;
-    StatusCode write(NodeId nodeId, DataValue value)  throws OPCCommunicationException;
+    void browseNode(String indent, NodeId browseRoot);
+    StatusCode write(NodeId nodeId, Object value)  throws OPCCommunicationException;
 
 }

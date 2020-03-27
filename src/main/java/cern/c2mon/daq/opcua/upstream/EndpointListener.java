@@ -17,10 +17,12 @@
 package cern.c2mon.daq.opcua.upstream;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.AllArgsConstructor;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
 public interface EndpointListener {
 
@@ -31,7 +33,9 @@ public interface EndpointListener {
         CONNECTION_LOST("Connection to server has been lost. Reconnecting...");
 
         public final String message;
+
     }
+    void initialize(IEquipmentMessageSender sender);
 
     void update (EquipmentState state);
 
@@ -39,5 +43,5 @@ public interface EndpointListener {
 
     void onTagInvalid(final ISourceDataTag dataTag, final SourceDataTagQuality quality);
 
-    void initialize(IEquipmentMessageSender sender);
+    void onWriteResponse(final StatusCode statusCode, final ISourceCommandTag tag);
 }

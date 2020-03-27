@@ -2,20 +2,12 @@ package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import lombok.SneakyThrows;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.Test;
-
-import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class EndpointSubscribeTagsTest extends EndpointTestBase{
-
-    @Test
-    public void subscribeTagsWithEmptyCollectionShouldThrowError() {
-        assertThrows(ConfigurationException.class, () -> endpoint.subscribeTags(Collections.emptyList()));
-    }
 
     @Test
     public void subscribeNewTagShouldSubscribeTagInMapper () {
@@ -61,13 +53,13 @@ public class EndpointSubscribeTagsTest extends EndpointTestBase{
     }
 
     @Test
-    public void badStatusCodeShouldUnsubscribeDataTag() throws ConfigurationException {
+    public void badStatusCodeShouldUnsubscribeDataTag() {
         subscribeTagsAndMockStatusCode(StatusCode.BAD, tag1);
         assertFalse(mapper.isSubscribed(tag1));
     }
 
     @Test
-    public void twoTagsWithBadSubscriptionStatusCodesShouldUnsubscribeBoth() throws ConfigurationException {
+    public void twoTagsWithBadSubscriptionStatusCodesShouldUnsubscribeBoth() {
         subscribeTagsAndMockStatusCode(StatusCode.BAD, tag1, tag2);
         assertFalse(mapper.isSubscribed(tag1) || mapper.isSubscribed(tag2));
     }

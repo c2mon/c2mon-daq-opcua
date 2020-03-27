@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.opcua.downstream.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
 import cern.c2mon.daq.opcua.mapping.Deadband;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
@@ -55,7 +55,7 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
     public void deleteSubscription (UaSubscription subscription) { }
 
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<ItemDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
+    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
         final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
         return Collections.nCopies(definitions.size(), monitoredItem);
@@ -68,7 +68,12 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
     }
 
     @Override
-    public StatusCode write (NodeId nodeId, DataValue value) {
+    public void browseNode(String indent, NodeId browseRoot) {
+
+    }
+
+    @Override
+    public StatusCode write (NodeId nodeId, Object value) {
         return StatusCode.GOOD;
     }
 

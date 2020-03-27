@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.Deadband;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
@@ -11,15 +11,14 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
+import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.Stack;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.DataChangeTrigger;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.MonitoringMode;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
+import org.eclipse.milo.opcua.stack.core.util.ConversionUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -133,11 +132,11 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
     }
 
     public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription,
-                                                                              List<ItemDefinition> definitions,
+                                                                              List<DataTagDefinition> definitions,
                                                                               Deadband deadband,
                                                                               BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCCommunicationException {
         List<MonitoredItemCreateRequest> requests = new ArrayList<>();
-        for(ItemDefinition definition : definitions) {
+        for(DataTagDefinition definition : definitions) {
             requests.add(createItemSubscriptionRequest(definition, deadband));
         }
         try {
@@ -155,15 +154,17 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         }
     }
 
-    public StatusCode write (NodeId nodeId, DataValue value) throws OPCCommunicationException {
+    public StatusCode write (NodeId nodeId, Object value) throws OPCCommunicationException {
         try {
-            return client.writeValue(nodeId, value).get();
+            // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
+            DataValue dataValue = new DataValue(new Variant(value), null, null);
+            return client.writeValue(nodeId, dataValue).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new OPCCommunicationException(WRITE, e);
         }
     }
 
-    private MonitoredItemCreateRequest createItemSubscriptionRequest(ItemDefinition definition, Deadband deadband) {
+    private MonitoredItemCreateRequest createItemSubscriptionRequest(DataTagDefinition definition, Deadband deadband) {
         // What is a sensible value for the queue size? Must be large enough to hold all notifications queued in between publishing cycles.
         // Currently, we are only keeping the newest value.
         int queueSize = 0;
@@ -198,5 +199,31 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
                 .filter(e -> e.getSecurityPolicyUri().equals(sp.getUri()))
                 .findFirst()
                 .orElseThrow(() -> new OPCCommunicationException(ENDPOINTS));
+    }
+
+    public void browseNode(String indent, NodeId browseRoot) {
+        BrowseDescription browse = new BrowseDescription(
+                browseRoot,
+                BrowseDirection.Forward,
+                Identifiers.References,
+                true,
+                uint(NodeClass.Object.getValue() | NodeClass.Variable.getValue()),
+                uint(BrowseResultMask.All.getValue())
+        );
+
+        try {
+            BrowseResult browseResult = client.browse(browse).get();
+
+            List<ReferenceDescription> references = ConversionUtil.toList(browseResult.getReferences());
+
+            for (ReferenceDescription rd : references) {
+                log.info("{} Node={}, NodeId={}", indent, rd.getBrowseName().getName(), rd.getNodeId().toString());
+
+                // recursively browse to children
+                rd.getNodeId().local().ifPresent(nodeId -> browseNode(indent + "  ", nodeId));
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Browsing nodeId={} failed: {}", browseRoot, e.getMessage(), e);
+        }
     }
 }

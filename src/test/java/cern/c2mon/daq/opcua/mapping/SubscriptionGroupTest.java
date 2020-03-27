@@ -8,9 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SubscriptionGroupTest extends MappingBase {
 
-    ItemDefinition definition;
-    ItemDefinition definitionWithSameDeadband;
-    ItemDefinition definitionWithDifferentDeadband;
+    DataTagDefinition definition;
+    DataTagDefinition definitionWithSameDeadband;
+    DataTagDefinition definitionWithDifferentDeadband;
 
     SubscriptionGroup group;
     SubscriptionGroup groupWithDifferentDeadband;

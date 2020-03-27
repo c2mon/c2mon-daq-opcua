@@ -10,7 +10,7 @@ public class ItemDefinitionTest extends MappingBase {
 
     @Test
     public void hardwareAddressOfTypeOPCDoesNotThrowError() {
-        assertDoesNotThrow(() -> ItemDefinition.of(tag));
+        assertDoesNotThrow(() -> DataTagDefinition.of(tag));
     }
 
     @Test
@@ -18,38 +18,38 @@ public class ItemDefinitionTest extends MappingBase {
         dataTagAddress.setHardwareAddress(new DBHardwareAddressImpl("Primary"));
         tag = makeSourceDataTag(1L, dataTagAddress);
 
-        assertThrows(ConfigurationException.class, () -> ItemDefinition.of(tag));
+        assertThrows(ConfigurationException.class, () -> DataTagDefinition.of(tag));
     }
 
     @Test
     public void hardwareAddressCreatesSameItemDefinitionSpecs() throws ConfigurationException {
-        ItemDefinition itemDefinition = ItemDefinition.of(tag);
+        DataTagDefinition dataTagDefinition = DataTagDefinition.of(tag);
 
-        assertEquals(opcHardwareAddress.getOPCItemName(), itemDefinition.getAddress().getIdentifier());
-        assertEquals(opcHardwareAddress.getNamespaceId(), itemDefinition.getAddress().getNamespaceIndex().intValue());
-        assertEquals(tag, itemDefinition.getTag());
+        assertEquals(opcHardwareAddress.getOPCItemName(), dataTagDefinition.getAddress().getIdentifier());
+        assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getAddress().getNamespaceIndex().intValue());
+        assertEquals(tag, dataTagDefinition.getTag());
     }
 
     @Test
-    public void redundantHardwareAddressCreatesRedundantItemDefinition() throws ConfigurationException {
+    public void redundantHardwareAddressCreatesRedundantItemDefinition() {
         opcHardwareAddress.setOpcRedundantItemName("Redundant");
         dataTagAddress.setHardwareAddress(opcHardwareAddress);
         tag = makeSourceDataTag(1L, dataTagAddress);
 
-        ItemDefinition itemDefinition = ItemDefinition.of(tag);
+        DataTagDefinition dataTagDefinition = DataTagDefinition.of(tag);
 
-        assertEquals(opcHardwareAddress.getOpcRedundantItemName(), itemDefinition.getRedundantAddress().getIdentifier());
-        assertEquals(opcHardwareAddress.getNamespaceId(), itemDefinition.getRedundantAddress().getNamespaceIndex().intValue());
+        assertEquals(opcHardwareAddress.getOpcRedundantItemName(), dataTagDefinition.getRedundantAddress().getIdentifier());
+        assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getRedundantAddress().getNamespaceIndex().intValue());
     }
 
     @Test
     public void sameTagShouldResultInSameDefinition() throws ConfigurationException {
-        assertEquals(ItemDefinition.of(tag), ItemDefinition.of(tag));
+        assertEquals(DataTagDefinition.of(tag), DataTagDefinition.of(tag));
     }
 
     @Test
     public void differentTagIdShouldResultInDifferentDefinitions() throws ConfigurationException {
-        assertNotEquals(ItemDefinition.of(tag), ItemDefinition.of(tagWithSameDeadband));
+        assertNotEquals(DataTagDefinition.of(tag), DataTagDefinition.of(tagWithSameDeadband));
     }
 
 }

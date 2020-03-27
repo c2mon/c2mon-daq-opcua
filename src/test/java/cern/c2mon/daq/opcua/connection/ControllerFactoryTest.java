@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import org.junit.jupiter.api.AfterEach;
@@ -9,12 +8,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static cern.c2mon.daq.opcua.connection.ControllerTestBase.*;
-import static org.easymock.EasyMock.createMock;
 
 public class ControllerFactoryTest {
 
     IEquipmentConfiguration config;
-    IEquipmentMessageSender sender = createMock(IEquipmentMessageSender.class);
 
     @BeforeEach
     public void setup() {

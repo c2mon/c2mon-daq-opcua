@@ -19,9 +19,13 @@ package cern.c2mon.daq.opcua.downstream;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
+import cern.c2mon.daq.opcua.upstream.EventPublisher;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
+import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
 import java.util.Collection;
 
@@ -42,10 +46,13 @@ public interface Endpoint {
     void removeDataTag(ISourceDataTag sourceDataTag) throws IllegalArgumentException;
 
     void refreshDataTags(Collection<ISourceDataTag> dataTags);
-    void write(final OPCHardwareAddress address, final Object value);
+    StatusCode write(final OPCHardwareAddress address, final Object value);
+
+    void executeCommand(ISourceCommandTag tag, SourceCommandTagValue value) throws ConfigurationException;
 
     void recreateSubscription(UaSubscription subscription);
 
     //for injection during testing
     void setClient(MiloClientWrapper client);
+    EventPublisher getPublisher();
 }

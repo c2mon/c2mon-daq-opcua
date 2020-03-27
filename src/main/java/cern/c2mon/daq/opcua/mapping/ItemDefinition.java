@@ -1,22 +1,7 @@
-/******************************************************************************
- * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- * 
- * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
- * C2MON is free software: you can redistribute it and/or modify it under the
- * terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation, either version 3 of the license.
- * 
- * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
- * more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
@@ -28,62 +13,56 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
-public class ItemDefinition {
+public abstract class ItemDefinition {
 
-    /**
-     * the c2mon tag
-     */
-    private final ISourceDataTag tag;
-
+    private final NodeId address;
+    private final NodeId redundantAddress;
     /**
      * equal to the client Handle of a monitoredItem returned by a Milo subscription
      */
     private final UInteger clientHandle;
-    private final NodeId address;
-    private final NodeId redundantAddress;
-
     private static final AtomicInteger clientHandles = new AtomicInteger();
 
-    private ItemDefinition(final ISourceDataTag tag, final NodeId address) {
-        this(tag, address, null);
+    @SneakyThrows
+    public static DataTagDefinition of(final ISourceDataTag tag) {
+        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+        return new DataTagDefinition(tag, toNodeId(opcAddress), toRedundantNodeId(opcAddress));
     }
 
-    private ItemDefinition(final ISourceDataTag tag, final NodeId address, final NodeId redundantAddress) {
-        this.tag = tag;
+    @SneakyThrows
+    public static CommandTagDefinition of(final ISourceCommandTag tag) {
+        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+        return new CommandTagDefinition(tag, toNodeId(opcAddress), toRedundantNodeId(opcAddress));
+    }
+
+    public ItemDefinition(NodeId address, NodeId redundantAddress) {
         this.address = address;
         this.redundantAddress = redundantAddress;
         this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());
     }
 
-    @SneakyThrows
-    public static ItemDefinition of(final ISourceDataTag tag) {
-        HardwareAddress hardwareAddress = tag.getHardwareAddress();
+    public static NodeId toNodeId(OPCHardwareAddress opcAddress) {
+        return new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName());
+    }
 
-        if (!(hardwareAddress instanceof OPCHardwareAddress)) {
+    protected static OPCHardwareAddress extractOpcAddress(HardwareAddress address) throws ConfigurationException {
+        if (!(address instanceof OPCHardwareAddress)) {
             throw new ConfigurationException(ConfigurationException.Cause.HARDWARE_ADDRESS_UNKNOWN);
         }
-        OPCHardwareAddress opcAddress = (OPCHardwareAddress) hardwareAddress;
+        return (OPCHardwareAddress) address;
+    }
 
-        int namespaceIndex = opcAddress.getNamespaceId();
+    protected static NodeId toRedundantNodeId(OPCHardwareAddress opcAddress) {
         String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
-        NodeId nodeId = new NodeId(namespaceIndex, opcAddress.getOPCItemName());
-
-        if (redundantOPCItemName != null && !redundantOPCItemName.trim().equals("")) {
-            NodeId redundantNodeId = new NodeId(namespaceIndex, redundantOPCItemName);
-            return new ItemDefinition(tag, nodeId, redundantNodeId);
-        } else {
-            return new ItemDefinition(tag, nodeId);
-        }
+        if (redundantOPCItemName == null || redundantOPCItemName.trim().equals("")) return null;
+        else return new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);
     }
 
-    public static NodeId toNodeId(OPCHardwareAddress opcAddress) {
-        int namespaceIndex = opcAddress.getNamespaceId();
-        return new NodeId(namespaceIndex, opcAddress.getOPCItemName());
-    }
+    protected abstract Long getTagId();
 
     /**
      * The objects are considered equal if their tags have the same id.
-     * 
+     *
      * @param o The object to compare to.
      * @return true if the objects equal else false.
      */
@@ -91,18 +70,18 @@ public class ItemDefinition {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ItemDefinition that = (ItemDefinition) o;
-        return tag.getId().equals(that.getTag().getId());
+        DataTagDefinition that = (DataTagDefinition) o;
+        return getTagId().equals(that.getTagId());
     }
 
     /**
      * Returns the hash code of this object.
-     * 
+     *
      * @return The hash code of this object which equals the hash code of its
      * ID.
      */
     @Override
     public int hashCode() {
-        return tag.getId().hashCode();
+        return getTagId().hashCode();
     }
 }
