@@ -21,4 +21,13 @@ public class CommandTagDefinition extends ItemDefinition {
         this.tag = tag;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        return super.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
 }

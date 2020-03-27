@@ -39,6 +39,7 @@ public class OPCCommunicationException extends RuntimeException {
         SUBSCRIBE_TAGS("Could not subscribe tags"),
         READ("Could not read node values"),
         WRITE("Could not write to nodes"),
+        BROWSE("Browsing node failed"),
         ENDPOINTS("The server does not offer any endpoints matching the configuration");
 
         public final String message;
@@ -47,9 +48,6 @@ public class OPCCommunicationException extends RuntimeException {
 
     public OPCCommunicationException(final Cause type, final Exception e) {
         super(type.message, e);
-        if (e instanceof InterruptedException) {
-            Thread.currentThread().interrupt();
-        }
     }
 
     public OPCCommunicationException(final Cause type) {

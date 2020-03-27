@@ -18,10 +18,7 @@ package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.mapping.CommandTagDefinition;
-import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
-import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.mapping.*;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -58,7 +55,7 @@ public class EndpointImpl implements Endpoint {
     @Getter
     private EventPublisher publisher;
 
-    public void initialize (boolean connectionLost) throws OPCCommunicationException {
+    public void initialize (boolean connectionLost){
         if (connectionLost) {
             publisher.notifyEquipmentState(CONNECTION_LOST);
         }
@@ -87,7 +84,7 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public synchronized void subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException {
+    public synchronized void subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
         }
@@ -95,7 +92,7 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public synchronized void subscribeTag (@NonNull final ISourceDataTag sourceDataTag) throws OPCCommunicationException {
+    public synchronized void subscribeTag (@NonNull final ISourceDataTag sourceDataTag) {
         SubscriptionGroup group = mapper.getGroup(sourceDataTag);
         DataTagDefinition definition = mapper.getDefinition(sourceDataTag);
 
@@ -112,7 +109,7 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public synchronized void removeDataTag (final ISourceDataTag dataTag) throws IllegalArgumentException {
+    public synchronized void removeDataTag (final ISourceDataTag dataTag) {
         SubscriptionGroup group = mapper.getGroup(dataTag);
 
         if (!group.isSubscribed()) {
@@ -174,7 +171,7 @@ public class EndpointImpl implements Endpoint {
 
     @Override
     public synchronized StatusCode write (final OPCHardwareAddress address, final Object value) {
-        NodeId nodeId = DataTagDefinition.toNodeId(address);
+        NodeId nodeId = ItemDefinition.toNodeId(address);
         return client.write(nodeId, value);
     }
 

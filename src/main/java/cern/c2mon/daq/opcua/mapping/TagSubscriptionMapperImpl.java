@@ -69,7 +69,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         if (tag2Definition.containsKey(tag)) {
             return tag2Definition.get(tag);
         } else {
-            DataTagDefinition definition = DataTagDefinition.of(tag);
+            DataTagDefinition definition = ItemDefinition.of(tag);
             tag2Definition.put(tag, definition);
             return definition;
         }
@@ -129,7 +129,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         if (command2Definition.containsKey(tag)) {
             return command2Definition.get(tag);
         } else {
-            CommandTagDefinition definition = CommandTagDefinition.of(tag);
+            CommandTagDefinition definition = ItemDefinition.of(tag);
             command2Definition.put(tag, definition);
             return definition;
         }

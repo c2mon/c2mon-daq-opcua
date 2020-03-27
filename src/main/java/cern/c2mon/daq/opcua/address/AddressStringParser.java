@@ -19,6 +19,9 @@ package cern.c2mon.daq.opcua.address;
 
 import cern.c2mon.daq.opcua.address.EquipmentAddress.ServerAddress;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -27,6 +30,7 @@ import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.*;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public abstract class AddressStringParser {
 
     /**
@@ -70,22 +74,32 @@ public abstract class AddressStringParser {
     }
 
     private static class EquipmentPropertyParser {
-        public enum RequiredKeys { URI, serverTimeout, serverRetryTimeout}
-        public enum OptionalKeys { user, password, aliveWriter, vendor }
+        @AllArgsConstructor
+        public enum Keys {
+            URI("URI", true),
+            SERVER_TIMEOUT("serverTimeout", true),
+            SERVER_RETRY_TIMEOUT("serverRetryTimeout", true),
+            USER("user", false),
+            PASSWORD("password", false),
+            ALIVE_WRITER("aliveWriter", false),
+            VENDOR("vendor", false);
+            String propertyName;
+            boolean required;
+        }
         String uri;
-        String usersAtDomain;
+        String userAtDomain;
         String password;
         int serverTimeout;
         int serverRetryTimeout;
         boolean aliveWriterEnabled;
 
         private EquipmentPropertyParser(Properties properties) {
-            this.uri = properties.getProperty(RequiredKeys.URI.name());
-            this.serverTimeout = Integer.parseInt(properties.getProperty(RequiredKeys.serverTimeout.name()));
-            this.serverRetryTimeout = Integer.parseInt(properties.getProperty(RequiredKeys.serverRetryTimeout.name()));
-            this.usersAtDomain = properties.getProperty(OptionalKeys.user.name(), "");
-            this.password = properties.getProperty(OptionalKeys.password.name(), "");
-            this.aliveWriterEnabled = Boolean.parseBoolean(properties.getProperty(OptionalKeys.aliveWriter.name(), "true"));
+            this.uri = properties.getProperty(Keys.URI.propertyName);
+            this.serverTimeout = Integer.parseInt(properties.getProperty(Keys.SERVER_TIMEOUT.propertyName));
+            this.serverRetryTimeout = Integer.parseInt(properties.getProperty(Keys.SERVER_RETRY_TIMEOUT.propertyName));
+            this.userAtDomain = properties.getProperty(Keys.USER.propertyName, "");
+            this.password = properties.getProperty(Keys.PASSWORD.propertyName, "");
+            this.aliveWriterEnabled = Boolean.parseBoolean(properties.getProperty(Keys.ALIVE_WRITER.propertyName, "true"));
         }
 
         public static EquipmentPropertyParser of(Properties properties) throws ConfigurationException {
@@ -94,30 +108,25 @@ public abstract class AddressStringParser {
         }
 
         private static void checkProperties(Properties properties) throws ConfigurationException {
-            ArrayList<String> propertyList = (ArrayList<String>) Collections.list(properties.propertyNames());
-            Set<String> requiredKeySet = Arrays.stream(RequiredKeys.values())
-                    .map(RequiredKeys::name)
-                    .collect(Collectors.toSet());
-            checkForRequiredKeys(propertyList, requiredKeySet);
-
-            Set<String> optionalKeySet = Arrays.stream(OptionalKeys.values())
-                    .map(OptionalKeys::name)
-                    .collect(Collectors.toSet());
-            checkForInvalidKeys(propertyList, requiredKeySet, optionalKeySet);
+            Set<String> propertyList = new HashSet<>(properties.stringPropertyNames());
+            List<Keys> keys = Arrays.asList(Keys.values());
+            checkForRequiredKeys(propertyList, keys);
+            checkForInvalidKeys(propertyList, keys);
         }
 
-        private static void checkForRequiredKeys(ArrayList<String> properties, Set<String> requiredKeySet) throws ConfigurationException {
-            boolean containsRequiredKeys = properties.containsAll(requiredKeySet);
-            if (!containsRequiredKeys) {
+        private static void checkForRequiredKeys(Set<String> properties, List<Keys> keys) throws ConfigurationException {
+            Set<String> requiredPropertyNames = keys.stream()
+                    .filter(key -> key.required)
+                    .map(key -> key.propertyName)
+                    .collect(Collectors.toSet());
+            if (!properties.containsAll(requiredPropertyNames)) {
                 throw new ConfigurationException(ADDRESS_MISSING_PROPERTIES);
             }
         }
 
-        private static void checkForInvalidKeys(ArrayList<String> properties, Set<String> requiredKeySet, Set<String> optionalKeySet) throws ConfigurationException {
-            properties.removeAll(requiredKeySet);
-            properties.removeAll(optionalKeySet);
-            boolean containsInvalidKeys = !properties.isEmpty();
-            if (containsInvalidKeys) {
+        private static void checkForInvalidKeys(Set<String> properties, List<Keys> keys) throws ConfigurationException {
+            properties.removeAll(keys.stream().map(key -> key.propertyName).collect(Collectors.toSet()));
+            if (!properties.isEmpty()) {
                 throw new ConfigurationException(ADDRESS_INVALID_PROPERTIES);
             }
         }
@@ -130,7 +139,7 @@ public abstract class AddressStringParser {
             List<ServerAddress> addresses = new ArrayList<>();
 
             String[] uris = splitBy(this.uri, ",");
-            String[] usersAtDomain = splitBy(this.usersAtDomain, ",");
+            String[] usersAtDomain = splitBy(this.userAtDomain, ",");
             String[] passwords = splitBy(this.password, ",");
 
             for (int i = 0; i < uris.length; i++) {

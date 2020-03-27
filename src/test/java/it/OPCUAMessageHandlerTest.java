@@ -92,11 +92,10 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     @Test
     @UseConf("commfault_ok.xml")
-    public void properConfigShouldSendOKCommfault () throws EqIOException, InterruptedException {
+    public void properConfigShouldSendOKCommfault () throws EqIOException {
         CommfaultSenderCapture capture = new CommfaultSenderCapture(messageSender);
 
         handler.connectToDataSource();
-        Thread.sleep(2000);
 
         capture.verifyCapture(107211L,
                 handler.getEquipmentConfiguration().getName()+":COMM_FAULT",
@@ -116,9 +115,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
         try {
             handler.connectToDataSource();
-            Thread.sleep(2000);
         }
-        catch (OPCCommunicationException | EqIOException | InterruptedException ignored) {}
+        catch (OPCCommunicationException | EqIOException ignored) {}
 
         capture.verifyCapture(107211L,
                 handler.getEquipmentConfiguration().getName()+":COMM_FAULT",

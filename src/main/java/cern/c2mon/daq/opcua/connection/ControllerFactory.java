@@ -9,18 +9,22 @@ import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public abstract class ControllerFactory {
 
     public static Controller getController (IEquipmentConfiguration config) throws ConfigurationException {
-
+        String uaTcpType = "opc.tcp";
         EquipmentAddress equipmentAddress = AddressStringParser.parse(config.getAddress());
-        if (!equipmentAddress.supportsProtocol(Controller.UA_TCP_TYPE)) {
+
+        if (!equipmentAddress.supportsProtocol(uaTcpType)) {
             throw new ConfigurationException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN);
         }
-        EquipmentAddress.ServerAddress address = equipmentAddress.getServerAddressWithProtocol(Controller.UA_TCP_TYPE);
+        EquipmentAddress.ServerAddress address = equipmentAddress.getServerAddressWithProtocol(uaTcpType);
 
         MiloClientWrapper wrapper = new MiloClientWrapperImpl(address.getUriString(), new NoSecurityCertifier());
         TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();

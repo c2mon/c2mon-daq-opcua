@@ -70,7 +70,7 @@ public abstract class ItemDefinition {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        DataTagDefinition that = (DataTagDefinition) o;
+        ItemDefinition that = (ItemDefinition) o;
         return getTagId().equals(that.getTagId());
     }
 

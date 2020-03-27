@@ -9,8 +9,6 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 
 public interface Controller {
 
-    String UA_TCP_TYPE = "opc.tcp";
-
     void initialize() throws ConfigurationException;
     void stop();
     void checkConnection() throws ConfigurationException;

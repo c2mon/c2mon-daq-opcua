@@ -1,8 +1,7 @@
 package cern.c2mon.daq.opcua.downstream;
 
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
+import cern.c2mon.daq.opcua.mapping.Deadband;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -18,23 +17,23 @@ import java.util.function.BiConsumer;
  * Therefore, let's keep things synchronous.
  */
 public interface MiloClientWrapper {
-    void initialize() throws OPCCommunicationException;
-    void connect() throws OPCCommunicationException;
-    void disconnect() throws OPCCommunicationException;
-    boolean isConnected() throws OPCCommunicationException;
+    void initialize();
+    void connect();
+    void disconnect();
+    boolean isConnected();
     void addEndpointSubscriptionListener(EndpointSubscriptionListener listener);
 
 
-    UaSubscription createSubscription(int timeDeadband) throws OPCCommunicationException;
-    void deleteSubscription(UaSubscription subscription) throws OPCCommunicationException;
+    UaSubscription createSubscription(int timeDeadband);
+    void deleteSubscription(UaSubscription subscription);
 
-    void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCCommunicationException;
+    void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription);
     List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription,
                                                                        List<DataTagDefinition> definitions,
                                                                        Deadband deadband,
-                                                                       BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCCommunicationException;
-    List<DataValue> read(NodeId nodeIds)  throws OPCCommunicationException;
+                                                                       BiConsumer<UaMonitoredItem, Integer> itemCreationCallback);
+    List<DataValue> read(NodeId nodeIds) ;
     void browseNode(String indent, NodeId browseRoot);
-    StatusCode write(NodeId nodeId, Object value)  throws OPCCommunicationException;
+    StatusCode write(NodeId nodeId, Object value);
 
 }

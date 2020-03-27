@@ -17,7 +17,6 @@
 package cern.c2mon.daq.opcua.downstream;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -37,13 +36,13 @@ import java.util.Collection;
 public interface Endpoint {
 
     boolean isConnected ();
-    void initialize (boolean connectionLost) throws OPCCommunicationException;
+    void initialize (boolean connectionLost);
     void reset();
     void subscribe (EndpointListener listener);
 
-    void subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException, OPCCommunicationException;
-    void subscribeTag(ISourceDataTag sourceDataTag) throws OPCCommunicationException;
-    void removeDataTag(ISourceDataTag sourceDataTag) throws IllegalArgumentException;
+    void subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException;
+    void subscribeTag(ISourceDataTag sourceDataTag);
+    void removeDataTag(ISourceDataTag sourceDataTag);
 
     void refreshDataTags(Collection<ISourceDataTag> dataTags);
     StatusCode write(final OPCHardwareAddress address, final Object value);

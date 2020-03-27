@@ -102,7 +102,7 @@ public class EquipmentAddress {
         this.aliveWriterEnabled = aliveWriterEnabled;
     }
 
-    public ServerAddress getServerAddressWithProtocol(String protocol) throws IllegalArgumentException {
+    public ServerAddress getServerAddressWithProtocol(String protocol) {
         for(ServerAddress address : addresses) {
             if (address.getProtocol().equals(protocol)) {
                 return address;

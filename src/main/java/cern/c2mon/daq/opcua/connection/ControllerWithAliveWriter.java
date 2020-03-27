@@ -15,6 +15,7 @@ public class ControllerWithAliveWriter extends ControllerImpl {
         this.aliveWriter = aliveWriter;
     }
 
+    @Override
     public void initialize () throws ConfigurationException {
         super.initialize();
         aliveWriter.startWriter();

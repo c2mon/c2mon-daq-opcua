@@ -40,6 +40,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.TimeUnit;
+
 @Slf4j
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
   /**
@@ -92,9 +94,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    */
   @Override
   public synchronized void refreshAllDataTags() {
-    new Thread(() -> {
-      controller.refreshAllDataTags();
-    }).start();
+    new Thread(() -> controller.refreshAllDataTags()).start();
   }
 
   /**
@@ -147,7 +147,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     if (equipmentConfiguration.getAddress().equals(oldEquipmentConfiguration.getAddress())) {
       try {
         disconnectFromDataSource();
-        wait(RESTART_DELAY);
+        TimeUnit.MILLISECONDS.sleep(RESTART_DELAY);
         connectToDataSource();
         changeReport.appendInfo("DAQ restarted.");
       } catch (EqIOException e) {
@@ -162,10 +162,4 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     }
     changeReport.setState(CHANGE_STATE.SUCCESS);
   }
-
-  @Override
-  public void shutdown() throws EqIOException {
-    super.shutdown();
-  }
-
 }

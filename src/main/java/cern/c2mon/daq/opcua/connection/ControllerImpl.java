@@ -20,7 +20,6 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.downstream.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -57,7 +56,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         endpoint.reset();
     }
 
-    public void checkConnection () throws OPCCommunicationException, ConfigurationException {
+    public void checkConnection () throws ConfigurationException {
         if (!endpoint.isConnected()) {
             endpoint.reset();
             initialize(true);
