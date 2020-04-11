@@ -7,14 +7,13 @@
     <groupId>cern.c2mon.daq</groupId>
     <artifactId>c2mon-daq-parent</artifactId>
     <version>1.9.3-SNAPSHOT</version>
+    <relativePath />
   </parent>
 
   <artifactId>c2mon-daq-opcua</artifactId>
   <version>1.9.3-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <description>
-    DAQ module for acquiring data from OPC UA servers. Also supports the older DCOM and SOAP protocols
-  </description>
+  <description>DAQ module for acquiring data from OPC UA servers</description>
 
   <scm>
     <url>https://gitlab.cern.ch/c2mon/c2mon-daq-opcua</url>
@@ -23,18 +22,9 @@
     <tag>HEAD</tag>
   </scm>
 
-
   <properties>
     <guava.version>26.0-jre</guava.version>
   </properties>
-
-  <repositories>
-    <repository>
-      <id>cern-nexus</id>
-      <name>CERN Central Nexus</name>
-      <url>https://nexus.web.cern.ch/nexus/content/groups/public</url>
-    </repository>
-  </repositories>
 
   <dependencies>
     <!-- C2MON dependencies -->
@@ -78,10 +68,12 @@
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
       <version>4.2</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymockclassextension</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
     <groupId>org.testcontainers</groupId>
@@ -93,6 +85,11 @@
 
   <!-- Activate plugin configurations to build a tarball and a docker image -->
   <build>
+    <testResources>
+      <testResource>
+        <directory>${project.basedir}/src/it/resources</directory>
+      </testResource>
+    </testResources>
     <plugins>
       <plugin>
         <groupId>org.sonarsource.scanner.maven</groupId>
@@ -113,27 +110,45 @@
         </configuration>
       </plugin>
       <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>3.0.0-M4</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
-            <version>5.5.2</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
+            <id>integration-test</id>
             <goals>
               <goal>integration-test</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>verify</id>
+            <goals>
               <goal>verify</goal>
             </goals>
           </execution>
         </executions>
-        <configuration>
-        </configuration>
-
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>add-test-source</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>add-test-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/it/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

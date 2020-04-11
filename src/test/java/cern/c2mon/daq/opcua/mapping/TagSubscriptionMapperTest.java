@@ -223,6 +223,4 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
         assertEquals(tag, getTagBy);
     }
-
-
 }
