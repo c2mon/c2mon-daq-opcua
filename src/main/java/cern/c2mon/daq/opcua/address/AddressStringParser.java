@@ -30,12 +30,15 @@ import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.*;
 
+/**
+ * An abstract class providing exclusively static methods to parse an address String for an EquipmentUnit defined
+ * in the equipment configuration.
+ */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public abstract class AddressStringParser {
 
     /**
-     * Creates a properties object which has the properties defined in the
-     * provided address String. Thread-safe.
+     * Parses the address String into an {@link EquipmentAddress} object according to the properties defined in the String.
      *
      * @param address The address String in the form:
      *
@@ -46,7 +49,7 @@ public abstract class AddressStringParser {
      *
      *    The parts in brackets are optional.
      *
-     * @return The EquipmentAddress object with the properties as given in the address String.
+     * @return The {@link EquipmentAddress} object with the properties as given in the address String.
      */
     public static EquipmentAddress parse(final String address) throws ConfigurationException {
         try {

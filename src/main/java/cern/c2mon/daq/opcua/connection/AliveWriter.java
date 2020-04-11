@@ -37,9 +37,10 @@ import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.MISSI
  */
 
 /**
- * Not to be confused with OPC UA's built-in functionality. The built-in keepalive only asserts that the server is
+ * The AliveWriter ensures that the SubEquipments connected to the OPC UA server are still running by writing to them.
+ * Not to be confused with OPC UA's built-in functionality. The built-in "keepalive" only asserts that the server is
  * running. The SubEquipment behind the Server may be down. The AliveWriter checks the state of the SubEquipment by
- * writing a counter to it.
+ * writing a counter to it and validating that the counter values are as expected.
  */
 
 @Slf4j

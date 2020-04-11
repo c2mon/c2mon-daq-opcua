@@ -26,6 +26,9 @@ import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * An Equipment Address
+ */
 @Getter
 public class EquipmentAddress {
 

@@ -42,6 +42,17 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * The OPCUAMessageHandler is the entry point of the application. It is created and called by the C2MON DAQ core and
+ * connects to exactly one OPC UA server. The handler can access pre-defined configurations from the C2MON server which
+ * are provided by the core, subscribe to tags as defined in the configuration, handle equipment configuration updates,
+ * and execute commands received by C2MON. NOTE that currently, the module supports only write commands, not yet
+ * server methods.
+ * The handler can also register listeners for optional events in this class.
+ *
+ * @author Andreas Lang, Nacho Vilches
+ */
+
 @Slf4j
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
   /**
@@ -57,21 +68,23 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
 
   /**
-   * Called when the core wants the OPC module to start up and connect to the
-   * OPC server.
+   * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial
+   * subscriptions of the tags given in the configuration, and subscribes listeners to update C2MON about changes in
+   * equipment state and data values.
    *
-   * @throws EqIOException Throws an {@link EqIOException} if there is an IO
-   *                       problem during startup.
+   * @throws EqIOException Throws an {@link EqIOException} if there is an IO problem during startup.
    */
   @Override
   public synchronized void connectToDataSource() throws EqIOException {
     IEquipmentConfiguration config = getEquipmentConfiguration();
     IEquipmentMessageSender sender = getEquipmentMessageSender();
 
+    log.debug("connect to the OPC UA data source...");
     endpointListener.initialize(sender);
     controller = ControllerFactory.getController(config);
     controller.subscribe(endpointListener);
     controller.initialize();
+    log.debug("connected");
 
     getEquipmentConfigurationHandler().setDataTagChanger((IDataTagChanger) controller);
     getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
@@ -94,7 +107,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    */
   @Override
   public synchronized void refreshAllDataTags() {
-    new Thread(() -> controller.refreshAllDataTags()).start();
+    controller.refreshAllDataTags();
   }
 
   /**
@@ -111,6 +124,13 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     controller.refreshDataTag(sourceDataTag);
   }
 
+  /**
+   * Executes a specific command.
+   * @param value defines the command to run. The id of the value must correspond to the id of a command tag in the
+   *              configuration.
+   * @return null
+   * @throws EqCommandTagException thrown when the command cannot be executed.
+   */
   @Override
   public String runCommand(SourceCommandTagValue value) throws EqCommandTagException {
     Long id = value.getId();
