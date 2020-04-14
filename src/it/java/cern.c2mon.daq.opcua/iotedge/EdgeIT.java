@@ -1,16 +1,16 @@
-package it.iotedge;
+package cern.c2mon.daq.opcua.iotedge;
 
+import cern.c2mon.daq.opcua.ConnectionResolver;
 import cern.c2mon.daq.opcua.downstream.*;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
-import it.ConnectionResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.junit.Assert;

@@ -1,5 +1,6 @@
-package it.simengine;
+package cern.c2mon.daq.opcua.simengine;
 
+import cern.c2mon.daq.opcua.ConnectionResolver;
 import cern.c2mon.daq.opcua.downstream.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
@@ -9,7 +10,6 @@ import cern.c2mon.shared.common.command.SourceCommandTag;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
-import it.ConnectionResolver;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.*;
 import org.testcontainers.containers.GenericContainer;

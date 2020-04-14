@@ -7,7 +7,7 @@
     </SubEquipmentUnits>
 
     <DataTags>
-        <DataTag id="1" name="BE.TEST:TEST1" control="false">
+        <DataTag id="1" name="VMon" control="false">
             <data-type>Float</data-type>
             <DataTagAddress>
                 <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
@@ -22,19 +22,45 @@
                 <guaranteed-delivery>false</guaranteed-delivery>
             </DataTagAddress>
         </DataTag>
-    </DataTags>
-
-    <CommandTags>
-        <CommandTag id="0" name="Power">
-            <mode>2</mode>
-            <data-type>java.lang.Integer</data-type>
+        <DataTag id="2" name="Power_d" control="false">
+            <data-type>Float</data-type>
+            <DataTagAddress>
                 <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
                     <namespace>2</namespace>
                     <opc-item-name>simSY4527.Board00.Chan000.Pw</opc-item-name>
                     <command-pulse-length>0</command-pulse-length>
                     <address-type>STRING</address-type>
-                    <command-type>CLASSIC</command-type>
+                    <command-type>CLASSIC</command-type>#
                 </HardwareAddress>
+                <time-to-live>3600000</time-to-live>
+                <priority>2</priority>
+                <guaranteed-delivery>false</guaranteed-delivery>
+            </DataTagAddress>
+        </DataTag>
+    </DataTags>
+
+    <CommandTags>
+        <CommandTag id="10" name="Power">
+            <mode>2</mode>
+            <data-type>java.lang.Integer</data-type>
+            <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                <namespace>2</namespace>
+                <opc-item-name>simSY4527.Board00.Chan000.Pw</opc-item-name>
+                <command-pulse-length>0</command-pulse-length>
+                <address-type>STRING</address-type>
+                <command-type>CLASSIC</command-type>
+            </HardwareAddress>
+        </CommandTag>
+        <CommandTag id="20" name="V0Set">
+            <mode>2</mode>
+            <data-type>java.lang.Float</data-type>
+            <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                <namespace>2</namespace>
+                <opc-item-name>simSY4527.Board00.Chan000.V0Set</opc-item-name>
+                <command-pulse-length>0</command-pulse-length>
+                <address-type>STRING</address-type>
+                <command-type>CLASSIC</command-type>
+            </HardwareAddress>
         </CommandTag>
     </CommandTags>
 </EquipmentUnit>

@@ -39,6 +39,7 @@ import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
 import java.util.concurrent.TimeUnit;
 
@@ -54,6 +55,7 @@ import java.util.concurrent.TimeUnit;
  */
 
 @Slf4j
+@EnableAutoConfiguration
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
   /**
    * Delay to restart the DAQ after an equipment change.

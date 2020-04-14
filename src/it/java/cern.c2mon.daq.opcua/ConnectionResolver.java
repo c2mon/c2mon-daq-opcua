@@ -1,4 +1,4 @@
-package it;
+package cern.c2mon.daq.opcua;
 
 import lombok.extern.slf4j.Slf4j;
 import org.testcontainers.containers.GenericContainer;
