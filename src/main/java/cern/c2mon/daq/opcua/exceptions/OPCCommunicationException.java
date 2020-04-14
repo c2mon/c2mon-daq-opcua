@@ -46,7 +46,7 @@ public class OPCCommunicationException extends RuntimeException {
 
     }
 
-    public OPCCommunicationException(final Cause type, final Exception e) {
+    public OPCCommunicationException(final Cause type, final Throwable e) {
         super(type.message, e);
     }
 

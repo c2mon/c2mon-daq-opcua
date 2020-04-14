@@ -13,6 +13,8 @@ import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateGenerator;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * Provides the security configurations for an endpoint with Security Policy Basic128Rsa15,
@@ -51,8 +53,8 @@ public class SelfSignedCertifier implements Certifier {
     }
 
     @Override
-    public SecurityPolicy getSecurityPolicy() {
-        return SecurityPolicy.Basic128Rsa15;
+    public Collection<SecurityPolicy> getSecurityPolicy() {
+        return Arrays.asList(SecurityPolicy.Basic128Rsa15, SecurityPolicy.Basic256Sha256);
     }
 
     private IdentityProvider getIdentityProvider() {
@@ -74,7 +76,7 @@ public class SelfSignedCertifier implements Certifier {
                 .setLocalityName("Geneva")
                 .setStateName("Geneva")
                 .setCountryCode("CH")
-                .setApplicationUri("urn:cern:c2mon:daq:opcua");
+                .setApplicationUri(Certifier.getApplicationUri());
 
         try {
             certificate = builder.build();

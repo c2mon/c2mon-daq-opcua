@@ -14,9 +14,10 @@ import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.junit.Assert;
-import org.junit.jupiter.api.*;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
@@ -35,23 +36,22 @@ public class EdgeIT {
     private MiloClientWrapper wrapper;
     private EventPublisher publisher = new EventPublisher();
     private static ConnectionResolver resolver;
-
-    @BeforeAll
-    public static void startServer() {
-        GenericContainer image = new GenericContainer("mcr.microsoft.com/iotedge/opc-plc")
-                .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
-                .withCommand("--unsecuretransport")
-                .withNetworkMode("host");
-
-        resolver = new ConnectionResolver(image);
-        resolver.initialize();
-    }
-
-    @AfterAll
-    public static void stopServer() {
-        resolver.close();
-        resolver = null;
-    }
+//
+//    @BeforeAll
+//    public static void startServer() {
+//        GenericContainer image = new GenericContainer("mcr.microsoft.com/iotedge/opc-plc")
+//                .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
+//                .withCommand("--unsecuretransport")
+//                .withNetworkMode("host");
+//        resolver = new ConnectionResolver(image);
+//        resolver.initialize();
+//    }
+//
+//    @AfterAll
+//    public static void stopServer() {
+//        resolver.close();
+//        resolver = null;
+//    }
 
     @BeforeEach
     public void setupEndpoint() {

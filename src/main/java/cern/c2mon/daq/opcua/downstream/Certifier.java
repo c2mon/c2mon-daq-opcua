@@ -4,6 +4,8 @@ import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 
+import java.util.Collection;
+
 /**
  * Interface for access of the configurations of the various endpoint security policies
  */
@@ -26,5 +28,9 @@ public interface Certifier {
      * The Security Policy is the name for the security algorithm and key length
      * @return the Security Policy of the respective security configuration
      */
-    SecurityPolicy getSecurityPolicy();
+    Collection<SecurityPolicy> getSecurityPolicy();
+
+    static String getApplicationUri() {
+        return "urn:cern:c2mon:daq:opcua";
+    }
 }

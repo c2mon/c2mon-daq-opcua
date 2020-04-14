@@ -22,6 +22,7 @@ import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.eclipse.milo.opcua.stack.core.util.ConversionUtil;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -55,7 +56,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         try {
             client = createClient();
         } catch (Exception e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(CREATE_CLIENT, e);
+            throw asOPCCommunicationException(CREATE_CLIENT, e);
         }
     }
 
@@ -63,7 +64,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         try {
             client = (OpcUaClient) client.connect().get();
         } catch (InterruptedException | ExecutionException e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(CONNECT, e);
+            throw asOPCCommunicationException(CONNECT, e);
         }
     }
 
@@ -78,7 +79,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
                 client = client.disconnect().get();
                 Stack.releaseSharedResources();
             } catch (InterruptedException | ExecutionException e) {
-                throw reinterruptIfNeededAndReturnCommunicationException(DISCONNECT, e);
+                throw asOPCCommunicationException(DISCONNECT, e);
             }
         }
     }
@@ -93,7 +94,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         try {
             return client.getSubscriptionManager().createSubscription(timeDeadband).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(CREATE_SUBSCRIPTION, e);
+            throw asOPCCommunicationException(CREATE_SUBSCRIPTION, e);
         }
     }
 
@@ -101,7 +102,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         try {
             client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(DELETE_SUBSCRIPTION, e);
+            throw asOPCCommunicationException(DELETE_SUBSCRIPTION, e);
         }
     }
 
@@ -128,7 +129,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         try {
             subscription.deleteMonitoredItems(itemsToRemove).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(DELETE_MONITORED_ITEM, e);
+            throw asOPCCommunicationException(DELETE_MONITORED_ITEM, e);
         }
     }
 
@@ -143,7 +144,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         try {
             return subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(SUBSCRIBE_TAGS, e);
+            throw asOPCCommunicationException(SUBSCRIBE_TAGS, e);
         }
     }
 
@@ -151,7 +152,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         try {
             return client.readValues(0, TimestampsToReturn.Both, Collections.singletonList(nodeIds)).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(READ, e);
+            throw asOPCCommunicationException(READ, e);
         }
     }
 
@@ -161,7 +162,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
             // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
             return client.writeValue(nodeId, dataValue).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(WRITE, e);
+            throw asOPCCommunicationException(WRITE, e);
         }
     }
 
@@ -187,7 +188,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
             List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
             return OpcUaClient.create(buildConfiguration(endpointDescriptions));
         } catch (InterruptedException | ExecutionException | UaException e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(CREATE_CLIENT, e);
+            throw asOPCCommunicationException(CREATE_CLIENT, e);
         }
     }
 
@@ -195,14 +196,16 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         EndpointDescription endpoint = chooseEndpoint(endpoints, cert.getSecurityPolicy());
         OpcUaClientConfigBuilder builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english("C2MON OPC UA DAQ Process"))
+                .setApplicationUri(Certifier.getApplicationUri())
                 .setRequestTimeout(uint(5000))
                 .setEndpoint(endpoint);
          return cert.configureSecuritySettings(builder).build();
     }
 
-    private static EndpointDescription chooseEndpoint (List<EndpointDescription> endpoints, SecurityPolicy sp) {
+    private static EndpointDescription chooseEndpoint (List<EndpointDescription> endpoints, Collection<SecurityPolicy> sp) {
+
         return endpoints.stream()
-                .filter(e -> e.getSecurityPolicyUri().equals(sp.getUri()))
+                .filter(e -> sp.stream().anyMatch(s -> s.getUri().equalsIgnoreCase(e.getSecurityPolicyUri())))
                 .findFirst()
                 .orElseThrow(() -> new OPCCommunicationException(ENDPOINTS));
     }
@@ -234,14 +237,18 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
                 rd.getNodeId().local().ifPresent(nodeId -> browseNode(indent + "  ", nodeId));
             }
         } catch (InterruptedException | ExecutionException e) {
-            throw reinterruptIfNeededAndReturnCommunicationException(OPCCommunicationException.Cause.BROWSE, e);
+            throw asOPCCommunicationException(OPCCommunicationException.Cause.BROWSE, e);
         }
     }
 
-    private OPCCommunicationException reinterruptIfNeededAndReturnCommunicationException(OPCCommunicationException.Cause cause, Exception e) {
+    private OPCCommunicationException asOPCCommunicationException(OPCCommunicationException.Cause cause, Exception e) {
+        Throwable t = e;
         if (e instanceof InterruptedException) {
             Thread.currentThread().interrupt();
+            t = e.getCause();
+        } else if (e instanceof ExecutionException) {
+            t = e.getCause();
         }
-        return new OPCCommunicationException(cause, e);
+        return new OPCCommunicationException(cause, t);
     }
 }
