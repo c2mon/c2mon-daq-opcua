@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.downstream.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 

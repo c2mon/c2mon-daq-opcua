@@ -1,6 +1,11 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.downstream.*;
+import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.EndpointImpl;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.security.*;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
@@ -10,6 +15,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
@@ -19,9 +28,10 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
+@SpringBootTest(classes = {AppConfig.class})
+@TestPropertySource(locations = "classpath:opcua.properties")
+@ExtendWith(SpringExtension.class)
 public class SecurityIT {
-
-    private static int PORT = 50000;
 
     private Endpoint endpoint;
     private TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
@@ -37,6 +47,7 @@ public class SecurityIT {
                 .withCommand("--unsecuretransport")
                 .withNetworkMode("host");
         image.start();
+        int PORT = 50000;
         uri = "opc.tcp://" + image.getContainerIpAddress() + ":" + PORT;
     }
 

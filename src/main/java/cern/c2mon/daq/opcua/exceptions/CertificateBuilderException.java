@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 /**
  * A custom wrapper for exceptions occurring during creation of self-signed certificates
  */
-public class CertificateBuilderException extends RuntimeException {
+public class CertificateBuilderException extends Exception {
 
 
     /**

@@ -1,8 +1,12 @@
-package cern.c2mon.daq.opcua.downstream;
+package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.exceptions.CertificateBuilderException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
+import cern.c2mon.daq.opcua.security.Certifier;
+import cern.c2mon.daq.opcua.security.SecurityProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
@@ -20,10 +24,11 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.eclipse.milo.opcua.stack.core.util.ConversionUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
@@ -37,10 +42,16 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Slf4j
 public class MiloClientWrapperImpl implements MiloClientWrapper {
 
+    @Autowired
+    AppConfig config;
+
     private OpcUaClient client;
 
     private final String uri;
     private final Certifier cert;
+
+    @Autowired
+    private SecurityProvider provider;
 
     /**
      * Creates a new instance of a wrapper for the Eclipse milo OPC UA client
@@ -54,19 +65,37 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     public void initialize () {
         try {
-            client = createClient();
-        } catch (Exception e) {
-            throw asOPCCommunicationException(CREATE_CLIENT, e);
-        }
-    }
-
-    public void connect() {
-        try {
+            List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
+            client = createClient(endpointDescriptions);
             client = (OpcUaClient) client.connect().get();
         } catch (InterruptedException | ExecutionException e) {
             throw asOPCCommunicationException(CONNECT, e);
         }
     }
+
+    private OpcUaClient createClient(final List<EndpointDescription> endpoints) {
+        OpcUaClientConfigBuilder builder = OpcUaClientConfig.builder()
+                .setApplicationName(LocalizedText.english(config.getAppName()))
+                .setApplicationUri(config.getApplicationUri())
+                .setRequestTimeout(uint(config.getRequestTimeout()));
+
+        endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel));
+
+        for (EndpointDescription e : endpoints) {
+            try {
+                SecurityPolicy securityPolicy = SecurityPolicy.fromUri(e.getSecurityPolicyUri());
+                MessageSecurityMode mode = e.getSecurityMode();
+                log.info("Attempt authentication with mode {} and algorithm {}. ", mode, securityPolicy);
+                provider.certifyBuilder(builder, securityPolicy, mode);
+                builder.setEndpoint(e);
+                return OpcUaClient.create(builder.build());
+            } catch (UaException | CertificateBuilderException ex) {
+                log.error("Authentication error. Attempting less secure endpoint: ", ex);
+            }
+        }
+        throw new OPCCommunicationException(AUTH_ERROR);
+    }
+
 
     public void addEndpointSubscriptionListener(EndpointSubscriptionListener listener) {
         client.getSubscriptionManager().addSubscriptionListener(listener);
@@ -182,34 +211,6 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue, uint(deadband.getType()), (double) deadband.getValue());
         return ExtensionObject.encode(client.getSerializationContext(), filter);
     }
-
-    private OpcUaClient createClient() {
-        try {
-            List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
-            return OpcUaClient.create(buildConfiguration(endpointDescriptions));
-        } catch (InterruptedException | ExecutionException | UaException e) {
-            throw asOPCCommunicationException(CREATE_CLIENT, e);
-        }
-    }
-
-    private OpcUaClientConfig buildConfiguration(final List<EndpointDescription> endpoints) {
-        EndpointDescription endpoint = chooseEndpoint(endpoints, cert.getSecurityPolicy());
-        OpcUaClientConfigBuilder builder = OpcUaClientConfig.builder()
-                .setApplicationName(LocalizedText.english("C2MON OPC UA DAQ Process"))
-                .setApplicationUri(Certifier.getApplicationUri())
-                .setRequestTimeout(uint(5000))
-                .setEndpoint(endpoint);
-         return cert.configureSecuritySettings(builder).build();
-    }
-
-    private static EndpointDescription chooseEndpoint (List<EndpointDescription> endpoints, Collection<SecurityPolicy> sp) {
-
-        return endpoints.stream()
-                .filter(e -> sp.stream().anyMatch(s -> s.getUri().equalsIgnoreCase(e.getSecurityPolicyUri())))
-                .findFirst()
-                .orElseThrow(() -> new OPCCommunicationException(ENDPOINTS));
-    }
-
     /**
      * Not yet in use - use for subscribing to a group of nodes if deemed useful.
      * @param indent applied as often to a node as the hierarchy is deep

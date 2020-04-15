@@ -40,7 +40,7 @@ public class OPCCommunicationException extends RuntimeException {
         READ("Could not read node values"),
         WRITE("Could not write to nodes"),
         BROWSE("Browsing node failed"),
-        ENDPOINTS("The server does not offer any endpoints matching the configuration");
+        AUTH_ERROR("Could not authenticate to any server endpoint!");
 
         public final String message;
 

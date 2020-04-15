@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.downstream;
+package cern.c2mon.daq.opcua.security;
 
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;

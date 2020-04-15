@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.downstream.EndpointSubscriptionListener;
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import lombok.Getter;
@@ -30,11 +30,6 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
 
     @Override
     public void initialize () {
-    }
-
-    @Override
-    public void connect () {
-
     }
 
     @Override

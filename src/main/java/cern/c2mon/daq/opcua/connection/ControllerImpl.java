@@ -18,7 +18,6 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
-import cern.c2mon.daq.opcua.downstream.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.shared.common.command.ISourceCommandTag;

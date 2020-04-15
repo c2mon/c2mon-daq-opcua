@@ -1,7 +1,11 @@
 package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.ConnectionResolver;
-import cern.c2mon.daq.opcua.downstream.*;
+import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.EndpointImpl;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.security.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;

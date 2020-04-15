@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.downstream;
+package cern.c2mon.daq.opcua.connection;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

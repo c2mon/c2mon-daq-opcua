@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.downstream.EndpointSubscriptionListener;
+import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
@@ -27,13 +27,6 @@ public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
     public void initialize () {
         throw new OPCCommunicationException(OPCCommunicationException.Cause.CREATE_CLIENT);
     }
-
-    @Override
-    public void connect () {
-        throw new OPCCommunicationException(OPCCommunicationException.Cause.CONNECT);
-
-    }
-
     @Override
     public void addEndpointSubscriptionListener (EndpointSubscriptionListener listener) {
 

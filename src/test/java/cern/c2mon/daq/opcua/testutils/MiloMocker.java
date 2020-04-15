@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.downstream.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.easymock.Capture;

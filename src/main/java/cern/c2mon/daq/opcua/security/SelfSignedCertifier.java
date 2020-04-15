@@ -1,20 +1,17 @@
-package cern.c2mon.daq.opcua.downstream;
+package cern.c2mon.daq.opcua.security;
 
+import cern.c2mon.daq.opcua.configuration.AppConfig;
 import cern.c2mon.daq.opcua.exceptions.CertificateBuilderException;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
-import org.eclipse.milo.opcua.sdk.client.api.identity.AnonymousProvider;
-import org.eclipse.milo.opcua.sdk.client.api.identity.IdentityProvider;
-import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateBuilder;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateGenerator;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.Collection;
 
 /**
  * Provides the security configurations for an endpoint with Security Policy Basic128Rsa15,
@@ -23,45 +20,40 @@ import java.util.Collection;
 @Slf4j
 public class SelfSignedCertifier implements Certifier {
 
+    @Setter
+    @Autowired
+    AppConfig config;
+
     protected KeyPair keyPair;
     protected X509Certificate certificate;
 
     @Override
-    public OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder){
-        return builder.setCertificate(getClientCertificate())
-                .setKeyPair(getKeyPair())
-                .setIdentityProvider(getIdentityProvider());
+    public OpcUaClientConfigBuilder configureSecuritySettings(OpcUaClientConfigBuilder builder) {
+        try {
+            return builder.setCertificate(getClientCertificate())
+                    .setKeyPair(getKeyPair());
+        } catch (CertificateBuilderException e) {
+            log.error("Continue without security");
+        }
+        return builder;
     }
 
-    private X509Certificate getClientCertificate() {
+    private X509Certificate getClientCertificate() throws CertificateBuilderException {
         if (certificate == null) {
             generateSelfSignedCertificate();
         }
         return certificate;
     }
 
-    private KeyPair getKeyPair() {
+    private KeyPair getKeyPair() throws CertificateBuilderException {
         if (keyPair == null) {
             generateSelfSignedCertificate();
         }
         return keyPair;
     }
 
-    @Override
-    public MessageSecurityMode getMessageSecurityMode() {
-        return MessageSecurityMode.SignAndEncrypt;
-    }
 
-    @Override
-    public Collection<SecurityPolicy> getSecurityPolicy() {
-        return Arrays.asList(SecurityPolicy.Basic128Rsa15, SecurityPolicy.Basic256Sha256);
-    }
-
-    private IdentityProvider getIdentityProvider() {
-        return new AnonymousProvider();
-    }
-
-    protected void generateSelfSignedCertificate() {
+    protected void generateSelfSignedCertificate() throws CertificateBuilderException {
         //Generate self-signed certificate
         try {
             keyPair = SelfSignedCertificateGenerator.generateRsaKeyPair(2048);
@@ -70,14 +62,13 @@ public class SelfSignedCertifier implements Certifier {
         }
 
         SelfSignedCertificateBuilder builder = new SelfSignedCertificateBuilder(keyPair)
-                .setCommonName("C2MON DAQ OPCUA")
-                .setOrganization("CERN")
-                .setOrganizationalUnit("C2MON team")
-                .setLocalityName("Geneva")
-                .setStateName("Geneva")
-                .setCountryCode("CH")
-                .setApplicationUri(Certifier.getApplicationUri());
-
+                .setCommonName(config.getAppName())
+                .setOrganization(config.getOrganization())
+                .setOrganizationalUnit(config.getOrganizationalUnit())
+                .setLocalityName(config.getLocalityName())
+                .setStateName(config.getStateName())
+                .setCountryCode(config.getCountryCode())
+                .setApplicationUri(config.getApplicationUri());
         try {
             certificate = builder.build();
         } catch (Exception e) {

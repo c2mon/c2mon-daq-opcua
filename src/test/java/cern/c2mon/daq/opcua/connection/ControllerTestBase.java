@@ -1,7 +1,5 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.downstream.Endpoint;
-import cern.c2mon.daq.opcua.downstream.EndpointImpl;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;

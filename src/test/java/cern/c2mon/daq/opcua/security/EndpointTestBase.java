@@ -1,5 +1,7 @@
-package cern.c2mon.daq.opcua.downstream;
+package cern.c2mon.daq.opcua.security;
 
+import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.EndpointImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;

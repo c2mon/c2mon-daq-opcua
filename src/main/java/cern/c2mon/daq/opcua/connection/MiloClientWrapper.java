@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.downstream;
+package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
@@ -18,7 +18,6 @@ import java.util.function.BiConsumer;
  */
 public interface MiloClientWrapper {
     void initialize();
-    void connect();
     void disconnect();
     boolean isConnected();
     void addEndpointSubscriptionListener(EndpointSubscriptionListener listener);
