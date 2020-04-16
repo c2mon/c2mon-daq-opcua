@@ -64,7 +64,8 @@ public class EdgeIT {
     @BeforeEach
     public void setupEndpoint() {
         future = listenForServerResponse();
-        wrapper = new MiloClientWrapperImpl(resolver.getURI(PORT));
+        wrapper = new MiloClientWrapperImpl();
+        wrapper.initialize(resolver.getURI(PORT));
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
@@ -99,7 +100,8 @@ public class EdgeIT {
 
     @Test
     public void connectToBadServer() {
-        wrapper = new MiloClientWrapperImpl("opc.tcp://somehost/somepath");
+        wrapper = new MiloClientWrapperImpl();
+        wrapper.initialize("opc.tcp://somehost/somepath");
         wrapper.setProvider(new SecurityProvider());
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(false));

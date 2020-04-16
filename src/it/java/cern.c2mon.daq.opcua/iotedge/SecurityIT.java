@@ -67,6 +67,8 @@ public class SecurityIT {
                 .stateName("Geneva")
                 .countryCode("CH")
                 .build();
+        AuthConfig auth = AuthConfig.builder().build();
+        config.setAuth(auth);
     }
 
     @AfterEach
@@ -76,7 +78,8 @@ public class SecurityIT {
     }
 
     private void initializeEndpoint() {
-        MiloClientWrapper wrapper = new MiloClientWrapperImpl(uri);
+        MiloClientWrapper wrapper = new MiloClientWrapperImpl();
+        wrapper.initialize(uri);
         p.setConfig(config);
         wrapper.setProvider(p);
         wrapper.setConfig(config);
@@ -86,10 +89,7 @@ public class SecurityIT {
 
     @Test
     public void connectWithoutCertificate() {
-        AuthConfig auth = AuthConfig.builder()
-                .communicateWithoutSecurity(true)
-                .build();
-        config.setAuth(auth);
+        config.getAuth().setCommunicateWithoutSecurity(true);
         initializeEndpoint();
         assertDoesNotThrow(()-> endpoint.isConnected());
     }

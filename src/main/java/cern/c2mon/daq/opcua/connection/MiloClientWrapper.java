@@ -19,6 +19,7 @@ import java.util.function.BiConsumer;
  * Therefore, let's keep things synchronous.
  */
 public interface MiloClientWrapper {
+    void initialize(String uri);
     void initialize();
     void disconnect();
     boolean isConnected();

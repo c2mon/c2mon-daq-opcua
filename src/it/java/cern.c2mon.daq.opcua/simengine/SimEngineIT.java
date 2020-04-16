@@ -72,8 +72,10 @@ public class SimEngineIT {
                 .build();
         p = new SecurityProvider();
         p.setConfig(config);
-        pilotWrapper = new MiloClientWrapperImpl(resolver.getURI(PILOT_PORT));
-        simEngineWrapper = new MiloClientWrapperImpl(resolver.getURI(SIMENGINE_PORT));
+        pilotWrapper = new MiloClientWrapperImpl();
+        pilotWrapper.initialize(resolver.getURI(PILOT_PORT));
+        simEngineWrapper = new MiloClientWrapperImpl();
+        simEngineWrapper.initialize(resolver.getURI(SIMENGINE_PORT));
 
         pilotWrapper.setConfig(config);
         simEngineWrapper.setConfig(config);

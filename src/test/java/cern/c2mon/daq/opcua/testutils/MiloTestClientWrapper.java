@@ -31,6 +31,11 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
     boolean returnGoodStatusCodes = true;
 
     @Override
+    public void initialize(String uri) {
+
+    }
+
+    @Override
     public void initialize () {
     }
 

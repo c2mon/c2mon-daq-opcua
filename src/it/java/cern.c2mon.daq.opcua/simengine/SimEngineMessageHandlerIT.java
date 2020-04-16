@@ -5,6 +5,8 @@ import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.ConnectionResolver;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.configuration.AuthConfig;
+import cern.c2mon.daq.opcua.connection.ControllerProxy;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.security.SecurityProvider;
@@ -62,6 +64,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     @BeforeClass
     public static void startServer() {
+        AuthConfig auth = AuthConfig.builder().build();
 
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")
@@ -72,6 +75,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
+                .auth(auth)
                 .build();
 
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
@@ -97,10 +101,13 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
 
-        MiloClientWrapper wrapper = handler.getController().getEndpoint().getWrapper();
-        wrapper.setConfig(config);
+        ControllerProxy proxy = new ControllerProxy();
+        handler.setProxy(proxy);
+
+        MiloClientWrapper wrapper = proxy.getController(equipmentConfiguration).getEndpoint().getWrapper();
         p.setConfig(config);
         wrapper.setProvider(p);
+        wrapper.setConfig(config);
     }
 
     @After

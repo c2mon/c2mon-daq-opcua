@@ -62,6 +62,7 @@ public class SecurityProvider {
             log.info("Not using security. Config Security Policy {}, MessageSecurityMode {}. ", securityPolicy, securityMode);
             return;
         }
+
         KeyStore keyStore = loadKeyStore();
         if (keyStore != null && isCertificatePresent()) {
             try {

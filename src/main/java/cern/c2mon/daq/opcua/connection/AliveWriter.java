@@ -21,6 +21,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Timer;
@@ -43,6 +44,7 @@ import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.MISSI
  */
 
 @Slf4j
+@RequiredArgsConstructor
 public class AliveWriter extends TimerTask {
   /**
    * The timer used to schedule the writing.
@@ -55,11 +57,11 @@ public class AliveWriter extends TimerTask {
   /**
    * The time between two write operations.
    */
-  private final long writeTime;
+  private long writeTime;
   /**
    * The tag which represents the target to write to.
    */
-  private final ISourceDataTag targetTag;
+  private ISourceDataTag targetTag;
   /**
    * The value to write (used like a counter).
    */
@@ -68,16 +70,13 @@ public class AliveWriter extends TimerTask {
   /**
    * Creates a new alive writer.
    *
-   * @param endpoint   The endpoint to write to.
    * @param writeTime  The time between two write operations.
    * @param targetTag  The tag which represents the value to write to.
    */
-  public AliveWriter(final Endpoint endpoint, final long writeTime, final ISourceDataTag targetTag) throws ConfigurationException {
+  public void initialize(final long writeTime, final ISourceDataTag targetTag) throws ConfigurationException {
     if (targetTag == null) {
       throw new ConfigurationException(MISSING_TARGET_TAG);
     }
-
-    this.endpoint = endpoint;
     this.writeTime = writeTime;
     this.targetTag = targetTag;
   }

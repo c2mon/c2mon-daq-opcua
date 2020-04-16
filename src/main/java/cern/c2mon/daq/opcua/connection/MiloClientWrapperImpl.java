@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.security.SecurityProvider;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
@@ -40,6 +41,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
  * The implementation of custom wrapper for the OPC UA milo client
  */
 @Slf4j
+@NoArgsConstructor
 public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     @Autowired
@@ -48,7 +50,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     private OpcUaClient client;
 
-    private final String uri;
+    private String uri;
 
     @Autowired
     @Setter
@@ -58,7 +60,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
      * Creates a new instance of a wrapper for the Eclipse milo OPC UA client
      * @param uri the endpoint uri that the client will connect to
      */
-    public MiloClientWrapperImpl(String uri) {
+    public void initialize(String uri) {
         this.uri = uri;
     }
 
@@ -66,19 +68,26 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         try {
             List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
             client = createClient(endpointDescriptions);
-            client = (OpcUaClient) client.connect().get();
         } catch (InterruptedException | ExecutionException e) {
             throw asOPCCommunicationException(CONNECT, e);
         }
     }
 
-    private OpcUaClient createClient(final List<EndpointDescription> endpoints) {
+    private OpcUaClient createClient(List<EndpointDescription> endpoints) throws InterruptedException{
         OpcUaClientConfigBuilder builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english(config.getAppName()))
                 .setApplicationUri(config.getApplicationUri())
                 .setRequestTimeout(uint(config.getRequestTimeout()));
 
-        endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel));
+        if (config.getAuth().isCommunicateWithoutSecurity()) {
+            log.info("Configured not to use security");
+            endpoints = endpoints.stream()
+                    .filter(e -> e.getSecurityLevel().intValue() == 0)
+                    .collect(Collectors.toList());
+        }
+        else {
+            endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
+        }
 
         for (EndpointDescription e : endpoints) {
             try {
@@ -87,8 +96,9 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
                 log.info("Attempt authentication with mode {} and algorithm {}. ", mode, securityPolicy);
                 provider.certifyBuilder(builder, securityPolicy, mode);
                 builder.setEndpoint(e);
-                return OpcUaClient.create(builder.build());
-            } catch (UaException | CertificateBuilderException ex) {
+                OpcUaClient client = OpcUaClient.create(builder.build());
+                return (OpcUaClient) client.connect().get();
+            } catch (UaException | CertificateBuilderException | ExecutionException ex) {
                 log.error("Authentication error. Attempting less secure endpoint: ", ex);
             }
         }

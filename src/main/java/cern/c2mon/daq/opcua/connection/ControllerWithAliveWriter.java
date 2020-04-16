@@ -1,16 +1,13 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 
 public class ControllerWithAliveWriter extends ControllerImpl {
 
-    AliveWriter aliveWriter;
+    final AliveWriter aliveWriter;
 
-    public ControllerWithAliveWriter (Endpoint endpoint,
-                                      IEquipmentConfiguration config,
-                                      AliveWriter aliveWriter) {
-        super(endpoint, config);
+    public ControllerWithAliveWriter (Endpoint endpoint, AliveWriter aliveWriter) {
+        super(endpoint);
         this.aliveWriter = aliveWriter;
     }
 

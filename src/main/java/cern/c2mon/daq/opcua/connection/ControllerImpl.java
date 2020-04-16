@@ -25,8 +25,9 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
@@ -35,13 +36,18 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ControllerImpl implements Controller, IDataTagChanger {
 
     @Getter
-    private Endpoint endpoint;
+    private final Endpoint endpoint;
+    @Setter
     private IEquipmentConfiguration config;
 
+    public void initialize (IEquipmentConfiguration config) throws ConfigurationException {
+        this.config = config;
+        initialize(false);
+    }
     public void initialize () throws ConfigurationException {
         initialize(false);
     }

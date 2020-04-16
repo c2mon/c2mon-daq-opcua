@@ -60,7 +60,8 @@ public abstract class ControllerTestBase {
         MiloTestClientWrapper wrapper = new MiloTestClientWrapper();
         mapper = new TagSubscriptionMapperImpl();
         Endpoint endpoint = new EndpointImpl(wrapper, mapper, publisher);
-        controller = new ControllerImpl(endpoint, config);
+        controller = new ControllerImpl(endpoint);
+        controller.setConfig(config);
 
         mocker = new MiloMocker(wrapper, mapper);
         mocker.mockStatusCode(StatusCode.GOOD, sourceTags.values());
