@@ -61,11 +61,11 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
 
     @Test
     public void writeBadClientShouldThrowException() {
-        endpoint.setClient(new MiloExceptionTestClientWrapper());
+        endpoint.setWrapper(new MiloExceptionTestClientWrapper());
         assertThrows(OPCCommunicationException.class,
                 () -> endpoint.executeCommand(tag, value),
                 OPCCommunicationException.Cause.WRITE.message);
         //clean up
-        endpoint.setClient(client);
+        endpoint.setWrapper(client);
     }
 }

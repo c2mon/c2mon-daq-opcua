@@ -1,6 +1,8 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.ConnectionResolver;
+import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.configuration.AuthConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointImpl;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
@@ -40,6 +42,9 @@ public class EdgeIT {
     private EventPublisher publisher = new EventPublisher();
     private static ConnectionResolver resolver;
 
+    SecurityProvider p;
+    AppConfig config;
+
     @BeforeAll
     public static void startServer() {
         GenericContainer image = new GenericContainer<>("mcr.microsoft.com/iotedge/opc-plc")
@@ -59,7 +64,22 @@ public class EdgeIT {
     @BeforeEach
     public void setupEndpoint() {
         future = listenForServerResponse();
-        wrapper = new MiloClientWrapperImpl(resolver.getURI(PORT), new NoSecurityCertifier());
+        wrapper = new MiloClientWrapperImpl(resolver.getURI(PORT));
+        config = AppConfig.builder()
+                .appName("c2mon-opcua-daq")
+                .applicationUri("urn:localhost:UA:C2MON")
+                .productUri("urn:cern:ch:UA:C2MON")
+                .organization("CERN")
+                .organizationalUnit("C2MON team")
+                .localityName("Geneva")
+                .stateName("Geneva")
+                .countryCode("CH")
+                .auth(AuthConfig.builder().communicateWithoutSecurity(true).build())
+                .build();
+        p = new SecurityProvider();
+        p.setConfig(config);
+        wrapper.setProvider(p);
+        wrapper.setConfig(config);
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         endpoint.initialize(false);
         log.info("Client ready");
@@ -79,7 +99,8 @@ public class EdgeIT {
 
     @Test
     public void connectToBadServer() {
-        wrapper = new MiloClientWrapperImpl("opc.tcp://somehost/somepath", new NoSecurityCertifier());
+        wrapper = new MiloClientWrapperImpl("opc.tcp://somehost/somepath");
+        wrapper.setProvider(new SecurityProvider());
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(false));
     }

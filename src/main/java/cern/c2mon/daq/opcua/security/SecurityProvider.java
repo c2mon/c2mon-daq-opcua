@@ -13,7 +13,6 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateBuilder;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -57,17 +56,6 @@ public class SecurityProvider {
     X509Certificate certificate;
     KeyStore keyStore;
 
-    // @Autowired
-    // CertificateLoader;
-
-    @Qualifier("SelfSignedCertifier")
-    @Autowired
-    Certifier selfSigned;
-
-    @Qualifier("NoSecurityCertifier")
-    @Autowired
-    Certifier noSecurity;
-
     public void certifyBuilder(OpcUaClientConfigBuilder builder, SecurityPolicy securityPolicy, MessageSecurityMode securityMode) throws CertificateBuilderException {
         auth = config.getAuth();
         if (securityPolicy == SecurityPolicy.None || securityMode == MessageSecurityMode.None) {
@@ -90,7 +78,7 @@ public class SecurityProvider {
         configureSecuritySettings(builder);
     }
 
-    public void generateSelfSignedCertificateAndPutInKeyStore() throws CertificateException, NoSuchAlgorithmException, IOException, KeyStoreException, CertificateBuilderException {
+    private void generateSelfSignedCertificateAndPutInKeyStore() throws CertificateException, NoSuchAlgorithmException, IOException, KeyStoreException, CertificateBuilderException {
         keyStore.load(null, auth.getKeyStorePassword().toCharArray());
         generateSelfSignedCertificate();
         keyStore.setKeyEntry(auth.getKeyStoreAlias(), keyPair.getPrivate(),
@@ -99,7 +87,7 @@ public class SecurityProvider {
         keyStore.store(out, auth.getKeyStorePassword().toCharArray());
     }
 
-    public KeyStore loadKeyStore() {
+    private KeyStore loadKeyStore() {
         if (keyStore == null && auth != null && auth.getKeyStoreType() != null) {
             try {
                 keyStore = KeyStore.getInstance(auth.getKeyStoreType());
@@ -110,7 +98,7 @@ public class SecurityProvider {
         return keyStore;
     }
 
-    public void configureSecuritySettings(OpcUaClientConfigBuilder builder){
+    private void configureSecuritySettings(OpcUaClientConfigBuilder builder){
         builder.setCertificate(certificate)
                 .setKeyPair(keyPair);
     }

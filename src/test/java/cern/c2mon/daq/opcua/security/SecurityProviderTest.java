@@ -45,12 +45,7 @@ class SecurityProviderTest {
                 .build();
         config.setAuth(auth);
 
-        SelfSignedCertifier ssc = new SelfSignedCertifier();
-        ssc.setConfig(config);
         p.setConfig(config);
-
-        p.setSelfSigned(ssc);
-        p.setNoSecurity(new NoSecurityCertifier());
 
         modes = new ArrayList<>(Arrays.asList(MessageSecurityMode.SignAndEncrypt, MessageSecurityMode.Sign, MessageSecurityMode.None));
         policies = new ArrayList<>(Arrays.asList(SecurityPolicy.Basic256Sha256, SecurityPolicy.Basic128Rsa15, SecurityPolicy.Basic256, SecurityPolicy.None));

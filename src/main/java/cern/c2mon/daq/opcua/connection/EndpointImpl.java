@@ -49,7 +49,8 @@ import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.*;
 public class EndpointImpl implements Endpoint {
 
     @Setter
-    private MiloClientWrapper client;
+    @Getter
+    private MiloClientWrapper wrapper;
     private TagSubscriptionMapper mapper;
 
     @Getter
@@ -60,7 +61,7 @@ public class EndpointImpl implements Endpoint {
             publisher.notifyEquipmentState(CONNECTION_LOST);
         }
         try {
-            client.initialize();
+            wrapper.initialize();
             publisher.notifyEquipmentState(OK);
         } catch (OPCCommunicationException e) {
             publisher.notifyEquipmentState(CONNECTION_FAILED);
@@ -75,7 +76,7 @@ public class EndpointImpl implements Endpoint {
 
     @Override
     public void recreateSubscription (UaSubscription subscription) {
-        client.deleteSubscription(subscription);
+        wrapper.deleteSubscription(subscription);
         SubscriptionGroup group = mapper.getGroup(subscription);
         List<DataTagDefinition> definitions = group.getDefinitions();
         group.reset();
@@ -100,10 +101,10 @@ public class EndpointImpl implements Endpoint {
 
     private void subscribeToGroup (SubscriptionGroup group, List<DataTagDefinition> definitions) {
         UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription()
-                : client.createSubscription(group.getDeadband().getTime());
+                : wrapper.createSubscription(group.getDeadband().getTime());
         group.setSubscription(subscription);
 
-        List<UaMonitoredItem> monitoredItems = client.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback);
+        List<UaMonitoredItem> monitoredItems = wrapper.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback);
         completeSubscription(monitoredItems);
     }
 
@@ -118,12 +119,12 @@ public class EndpointImpl implements Endpoint {
         UaSubscription subscription = group.getSubscription();
         UInteger clientHandle = mapper.getDefinition(dataTag).getClientHandle();
 
-        client.deleteItemFromSubscription(clientHandle, subscription);
+        wrapper.deleteItemFromSubscription(clientHandle, subscription);
         mapper.removeTagFromGroup(dataTag);
         
         if (group.size() < 1) {
             group.reset();
-            client.deleteSubscription(subscription);
+            wrapper.deleteSubscription(subscription);
         }
     }
 
@@ -131,14 +132,14 @@ public class EndpointImpl implements Endpoint {
     public synchronized void refreshDataTags (final Collection<ISourceDataTag> dataTags) {
         for (ISourceDataTag dataTag : dataTags) {
             NodeId address = mapper.getDefinition(dataTag).getAddress();
-            client.read(address).forEach(value -> publisher.notifyTagEvent(value.getStatusCode(), dataTag, value));
+            wrapper.read(address).forEach(value -> publisher.notifyTagEvent(value.getStatusCode(), dataTag, value));
         }
     }
 
     @Override
     public synchronized void reset () {
         mapper.clear();
-        client.disconnect();
+        wrapper.disconnect();
     }
 
     @Override
@@ -159,7 +160,7 @@ public class EndpointImpl implements Endpoint {
                 if (pulseLength > 0) {
                     log.debug("Not yet implemented");
                 } else {
-                    StatusCode write = client.write(def.getAddress(), value);
+                    StatusCode write = wrapper.write(def.getAddress(), value);
                     publisher.notifyWriteEvent(write, tag);
                 }
                 break;
@@ -171,12 +172,12 @@ public class EndpointImpl implements Endpoint {
     @Override
     public synchronized StatusCode write (final OPCHardwareAddress address, final Object value) {
         NodeId nodeId = ItemDefinition.toNodeId(address);
-        return client.write(nodeId, value);
+        return wrapper.write(nodeId, value);
     }
 
     @Override
     public synchronized boolean isConnected () {
-        return client.isConnected();
+        return wrapper.isConnected();
     }
 
     private void completeSubscription (List<UaMonitoredItem> monitoredItems) {

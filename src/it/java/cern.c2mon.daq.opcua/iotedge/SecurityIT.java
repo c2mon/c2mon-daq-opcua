@@ -1,20 +1,18 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.configuration.AuthConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointImpl;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
-import cern.c2mon.daq.opcua.security.*;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.security.SecurityProvider;
+import cern.c2mon.daq.opcua.security.SelfSignedCertifier;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
@@ -34,11 +32,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class SecurityIT {
 
     private Endpoint endpoint;
-    private TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
-    private MiloClientWrapper wrapper;
-    private EventPublisher publisher = new EventPublisher();
     private static GenericContainer image;
     private static String uri;
+
+    SecurityProvider p = new SecurityProvider();
+    AppConfig config;
 
     @BeforeAll
     public static void startServer() {
@@ -57,21 +55,42 @@ public class SecurityIT {
         image.close();
     }
 
+    @BeforeEach
+    public void setUp() {
+        config = AppConfig.builder()
+                .appName("c2mon-opcua-daq")
+                .applicationUri("urn:localhost:UA:C2MON")
+                .productUri("urn:cern:ch:UA:C2MON")
+                .organization("CERN")
+                .organizationalUnit("C2MON team")
+                .localityName("Geneva")
+                .stateName("Geneva")
+                .countryCode("CH")
+                .build();
+    }
+
     @AfterEach
     public void cleanUp() {
         endpoint.reset();
         endpoint = null;
     }
 
-    private void initializeEndpointWithCertificate(Certifier certifier) {
-        wrapper = new MiloClientWrapperImpl(uri, certifier);
-        endpoint = new EndpointImpl(wrapper, mapper, publisher);
+    private void initializeEndpoint() {
+        MiloClientWrapper wrapper = new MiloClientWrapperImpl(uri);
+        p.setConfig(config);
+        wrapper.setProvider(p);
+        wrapper.setConfig(config);
+        endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
         endpoint.initialize(false);
     }
 
     @Test
     public void connectWithoutCertificate() {
-        initializeEndpointWithCertificate(new NoSecurityCertifier());
+        AuthConfig auth = AuthConfig.builder()
+                .communicateWithoutSecurity(true)
+                .build();
+        config.setAuth(auth);
+        initializeEndpoint();
         assertDoesNotThrow(()-> endpoint.isConnected());
     }
 
@@ -79,7 +98,7 @@ public class SecurityIT {
     public void connectWithSelfSignedCertificateShouldThrowAuthenticationError() {
         //certificate should be rejected
         assertThrows(OPCCommunicationException.class,
-                ()->initializeEndpointWithCertificate(new SelfSignedCertifier()),
+                this::initializeEndpoint,
                 "Certificate is not trusted.");
     }
     @Test
@@ -87,13 +106,13 @@ public class SecurityIT {
         SelfSignedCertifier cert = new SelfSignedCertifier();
         //should be rejected
         assertThrows(OPCCommunicationException.class,
-                ()->initializeEndpointWithCertificate(cert),
+                this::initializeEndpoint,
                 "Certificate is not trusted.");
 
         //move certificate to trusted
         image.execInContainer("mkdir", "pki/trusted");
         image.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
 
-        assertDoesNotThrow(()->initializeEndpointWithCertificate(cert));
+        assertDoesNotThrow(this::initializeEndpoint);
     }
 }

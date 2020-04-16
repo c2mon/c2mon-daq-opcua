@@ -5,8 +5,8 @@ import cern.c2mon.daq.opcua.exceptions.CertificateBuilderException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
-import cern.c2mon.daq.opcua.security.Certifier;
 import cern.c2mon.daq.opcua.security.SecurityProvider;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
@@ -26,12 +26,12 @@ import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.eclipse.milo.opcua.stack.core.util.ConversionUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
@@ -43,24 +43,23 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     @Autowired
+    @Setter
     AppConfig config;
 
     private OpcUaClient client;
 
     private final String uri;
-    private final Certifier cert;
 
     @Autowired
+    @Setter
     private SecurityProvider provider;
 
     /**
      * Creates a new instance of a wrapper for the Eclipse milo OPC UA client
      * @param uri the endpoint uri that the client will connect to
-     * @param cert the certifier policy that the client and endpoint will adhere to
      */
-    public MiloClientWrapperImpl(String uri, Certifier cert) {
+    public MiloClientWrapperImpl(String uri) {
         this.uri = uri;
-        this.cert = cert;
     }
 
     public void initialize () {
@@ -148,13 +147,11 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         }
     }
 
+    @Override
     public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
-        List<UaMonitoredItem> itemsToRemove = new ArrayList<>();
-        for (UaMonitoredItem uaMonitoredItem : subscription.getMonitoredItems()) {
-            if (clientHandle.equals(uaMonitoredItem.getClientHandle())) {
-                itemsToRemove.add(uaMonitoredItem);
-            }
-        }
+        List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
+                .filter(i -> clientHandle.equals(i.getClientHandle()))
+                .collect(Collectors.toList());
         try {
             subscription.deleteMonitoredItems(itemsToRemove).get();
         } catch (InterruptedException | ExecutionException e) {
@@ -166,10 +163,9 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
                                                                               List<DataTagDefinition> definitions,
                                                                               Deadband deadband,
                                                                               BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
-        List<MonitoredItemCreateRequest> requests = new ArrayList<>();
-        for(DataTagDefinition definition : definitions) {
-            requests.add(createItemSubscriptionRequest(definition, deadband));
-        }
+        List<MonitoredItemCreateRequest> requests =definitions.stream()
+                .map(d -> createItemSubscriptionRequest(d, deadband))
+                .collect(Collectors.toList());
         try {
             return subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback).get();
         } catch (InterruptedException | ExecutionException e) {
@@ -199,10 +195,8 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         // What is a sensible value for the queue size? Must be large enough to hold all notifications queued in between publishing cycles.
         // Currently, we are only keeping the newest value.
         int queueSize = 0;
-
         MonitoringParameters mp = new MonitoringParameters(definition.getClientHandle(), (double) deadband.getTime(),
                 getFilter(deadband), uint(queueSize), true);
-
         ReadValueId id = new ReadValueId(definition.getAddress(), AttributeId.Value.uid(),null, QualifiedName.NULL_VALUE);
         return new MonitoredItemCreateRequest(id, MonitoringMode.Reporting, mp);
     }

@@ -39,6 +39,7 @@ import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
 import java.util.concurrent.TimeUnit;
@@ -63,6 +64,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   private static final long RESTART_DELAY = 2000L;
 
   @Getter
+  @Autowired
   private Controller controller;
 
   @Setter

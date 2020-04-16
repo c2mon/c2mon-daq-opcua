@@ -8,6 +8,8 @@ import lombok.Setter;
 @Setter
 @Builder
 public class AuthConfig {
+    private boolean communicateWithoutSecurity = false;
+
     private String keyStoreType = "PKCS12";
     private String keyStorePath;
     private String keyStorePassword;

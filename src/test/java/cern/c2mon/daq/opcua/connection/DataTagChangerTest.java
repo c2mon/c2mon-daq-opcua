@@ -42,7 +42,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @Test
     public void invalidOnAddDataTagShouldReportFail () {
-        ((Controller) tagChanger).getEndpoint().setClient(new MiloExceptionTestClientWrapper());
+        ((Controller) tagChanger).getEndpoint().setWrapper(new MiloExceptionTestClientWrapper());
         tagChanger.onAddDataTag(tag, changeReport);
         Assertions.assertEquals(FAIL, changeReport.getState());
     }

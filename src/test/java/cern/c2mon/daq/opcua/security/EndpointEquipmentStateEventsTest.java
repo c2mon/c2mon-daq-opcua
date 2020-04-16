@@ -57,14 +57,14 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
 
     @Test
     public void errorOnInitializeShouldSendFail () throws ExecutionException, InterruptedException {
-        endpoint.setClient(new MiloExceptionTestClientWrapper());
+        endpoint.setWrapper(new MiloExceptionTestClientWrapper());
         Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(false));
         assertEquals(Collections.singletonList(CONNECTION_FAILED), future.get());
     }
 
     @Test
     public void errorOnInitializeAfterLostConnectionShouldSendBoth () throws ExecutionException, InterruptedException {
-        endpoint.setClient(new MiloExceptionTestClientWrapper());
+        endpoint.setWrapper(new MiloExceptionTestClientWrapper());
         Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(true));
         assertEquals(Arrays.asList(CONNECTION_LOST, CONNECTION_FAILED), future.get());
     }

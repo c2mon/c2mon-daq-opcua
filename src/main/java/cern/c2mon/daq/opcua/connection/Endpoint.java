@@ -52,6 +52,7 @@ public interface Endpoint {
     void recreateSubscription(UaSubscription subscription);
 
     //for injection during testing
-    void setClient(MiloClientWrapper client);
+    void setWrapper(MiloClientWrapper wrapper);
+    MiloClientWrapper getWrapper();
     EventPublisher getPublisher();
 }

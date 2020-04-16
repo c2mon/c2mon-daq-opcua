@@ -1,13 +1,15 @@
 package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.ConnectionResolver;
+import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.configuration.AuthConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointImpl;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
-import cern.c2mon.daq.opcua.security.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.security.SecurityProvider;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.command.SourceCommandTag;
@@ -35,6 +37,8 @@ public class SimEngineIT {
     private static Endpoint simEngine;
     private static ConnectionResolver resolver;
 
+    SecurityProvider p;
+    AppConfig config;
 
     @BeforeAll
     public static void startServers() {
@@ -54,15 +58,33 @@ public class SimEngineIT {
     }
 
     @BeforeEach
-    public void setupTestcontainers() {
-        pilotWrapper = new MiloClientWrapperImpl(resolver.getURI(PILOT_PORT), new NoSecurityCertifier());
-        simEngineWrapper = new MiloClientWrapperImpl(resolver.getURI(SIMENGINE_PORT), new NoSecurityCertifier());
+    public void setUp() {
+        config = AppConfig.builder()
+                .appName("c2mon-opcua-daq")
+                .applicationUri("urn:localhost:UA:C2MON")
+                .productUri("urn:cern:ch:UA:C2MON")
+                .organization("CERN")
+                .organizationalUnit("C2MON team")
+                .localityName("Geneva")
+                .stateName("Geneva")
+                .countryCode("CH")
+                .auth(AuthConfig.builder().communicateWithoutSecurity(true).build())
+                .build();
+        p = new SecurityProvider();
+        p.setConfig(config);
+        pilotWrapper = new MiloClientWrapperImpl(resolver.getURI(PILOT_PORT));
+        simEngineWrapper = new MiloClientWrapperImpl(resolver.getURI(SIMENGINE_PORT));
+
+        pilotWrapper.setConfig(config);
+        simEngineWrapper.setConfig(config);
+        pilotWrapper.setProvider(p);
+        simEngineWrapper.setProvider(p);
         pilot = new EndpointImpl(pilotWrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
         simEngine = new EndpointImpl(simEngineWrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
     }
 
     @AfterEach
-    public void teardown() {
+    public void tearDown() {
         pilot.reset();
         simEngine.reset();
     }

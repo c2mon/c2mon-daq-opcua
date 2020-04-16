@@ -4,7 +4,10 @@ import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.ConnectionResolver;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
+import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.security.SecurityProvider;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
@@ -54,8 +57,23 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static long CMDID_V0SET = 20L;
 
 
+    SecurityProvider p = new SecurityProvider();
+    static AppConfig config;
+
     @BeforeClass
     public static void startServer() {
+
+        config = AppConfig.builder()
+                .appName("c2mon-opcua-daq")
+                .applicationUri("urn:localhost:UA:C2MON")
+                .productUri("urn:cern:ch:UA:C2MON")
+                .organization("CERN")
+                .organizationalUnit("C2MON team")
+                .localityName("Geneva")
+                .stateName("Geneva")
+                .countryCode("CH")
+                .build();
+
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
         GenericContainer image = new GenericContainer("gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3")
                 .waitingFor(Wait.forLogMessage(".*Server opened endpoints for following URLs:.*", 2))
@@ -78,6 +96,11 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
+
+        MiloClientWrapper wrapper = handler.getController().getEndpoint().getWrapper();
+        wrapper.setConfig(config);
+        p.setConfig(config);
+        wrapper.setProvider(p);
     }
 
     @After
