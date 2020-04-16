@@ -2,14 +2,22 @@ package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.configuration.AppConfig;
 import cern.c2mon.daq.opcua.configuration.AuthConfig;
-import cern.c2mon.daq.opcua.exceptions.CertificateBuilderException;
+import cern.c2mon.daq.opcua.exceptions.SecurityProviderException;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.*;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,10 +32,12 @@ class SecurityProviderTest {
 
     SecurityProvider p = new SecurityProvider();
     AppConfig config;
+    AuthConfig auth;
 
 
     @BeforeEach
     public void setUp() {
+        auth = AuthConfig.builder().build();
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
@@ -37,13 +47,8 @@ class SecurityProviderTest {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
+                .auth(auth)
                 .build();
-        AuthConfig auth = AuthConfig.builder()
-                .keyStorePath("PKI/x.pem")
-                .keyStorePassword("pwd")
-                .keyStoreAlias("alias")
-                .build();
-        config.setAuth(auth);
 
         p.setConfig(config);
 
@@ -53,7 +58,7 @@ class SecurityProviderTest {
     }
 
     @Test
-    public void certifyBuilderWithSecurityShouldAppendKeyPairAndCertificate() throws CertificateBuilderException {
+    public void certifyBuilderWithSecurityShouldAppendKeyPairAndCertificate() throws SecurityProviderException {
         modes.remove(MessageSecurityMode.None);
         policies.remove(SecurityPolicy.None);
         for (SecurityPolicy policy : policies) {
@@ -66,7 +71,7 @@ class SecurityProviderTest {
     }
 
     @Test
-    public void certifyBuilderWithoutSecurityPolicyShouldNotChangeBuilder() throws CertificateBuilderException {
+    public void certifyBuilderWithoutSecurityPolicyShouldNotChangeBuilder() throws SecurityProviderException {
         OpcUaClientConfig expected = OpcUaClientConfig.builder().build();
         for (MessageSecurityMode m : modes) {
             OpcUaClientConfig actual = certifyWith(SecurityPolicy.None, m);
@@ -75,12 +80,43 @@ class SecurityProviderTest {
     }
 
     @Test
-    public void certifyBuilderWithModeNoneShouldNotChangeBuilder() throws CertificateBuilderException {
+    public void certifyBuilderWithModeNoneShouldNotChangeBuilder() throws SecurityProviderException {
         OpcUaClientConfig expected = OpcUaClientConfig.builder().build();
         for (SecurityPolicy policy : policies) {
             OpcUaClientConfig actual = certifyWith(policy, MessageSecurityMode.None);
             compareConfig(expected, actual);
         }
+    }
+
+    @Test
+    public void builderShouldUseCertificateFromKeystoreIfExists() throws SecurityProviderException, KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        setupAuthForCertificate();
+        KeyStore ks = loadFromKeyStore();
+        Key expectedPrivate = ks.getKey(auth.getKeyStoreAlias(), auth.getPrivateKeyPassword().toCharArray());
+        X509Certificate expectedCert = (X509Certificate) ks.getCertificate(auth.getKeyStoreAlias());
+        PublicKey expectedPublic = expectedCert.getPublicKey();
+
+        OpcUaClientConfig config = certifyWith(SecurityPolicy.Basic256Sha256, MessageSecurityMode.SignAndEncrypt);
+
+        Assertions.assertEquals(expectedCert.toString(), config.getCertificate().get().toString());
+        Assertions.assertEquals(expectedPrivate.toString(), config.getKeyPair().get().getPrivate().toString());
+        Assertions.assertEquals(expectedPublic.toString(), config.getKeyPair().get().getPublic().toString());
+    }
+
+    private void setupAuthForCertificate(){
+        String path = SecurityProviderTest.class.getClassLoader().getResource("keystore.pfx").getPath();
+        auth.setKeyStoreType("PKCS12");
+        auth.setKeyStorePath(path);
+        auth.setKeyStorePassword("password");
+        auth.setPrivateKeyPassword("password");
+        auth.setKeyStoreAlias("1");
+    }
+
+    private KeyStore loadFromKeyStore() throws CertificateException, NoSuchAlgorithmException, IOException, KeyStoreException {
+        KeyStore keyStore = KeyStore.getInstance(auth.getKeyStoreType());
+        InputStream in = Files.newInputStream(Paths.get(auth.getKeyStorePath()));
+        keyStore.load(in, auth.getKeyStorePassword().toCharArray());
+        return keyStore;
     }
 
     private void compareConfig(OpcUaClientConfig a, OpcUaClientConfig b) {
@@ -91,7 +127,7 @@ class SecurityProviderTest {
         assertEquals(a.getKeyPair(), b.getKeyPair());
     }
 
-    private OpcUaClientConfig certifyWith(SecurityPolicy sp, MessageSecurityMode mode) throws CertificateBuilderException {
+    private OpcUaClientConfig certifyWith(SecurityPolicy sp, MessageSecurityMode mode) throws SecurityProviderException {
         OpcUaClientConfigBuilder builder = OpcUaClientConfig.builder();
         p.certifyBuilder(builder, sp, mode);
         return builder.build();

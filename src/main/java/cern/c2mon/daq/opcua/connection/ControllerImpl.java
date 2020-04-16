@@ -45,7 +45,9 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     private IEquipmentConfiguration config;
 
     public void initialize (IEquipmentConfiguration config) throws ConfigurationException {
-        this.config = config;
+        synchronized (this) {
+            this.config = config;
+        }
         initialize(false);
     }
     public void initialize () throws ConfigurationException {

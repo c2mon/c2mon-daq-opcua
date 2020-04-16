@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.configuration.AppConfig;
 import cern.c2mon.daq.opcua.configuration.AuthConfig;
-import cern.c2mon.daq.opcua.exceptions.CertificateBuilderException;
+import cern.c2mon.daq.opcua.exceptions.SecurityProviderException;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
@@ -21,10 +21,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.KeyPair;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -56,47 +53,59 @@ public class SecurityProvider {
     X509Certificate certificate;
     KeyStore keyStore;
 
-    public void certifyBuilder(OpcUaClientConfigBuilder builder, SecurityPolicy securityPolicy, MessageSecurityMode securityMode) throws CertificateBuilderException {
+    public void certifyBuilder(OpcUaClientConfigBuilder builder, SecurityPolicy securityPolicy, MessageSecurityMode securityMode) throws SecurityProviderException {
         auth = config.getAuth();
         if (securityPolicy == SecurityPolicy.None || securityMode == MessageSecurityMode.None) {
             log.info("Not using security. Config Security Policy {}, MessageSecurityMode {}. ", securityPolicy, securityMode);
             return;
         }
 
-        KeyStore keyStore = loadKeyStore();
-        if (keyStore != null && isCertificatePresent()) {
-            try {
+        if (isKeyStoreConfigured()) {
+            loadKeyStore();
+            if (keyStore != null) {
                 loadCertificate(this.keyStore);
-            } catch (IOException | CertificateException | NoSuchAlgorithmException e) {
-                try {
-                    generateSelfSignedCertificateAndPutInKeyStore();
-                } catch (CertificateException | NoSuchAlgorithmException | IOException | KeyStoreException ex) {
-                    log.error("Could not store self Signed Certificates in Keystore.", e);
+                if (certificate == null || keyPair == null) {
+                    generateAndStoreSelfSignedCert();
                 }
             }
         }
-        generateSelfSignedCertificate();
+        generateSelfSignedCertificateIfNecessary();
         configureSecuritySettings(builder);
     }
 
-    private void generateSelfSignedCertificateAndPutInKeyStore() throws CertificateException, NoSuchAlgorithmException, IOException, KeyStoreException, CertificateBuilderException {
-        keyStore.load(null, auth.getKeyStorePassword().toCharArray());
-        generateSelfSignedCertificate();
-        keyStore.setKeyEntry(auth.getKeyStoreAlias(), keyPair.getPrivate(),
-                auth.getKeyStorePassword().toCharArray(), new X509Certificate[]{certificate});
-        OutputStream out = Files.newOutputStream(getKeyStorePath());
-        keyStore.store(out, auth.getKeyStorePassword().toCharArray());
+    private boolean isKeyStoreConfigured() {
+        return auth != null &&
+                auth.getKeyStoreType() != null &&
+                auth.getKeyStorePath() != null &&
+                auth.getPrivateKeyPassword() != null &&
+                auth.getKeyStorePassword() != null &&
+                auth.getKeyStoreAlias() != null;
     }
 
-    private KeyStore loadKeyStore() {
-        if (keyStore == null && auth != null && auth.getKeyStoreType() != null) {
+    private void generateAndStoreSelfSignedCert() {
+        try {
+            keyStore.load(null, auth.getKeyStorePassword().toCharArray());
+            generateSelfSignedCertificateIfNecessary();
+            log.info("Storing certificate in keystore");
+            keyStore.setKeyEntry(auth.getKeyStoreAlias(), keyPair.getPrivate(),
+                    auth.getKeyStorePassword().toCharArray(), new X509Certificate[]{certificate});
+            OutputStream out = Files.newOutputStream(getKeyStorePath());
+            keyStore.store(out, auth.getKeyStorePassword().toCharArray());
+        } catch (IOException | SecurityProviderException | KeyStoreException | CertificateException | NoSuchAlgorithmException e) {
+            log.error("An error ocurred storing self signed certificates in keystore. ", e);
+        }
+    }
+
+
+
+    private void loadKeyStore() {
+        if (keyStore == null) {
             try {
                 keyStore = KeyStore.getInstance(auth.getKeyStoreType());
             } catch (KeyStoreException e) {
                 log.error("Cannot load Keystore. Proceed without. ", e);
             }
         }
-        return keyStore;
     }
 
     private void configureSecuritySettings(OpcUaClientConfigBuilder builder){
@@ -104,9 +113,6 @@ public class SecurityProvider {
                 .setKeyPair(keyPair);
     }
 
-    private boolean isCertificatePresent() {
-        return auth != null && auth.getKeyStorePath() != null && Files.exists(getKeyStorePath());
-    }
 
     private Path getKeyStorePath() {
         if (serverKeyStorePath == null) {
@@ -115,23 +121,39 @@ public class SecurityProvider {
         return serverKeyStorePath;
     }
 
-    private void loadCertificate(KeyStore keyStore) throws IOException, CertificateException, NoSuchAlgorithmException {
-        InputStream in = Files.newInputStream(Paths.get(auth.getKeyStorePath()));
-        keyStore.load(in, auth.getKeyStorePassword().toCharArray());
+    private void loadCertificate(KeyStore keyStore) {
+        log.info("Loading certificate...");
+        if (!Files.exists(getKeyStorePath())) {
+            log.info("The configured keystore file does not exist. Proceeding without loading the certificate.");
+        } else {
+            try {
+                InputStream in = Files.newInputStream(Paths.get(auth.getKeyStorePath()));
+                keyStore.load(in, auth.getKeyStorePassword().toCharArray());
+                Key privateKey = keyStore.getKey(auth.getKeyStoreAlias(), auth.getPrivateKeyPassword().toCharArray());
+                if (privateKey instanceof PrivateKey) {
+                    certificate = (X509Certificate) keyStore.getCertificate(auth.getKeyStoreAlias());
+                    PublicKey publicKey = certificate.getPublicKey();
+                    keyPair = new KeyPair(publicKey, (PrivateKey) privateKey);
+                }
+            } catch (IOException | CertificateException | NoSuchAlgorithmException | UnrecoverableKeyException | KeyStoreException e) {
+                log.error("An error occurred loading the defined certificate. ", e);
+            }
+        }
     }
 
     private IdentityProvider getIdentityProvider() {
         return new AnonymousProvider();
     }
 
-    protected void generateSelfSignedCertificate() throws CertificateBuilderException {
+    protected void generateSelfSignedCertificateIfNecessary() throws SecurityProviderException {
         if (keyPair != null && certificate != null) {
             return;
         }
+        log.info("Generating self-signed certificate.");
         try {
             keyPair = SelfSignedCertificateGenerator.generateRsaKeyPair(2048);
         } catch (NoSuchAlgorithmException e) {
-            throw new CertificateBuilderException(CertificateBuilderException.Cause.RSA_KEYPAIR, e);
+            throw new SecurityProviderException(SecurityProviderException.Cause.RSA_KEYPAIR, e);
         }
 
         SelfSignedCertificateBuilder builder = new SelfSignedCertificateBuilder(keyPair)
@@ -145,7 +167,7 @@ public class SecurityProvider {
         try {
             certificate = builder.build();
         } catch (Exception e) {
-            throw new CertificateBuilderException(CertificateBuilderException.Cause.CERTIFICATE_BUILDER, e);
+            throw new SecurityProviderException(SecurityProviderException.Cause.CERTIFICATE_BUILDER, e);
         }
     }
 

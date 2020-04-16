@@ -12,7 +12,7 @@ public class AuthConfig {
 
     private String keyStoreType = "PKCS12";
     private String keyStorePath;
-    private String keyStorePassword;
+    private String keyStorePassword = "";
     private String keyStoreAlias;
 
     private String certificateBaseDir;

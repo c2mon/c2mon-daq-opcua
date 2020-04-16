@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.configuration.AppConfig;
-import cern.c2mon.daq.opcua.exceptions.CertificateBuilderException;
+import cern.c2mon.daq.opcua.exceptions.SecurityProviderException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
@@ -71,7 +71,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
      * self-signed certificate.
      * Connection without security is only taken as a last resort if the above strategies fail, and can be disabled
      * completely in the configuration.
-     */
+git p     */
     public void initialize () {
         try {
             List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
@@ -103,7 +103,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
                 builder.setEndpoint(e);
                 OpcUaClient client = OpcUaClient.create(builder.build());
                 return (OpcUaClient) client.connect().get();
-            } catch (UaException | CertificateBuilderException | ExecutionException ex) {
+            } catch (UaException | SecurityProviderException | ExecutionException ex) {
                 log.error("Authentication error. Attempting less secure endpoint: ", ex);
             }
         }

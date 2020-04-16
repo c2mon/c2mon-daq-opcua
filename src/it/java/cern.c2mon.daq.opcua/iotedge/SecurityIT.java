@@ -22,7 +22,6 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
 @SpringBootTest(classes = {AppConfig.class})
@@ -36,6 +35,7 @@ public class SecurityIT {
 
     SecurityProvider p = new SecurityProvider();
     AppConfig config;
+    AuthConfig auth;
 
     @BeforeAll
     public static void startServer() {
@@ -56,6 +56,7 @@ public class SecurityIT {
 
     @BeforeEach
     public void setUp() {
+        auth = AuthConfig.builder().fallbackOnInsecureCommunication(true).build();
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
@@ -65,8 +66,8 @@ public class SecurityIT {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
+                .auth(auth)
                 .build();
-        AuthConfig auth = AuthConfig.builder().fallbackOnInsecureCommunication(true).build();
         config.setAuth(auth);
     }
 
@@ -93,25 +94,44 @@ public class SecurityIT {
     }
 
     @Test
-    public void connectWithSelfSignedCertificateShouldThrowAuthenticationError() {
+    public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException {
         config.getAuth().setFallbackOnInsecureCommunication(false);
-        //certificate should be rejected
-        assertThrows(OPCCommunicationException.class,
-                this::initializeEndpoint,
-                "Certificate is not trusted.");
-    }
-    @Test
-    public void trustedCertificateShouldAllowConnection() throws IOException, InterruptedException {
-        config.getAuth().setFallbackOnInsecureCommunication(false);
-        //should be rejected
-        assertThrows(OPCCommunicationException.class,
-                this::initializeEndpoint,
-                "Certificate is not trusted.");
+        try {
+            this.initializeEndpoint();
+        } catch (OPCCommunicationException e) {
+            // expected behavior
+        }
 
         //move certificate to trusted
         image.execInContainer("mkdir", "pki/trusted");
         image.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
 
         assertDoesNotThrow(this::initializeEndpoint);
+    }
+
+    @Test
+    public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException {
+        setupAuthForCertificate();
+        try {
+            this.initializeEndpoint();
+        } catch (OPCCommunicationException e) {
+            // expected behavior
+        }
+
+        //move certificate to trusted
+        image.execInContainer("mkdir", "pki/trusted");
+        image.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
+
+        assertDoesNotThrow(this::initializeEndpoint);
+    }
+
+    private void setupAuthForCertificate(){
+        config.getAuth().setFallbackOnInsecureCommunication(false);
+        String path = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
+        auth.setKeyStoreType("PKCS12");
+        auth.setKeyStorePath(path);
+        auth.setKeyStorePassword("password");
+        auth.setPrivateKeyPassword("password");
+        auth.setKeyStoreAlias("1");
     }
 }
