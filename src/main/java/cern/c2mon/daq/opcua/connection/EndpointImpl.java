@@ -46,14 +46,13 @@ import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.*;
 
 @Slf4j
 @AllArgsConstructor
+@Getter
 public class EndpointImpl implements Endpoint {
 
     @Setter
-    @Getter
     private MiloClientWrapper wrapper;
     private TagSubscriptionMapper mapper;
 
-    @Getter
     private EventPublisher publisher;
 
     public void initialize (boolean connectionLost){

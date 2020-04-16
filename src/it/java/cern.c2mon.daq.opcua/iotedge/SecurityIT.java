@@ -9,7 +9,6 @@ import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.SecurityProvider;
-import cern.c2mon.daq.opcua.security.SelfSignedCertifier;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
@@ -67,7 +66,7 @@ public class SecurityIT {
                 .stateName("Geneva")
                 .countryCode("CH")
                 .build();
-        AuthConfig auth = AuthConfig.builder().build();
+        AuthConfig auth = AuthConfig.builder().fallbackOnInsecureCommunication(true).build();
         config.setAuth(auth);
     }
 
@@ -89,13 +88,13 @@ public class SecurityIT {
 
     @Test
     public void connectWithoutCertificate() {
-        config.getAuth().setCommunicateWithoutSecurity(true);
         initializeEndpoint();
         assertDoesNotThrow(()-> endpoint.isConnected());
     }
 
     @Test
     public void connectWithSelfSignedCertificateShouldThrowAuthenticationError() {
+        config.getAuth().setFallbackOnInsecureCommunication(false);
         //certificate should be rejected
         assertThrows(OPCCommunicationException.class,
                 this::initializeEndpoint,
@@ -103,7 +102,7 @@ public class SecurityIT {
     }
     @Test
     public void trustedCertificateShouldAllowConnection() throws IOException, InterruptedException {
-        SelfSignedCertifier cert = new SelfSignedCertifier();
+        config.getAuth().setFallbackOnInsecureCommunication(false);
         //should be rejected
         assertThrows(OPCCommunicationException.class,
                 this::initializeEndpoint,

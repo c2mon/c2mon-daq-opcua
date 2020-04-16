@@ -36,21 +36,21 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
 
     @Test
     public void goodStatusCodesShouldSendOK () throws ExecutionException, InterruptedException {
-        mocker.mockStatusCode(StatusCode.GOOD, tag1);
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tag1);
         endpoint.initialize(false);
         assertEquals(Collections.singletonList(OK), future.get());
     }
 
     @Test
     public void badStatusCodesShouldSendOK () throws ExecutionException, InterruptedException {
-        mocker.mockStatusCode(StatusCode.BAD, tag1);
+        mocker.mockStatusCodeAndClientHandle(StatusCode.BAD, tag1);
         endpoint.initialize(false);
         assertEquals(Collections.singletonList(OK), future.get());
     }
 
     @Test
     public void initializeAfterLostConnectionShouldSendLostAndOK () throws ExecutionException, InterruptedException {
-        mocker.mockStatusCode(StatusCode.BAD, tag1);
+        mocker.mockStatusCodeAndClientHandle(StatusCode.BAD, tag1);
         endpoint.initialize(true);
         assertEquals(Arrays.asList(CONNECTION_LOST, OK), future.get());
     }

@@ -17,6 +17,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -55,4 +56,5 @@ public interface Endpoint {
     void setWrapper(MiloClientWrapper wrapper);
     MiloClientWrapper getWrapper();
     EventPublisher getPublisher();
+    TagSubscriptionMapper getMapper();
 }

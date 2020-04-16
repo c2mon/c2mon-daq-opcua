@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 @AllArgsConstructor
 @Component
 @Setter
+@Getter
 public class ControllerProxy {
 
     @Autowired

@@ -66,7 +66,7 @@ public class EndpointSubscribeTagsTest extends EndpointTestBase{
 
     @Test
     public void twoTagsWithOneBadStatusCodeShouldUnsubscribeOne() throws ConfigurationException {
-        mocker.mockGoodAndBadStatusCodes(new ISourceDataTag[]{tag1}, new ISourceDataTag[]{tag2});
+        mocker.mockGoodAndBadStatusCodesAndReplay(new ISourceDataTag[]{tag1}, new ISourceDataTag[]{tag2});
         subscribeTags(tag1, tag2);
         assertTrue(mapper.isSubscribed(tag1) && !mapper.isSubscribed(tag2));
     }

@@ -59,7 +59,7 @@ public class EndpointTagEventsTest extends EndpointTestBase {
 
     @Test
     public void validSubscriptionEventShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
-        mocker.mockValueConsumerAndSubscribeTag(StatusCode.GOOD, tag1);
+        mocker.mockValueConsumerAndSubscribeTagAndReplay(StatusCode.GOOD, tag1);
         endpoint.subscribeTag(tag1);
         assertEquals(tag1, newTagValueFuture.get(TIMEOUT, TimeUnit.MILLISECONDS));
         assertFalse(tagInvalidFuture.isDone());
@@ -67,7 +67,7 @@ public class EndpointTagEventsTest extends EndpointTestBase {
 
     @Test
     public void invalidSubscriptionEventShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
-        mocker.mockValueConsumerAndSubscribeTag(StatusCode.BAD, tag1);
+        mocker.mockValueConsumerAndSubscribeTagAndReplay(StatusCode.BAD, tag1);
         endpoint.subscribeTag(tag1);
         assertEquals(tag1, tagInvalidFuture.get(TIMEOUT, TimeUnit.MILLISECONDS));
         assertFalse(newTagValueFuture.isDone());

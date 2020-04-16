@@ -64,7 +64,7 @@ public abstract class ControllerTestBase {
         controller.setConfig(config);
 
         mocker = new MiloMocker(wrapper, mapper);
-        mocker.mockStatusCode(StatusCode.GOOD, sourceTags.values());
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
     }
 
     @AfterEach

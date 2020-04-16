@@ -31,7 +31,7 @@ public class MiloMocker {
         EasyMock.replay(client.getMonitoredItem());
     }
 
-    public void mockStatusCode (StatusCode code, Collection<ISourceDataTag> tags) {
+    public void mockStatusCodeAndClientHandle(StatusCode code, Collection<ISourceDataTag> tags) {
         UaMonitoredItem monitoredItem = client.getMonitoredItem();
         expect(monitoredItem.getStatusCode()).andReturn(code).anyTimes();
         mockClientHandle(monitoredItem, tags);
@@ -49,11 +49,11 @@ public class MiloMocker {
         }
     }
 
-    public void mockStatusCode (StatusCode code, ISourceDataTag... tags) {
-        mockStatusCode(code, Arrays.asList(tags));
+    public void mockStatusCodeAndClientHandle(StatusCode code, ISourceDataTag... tags) {
+        mockStatusCodeAndClientHandle(code, Arrays.asList(tags));
     }
 
-    public void mockGoodAndBadStatusCodes (ISourceDataTag[] goodTags, ISourceDataTag[] badTags) {
+    public void mockGoodAndBadStatusCodesAndReplay(ISourceDataTag[] goodTags, ISourceDataTag[] badTags) {
         UaMonitoredItem monitoredItem = client.getMonitoredItem();
         expect(monitoredItem.getStatusCode()).andReturn(StatusCode.GOOD).times(goodTags.length);
         mockClientHandle(monitoredItem, Arrays.asList(goodTags));
@@ -63,7 +63,7 @@ public class MiloMocker {
         replay();
     }
 
-    public void mockValueConsumerAndSubscribeTag (StatusCode statusCode, ISourceDataTag tag) {
+    public void mockValueConsumerAndSubscribeTagAndReplay(StatusCode statusCode, ISourceDataTag tag) {
         UaMonitoredItem monitoredItem = client.getMonitoredItem();
         UInteger clientHandle = mapper.getDefinition(tag).getClientHandle();
         expect(monitoredItem.getClientHandle()).andReturn(clientHandle).anyTimes();

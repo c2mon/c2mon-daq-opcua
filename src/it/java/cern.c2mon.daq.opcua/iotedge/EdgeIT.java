@@ -75,7 +75,7 @@ public class EdgeIT {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
-                .auth(AuthConfig.builder().communicateWithoutSecurity(true).build())
+                .auth(AuthConfig.builder().fallbackOnInsecureCommunication(true).build())
                 .build();
         p = new SecurityProvider();
         p.setConfig(config);

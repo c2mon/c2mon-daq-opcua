@@ -64,6 +64,14 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         this.uri = uri;
     }
 
+    /**
+     * Unless otherwise configured, the client attempts to connect to the most secure endpoint first, where Milo's
+     * endpoint security level is taken as a measure. The preferred means of authentication is using a predefined
+     * certificate, the details of which are given in AppConfig. If this is not configured, the client generates a
+     * self-signed certificate.
+     * Connection without security is only taken as a last resort if the above strategies fail, and can be disabled
+     * completely in the configuration.
+     */
     public void initialize () {
         try {
             List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
@@ -79,17 +87,14 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
                 .setApplicationUri(config.getApplicationUri())
                 .setRequestTimeout(uint(config.getRequestTimeout()));
 
-        if (config.getAuth().isCommunicateWithoutSecurity()) {
-            log.info("Configured not to use security");
-            endpoints = endpoints.stream()
-                    .filter(e -> e.getSecurityLevel().intValue() == 0)
-                    .collect(Collectors.toList());
-        }
-        else {
-            endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
-        }
+
+        endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
 
         for (EndpointDescription e : endpoints) {
+            if (!config.getAuth().isFallbackOnInsecureCommunication() && e.getSecurityLevel().intValue() == 0) {
+                log.info("Insecure connection skipped as configured.");
+                continue;
+            }
             try {
                 SecurityPolicy securityPolicy = SecurityPolicy.fromUri(e.getSecurityPolicyUri());
                 MessageSecurityMode mode = e.getSecurityMode();

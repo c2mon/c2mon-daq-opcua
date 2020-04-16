@@ -64,7 +64,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     @BeforeClass
     public static void startServer() {
-        AuthConfig auth = AuthConfig.builder().build();
+        AuthConfig auth = AuthConfig.builder().fallbackOnInsecureCommunication(true).build();
 
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")

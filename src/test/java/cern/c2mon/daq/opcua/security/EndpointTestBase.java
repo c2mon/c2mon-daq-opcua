@@ -45,7 +45,7 @@ public abstract class EndpointTestBase {
 
     @SneakyThrows
     protected void subscribeTagsAndMockStatusCode (StatusCode code, ISourceDataTag... tags)  {
-        mocker.mockStatusCode(code, tags);
+        mocker.mockStatusCodeAndClientHandle(code, tags);
         mocker.replay();
         subscribeTags(tags);
     }
