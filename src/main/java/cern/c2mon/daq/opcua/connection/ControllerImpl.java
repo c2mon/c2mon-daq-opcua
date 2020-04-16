@@ -56,7 +56,9 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     private void initialize (boolean connectionLost) throws ConfigurationException {
         endpoint.initialize(connectionLost);
-        endpoint.subscribeTags(config.getSourceDataTags().values());
+        synchronized (this) {
+            endpoint.subscribeTags(config.getSourceDataTags().values());
+        }
     }
 
     public synchronized void stop () {

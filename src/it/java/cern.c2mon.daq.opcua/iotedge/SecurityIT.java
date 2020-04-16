@@ -96,22 +96,18 @@ public class SecurityIT {
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException {
         config.getAuth().setFallbackOnInsecureCommunication(false);
-        try {
-            this.initializeEndpoint();
-        } catch (OPCCommunicationException e) {
-            // expected behavior
-        }
-
-        //move certificate to trusted
-        image.execInContainer("mkdir", "pki/trusted");
-        image.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
-
-        assertDoesNotThrow(this::initializeEndpoint);
+        trustAndConnect();
+        assertDoesNotThrow(()-> endpoint.isConnected());
     }
 
     @Test
     public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException {
         setupAuthForCertificate();
+        trustAndConnect();
+        assertDoesNotThrow(()-> endpoint.isConnected());
+    }
+
+    private void trustAndConnect() throws IOException, InterruptedException {
         try {
             this.initializeEndpoint();
         } catch (OPCCommunicationException e) {
@@ -122,7 +118,11 @@ public class SecurityIT {
         image.execInContainer("mkdir", "pki/trusted");
         image.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
 
-        assertDoesNotThrow(this::initializeEndpoint);
+        //connect
+        this.initializeEndpoint();
+
+        //cleanup
+        image.execInContainer("rm", "-r", "pki/trusted");
     }
 
     private void setupAuthForCertificate(){
