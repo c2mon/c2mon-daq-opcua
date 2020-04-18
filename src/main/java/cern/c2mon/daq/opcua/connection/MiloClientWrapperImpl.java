@@ -1,25 +1,20 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.configuration.AppConfig;
-import cern.c2mon.daq.opcua.exceptions.SecurityProviderException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
-import cern.c2mon.daq.opcua.security.SecurityProvider;
+import cern.c2mon.daq.opcua.security.SecurityModule;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
-import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
-import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.Stack;
-import org.eclipse.milo.opcua.stack.core.UaException;
-import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
@@ -28,7 +23,6 @@ import org.eclipse.milo.opcua.stack.core.util.ConversionUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
@@ -54,7 +48,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     @Autowired
     @Setter
-    private SecurityProvider provider;
+    private SecurityModule securityModule;
 
     /**
      * Creates a new instance of a wrapper for the Eclipse milo OPC UA client
@@ -75,41 +69,11 @@ git p     */
     public void initialize () {
         try {
             List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
-            client = createClient(endpointDescriptions);
+            client = securityModule.createClient(endpointDescriptions);
         } catch (InterruptedException | ExecutionException e) {
             throw asOPCCommunicationException(CONNECT, e);
         }
     }
-
-    private OpcUaClient createClient(List<EndpointDescription> endpoints) throws InterruptedException{
-        OpcUaClientConfigBuilder builder = OpcUaClientConfig.builder()
-                .setApplicationName(LocalizedText.english(config.getAppName()))
-                .setApplicationUri(config.getApplicationUri())
-                .setRequestTimeout(uint(config.getRequestTimeout()));
-
-
-        endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
-
-        for (EndpointDescription e : endpoints) {
-            if (!config.getAuth().isFallbackOnInsecureCommunication() && e.getSecurityLevel().intValue() == 0) {
-                log.info("Insecure connection skipped as configured.");
-                continue;
-            }
-            try {
-                SecurityPolicy securityPolicy = SecurityPolicy.fromUri(e.getSecurityPolicyUri());
-                MessageSecurityMode mode = e.getSecurityMode();
-                log.info("Attempt authentication with mode {} and algorithm {}. ", mode, securityPolicy);
-                provider.certifyBuilder(builder, securityPolicy, mode);
-                builder.setEndpoint(e);
-                OpcUaClient client = OpcUaClient.create(builder.build());
-                return (OpcUaClient) client.connect().get();
-            } catch (UaException | SecurityProviderException | ExecutionException ex) {
-                log.error("Authentication error. Attempting less secure endpoint: ", ex);
-            }
-        }
-        throw new OPCCommunicationException(AUTH_ERROR);
-    }
-
 
     public void addEndpointSubscriptionListener(EndpointSubscriptionListener listener) {
         client.getSubscriptionManager().addSubscriptionListener(listener);

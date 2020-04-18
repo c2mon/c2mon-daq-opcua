@@ -2,15 +2,16 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.ConnectionResolver;
 import cern.c2mon.daq.opcua.configuration.AppConfig;
-import cern.c2mon.daq.opcua.configuration.AuthConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointImpl;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
-import cern.c2mon.daq.opcua.security.*;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.security.CertificateGenerator;
+import cern.c2mon.daq.opcua.security.CertificateLoader;
+import cern.c2mon.daq.opcua.security.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
@@ -42,7 +43,7 @@ public class EdgeIT {
     private EventPublisher publisher = new EventPublisher();
     private static ConnectionResolver resolver;
 
-    SecurityProvider p;
+    SecurityModule p;
     AppConfig config;
 
     @BeforeAll
@@ -75,11 +76,11 @@ public class EdgeIT {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
-                .auth(AuthConfig.builder().fallbackOnInsecureCommunication(true).build())
+                .enableInsecureCommunication(true)
+                .enableOnDemandCertification(true)
                 .build();
-        p = new SecurityProvider();
-        p.setConfig(config);
-        wrapper.setProvider(p);
+        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config));
+        wrapper.setSecurityModule(p);
         wrapper.setConfig(config);
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         endpoint.initialize(false);
@@ -102,7 +103,7 @@ public class EdgeIT {
     public void connectToBadServer() {
         wrapper = new MiloClientWrapperImpl();
         wrapper.initialize("opc.tcp://somehost/somepath");
-        wrapper.setProvider(new SecurityProvider());
+        wrapper.setSecurityModule(p);
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(false));
     }

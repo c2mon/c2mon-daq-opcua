@@ -1,14 +1,15 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.configuration.AppConfig;
-import cern.c2mon.daq.opcua.configuration.AuthConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointImpl;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.security.SecurityProvider;
+import cern.c2mon.daq.opcua.security.CertificateGenerator;
+import cern.c2mon.daq.opcua.security.CertificateLoader;
+import cern.c2mon.daq.opcua.security.SecurityModule;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
@@ -33,9 +34,8 @@ public class SecurityIT {
     private static GenericContainer image;
     private static String uri;
 
-    SecurityProvider p = new SecurityProvider();
+    SecurityModule p;
     AppConfig config;
-    AuthConfig auth;
 
     @BeforeAll
     public static void startServer() {
@@ -56,7 +56,6 @@ public class SecurityIT {
 
     @BeforeEach
     public void setUp() {
-        auth = AuthConfig.builder().fallbackOnInsecureCommunication(true).build();
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
@@ -66,25 +65,16 @@ public class SecurityIT {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
-                .auth(auth)
+                .enableInsecureCommunication(true)
+                .enableOnDemandCertification(true)
                 .build();
-        config.setAuth(auth);
+        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config));
     }
 
     @AfterEach
     public void cleanUp() {
         endpoint.reset();
         endpoint = null;
-    }
-
-    private void initializeEndpoint() {
-        MiloClientWrapper wrapper = new MiloClientWrapperImpl();
-        wrapper.initialize(uri);
-        p.setConfig(config);
-        wrapper.setProvider(p);
-        wrapper.setConfig(config);
-        endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
-        endpoint.initialize(false);
     }
 
     @Test
@@ -95,7 +85,7 @@ public class SecurityIT {
 
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException {
-        config.getAuth().setFallbackOnInsecureCommunication(false);
+        config.setEnableInsecureCommunication(false);
         trustAndConnect();
         assertDoesNotThrow(()-> endpoint.isConnected());
     }
@@ -107,31 +97,65 @@ public class SecurityIT {
         assertDoesNotThrow(()-> endpoint.isConnected());
     }
 
+    @Test
+    public void authWithUserNameAndPasswordShouldConnect() {
+        setupAuthForPassword();
+        initializeEndpoint("opc.tcp://milo.digitalpetri.com:62541/milo");
+        assertDoesNotThrow(()-> endpoint.isConnected());
+    }
+
+    private void initializeEndpoint() {
+        initializeEndpoint(uri);
+    }
+
+    private void initializeEndpoint(String uri) {
+        MiloClientWrapper wrapper = new MiloClientWrapperImpl();
+        wrapper.initialize(uri);
+        wrapper.setSecurityModule(p);
+        wrapper.setConfig(config);
+        endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
+        endpoint.initialize(false);
+    }
+
     private void trustAndConnect() throws IOException, InterruptedException {
+        log.info("Initial connection attempt.");
         try {
             this.initializeEndpoint();
         } catch (OPCCommunicationException e) {
             // expected behavior
         }
 
-        //move certificate to trusted
+        log.info("Trust certificate.");
         image.execInContainer("mkdir", "pki/trusted");
         image.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
 
-        //connect
+        log.info("Reconnect.");
         this.initializeEndpoint();
 
-        //cleanup
+        log.info("Cleanup.");
         image.execInContainer("rm", "-r", "pki/trusted");
     }
 
     private void setupAuthForCertificate(){
-        config.getAuth().setFallbackOnInsecureCommunication(false);
+        config.setEnableInsecureCommunication(false);
         String path = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
-        auth.setKeyStoreType("PKCS12");
-        auth.setKeyStorePath(path);
-        auth.setKeyStorePassword("password");
-        auth.setPrivateKeyPassword("password");
-        auth.setKeyStoreAlias("1");
+        AppConfig.KeystoreConfig keystoreConfig = AppConfig.KeystoreConfig.builder()
+                .type("PKCS12")
+                .path(path)
+                .alias("1")
+                .pwd("password")
+                .pkPwd("password")
+                .build();
+        config.setKeystore(keystoreConfig);
+    }
+
+    private void setupAuthForPassword(){
+        config.setEnableInsecureCommunication(true);
+        config.setEnableOnDemandCertification(false);
+        AppConfig.UsrPwdConfig usrPwdConfig = AppConfig.UsrPwdConfig.builder()
+                .usr("user1")
+                .pwd("password")
+                .build();
+        config.setUsrPwd(usrPwdConfig);
     }
 }

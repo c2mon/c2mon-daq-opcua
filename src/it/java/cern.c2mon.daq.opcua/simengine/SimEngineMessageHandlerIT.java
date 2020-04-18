@@ -5,11 +5,12 @@ import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.ConnectionResolver;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.configuration.AppConfig;
-import cern.c2mon.daq.opcua.configuration.AuthConfig;
 import cern.c2mon.daq.opcua.connection.ControllerProxy;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.security.SecurityProvider;
+import cern.c2mon.daq.opcua.security.CertificateGenerator;
+import cern.c2mon.daq.opcua.security.CertificateLoader;
+import cern.c2mon.daq.opcua.security.SecurityModule;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
@@ -59,13 +60,11 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static long CMDID_V0SET = 20L;
 
 
-    SecurityProvider p = new SecurityProvider();
+    SecurityModule p;
     static AppConfig config;
 
     @BeforeClass
     public static void startServer() {
-        AuthConfig auth = AuthConfig.builder().fallbackOnInsecureCommunication(true).build();
-
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
@@ -75,9 +74,9 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
-                .auth(auth)
+                .enableInsecureCommunication(true)
+                .enableOnDemandCertification(true)
                 .build();
-
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
         GenericContainer image = new GenericContainer("gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3")
                 .waitingFor(Wait.forLogMessage(".*Server opened endpoints for following URLs:.*", 2))
@@ -105,8 +104,8 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         handler.setProxy(proxy);
 
         MiloClientWrapper wrapper = proxy.getController(equipmentConfiguration).getEndpoint().getWrapper();
-        p.setConfig(config);
-        wrapper.setProvider(p);
+        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config));
+        wrapper.setSecurityModule(p);
         wrapper.setConfig(config);
     }
 

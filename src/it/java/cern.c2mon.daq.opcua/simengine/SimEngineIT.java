@@ -2,14 +2,15 @@ package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.ConnectionResolver;
 import cern.c2mon.daq.opcua.configuration.AppConfig;
-import cern.c2mon.daq.opcua.configuration.AuthConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointImpl;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.security.SecurityProvider;
+import cern.c2mon.daq.opcua.security.CertificateGenerator;
+import cern.c2mon.daq.opcua.security.CertificateLoader;
+import cern.c2mon.daq.opcua.security.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.command.SourceCommandTag;
@@ -37,7 +38,7 @@ public class SimEngineIT {
     private static Endpoint simEngine;
     private static ConnectionResolver resolver;
 
-    SecurityProvider p;
+    SecurityModule p;
     AppConfig config;
 
     @BeforeAll
@@ -68,10 +69,11 @@ public class SimEngineIT {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
-                .auth(AuthConfig.builder().fallbackOnInsecureCommunication(true).build())
+                .enableInsecureCommunication(true)
+                .enableOnDemandCertification(true)
                 .build();
-        p = new SecurityProvider();
-        p.setConfig(config);
+
+        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config));
         pilotWrapper = new MiloClientWrapperImpl();
         pilotWrapper.initialize(resolver.getURI(PILOT_PORT));
         simEngineWrapper = new MiloClientWrapperImpl();
@@ -79,8 +81,8 @@ public class SimEngineIT {
 
         pilotWrapper.setConfig(config);
         simEngineWrapper.setConfig(config);
-        pilotWrapper.setProvider(p);
-        simEngineWrapper.setProvider(p);
+        pilotWrapper.setSecurityModule(p);
+        simEngineWrapper.setSecurityModule(p);
         pilot = new EndpointImpl(pilotWrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
         simEngine = new EndpointImpl(simEngineWrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
     }

@@ -15,11 +15,13 @@ public class SecurityProviderException extends Exception {
     public enum Cause {
         RSA_KEYPAIR("Could not generate RSA Key Pair"),
         CERTIFICATE_BUILDER("Could not build certificate"),
-        LOAD_CERTIFICATE("Could not load certificate"),
-        STORE_SELFSIGNED("Could not store self signed certificate");
+        NOTHING_TO_CERTIFY("Could not load certificate and self-signed certificate generation is disabled.");
 
         public final String message;
 
+    }
+    public SecurityProviderException(final SecurityProviderException.Cause type) {
+        super(type.message);
     }
 
     public SecurityProviderException(final SecurityProviderException.Cause type, final Exception e) {
