@@ -64,8 +64,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
      * certificate, the details of which are given in AppConfig. If this is not configured, the client generates a
      * self-signed certificate.
      * Connection without security is only taken as a last resort if the above strategies fail, and can be disabled
-     * completely in the configuration.
-git p     */
+     * completely in the configuration. */
     public void initialize () {
         try {
             List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();

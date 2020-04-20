@@ -10,6 +10,7 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
+import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.security.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
@@ -73,7 +74,7 @@ public class SimEngineIT {
                 .enableOnDemandCertification(true)
                 .build();
 
-        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config));
+        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         pilotWrapper = new MiloClientWrapperImpl();
         pilotWrapper.initialize(resolver.getURI(PILOT_PORT));
         simEngineWrapper = new MiloClientWrapperImpl();

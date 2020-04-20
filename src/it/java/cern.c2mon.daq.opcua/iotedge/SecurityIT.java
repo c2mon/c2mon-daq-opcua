@@ -9,6 +9,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
+import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.security.SecurityModule;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ public class SecurityIT {
 
     SecurityModule p;
     AppConfig config;
+    AppConfig.KeystoreConfig ksConfig;
 
     @BeforeAll
     public static void startServer() {
@@ -56,6 +58,7 @@ public class SecurityIT {
 
     @BeforeEach
     public void setUp() {
+        ksConfig = AppConfig.KeystoreConfig.builder().build();
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
@@ -67,8 +70,9 @@ public class SecurityIT {
                 .countryCode("CH")
                 .enableInsecureCommunication(true)
                 .enableOnDemandCertification(true)
+                .keystore(ksConfig)
                 .build();
-        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config));
+        p = new SecurityModule(config, new CertificateLoader(ksConfig), new CertificateGenerator(config), new NoSecurityCertifier());
     }
 
     @AfterEach
@@ -94,13 +98,6 @@ public class SecurityIT {
     public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException {
         setupAuthForCertificate();
         trustAndConnect();
-        assertDoesNotThrow(()-> endpoint.isConnected());
-    }
-
-    @Test
-    public void authWithUserNameAndPasswordShouldConnect() {
-        setupAuthForPassword();
-        initializeEndpoint("opc.tcp://milo.digitalpetri.com:62541/milo");
         assertDoesNotThrow(()-> endpoint.isConnected());
     }
 
@@ -138,15 +135,12 @@ public class SecurityIT {
 
     private void setupAuthForCertificate(){
         config.setEnableInsecureCommunication(false);
+        config.setEnableOnDemandCertification(false);
         String path = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
-        AppConfig.KeystoreConfig keystoreConfig = AppConfig.KeystoreConfig.builder()
-                .type("PKCS12")
-                .path(path)
-                .alias("1")
-                .pwd("password")
-                .pkPwd("password")
-                .build();
-        config.setKeystore(keystoreConfig);
+        ksConfig.setType("PKCS12");
+        ksConfig.setPath(path);
+        ksConfig.setAlias("1");
+        ksConfig.setPwd("password");
     }
 
     private void setupAuthForPassword(){

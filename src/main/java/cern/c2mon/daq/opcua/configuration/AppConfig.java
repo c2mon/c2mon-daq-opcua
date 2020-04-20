@@ -40,7 +40,6 @@ public class AppConfig {
         private String path;
         private String pwd = "";
         private String alias;
-        private String pkPwd;
     }
 
     /**

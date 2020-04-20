@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.security;
+package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;

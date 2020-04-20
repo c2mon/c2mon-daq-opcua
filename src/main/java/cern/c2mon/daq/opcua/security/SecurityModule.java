@@ -11,7 +11,6 @@ import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.sdk.client.api.identity.UsernameProvider;
 import org.eclipse.milo.opcua.stack.core.UaException;
-import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +20,6 @@ import org.springframework.stereotype.Service;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.AUTH_ERROR;
@@ -38,16 +36,19 @@ public class SecurityModule {
 
     @Autowired
     @Qualifier("loader")
-    private final CertificateLoader loader;
+    private final Certifier loader;
 
     @Autowired
     @Qualifier("generator")
-    private final CertificateGenerator generator;
+    private final Certifier generator;
+
+    @Autowired
+    @Qualifier("none")
+    private final Certifier noSecurityCertifier;
 
     private OpcUaClientConfigBuilder builder;
 
     public OpcUaClient createClient(List<EndpointDescription> endpoints) throws InterruptedException {
-        OpcUaClient client = null;
         builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english(config.getAppName()))
                 .setApplicationUri(config.getApplicationUri())
@@ -63,18 +64,15 @@ public class SecurityModule {
         endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
 
         //connect with existing certificate if present
-        if (loader.canCertify()) {
-            log.info("Authenticate with loaded certificate. ");
-            client = connectIfPossible(endpoints, loader);
-        }
+        OpcUaClient client = connectIfPossible(endpoints, loader);
+
         if (client == null && config.isEnableOnDemandCertification()) {
             log.info("Authenticate with generated certificate. ");
             client = connectIfPossible(endpoints, generator);
         }
         if (client == null && config.isEnableInsecureCommunication()) {
             log.info("Attempt insecure connection. ");
-            client = connectIfPossible(endpoints, e -> e.getSecurityLevel().intValue() == 0, generator);
-            log.info("Insecure connection unsuccessful. ");
+            client = connectIfPossible(endpoints, noSecurityCertifier);
         }
         if (client == null) {
             throw new OPCCommunicationException(AUTH_ERROR);
@@ -89,29 +87,22 @@ public class SecurityModule {
     }
 
     private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier) throws InterruptedException {
-        return connectIfPossible(endpoints, e -> supportsSigAlg(e, certifier), certifier);
-    }
-
-    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints,
-                                          Function<EndpointDescription, Boolean> predicate,
-                                          Certifier certifier) throws InterruptedException {
-        final var matchingEndpoints = endpoints.stream().filter(predicate::apply).collect(Collectors.toList());
+        final List<EndpointDescription> matchingEndpoints = endpoints.stream().filter(certifier::supportsAlgorithm).collect(Collectors.toList());
         for (EndpointDescription e : matchingEndpoints) {
-            try {
+            if (certifier.canCertify(e)) {
+                certifier.certify(builder, e);
                 log.info("Attempt authentication with mode {} and algorithm {}. ", e.getSecurityMode(), e.getSecurityPolicyUri());
-                certifier.certify(builder);
-                builder.setEndpoint(e);
-                OpcUaClient client = OpcUaClient.create(builder.build());
-                return (OpcUaClient) client.connect().get();
-            } catch (UaException | ExecutionException ex) {
-                log.error("Authentication error. Attempting less secure endpoint: ", ex);
+                try {
+                    OpcUaClient client = OpcUaClient.create(builder.build());
+                    return (OpcUaClient) client.connect().get();
+                } catch (UaException | ExecutionException ex) {
+                    log.error("Authentication error. Attempting less secure endpoint: ", ex);
+                }
+            }
+            else {
+                log.info("Unable to certify endpoint {}, {}. ", e.getSecurityMode(), e.getSecurityPolicyUri());
             }
         }
         return null;
-    }
-
-    private boolean supportsSigAlg(EndpointDescription e, Certifier certifier) {
-        final var sp = SecurityPolicy.fromUriSafe(e.getSecurityPolicyUri());
-        return sp.isPresent() && certifier.supports(sp.get().getAsymmetricSignatureAlgorithm().getTransformation());
     }
 }
