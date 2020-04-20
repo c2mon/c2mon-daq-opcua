@@ -10,15 +10,14 @@ public interface Certifier {
     /**
      * Append the endpoint as well as a certificate and keypair matching the endpoint's security policy to the builder,
      * given that the endpoint is supported.
-     * @param builder the builder to configure to use the certificate and keypair
-     * @param endpoint the certificate and keypair are chosen to match the endpoint's security policy. The endpoint is
-     *                 also appended to the builder.
+     * @param builder the builder to configure for connection
+     * @param endpoint configure the builder according to the endpoint's security policy settings.
      */
     void certify(OpcUaClientConfigBuilder builder, EndpointDescription endpoint);
 
     /**
      * Checks whether the certifier supports an endpoint's security policy and the corresponding signature algorithm.
-     * This method only checks wether the algorithms match, but does not load or generate the certifiate and keypair.
+     * This method only checks whether the algorithms match, but does not load or generate the certifiate and keypair.
      * Loading or generating the ceritificate and keypair may still result in errors, for example due to bad
      * configuration settings.
      * @param endpoint the endpoint whose security policy to check to be supported.
@@ -27,10 +26,11 @@ public interface Certifier {
     boolean supportsAlgorithm(EndpointDescription endpoint);
 
     /**
-     * Loads or generates a matching certificate and keypair if not yet present and returns whether the endpoint can
-     * thus be certified.
+     * Loads or generates the certificate and keypair for an endpoint if it's security policy is supported and not yet
+     * done, and returns whether the process was successful, they match the endpoint and the endpoint can be
+     * certified.
      * @param endpoint the endpoint for which certificate and keypair are generated or loaded.
-     * @return whether the endpoint can be certified.
+     * @return whether certificate and keypair could be loaded or generated and match the endpoint.
      */
     boolean canCertify(EndpointDescription endpoint);
 }

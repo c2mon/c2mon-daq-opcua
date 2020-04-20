@@ -29,6 +29,11 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Setter
 @Slf4j
 @RequiredArgsConstructor
+
+/**
+ * Chooses an endpoint to connect to and creates a client as configured in {@link AppConfig}, selecting from a list
+ * of endpoints.
+ */
 public class SecurityModule {
 
     @Autowired
@@ -48,6 +53,17 @@ public class SecurityModule {
 
     private OpcUaClientConfigBuilder builder;
 
+    /**
+     * Creates an {@link OpcUaClient} according to the configuration specified in {@link AppConfig} and connect to it.
+     * The endpoint to connect to is chosen according to the security policy. Preference is given to endpoints to which
+     * a connection can be made using a certificate loaded from a keystore file, is so configured. If this is not
+     * possible and on-the-fly certificate generation is enabled, self-signed certificates will be generated to attempt
+     * connection with appropriate endpoints. Connection with an insecure endpoint are attempted only if this is not
+     * possible either and the option is allowed in the configuration.
+     * @param endpoints A list of endpoints of which to connect to one.
+     * @return An {@link OpcUaClient} object that is connected to one of the endpoints.
+     * @throws InterruptedException if interrupt was called on the thread during execution.
+     */
     public OpcUaClient createClient(List<EndpointDescription> endpoints) throws InterruptedException {
         builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english(config.getAppName()))

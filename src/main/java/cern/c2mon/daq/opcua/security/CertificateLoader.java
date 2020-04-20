@@ -5,7 +5,6 @@ import io.netty.util.internal.StringUtil;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -24,15 +23,16 @@ import java.util.stream.Stream;
 @Slf4j
 @RequiredArgsConstructor
 @Qualifier("loader")
+/**
+ * Loads a certificate and keypair from a keystore file configured in AppConfig, and configures a builder to use them.
+ */
 public class CertificateLoader extends CertifierBase {
     final AppConfig.KeystoreConfig config;
-
-    public void certify(OpcUaClientConfigBuilder builder, EndpointDescription endpoint) {
-        if (canCertify(endpoint)) {
-            super.certify(builder, endpoint);
-        }
-    }
-
+    /**
+     * Loads a matching certificate and keypair if not yet present and returns whether they match the endpoint.
+     * @param endpoint the endpoint for which certificate and keypair are generated.
+     * @return whether certificate and keypair could be loaded and match the endpoint
+     */
     public boolean canCertify(EndpointDescription endpoint) {
         if (certificate == null || keyPair == null) {
             keyPair = null;
@@ -42,7 +42,12 @@ public class CertificateLoader extends CertifierBase {
         return existingCertificateMatchesEndpoint(endpoint);
     }
 
-
+    /**
+     * Checks whether the certifier supports an endpoint's security policy and the corresponding signature algorithm.
+     * The certifiate is loaded if not yet present, as this is required to read it's signature algorithm.
+     * @param endpoint the endpoint whose security policy to check to be supported.
+     * @return whether the endpoint's security policy is supported.
+     */
     public boolean supportsAlgorithm(EndpointDescription endpoint) {
         return canCertify(endpoint);
     }

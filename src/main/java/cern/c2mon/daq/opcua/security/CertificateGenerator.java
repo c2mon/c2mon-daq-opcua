@@ -4,7 +4,6 @@ import cern.c2mon.daq.opcua.configuration.AppConfig;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateBuilder;
@@ -32,12 +31,12 @@ public class CertificateGenerator extends CertifierBase {
     private static final String RSA_SHA256 = "SHA256withRSA";
     private static final String[] SUPPORTED_SIG_ALGS = {RSA_SHA256};
 
-    public void certify(OpcUaClientConfigBuilder builder, EndpointDescription endpoint) {
-        if (canCertify(endpoint)) {
-            super.certify(builder, endpoint);
-        }
-    }
-
+    /**
+     * Generates a matching certificate and keypair if not yet present and returns whether the endpoint can
+     * therewith be certified.
+     * @param endpoint the endpoint for which certificate and keypair are generated
+     * @return whether the endpoint can be certified
+     */
     public boolean canCertify(EndpointDescription endpoint) {
         final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
         if (!sp.isPresent()  || !supportsAlgorithm(endpoint)) {
@@ -74,6 +73,12 @@ public class CertificateGenerator extends CertifierBase {
         }
     }
 
+    /**
+     * Checks whether an endpoint's security policy is supported by the CertificateGenerator. This method only checks
+     * whether the algorithms match. Loading or generating the ceritificate and keypair may still result in errors.
+     * @param endpoint the endpoint whose security policy to check to be supported.
+     * @return whether the endpoint's security policy is supported.
+     */
     public boolean supportsAlgorithm(EndpointDescription endpoint) {
         final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
         if (!sp.isPresent()) {
