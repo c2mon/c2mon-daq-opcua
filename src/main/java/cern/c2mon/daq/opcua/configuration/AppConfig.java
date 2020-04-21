@@ -1,13 +1,14 @@
 package cern.c2mon.daq.opcua.configuration;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 
+@Configuration
 @ConfigurationProperties(prefix="app")
-@Getter
-@Setter
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 @Builder
 /**
  * Configurations regarding the application. Note that these configurations will be used when creating self-signing
@@ -26,15 +27,18 @@ public class AppConfig {
     private boolean enableInsecureCommunication = true;
     private boolean enableOnDemandCertification = true;
 
-    private KeystoreConfig keystore;
-    private UsrPwdConfig usrPwd;
+    private KeystoreConfig keystore = new KeystoreConfig();
+    private UsrPwdConfig usrPwd = new UsrPwdConfig();
 
     /**
-     * Mandatory settings to load an existing certificate
+     * Settings required to load an existing certificate
      */
-    @Getter
-    @Setter
+    @Configuration
+    @ConfigurationProperties(prefix="app.keystore")
+    @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class KeystoreConfig {
         private String type = "PKCS12";
         private String path;
@@ -43,11 +47,12 @@ public class AppConfig {
     }
 
     /**
-     * Mandatory settings for authentication with username and password
+     * Settings required for authentication with username and password
      */
-    @Getter
-    @Setter
+    @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class UsrPwdConfig {
         private String usr;
         private String pwd;

@@ -1,12 +1,10 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.configuration.AppConfig;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.security.SecurityModule;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
@@ -21,6 +19,7 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.eclipse.milo.opcua.stack.core.util.ConversionUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,20 +34,16 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
  * The implementation of custom wrapper for the OPC UA milo client
  */
 @Slf4j
-@NoArgsConstructor
+@RequiredArgsConstructor
+@Component("wrapper")
 public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     @Autowired
-    @Setter
-    AppConfig config;
+    private final SecurityModule securityModule;
 
     private OpcUaClient client;
 
     private String uri;
-
-    @Autowired
-    @Setter
-    private SecurityModule securityModule;
 
     /**
      * Creates a new instance of a wrapper for the Eclipse milo OPC UA client

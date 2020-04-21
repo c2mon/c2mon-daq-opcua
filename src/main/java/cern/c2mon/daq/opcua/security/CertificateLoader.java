@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -18,14 +17,13 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.stream.Stream;
 
-@Component
-@Getter
-@Slf4j
-@RequiredArgsConstructor
-@Qualifier("loader")
 /**
  * Loads a certificate and keypair from a keystore file configured in AppConfig, and configures a builder to use them.
  */
+@Component("loader")
+@Getter
+@Slf4j
+@RequiredArgsConstructor
 public class CertificateLoader extends CertifierBase {
     final AppConfig.KeystoreConfig config;
     /**

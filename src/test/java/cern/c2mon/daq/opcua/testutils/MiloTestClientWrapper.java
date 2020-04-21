@@ -1,11 +1,9 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.configuration.AppConfig;
 import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
-import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
-import cern.c2mon.daq.opcua.security.SecurityModule;
+import cern.c2mon.daq.opcua.mapping.Deadband;
 import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
@@ -77,16 +75,6 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
     @Override
     public StatusCode write (NodeId nodeId, Object value) {
         return StatusCode.GOOD;
-    }
-
-    @Override
-    public void setSecurityModule(SecurityModule securityModule) {
-
-    }
-
-    @Override
-    public void setConfig(AppConfig config) {
-
     }
 
     @Override

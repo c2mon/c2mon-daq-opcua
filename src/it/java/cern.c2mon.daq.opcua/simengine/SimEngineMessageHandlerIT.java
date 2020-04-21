@@ -6,11 +6,7 @@ import cern.c2mon.daq.opcua.ConnectionResolver;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.configuration.AppConfig;
 import cern.c2mon.daq.opcua.connection.ControllerProxy;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.security.CertificateGenerator;
-import cern.c2mon.daq.opcua.security.CertificateLoader;
-import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.security.SecurityModule;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
@@ -103,11 +99,6 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
         ControllerProxy proxy = new ControllerProxy();
         handler.setProxy(proxy);
-
-        MiloClientWrapper wrapper = proxy.getController(equipmentConfiguration).getEndpoint().getWrapper();
-        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        wrapper.setSecurityModule(p);
-        wrapper.setConfig(config);
     }
 
     @After

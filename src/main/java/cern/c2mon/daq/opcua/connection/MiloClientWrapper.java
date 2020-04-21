@@ -1,9 +1,7 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.configuration.AppConfig;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
-import cern.c2mon.daq.opcua.security.SecurityModule;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -37,8 +35,4 @@ public interface MiloClientWrapper {
     List<DataValue> read(NodeId nodeIds) ;
     void browseNode(String indent, NodeId browseRoot);
     StatusCode write(NodeId nodeId, Object value);
-
-    void setSecurityModule(SecurityModule securityModule);
-
-    void setConfig(AppConfig config);
 }

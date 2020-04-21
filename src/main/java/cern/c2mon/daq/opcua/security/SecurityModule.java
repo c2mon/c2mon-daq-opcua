@@ -14,8 +14,7 @@ import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.List;
@@ -25,11 +24,10 @@ import java.util.stream.Collectors;
 import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.AUTH_ERROR;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
-@Service
+@Component("securityModule")
 @Setter
 @Slf4j
 @RequiredArgsConstructor
-
 /**
  * Chooses an endpoint to connect to and creates a client as configured in {@link AppConfig}, selecting from a list
  * of endpoints.
@@ -40,16 +38,13 @@ public class SecurityModule {
     private final AppConfig config;
 
     @Autowired
-    @Qualifier("loader")
     private final Certifier loader;
 
     @Autowired
-    @Qualifier("generator")
     private final Certifier generator;
 
     @Autowired
-    @Qualifier("none")
-    private final Certifier noSecurityCertifier;
+    private final Certifier noSecurity;
 
     private OpcUaClientConfigBuilder builder;
 
@@ -88,7 +83,7 @@ public class SecurityModule {
         }
         if (client == null && config.isEnableInsecureCommunication()) {
             log.info("Attempt insecure connection. ");
-            client = connectIfPossible(endpoints, noSecurityCertifier);
+            client = connectIfPossible(endpoints, noSecurity);
         }
         if (client == null) {
             throw new OPCCommunicationException(AUTH_ERROR);

@@ -38,7 +38,6 @@ public class ControllerProxy {
     private MiloClientWrapper wrapper;
 
     public ControllerProxy() {
-        wrapper = new MiloClientWrapperImpl();
         EndpointImpl endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
         aliveWriter = new AliveWriter(endpoint);
         controller = new ControllerImpl(endpoint);

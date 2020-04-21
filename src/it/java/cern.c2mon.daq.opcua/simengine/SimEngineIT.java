@@ -75,15 +75,12 @@ public class SimEngineIT {
                 .build();
 
         p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        pilotWrapper = new MiloClientWrapperImpl();
+
+        pilotWrapper = new MiloClientWrapperImpl(p);
         pilotWrapper.initialize(resolver.getURI(PILOT_PORT));
-        simEngineWrapper = new MiloClientWrapperImpl();
+        simEngineWrapper = new MiloClientWrapperImpl(p);
         simEngineWrapper.initialize(resolver.getURI(SIMENGINE_PORT));
 
-        pilotWrapper.setConfig(config);
-        simEngineWrapper.setConfig(config);
-        pilotWrapper.setSecurityModule(p);
-        simEngineWrapper.setSecurityModule(p);
         pilot = new EndpointImpl(pilotWrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
         simEngine = new EndpointImpl(simEngineWrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
     }

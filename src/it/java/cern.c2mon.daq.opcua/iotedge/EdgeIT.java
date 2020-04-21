@@ -66,7 +66,6 @@ public class EdgeIT {
     @BeforeEach
     public void setupEndpoint() {
         future = listenForServerResponse();
-        wrapper = new MiloClientWrapperImpl();
         wrapper.initialize(resolver.getURI(PORT));
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")
@@ -81,8 +80,7 @@ public class EdgeIT {
                 .enableOnDemandCertification(true)
                 .build();
         p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        wrapper.setSecurityModule(p);
-        wrapper.setConfig(config);
+        wrapper = new MiloClientWrapperImpl(p);
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         endpoint.initialize(false);
         log.info("Client ready");
@@ -102,9 +100,8 @@ public class EdgeIT {
 
     @Test
     public void connectToBadServer() {
-        wrapper = new MiloClientWrapperImpl();
+        wrapper = new MiloClientWrapperImpl(p);
         wrapper.initialize("opc.tcp://somehost/somepath");
-        wrapper.setSecurityModule(p);
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(false));
     }

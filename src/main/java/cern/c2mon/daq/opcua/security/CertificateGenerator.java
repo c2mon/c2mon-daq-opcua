@@ -8,24 +8,25 @@ import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateBuilder;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateGenerator;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Optional;
 
-@Component
-@Slf4j
-@Getter
-@RequiredArgsConstructor
-@Qualifier("generator")
 /**
  * For those endpoints with a supported security policy, the CertificateGenerator generates a new self-signed certificate
  * and keypair with a matching signature algorithm.
  * Currently, only @RsaSha256 (http://www.w3.org/2001/04/xmldsig-more#rsa-sha256) is supported.
  */
+@Component("generator")
+@Getter
+@Slf4j
+@RequiredArgsConstructor
 public class CertificateGenerator extends CertifierBase {
+
+    @Autowired
     final AppConfig config;
 
     private static final String RSA_SHA256 = "SHA256withRSA";

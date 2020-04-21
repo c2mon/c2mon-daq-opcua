@@ -106,10 +106,8 @@ public class SecurityIT {
     }
 
     private void initializeEndpoint(String uri) {
-        MiloClientWrapper wrapper = new MiloClientWrapperImpl();
+        MiloClientWrapper wrapper = new MiloClientWrapperImpl(p);
         wrapper.initialize(uri);
-        wrapper.setSecurityModule(p);
-        wrapper.setConfig(config);
         endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
         endpoint.initialize(false);
     }
