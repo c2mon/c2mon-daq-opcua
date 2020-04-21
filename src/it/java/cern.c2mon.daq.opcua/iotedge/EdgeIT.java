@@ -66,7 +66,6 @@ public class EdgeIT {
     @BeforeEach
     public void setupEndpoint() {
         future = listenForServerResponse();
-        wrapper.initialize(resolver.getURI(PORT));
         config = AppConfig.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
@@ -81,6 +80,7 @@ public class EdgeIT {
                 .build();
         p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         wrapper = new MiloClientWrapperImpl(p);
+        wrapper.initialize(resolver.getURI(PORT));
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         endpoint.initialize(false);
         log.info("Client ready");

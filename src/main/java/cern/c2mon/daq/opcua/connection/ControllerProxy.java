@@ -3,12 +3,10 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +14,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Component
 @Setter
 @Getter
@@ -24,26 +22,18 @@ public class ControllerProxy {
 
     @Autowired
     @Qualifier("controller")
-    private Controller controller;
+    private final Controller controller;
 
     @Autowired
     @Qualifier("controllerWithAliveWriter")
-    private Controller controllerWithAliveWriter;
+    private final Controller controllerWithAliveWriter;
 
     @Autowired
-    private AliveWriter aliveWriter;
+    private final AliveWriter aliveWriter;
 
     @Getter
     @Autowired
-    private MiloClientWrapper wrapper;
-
-    public ControllerProxy() {
-        EndpointImpl endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
-        aliveWriter = new AliveWriter(endpoint);
-        controller = new ControllerImpl(endpoint);
-        controllerWithAliveWriter = new ControllerWithAliveWriter(endpoint, aliveWriter);
-    }
-
+    private final MiloClientWrapper wrapper;
 
     public Controller getController(IEquipmentConfiguration config) throws ConfigurationException {
         String uaTcpType = "opc.tcp";

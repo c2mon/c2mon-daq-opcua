@@ -1,12 +1,18 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
-import cern.c2mon.daq.opcua.connection.ControllerProxy;
-import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.connection.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.security.CertificateGenerator;
+import cern.c2mon.daq.opcua.security.CertificateLoader;
+import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
+import cern.c2mon.daq.opcua.security.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
 import cern.c2mon.daq.opcua.testutils.MiloTestClientWrapper;
+import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
@@ -34,7 +40,26 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     protected void beforeTest () throws Exception {
         handler = (OPCUAMessageHandler) msgHandler;
         capture = new CommfaultSenderCapture(messageSender);
-        ControllerProxy proxy = new ControllerProxy();
+
+        AppConfig config = AppConfig.builder()
+                .appName("c2mon-opcua-daq")
+                .applicationUri("urn:localhost:UA:C2MON")
+                .productUri("urn:cern:ch:UA:C2MON")
+                .organization("CERN")
+                .organizationalUnit("C2MON team")
+                .localityName("Geneva")
+                .stateName("Geneva")
+                .countryCode("CH")
+                .enableInsecureCommunication(true)
+                .enableOnDemandCertification(true)
+                .build();
+        SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
+        MiloClientWrapper wrapper = new MiloClientWrapperImpl(p);
+        EndpointImpl endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
+        AliveWriter aliveWriter = new AliveWriter(endpoint);
+        Controller controllerWithAliveWriter = new ControllerWithAliveWriter(endpoint, aliveWriter);
+
+        ControllerProxy proxy = new ControllerProxy(new ControllerImpl(endpoint), controllerWithAliveWriter, aliveWriter, wrapper);
         handler.setProxy(proxy);
     }
 
