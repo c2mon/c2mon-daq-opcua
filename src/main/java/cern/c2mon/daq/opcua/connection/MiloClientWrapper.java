@@ -18,7 +18,6 @@ import java.util.function.BiConsumer;
  */
 public interface MiloClientWrapper {
     void initialize(String uri);
-    void initialize();
     void disconnect();
     boolean isConnected();
     void addEndpointSubscriptionListener(EndpointSubscriptionListener listener);

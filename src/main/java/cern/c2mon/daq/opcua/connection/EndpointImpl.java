@@ -26,7 +26,6 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.type.TypeConverter;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -36,6 +35,8 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -45,22 +46,39 @@ import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.*;
 
 
 @Slf4j
-@AllArgsConstructor
 @Getter
+@Component("endpoint")
 public class EndpointImpl implements Endpoint {
 
     @Setter
+    @Autowired
     private MiloClientWrapper wrapper;
-    private TagSubscriptionMapper mapper;
 
-    private EventPublisher publisher;
+    @Autowired
+    private final TagSubscriptionMapper mapper;
+
+    @Autowired
+    private final EventPublisher publisher;
+
+    private String uri;
+
+    public EndpointImpl(MiloClientWrapper wrapper, TagSubscriptionMapper mapper, EventPublisher publisher) {
+        this.wrapper = wrapper;
+        this.mapper = mapper;
+        this.publisher = publisher;
+    }
+
+    public void initialize (String uri){
+        this.uri = uri;
+        initialize(false);
+    }
 
     public void initialize (boolean connectionLost){
         if (connectionLost) {
             publisher.notifyEquipmentState(CONNECTION_LOST);
         }
         try {
-            wrapper.initialize();
+            wrapper.initialize(uri);
             publisher.notifyEquipmentState(OK);
         } catch (OPCCommunicationException e) {
             publisher.notifyEquipmentState(CONNECTION_FAILED);

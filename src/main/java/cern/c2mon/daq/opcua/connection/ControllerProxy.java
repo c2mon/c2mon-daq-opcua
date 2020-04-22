@@ -43,7 +43,7 @@ public class ControllerProxy {
             throw new ConfigurationException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN);
         }
         EquipmentAddress.ServerAddress address = equipmentAddress.getServerAddressWithProtocol(uaTcpType);
-        wrapper.initialize(address.getUriString());
+        //wrapper.initialize(address.getUriString());
 
         if (equipmentAddress.isAliveWriterEnabled()) {
             try {

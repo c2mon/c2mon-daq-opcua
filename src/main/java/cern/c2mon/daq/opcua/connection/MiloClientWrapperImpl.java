@@ -43,16 +43,6 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
 
     private OpcUaClient client;
 
-    private String uri;
-
-    /**
-     * Creates a new instance of a wrapper for the Eclipse milo OPC UA client
-     * @param uri the endpoint uri that the client will connect to
-     */
-    public void initialize(String uri) {
-        this.uri = uri;
-    }
-
     /**
      * Unless otherwise configured, the client attempts to connect to the most secure endpoint first, where Milo's
      * endpoint security level is taken as a measure. The preferred means of authentication is using a predefined
@@ -60,7 +50,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
      * self-signed certificate.
      * Connection without security is only taken as a last resort if the above strategies fail, and can be disabled
      * completely in the configuration. */
-    public void initialize () {
+    public void initialize (String uri) {
         try {
             List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
             client = securityModule.createClient(endpointDescriptions);

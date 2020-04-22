@@ -34,10 +34,6 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
     }
 
     @Override
-    public void initialize () {
-    }
-
-    @Override
     public void addEndpointSubscriptionListener (EndpointSubscriptionListener listener) {
 
     }

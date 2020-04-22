@@ -58,7 +58,7 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
     @Test
     public void errorOnInitializeShouldSendFail () throws ExecutionException, InterruptedException {
         endpoint.setWrapper(new MiloExceptionTestClientWrapper());
-        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(false));
+        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize("uri"));
         assertEquals(Collections.singletonList(CONNECTION_FAILED), future.get());
     }
 

@@ -37,6 +37,7 @@ import java.util.Collection;
 public interface Endpoint {
 
     boolean isConnected ();
+    void initialize (String uri);
     void initialize (boolean connectionLost);
     void reset();
     void subscribe (EndpointListener listener);

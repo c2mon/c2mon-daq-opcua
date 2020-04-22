@@ -18,14 +18,18 @@ package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import lombok.NoArgsConstructor;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.stream.Collectors.*;
 
+@NoArgsConstructor
+@Component("mapper")
 public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     private final Map<Deadband, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();

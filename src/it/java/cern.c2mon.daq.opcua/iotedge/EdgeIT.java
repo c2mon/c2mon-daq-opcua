@@ -80,9 +80,8 @@ public class EdgeIT {
                 .build();
         p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         wrapper = new MiloClientWrapperImpl(p);
-        wrapper.initialize(resolver.getURI(PORT));
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
-        endpoint.initialize(false);
+        endpoint.initialize(resolver.getURI(PORT));
         log.info("Client ready");
     }
 

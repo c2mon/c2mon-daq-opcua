@@ -9,10 +9,12 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.NoArgsConstructor;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 @NoArgsConstructor
+@Component("publisher")
 public class EventPublisher {
 
     ConcurrentLinkedQueue<EndpointListener> listeners = new ConcurrentLinkedQueue<>();
