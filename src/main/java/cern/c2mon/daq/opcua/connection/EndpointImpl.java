@@ -68,12 +68,11 @@ public class EndpointImpl implements Endpoint {
         this.publisher = publisher;
     }
 
-    public void initialize (String uri){
+    public void initialize(String uri){
         this.uri = uri;
-        initialize(false);
     }
 
-    public void initialize (boolean connectionLost){
+    public void connect(boolean connectionLost){
         if (connectionLost) {
             publisher.notifyEquipmentState(CONNECTION_LOST);
         }

@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.iotedge;
 import cern.c2mon.daq.opcua.configuration.AppConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointImpl;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
@@ -102,14 +101,9 @@ public class SecurityIT {
     }
 
     private void initializeEndpoint() {
-        initializeEndpoint(uri);
-    }
-
-    private void initializeEndpoint(String uri) {
-        MiloClientWrapper wrapper = new MiloClientWrapperImpl(p);
-        wrapper.initialize(uri);
-        endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
-        endpoint.initialize(false);
+        endpoint = new EndpointImpl(new MiloClientWrapperImpl(p), new TagSubscriptionMapperImpl(), new EventPublisher());
+        endpoint.initialize(uri);
+        endpoint.connect(false);
     }
 
     private void trustAndConnect() throws IOException, InterruptedException {

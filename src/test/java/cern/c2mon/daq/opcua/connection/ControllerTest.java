@@ -8,19 +8,18 @@ import org.junit.jupiter.api.Test;
 public class ControllerTest extends ControllerTestBase {
 
     @BeforeEach
-    public void setupMocker() {
+    public void setupMocker() throws ConfigurationException {
         mocker.replay();
+        controller.initialize(config);
     }
 
     @Test
-    public void initializeShouldSubscribeTags() throws ConfigurationException {
-        controller.initialize();
+    public void initializeShouldSubscribeTags() {
         sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.isSubscribed(dataTag)));
     }
 
     @Test
     public void stopShouldResetEndpoint() throws ConfigurationException {
-        controller.initialize();
         controller.stop();
         Assertions.assertTrue(mapper.getGroups().isEmpty());
     }

@@ -82,6 +82,7 @@ public class EdgeIT {
         wrapper = new MiloClientWrapperImpl(p);
         endpoint = new EndpointImpl(wrapper, mapper, publisher);
         endpoint.initialize(resolver.getURI(PORT));
+        endpoint.connect(false);
         log.info("Client ready");
     }
 
@@ -99,10 +100,8 @@ public class EdgeIT {
 
     @Test
     public void connectToBadServer() {
-        wrapper = new MiloClientWrapperImpl(p);
-        wrapper.initialize("opc.tcp://somehost/somepath");
-        endpoint = new EndpointImpl(wrapper, mapper, publisher);
-        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(false));
+        endpoint.initialize("opc.tcp://somehost/somepath");
+        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.connect(false));
     }
 
     @Test

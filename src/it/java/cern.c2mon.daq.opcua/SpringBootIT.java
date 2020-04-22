@@ -30,7 +30,7 @@ public class SpringBootIT {
 
     @Test
     public void testSpring() {
-        endpoint.initialize(true);
+        endpoint.initialize("test");
 
     }
 }

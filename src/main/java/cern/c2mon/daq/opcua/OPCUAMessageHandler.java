@@ -22,7 +22,6 @@ import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.connection.Controller;
-import cern.c2mon.daq.opcua.connection.ControllerProxy;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
@@ -63,16 +62,13 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    */
   private static final long RESTART_DELAY = 2000L;
 
-  @Getter
-  private Controller controller;
-
   @Setter
   EndpointListener endpointListener = new EndpointListenerImpl();
 
   @Getter
   @Setter
   @Autowired
-  ControllerProxy proxy;
+  Controller controller;
 
 
   /**
@@ -89,7 +85,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
     log.debug("connect to the OPC UA data source...");
     endpointListener.initialize(sender);
-    controller = proxy.getController(config);
     controller.subscribe(endpointListener);
     controller.initialize(config);
     log.debug("connected");

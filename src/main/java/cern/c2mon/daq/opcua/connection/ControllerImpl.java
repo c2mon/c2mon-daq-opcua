@@ -18,6 +18,8 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
+import cern.c2mon.daq.opcua.address.AddressStringParser;
+import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -29,33 +31,44 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 
+@Component
 @Slf4j
 @RequiredArgsConstructor
 public class ControllerImpl implements Controller, IDataTagChanger {
 
     @Getter
     private final Endpoint endpoint;
+
+    @Autowired
+    private final AliveWriter aliveWriter;
+
     @Setter
     private IEquipmentConfiguration config;
 
-    public void initialize (IEquipmentConfiguration config) throws ConfigurationException {
-        synchronized (this) {
-            this.config = config;
+
+    public synchronized void initialize(IEquipmentConfiguration config) throws ConfigurationException {
+        this.config = config;
+        String uaTcpType = "opc.tcp";
+        EquipmentAddress addr = AddressStringParser.parse(config.getAddress());
+        if (!addr.supportsProtocol(uaTcpType)) {
+            throw new ConfigurationException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN);
         }
-        initialize(false);
-    }
-    public void initialize () throws ConfigurationException {
-        initialize(false);
+        aliveWriter.initialize(config, addr.isAliveWriterEnabled());
+        endpoint.initialize(addr.getServerAddressOfType(uaTcpType).getUriString());
+        connect(false);
     }
 
-    private void initialize (boolean connectionLost) throws ConfigurationException {
-        endpoint.initialize(connectionLost);
+    @Override
+    public void connect(boolean connectionLost) throws ConfigurationException {
+        endpoint.connect(connectionLost);
         synchronized (this) {
             endpoint.subscribeTags(config.getSourceDataTags().values());
         }
@@ -68,7 +81,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     public void checkConnection () throws ConfigurationException {
         if (!endpoint.isConnected()) {
             endpoint.reset();
-            initialize(true);
+            connect(true);
             refreshAllDataTags();
         }
     }
@@ -82,7 +95,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     }
 
     public String updateAliveWriterAndReport () {
-        return  "Alive Writer is not active -> not updated.";
+        return aliveWriter.updateAndReport();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
@@ -29,6 +30,7 @@ public abstract class ControllerTestBase {
     TagSubscriptionMapper mapper;
     Controller controller;
     MiloMocker mocker;
+    IEquipmentConfiguration config;
 
     public static void setupWithAddressAndAliveTag (IEquipmentConfiguration config, String address, boolean aliveWriterEnabled, ISourceDataTag aliveTag) {
         expect(config.getAddress()).andReturn(address + aliveWriterEnabled).anyTimes();
@@ -51,20 +53,18 @@ public abstract class ControllerTestBase {
     }
 
     @BeforeEach
-    public void setup() {
-        IEquipmentConfiguration config = createMockConfig();
+    public void setup() throws ConfigurationException {
+        config = createMockConfig();
         expect(config.getSourceDataTags()).andReturn(sourceTags).anyTimes();
         setupWithAddressAndAliveTag(config, ADDRESS_PROTOCOL_TCP + ADDRESS_BASE, true, aliveTag);
 
-        EventPublisher publisher = new EventPublisher();
         MiloTestClientWrapper wrapper = new MiloTestClientWrapper();
         mapper = new TagSubscriptionMapperImpl();
-        Endpoint endpoint = new EndpointImpl(wrapper, mapper, publisher);
-        controller = new ControllerImpl(endpoint);
-        controller.setConfig(config);
-
         mocker = new MiloMocker(wrapper, mapper);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
+
+        Endpoint endpoint = new EndpointImpl(wrapper, mapper, new EventPublisher());
+        controller = new ControllerImpl(endpoint, new AliveWriter(endpoint));
     }
 
     @AfterEach

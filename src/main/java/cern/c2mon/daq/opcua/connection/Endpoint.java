@@ -37,8 +37,8 @@ import java.util.Collection;
 public interface Endpoint {
 
     boolean isConnected ();
-    void initialize (String uri);
-    void initialize (boolean connectionLost);
+    void initialize(String uri);
+    void connect(boolean connectionLost);
     void reset();
     void subscribe (EndpointListener listener);
 
@@ -55,7 +55,6 @@ public interface Endpoint {
 
     //for injection during testing
     void setWrapper(MiloClientWrapper wrapper);
-    MiloClientWrapper getWrapper();
     EventPublisher getPublisher();
     TagSubscriptionMapper getMapper();
 }

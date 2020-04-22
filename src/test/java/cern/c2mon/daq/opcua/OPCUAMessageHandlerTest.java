@@ -57,10 +57,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         MiloClientWrapper wrapper = new MiloClientWrapperImpl(p);
         EndpointImpl endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
         AliveWriter aliveWriter = new AliveWriter(endpoint);
-        Controller controllerWithAliveWriter = new ControllerWithAliveWriter(endpoint, aliveWriter);
-
-        ControllerProxy proxy = new ControllerProxy(new ControllerImpl(endpoint), controllerWithAliveWriter, aliveWriter, wrapper);
-        handler.setProxy(proxy);
+        Controller controllerWithAliveWriter = new ControllerImpl(endpoint, aliveWriter);
+        handler.setController(controllerWithAliveWriter);
     }
 
     @Override
@@ -129,7 +127,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     private void mockSuccessfulConnectionAndReplay() {
         MiloTestClientWrapper wrapper = new MiloTestClientWrapper();
-        Endpoint endpoint = handler.getProxy().getController().getEndpoint();
+        Endpoint endpoint = handler.getController().getEndpoint();
         endpoint.setWrapper(wrapper);
 
         MiloMocker mocker = new MiloMocker(wrapper, endpoint.getMapper());

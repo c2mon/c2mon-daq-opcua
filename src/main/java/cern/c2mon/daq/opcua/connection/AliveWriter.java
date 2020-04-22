@@ -16,25 +16,19 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
+import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.MISSING_TARGET_TAG;
-
-/**
- * Regularly writes to a value in the OPC server to simulate an alive.
- *
- * @author Andreas Lang
- */
 
 /**
  * The AliveWriter ensures that the SubEquipments connected to the OPC UA server are still running by writing to them.
@@ -42,43 +36,74 @@ import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.MISSI
  * running. The SubEquipment behind the Server may be down. The AliveWriter checks the state of the SubEquipment by
  * writing a counter to it and validating that the counter values are as expected.
  */
-
+@Component
 @Slf4j
 @RequiredArgsConstructor
 public class AliveWriter extends TimerTask {
+
+  /**
+   * The endpoint to write to.
+   */
+  @Autowired
+  private final Endpoint endpoint;
+
   /**
    * The timer used to schedule the writing.
    */
   private Timer timer;
-  /**
-   * The endpoint to write to.
-   */
-  private final Endpoint endpoint;
+
   /**
    * The time between two write operations.
    */
   private long writeTime;
+
   /**
-   * The tag which represents the target to write to.
+   * The address to write to, represents the AliveTag.
    */
-  private ISourceDataTag targetTag;
+  private OPCHardwareAddress address;
+
+  /**
+   * Flag indicating whether the aliveWriter is enabled.
+   */
+  private boolean enabled = false;
+
   /**
    * The value to write (used like a counter).
    */
-  private AtomicInteger writeCounter = new AtomicInteger(0);
+  private final AtomicInteger writeCounter = new AtomicInteger(0);
 
   /**
-   * Creates a new alive writer.
-   *
-   * @param writeTime  The time between two write operations.
-   * @param targetTag  The tag which represents the value to write to.
+   * Initializes the AliveWriter considering the given equipment Configuration. If no the writer is not enabled or no
+   * alive tag is specified, the aliveWriter is not started.
+   * @param config the equipment configuration
+   * @param enabled a flag indicating whether the AliveWriter should be started.
    */
-  public void initialize(final long writeTime, final ISourceDataTag targetTag) throws ConfigurationException {
-    if (targetTag == null) {
-      throw new ConfigurationException(MISSING_TARGET_TAG);
+  public void initialize(IEquipmentConfiguration config, boolean enabled) {
+    if (enabled) {
+      final ISourceDataTag aliveTag = config.getSourceDataTag(config.getAliveTagId());
+      if (aliveTag != null) {
+        this.enabled = true;
+        this.writeTime = config.getAliveTagInterval() / 2;
+        this.address = (OPCHardwareAddress) aliveTag.getHardwareAddress();
+        startWriter();
+      } else {
+        log.error("The target tag is not defined, cannot start the Alive Writer.");
+      }
     }
-    this.writeTime = writeTime;
-    this.targetTag = targetTag;
+  }
+
+  /**
+   * Restarts the AliveWriter, if it was enabled on initialization.
+   * @return a report describing the triggered restart, or the disabled state of the aliveWriter.
+   */
+  public String updateAndReport() {
+    if (enabled) {
+      stopWriter();
+      startWriter();
+      return "Alive Writer updated";
+    } else {
+      return "Alive Writer is not active and therefore was not updated.";
+    }
   }
 
   /**
@@ -87,20 +112,18 @@ public class AliveWriter extends TimerTask {
    */
   @Override
   public void run() {
-    OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) targetTag.getHardwareAddress();
-
     // We send an Integer since Long could cause problems to the OPC
     Object castedValue = writeCounter.intValue();
-    if (log.isDebugEnabled()) { log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName()); }
+    if (log.isDebugEnabled()) {
+      log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
+    }
     try {
-      endpoint.write(hardwareAddress, castedValue);
+      endpoint.write(address, castedValue);
       writeCounter.incrementAndGet();
       writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
-    }
-    catch (OPCCommunicationException exception) {
+    } catch (OPCCommunicationException exception) {
       log.error("Error while writing alive. Going to retry...", exception);
-    }
-    catch (OPCCriticalException exception) {
+    } catch (OPCCriticalException exception) {
       log.error("Critical error while writing alive. Stopping alive...", exception);
       synchronized (this) {
         cancel();
@@ -108,10 +131,7 @@ public class AliveWriter extends TimerTask {
     }
   }
 
-  /**
-   * Starts this writer.
-   */
-  public synchronized void startWriter() {
+  private synchronized void startWriter() {
     if (timer != null) {
       timer.cancel();
     }
@@ -120,15 +140,11 @@ public class AliveWriter extends TimerTask {
     timer.schedule(this, writeTime, writeTime);
   }
 
-  /**
-   * Stops this writer.
-   */
-  public synchronized void stopWriter() {
+  private synchronized void stopWriter() {
     if (timer != null) {
       log.info("Stopping OPCAliveWriter...");
       timer.cancel();
       timer = null;
     }
   }
-
 }

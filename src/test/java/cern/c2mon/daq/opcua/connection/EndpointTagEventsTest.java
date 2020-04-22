@@ -28,7 +28,7 @@ public class EndpointTagEventsTest extends EndpointTestBase {
     @BeforeEach
     public void setup() {
         super.setup();
-        endpoint.initialize(false);
+        endpoint.connect(false);
         listenForTagEvent();
     }
 

@@ -37,35 +37,36 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
     @Test
     public void goodStatusCodesShouldSendOK () throws ExecutionException, InterruptedException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tag1);
-        endpoint.initialize(false);
+        endpoint.connect(false);
         assertEquals(Collections.singletonList(OK), future.get());
     }
 
     @Test
     public void badStatusCodesShouldSendOK () throws ExecutionException, InterruptedException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.BAD, tag1);
-        endpoint.initialize(false);
+        endpoint.connect(false);
         assertEquals(Collections.singletonList(OK), future.get());
     }
 
     @Test
     public void initializeAfterLostConnectionShouldSendLostAndOK () throws ExecutionException, InterruptedException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.BAD, tag1);
-        endpoint.initialize(true);
+        endpoint.connect(true);
         assertEquals(Arrays.asList(CONNECTION_LOST, OK), future.get());
     }
 
     @Test
     public void errorOnInitializeShouldSendFail () throws ExecutionException, InterruptedException {
         endpoint.setWrapper(new MiloExceptionTestClientWrapper());
-        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize("uri"));
+        endpoint.initialize("uri");
+        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.connect(false));
         assertEquals(Collections.singletonList(CONNECTION_FAILED), future.get());
     }
 
     @Test
     public void errorOnInitializeAfterLostConnectionShouldSendBoth () throws ExecutionException, InterruptedException {
         endpoint.setWrapper(new MiloExceptionTestClientWrapper());
-        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.initialize(true));
+        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.connect(true));
         assertEquals(Arrays.asList(CONNECTION_LOST, CONNECTION_FAILED), future.get());
     }
 

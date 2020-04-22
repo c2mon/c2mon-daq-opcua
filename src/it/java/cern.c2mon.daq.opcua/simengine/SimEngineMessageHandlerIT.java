@@ -102,15 +102,11 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
 
-
         p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        MiloClientWrapper wrapper = new MiloClientWrapperImpl(p);
-        EndpointImpl endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
-        AliveWriter aliveWriter = new AliveWriter(endpoint);
-        Controller controllerWithAliveWriter = new ControllerWithAliveWriter(endpoint, aliveWriter);
+        EndpointImpl endpoint = new EndpointImpl(new MiloClientWrapperImpl(p), new TagSubscriptionMapperImpl(), new EventPublisher());
+        Controller controller = new ControllerImpl(endpoint, new AliveWriter(endpoint));
 
-        ControllerProxy proxy = new ControllerProxy(new ControllerImpl(endpoint), controllerWithAliveWriter, aliveWriter, wrapper);
-        handler.setProxy(proxy);
+        handler.setController(controller);
     }
 
     @After

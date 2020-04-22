@@ -27,7 +27,7 @@ public class DataTagChangerTest extends ControllerTestBase {
         tag = ServerTagFactory.DipData.createDataTag();
         mocker.mockClientHandle(Collections.singletonList(tag));
         mocker.replay();
-        controller.initialize();
+        controller.initialize(config);
 
         assert super.controller instanceof IDataTagChanger;
         tagChanger = (IDataTagChanger) super.controller;

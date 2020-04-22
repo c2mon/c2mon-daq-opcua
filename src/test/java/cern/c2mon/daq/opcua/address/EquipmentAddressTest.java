@@ -53,7 +53,7 @@ public class EquipmentAddressTest {
 
     @Test
     public void getServerAddressWithUnknownProtocolShouldThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> equipmentAddress.getServerAddressWithProtocol("http"));
+        assertThrows(IllegalArgumentException.class, () -> equipmentAddress.getServerAddressOfType("http"));
     }
 
     @Test
@@ -61,7 +61,7 @@ public class EquipmentAddressTest {
         ServerAddress secondSA = new ServerAddress(new URI("http://test"),"user", "domain", "password");
         EquipmentAddress equipmentAddress = new EquipmentAddress(Arrays.asList(serverAddress, secondSA), 1, 2, true);
 
-        ServerAddress serverAddressWithProtocol = equipmentAddress.getServerAddressWithProtocol("opc.tcp");
+        ServerAddress serverAddressWithProtocol = equipmentAddress.getServerAddressOfType("opc.tcp");
 
         assertEquals(serverAddress, serverAddressWithProtocol);
     }

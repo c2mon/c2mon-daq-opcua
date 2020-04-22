@@ -80,12 +80,13 @@ public class SimEngineIT {
         p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
 
         pilotWrapper = new MiloClientWrapperImpl(p);
-        pilotUri = resolver.getURI(PILOT_PORT);
         simEngineWrapper = new MiloClientWrapperImpl(p);
-        simUri = resolver.getURI(SIMENGINE_PORT);
 
         pilot = new EndpointImpl(pilotWrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
         simEngine = new EndpointImpl(simEngineWrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
+
+        pilot.initialize(resolver.getURI(PILOT_PORT));
+        simEngine.initialize(resolver.getURI(SIMENGINE_PORT));
     }
 
     @AfterEach
@@ -96,19 +97,19 @@ public class SimEngineIT {
 
     @Test
     public void testPilotConnection() {
-        pilot.initialize(pilotUri);
+        pilot.connect(false);
         Assertions.assertDoesNotThrow(()-> pilot.isConnected());
     }
 
     @Test
     public void testSimEngineConnection() {
-        simEngine.initialize(simUri);
+        simEngine.connect(false);
         Assertions.assertDoesNotThrow(()-> simEngine.isConnected());
     }
 
     @Test
     public void writeValue() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
-        simEngine.initialize(simUri);
+        simEngine.connect(false);
         CompletableFuture<Object> writeResponse = ServerTestListener.listenForWriteResponse(simEngine.getPublisher());
 
         SourceCommandTag commandTag = new SourceCommandTag(0L, "Power");
