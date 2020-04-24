@@ -62,14 +62,16 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    */
   private static final long RESTART_DELAY = 2000L;
 
-  @Setter
-  EndpointListener endpointListener = new EndpointListenerImpl();
-
   @Getter
-  @Setter
-  @Autowired
-  Controller controller;
+  private Controller controller;
 
+  @Setter
+  private EndpointListener endpointListener = new EndpointListenerImpl();
+
+  @Autowired
+  public void setController(Controller controller) {
+    this.controller = controller;
+  }
 
   /**
    * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial

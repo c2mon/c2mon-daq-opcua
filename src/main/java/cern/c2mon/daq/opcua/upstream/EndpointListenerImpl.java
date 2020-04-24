@@ -8,9 +8,11 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.springframework.stereotype.Component;
 
-@Slf4j
+@Component("endpointListener")
 @NoArgsConstructor
+@Slf4j
 public class EndpointListenerImpl implements EndpointListener {
 
     IEquipmentMessageSender sender;

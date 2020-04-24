@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
 import cern.c2mon.daq.opcua.testutils.MiloTestClientWrapper;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
@@ -38,13 +39,6 @@ public abstract class ControllerTestBase {
         replay(config);
     }
 
-    public static IEquipmentConfiguration createMockConfig() {
-        IEquipmentConfiguration config = createMock(IEquipmentConfiguration.class);
-        expect(config.getAliveTagId()).andReturn(1L).anyTimes();
-        expect(config.getAliveTagInterval()).andReturn(13L).anyTimes();
-        return config;
-    }
-
     public static Map<Long, ISourceDataTag> generateSourceTags () {
         Map<Long, ISourceDataTag> sourceTags = new HashMap<>();
         sourceTags.put(2L, ServerTagFactory.RandomUnsignedInt32.createDataTag());
@@ -54,7 +48,7 @@ public abstract class ControllerTestBase {
 
     @BeforeEach
     public void setup() throws ConfigurationException {
-        config = createMockConfig();
+        config = TestUtils.createMockConfig();
         expect(config.getSourceDataTags()).andReturn(sourceTags).anyTimes();
         setupWithAddressAndAliveTag(config, ADDRESS_PROTOCOL_TCP + ADDRESS_BASE, true, aliveTag);
 

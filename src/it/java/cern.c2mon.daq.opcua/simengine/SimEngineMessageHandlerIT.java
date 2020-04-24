@@ -1,8 +1,6 @@
 package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.common.messaging.IProcessMessageSender;
-import cern.c2mon.daq.opcua.ConnectionResolver;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.configuration.AppConfig;
 import cern.c2mon.daq.opcua.connection.*;
@@ -12,6 +10,8 @@ import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.security.SecurityModule;
+import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.opcua.upstream.EndpointListener;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
@@ -28,22 +28,19 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.easymock.Capture;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.easymock.EasyMock.*;
+import static cern.c2mon.daq.opcua.OPCUAMessageHandlerTest.CommfaultSenderCapture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -61,31 +58,10 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static long CMDID_PW = 10L;
     private static long CMDID_V0SET = 20L;
 
-
-    SecurityModule p;
-    static AppConfig config;
-
     @BeforeClass
     public static void startServer() {
-        config = AppConfig.builder()
-                .appName("c2mon-opcua-daq")
-                .applicationUri("urn:localhost:UA:C2MON")
-                .productUri("urn:cern:ch:UA:C2MON")
-                .organization("CERN")
-                .organizationalUnit("C2MON team")
-                .localityName("Geneva")
-                .stateName("Geneva")
-                .countryCode("CH")
-                .enableInsecureCommunication(true)
-                .enableOnDemandCertification(true)
-                .build();
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
-        GenericContainer image = new GenericContainer("gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3")
-                .waitingFor(Wait.forLogMessage(".*Server opened endpoints for following URLs:.*", 2))
-                .withEnv("SIMCONFIG", "sim_BASIC.short.xml")
-                .withNetworkMode("host");
-
-        resolver = new ConnectionResolver(image);
+        resolver = ConnectionResolver.resolveVenusServers("sim_BASIC.short.xml");
         resolver.initialize();
     }
 
@@ -102,7 +78,8 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
 
-        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
+        AppConfig config = TestUtils.createDefaultConfig();
+        SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         EndpointImpl endpoint = new EndpointImpl(new MiloClientWrapperImpl(p), new TagSubscriptionMapperImpl(), new EventPublisher());
         Controller controller = new ControllerImpl(endpoint, new AliveWriter(endpoint));
 
@@ -213,22 +190,5 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     }
 
 
-    private static class CommfaultSenderCapture {
-        Capture<Long> id = newCapture();
-        Capture<String> tagName = newCapture();
-        Capture<Boolean> val = newCapture();
-        Capture<String> msg= newCapture();
 
-        public CommfaultSenderCapture(IProcessMessageSender sender) {
-            sender.sendCommfaultTag(captureLong(id), capture(tagName), captureBoolean(val), capture(msg));
-            expectLastCall().once();
-            replay(sender);
-        }
-
-        public void verifyCapture(Long id, String tagName, String msg) {
-            assertEquals(id, this.id.getValue().longValue());
-            assertEquals(tagName, this.tagName.getValue());
-            assertEquals(msg, this.msg.getValue());
-        }
-    }
 }

@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * running. The SubEquipment behind the Server may be down. The AliveWriter checks the state of the SubEquipment by
  * writing a counter to it and validating that the counter values are as expected.
  */
-@Component
+@Component("aliveWriter")
 @Slf4j
 @RequiredArgsConstructor
 public class AliveWriter extends TimerTask {

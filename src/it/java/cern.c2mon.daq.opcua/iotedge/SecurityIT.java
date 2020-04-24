@@ -10,6 +10,8 @@ import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.security.SecurityModule;
+import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
@@ -17,8 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.io.IOException;
 
@@ -30,48 +30,28 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 @ExtendWith(SpringExtension.class)
 public class SecurityIT {
 
-    private Endpoint endpoint;
-    private static GenericContainer image;
+    private static ConnectionResolver resolver;
     private static String uri;
+    private Endpoint endpoint;
 
-    SecurityModule p;
     AppConfig config;
-    AppConfig.KeystoreConfig ksConfig;
 
     @BeforeAll
     public static void startServer() {
-       image = new GenericContainer<>("mcr.microsoft.com/iotedge/opc-plc")
-                .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
-                .withCommand("--unsecuretransport")
-                .withNetworkMode("host");
-        image.start();
-        int PORT = 50000;
-        uri = "opc.tcp://" + image.getContainerIpAddress() + ":" + PORT;
+        resolver = ConnectionResolver.resolveIoTEdgeServer();
+        resolver.initialize();
+        uri = resolver.getURI(ConnectionResolver.Ports.IOTEDGE);
     }
 
     @AfterAll
     public static void stopServer() {
-        image.stop();
-        image.close();
+        resolver.close();
+        resolver = null;
     }
 
     @BeforeEach
     public void setUp() {
-        ksConfig = AppConfig.KeystoreConfig.builder().build();
-        config = AppConfig.builder()
-                .appName("c2mon-opcua-daq")
-                .applicationUri("urn:localhost:UA:C2MON")
-                .productUri("urn:cern:ch:UA:C2MON")
-                .organization("CERN")
-                .organizationalUnit("C2MON team")
-                .localityName("Geneva")
-                .stateName("Geneva")
-                .countryCode("CH")
-                .enableInsecureCommunication(true)
-                .enableOnDemandCertification(true)
-                .keystore(ksConfig)
-                .build();
-        p = new SecurityModule(config, new CertificateLoader(ksConfig), new CertificateGenerator(config), new NoSecurityCertifier());
+        config = TestUtils.createDefaultConfig();
     }
 
     @AfterEach
@@ -101,6 +81,7 @@ public class SecurityIT {
     }
 
     private void initializeEndpoint() {
+        SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         endpoint = new EndpointImpl(new MiloClientWrapperImpl(p), new TagSubscriptionMapperImpl(), new EventPublisher());
         endpoint.initialize(uri);
         endpoint.connect(false);
@@ -113,26 +94,21 @@ public class SecurityIT {
         } catch (OPCCommunicationException e) {
             // expected behavior
         }
-
-        log.info("Trust certificate.");
-        image.execInContainer("mkdir", "pki/trusted");
-        image.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
+        resolver.trustCertificates();
 
         log.info("Reconnect.");
         this.initializeEndpoint();
-
-        log.info("Cleanup.");
-        image.execInContainer("rm", "-r", "pki/trusted");
+        resolver.cleanUpCertificates();
     }
 
     private void setupAuthForCertificate(){
         config.setEnableInsecureCommunication(false);
         config.setEnableOnDemandCertification(false);
         String path = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
-        ksConfig.setType("PKCS12");
-        ksConfig.setPath(path);
-        ksConfig.setAlias("1");
-        ksConfig.setPwd("password");
+        config.getKeystore().setType("PKCS12");
+        config.getKeystore().setPath(path);
+        config.getKeystore().setAlias("1");
+        config.getKeystore().setPwd("password");
     }
 
     private void setupAuthForPassword(){

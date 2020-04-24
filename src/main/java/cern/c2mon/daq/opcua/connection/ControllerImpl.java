@@ -39,7 +39,7 @@ import java.util.Collections;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 
-@Component
+@Component("controller")
 @Slf4j
 @RequiredArgsConstructor
 public class ControllerImpl implements Controller, IDataTagChanger {
