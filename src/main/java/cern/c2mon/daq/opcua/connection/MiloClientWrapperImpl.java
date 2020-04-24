@@ -25,6 +25,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.*;
@@ -52,8 +54,9 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
      * completely in the configuration. */
     public void initialize (String uri) {
         try {
-            List<EndpointDescription> endpointDescriptions = DiscoveryClient.getEndpoints(uri).get();
-            client = securityModule.createClient(endpointDescriptions);
+            List<EndpointDescription> endpoints = DiscoveryClient.getEndpoints(uri).get();
+            endpoints = updateEndpointUrls(uri, endpoints);
+            client = securityModule.createClient(endpoints);
         } catch (InterruptedException | ExecutionException e) {
             throw asOPCCommunicationException(CONNECT, e);
         }
@@ -197,6 +200,34 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         } catch (InterruptedException | ExecutionException e) {
             throw asOPCCommunicationException(OPCCommunicationException.Cause.BROWSE, e);
         }
+    }
+
+    /**
+     * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
+     * be resolved by the client. Replace the hostname of each endpoint's URL by the one used to originally reach the
+     * server to work around the issue.
+     * @param originalUri the (resolvable) uri used to originally reach the server.
+     * @param originalEndpoints a list of originalEndpoints returned by the DiscoveryClient potentially containing incorrect endpointUrls
+     * @return a list of endpoints with the original url as as endpointUrl, but other identical to the originalEndpoints.
+     */
+    private static List<EndpointDescription> updateEndpointUrls(String originalUri, List<EndpointDescription> originalEndpoints) {
+        // Some hostnames contain characters not allowed in a URI (such as underscores in Windows machine hostnames),
+        // hence parsing manually rather than relying on URI class methods.
+        final String hostRegex = "://[^/]*";
+        final Matcher matcher = Pattern.compile(hostRegex).matcher(originalUri);
+        if (matcher.find()) {
+            return originalEndpoints.stream().map(e -> new EndpointDescription(
+                    e.getEndpointUrl().replaceAll(hostRegex, matcher.group()),
+                    e.getServer(),
+                    e.getServerCertificate(),
+                    e.getSecurityMode(),
+                    e.getSecurityPolicyUri(),
+                    e.getUserIdentityTokens(),
+                    e.getTransportProfileUri(),
+                    e.getSecurityLevel()))
+                    .collect(Collectors.toList());
+        }
+        return originalEndpoints;
     }
 
     private OPCCommunicationException asOPCCommunicationException(OPCCommunicationException.Cause cause, Exception e) {
