@@ -26,6 +26,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static cern.c2mon.daq.opcua.testutils.ServerTestListener.Target.WRITE_RESPONSE;
+
 public class SimEngineIT {
     private static Endpoint pilot;
     private static Endpoint simEngine;
@@ -77,7 +79,7 @@ public class SimEngineIT {
     @Test
     public void writeValue() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
         simEngine.connect(false);
-        CompletableFuture<Object> writeResponse = ServerTestListener.listenForWriteResponse(simEngine.getPublisher());
+        CompletableFuture<Object> writeResponse = ServerTestListener.createListenerAndReturnFutures(simEngine.getPublisher()).get(WRITE_RESPONSE);
 
         SourceCommandTag commandTag = new SourceCommandTag(0L, "Power");
         OPCHardwareAddressImpl hw = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw");

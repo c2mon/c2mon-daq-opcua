@@ -18,7 +18,7 @@ public class Deadband {
     short type;
 
     public static Deadband of(ISourceDataTag tag) {
-        return of(tag.getTimeDeadband(), tag.getValueDeadbandType(), (short) tag.getValueDeadband());
+        return of(tag.getTimeDeadband(), (short) tag.getValueDeadband(), tag.getValueDeadbandType());
     }
 
     public static Deadband of(int time, float value, short type) {

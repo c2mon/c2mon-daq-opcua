@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static cern.c2mon.daq.opcua.testutils.ServerTestListener.Target.WRITE_RESPONSE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -41,7 +42,7 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
 
     @Test
     public void executeClassicCommandWithoutPulseShouldNotifyListener() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
-        CompletableFuture<Object> writeResponse = ServerTestListener.listenForWriteResponse(publisher);
+        CompletableFuture<Object> writeResponse = ServerTestListener.createListenerAndReturnFutures(publisher).get(WRITE_RESPONSE);
         endpoint.executeCommand(tag, value);
         assertEquals(StatusCode.GOOD, writeResponse.get(3000, TimeUnit.MILLISECONDS));
     }

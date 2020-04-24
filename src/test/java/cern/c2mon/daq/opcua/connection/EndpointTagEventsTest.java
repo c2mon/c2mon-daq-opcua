@@ -27,7 +27,7 @@ public class EndpointTagEventsTest extends EndpointTestBase {
     public void setup() {
         super.setup();
         endpoint.connect(false);
-        Map<ServerTestListener.Target, CompletableFuture<Object>> f = ServerTestListener.createListenerAndReturnFutures(publisher, null);
+        Map<ServerTestListener.Target, CompletableFuture<Object>> f = ServerTestListener.createListenerAndReturnFutures(publisher);
         tagUpdateFuture = f.get(TAG_UPDATE);
         tagInvalidFuture = f.get(TAG_INVALID);
     }

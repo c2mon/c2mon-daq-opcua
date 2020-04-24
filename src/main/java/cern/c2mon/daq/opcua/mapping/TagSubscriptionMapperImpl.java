@@ -118,7 +118,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public boolean isSubscribed(ISourceDataTag tag) {
-        SubscriptionGroup group = getExistingGroup(Deadband.of(tag));
+        SubscriptionGroup group = subscriptionGroups.get(Deadband.of(tag));
         return group != null && group.isSubscribed() && group.contains(getDefinition(tag));
     }
 
@@ -141,7 +141,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     private SubscriptionGroup getOrCreateGroup(Deadband deadband) {
         if (groupExists(deadband)) {
-            return getExistingGroup(deadband);
+            return subscriptionGroups.get(deadband);
         } else {
             SubscriptionGroup group = new SubscriptionGroup(deadband);
             subscriptionGroups.put(deadband, group);
@@ -150,11 +150,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     private boolean groupExists (Deadband deadband) {
-        return getExistingGroup(deadband) != null;
-    }
-
-    private SubscriptionGroup getExistingGroup (Deadband deadband) {
-        return subscriptionGroups.get(deadband);
+        return subscriptionGroups.get(deadband) != null;
     }
 
     private DataTagDefinition findDefinitionWithClientHandle(UInteger clientHandle){

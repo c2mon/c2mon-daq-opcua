@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import static cern.c2mon.daq.opcua.testutils.ServerTestListener.Target.EQUIPMENT_STATE;
 import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -23,7 +24,7 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
     @BeforeEach
     public void setup () {
         super.setup();
-        f = ServerTestListener.listenForEquipmentState(publisher);
+        f = ServerTestListener.createListenerAndReturnFutures(publisher).get(EQUIPMENT_STATE);
     }
 
     @Test

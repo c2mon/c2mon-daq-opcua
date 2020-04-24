@@ -129,7 +129,7 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
                                                                               List<DataTagDefinition> definitions,
                                                                               Deadband deadband,
                                                                               BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
-        List<MonitoredItemCreateRequest> requests =definitions.stream()
+        List<MonitoredItemCreateRequest> requests = definitions.stream()
                 .map(d -> createItemSubscriptionRequest(d, deadband))
                 .collect(Collectors.toList());
         try {
@@ -161,16 +161,21 @@ public class MiloClientWrapperImpl implements MiloClientWrapper {
         // What is a sensible value for the queue size? Must be large enough to hold all notifications queued in between publishing cycles.
         // Currently, we are only keeping the newest value.
         int queueSize = 0;
-        MonitoringParameters mp = new MonitoringParameters(definition.getClientHandle(), (double) deadband.getTime(),
-                getFilter(deadband), uint(queueSize), true);
-        ReadValueId id = new ReadValueId(definition.getAddress(), AttributeId.Value.uid(),null, QualifiedName.NULL_VALUE);
+        DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue, uint(deadband.getType()), (double) deadband.getValue());
+        ExtensionObject encodedFilter =  ExtensionObject.encode(client.getSerializationContext(), filter);
+        MonitoringParameters mp = new MonitoringParameters(
+                definition.getClientHandle(),
+                (double) deadband.getTime(),
+                encodedFilter,
+                uint(queueSize),
+                true);
+        ReadValueId id = new ReadValueId(definition.getAddress(),
+                AttributeId.Value.uid(),
+                null,
+                QualifiedName.NULL_VALUE);
         return new MonitoredItemCreateRequest(id, MonitoringMode.Reporting, mp);
     }
 
-    private ExtensionObject getFilter(Deadband deadband) {
-        DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue, uint(deadband.getType()), (double) deadband.getValue());
-        return ExtensionObject.encode(client.getSerializationContext(), filter);
-    }
     /**
      * Not yet in use - use for subscribing to a group of nodes if deemed useful.
      * @param indent applied as often to a node as the hierarchy is deep
