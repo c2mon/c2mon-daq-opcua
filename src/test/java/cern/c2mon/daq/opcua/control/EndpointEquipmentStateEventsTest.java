@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.testutils.MiloExceptionTestClientWrapper;
@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static cern.c2mon.daq.opcua.testutils.ServerTestListener.Target.EQUIPMENT_STATE;
-import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.*;
+import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

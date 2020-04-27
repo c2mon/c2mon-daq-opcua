@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;

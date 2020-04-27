@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.control;
 
 import lombok.AllArgsConstructor;
 

@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.AppConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;

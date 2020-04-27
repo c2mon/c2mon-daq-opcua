@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.AppConfig;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.configuration;
+package cern.c2mon.daq.opcua;
 
 import lombok.*;
 import org.springframework.boot.context.properties.ConfigurationProperties;

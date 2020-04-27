@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
-import cern.c2mon.daq.opcua.security.SecurityModule;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;

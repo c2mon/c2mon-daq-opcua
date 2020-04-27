@@ -14,13 +14,14 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.*;
-import cern.c2mon.daq.opcua.upstream.EndpointListener;
-import cern.c2mon.daq.opcua.upstream.EventPublisher;
+import cern.c2mon.daq.opcua.EndpointListener;
+import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
@@ -42,7 +43,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.*;
+import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
 
 
 @Slf4j

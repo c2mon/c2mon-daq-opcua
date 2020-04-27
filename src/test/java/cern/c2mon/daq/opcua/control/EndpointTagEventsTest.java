@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;

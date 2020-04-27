@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.upstream;
+package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.shared.common.command.ISourceCommandTag;

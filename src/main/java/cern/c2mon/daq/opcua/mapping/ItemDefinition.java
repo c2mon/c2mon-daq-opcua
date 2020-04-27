@@ -35,12 +35,6 @@ public abstract class ItemDefinition {
         return new CommandTagDefinition(tag, toNodeId(opcAddress), toRedundantNodeId(opcAddress));
     }
 
-    public ItemDefinition(NodeId address, NodeId redundantAddress) {
-        this.address = address;
-        this.redundantAddress = redundantAddress;
-        this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());
-    }
-
     public static NodeId toNodeId(OPCHardwareAddress opcAddress) {
         return new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName());
     }
@@ -56,6 +50,12 @@ public abstract class ItemDefinition {
         String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
         if (redundantOPCItemName == null || redundantOPCItemName.trim().equals("")) return null;
         else return new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);
+    }
+
+    public ItemDefinition(NodeId address, NodeId redundantAddress) {
+        this.address = address;
+        this.redundantAddress = redundantAddress;
+        this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());
     }
 
     protected abstract Long getTagId();

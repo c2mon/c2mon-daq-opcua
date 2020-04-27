@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.configuration.AppConfig;
-import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.EndpointImpl;
+import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.control.Endpoint;
+import cern.c2mon.daq.opcua.control.EndpointImpl;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
@@ -10,12 +10,12 @@ import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
-import cern.c2mon.daq.opcua.security.SecurityModule;
+import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
-import cern.c2mon.daq.opcua.upstream.EventPublisher;
+import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;

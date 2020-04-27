@@ -1,18 +1,18 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
-import cern.c2mon.daq.opcua.configuration.AppConfig;
-import cern.c2mon.daq.opcua.connection.*;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
-import cern.c2mon.daq.opcua.security.SecurityModule;
+import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
 import cern.c2mon.daq.opcua.testutils.MiloTestClientWrapper;
-import cern.c2mon.daq.opcua.upstream.EventPublisher;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
@@ -23,8 +23,8 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.Test;
 
 import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ADDRESS_MISSING_PROPERTIES;
-import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.CONNECTION_FAILED;
-import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.OK;
+import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_FAILED;
+import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.OK;
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;

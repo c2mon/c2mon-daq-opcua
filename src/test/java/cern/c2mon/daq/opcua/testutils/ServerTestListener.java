@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.opcua.upstream.EndpointListener;
-import cern.c2mon.daq.opcua.upstream.EventPublisher;
+import cern.c2mon.daq.opcua.EndpointListener;
+import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static cern.c2mon.daq.opcua.testutils.ServerTestListener.Target.*;
-import static cern.c2mon.daq.opcua.upstream.EndpointListener.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_LOST;
 
 @Slf4j
 public abstract class ServerTestListener {

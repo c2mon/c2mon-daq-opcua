@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
-import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import org.easymock.Capture;
 

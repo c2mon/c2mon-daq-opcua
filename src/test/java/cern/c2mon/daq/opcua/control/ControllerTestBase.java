@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
@@ -7,7 +7,7 @@ import cern.c2mon.daq.opcua.testutils.MiloMocker;
 import cern.c2mon.daq.opcua.testutils.MiloTestClientWrapper;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
-import cern.c2mon.daq.opcua.upstream.EventPublisher;
+import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;

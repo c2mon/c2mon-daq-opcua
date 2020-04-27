@@ -1,7 +1,8 @@
-package cern.c2mon.daq.opcua.security;
+package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.security.Certifier;
 import com.google.common.base.Strings;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

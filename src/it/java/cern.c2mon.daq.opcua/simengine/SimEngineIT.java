@@ -1,19 +1,19 @@
 package cern.c2mon.daq.opcua.simengine;
 
-import cern.c2mon.daq.opcua.configuration.AppConfig;
-import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.EndpointImpl;
+import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.control.Endpoint;
+import cern.c2mon.daq.opcua.control.EndpointImpl;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
-import cern.c2mon.daq.opcua.security.SecurityModule;
+import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
-import cern.c2mon.daq.opcua.upstream.EventPublisher;
+import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.shared.common.command.SourceCommandTag;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;

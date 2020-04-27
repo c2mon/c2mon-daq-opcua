@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.configuration.AppConfig;
+import cern.c2mon.daq.opcua.AppConfig;
 import io.netty.util.internal.StringUtil;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -17,7 +17,7 @@
 
 package cern.c2mon.daq.opcua.address;
 
-import cern.c2mon.daq.opcua.connection.AliveWriter;
+import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import lombok.Getter;
 import lombok.NonNull;
