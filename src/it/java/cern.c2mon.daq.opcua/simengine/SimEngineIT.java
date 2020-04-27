@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.simengine;
 import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.control.Endpoint;
 import cern.c2mon.daq.opcua.control.EndpointImpl;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
@@ -51,8 +51,8 @@ public class SimEngineIT {
         AppConfig config = TestUtils.createDefaultConfig();
         p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
 
-        pilot = new EndpointImpl(new MiloClientWrapperImpl(p), new TagSubscriptionMapperImpl(), new EventPublisher());
-        simEngine = new EndpointImpl(new MiloClientWrapperImpl(p), new TagSubscriptionMapperImpl(), new EventPublisher());
+        pilot = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), new EventPublisher());
+        simEngine = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), new EventPublisher());
 
         pilot.initialize(resolver.getURI(ConnectionResolver.Ports.PILOT));
         simEngine.initialize(resolver.getURI(ConnectionResolver.Ports.SIMENGINE));
@@ -62,18 +62,6 @@ public class SimEngineIT {
     public void tearDown() {
         pilot.reset();
         simEngine.reset();
-    }
-
-    @Test
-    public void testPilotConnection() {
-        pilot.connect(false);
-        Assertions.assertDoesNotThrow(()-> pilot.isConnected());
-    }
-
-    @Test
-    public void testSimEngineConnection() {
-        simEngine.connect(false);
-        Assertions.assertDoesNotThrow(()-> simEngine.isConnected());
     }
 
     @Test

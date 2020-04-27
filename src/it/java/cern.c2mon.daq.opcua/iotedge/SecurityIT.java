@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.iotedge;
 import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.control.Endpoint;
 import cern.c2mon.daq.opcua.control.EndpointImpl;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
@@ -82,7 +82,7 @@ public class SecurityIT {
 
     private void initializeEndpoint() {
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        endpoint = new EndpointImpl(new MiloClientWrapperImpl(p), new TagSubscriptionMapperImpl(), new EventPublisher());
+        endpoint = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), new EventPublisher());
         endpoint.initialize(uri);
         endpoint.connect(false);
     }

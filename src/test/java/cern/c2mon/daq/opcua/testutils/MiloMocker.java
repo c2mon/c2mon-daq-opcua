@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.ClientWrapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.easymock.Capture;
@@ -21,7 +21,7 @@ public class MiloMocker {
     MiloTestClientWrapper client;
     TagSubscriptionMapper mapper;
 
-    public MiloMocker(MiloClientWrapper client, TagSubscriptionMapper mapper) {
+    public MiloMocker(ClientWrapper client, TagSubscriptionMapper mapper) {
         assert client instanceof MiloTestClientWrapper;
         this.client = (MiloTestClientWrapper) client;
         this.mapper = mapper;

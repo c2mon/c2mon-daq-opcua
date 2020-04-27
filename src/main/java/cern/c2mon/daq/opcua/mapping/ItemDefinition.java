@@ -52,7 +52,7 @@ public abstract class ItemDefinition {
         else return new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);
     }
 
-    public ItemDefinition(NodeId address, NodeId redundantAddress) {
+    protected ItemDefinition(NodeId address, NodeId redundantAddress) {
         this.address = address;
         this.redundantAddress = redundantAddress;
         this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());

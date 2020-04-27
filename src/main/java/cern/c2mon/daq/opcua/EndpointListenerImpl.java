@@ -54,4 +54,12 @@ public class EndpointListenerImpl implements EndpointListener {
         //TODO: implement
         log.debug("Wrote to tag {}", tag);
     }
+
+    @Override
+    public void onAlive(StatusCode statusCode) {
+        log.debug("IsAlive returned status code {}", statusCode);
+        if (statusCode.isGood()) {
+            sender.sendSupervisionAlive();
+        }
+    }
 }

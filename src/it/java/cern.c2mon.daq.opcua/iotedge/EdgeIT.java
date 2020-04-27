@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.iotedge;
 import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.control.Endpoint;
 import cern.c2mon.daq.opcua.control.EndpointImpl;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
@@ -63,7 +63,7 @@ public class EdgeIT {
         config = TestUtils.createDefaultConfig();
         config.setEnableOnDemandCertification(false);
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        endpoint = new EndpointImpl(new MiloClientWrapperImpl(p), mapper, publisher);
+        endpoint = new EndpointImpl(new MiloClientWrapper(p), mapper, publisher);
         endpoint.initialize(resolver.getURI(ConnectionResolver.Ports.IOTEDGE));
         endpoint.connect(false);
         log.info("Client ready");

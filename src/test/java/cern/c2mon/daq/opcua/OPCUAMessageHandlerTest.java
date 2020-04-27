@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
+import cern.c2mon.daq.opcua.connection.ClientWrapper;
 import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
 import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
@@ -54,7 +54,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
                 .enableOnDemandCertification(true)
                 .build();
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        MiloClientWrapper wrapper = new MiloClientWrapperImpl(p);
+        ClientWrapper wrapper = new MiloClientWrapper(p);
         EndpointImpl endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
         AliveWriter aliveWriter = new AliveWriter(endpoint);
         Controller controllerWithAliveWriter = new ControllerImpl(endpoint, aliveWriter);

@@ -21,7 +21,7 @@ import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_LO
 @Slf4j
 public abstract class ServerTestListener {
 
-    public enum Target {TAG_UPDATE, TAG_INVALID, WRITE_RESPONSE, EQUIPMENT_STATE}
+    public enum Target {TAG_UPDATE, TAG_INVALID, WRITE_RESPONSE, EQUIPMENT_STATE, ALIVE}
 
     public static Map<Target, CompletableFuture<Object>> createListenerAndReturnFutures(EventPublisher publisher) {
         final Map<Target, CompletableFuture<Object>> futures = new HashMap<>();
@@ -29,18 +29,21 @@ public abstract class ServerTestListener {
         futures.put(TAG_INVALID, new CompletableFuture<>());
         futures.put(WRITE_RESPONSE, new CompletableFuture<>());
         futures.put(EQUIPMENT_STATE, new CompletableFuture<>());
+        futures.put(ALIVE, new CompletableFuture<>());
         publisher.subscribe(createEndpointListener(
                 futures.get(TAG_UPDATE),
                 futures.get(TAG_INVALID),
                 futures.get(WRITE_RESPONSE),
-                futures.get(EQUIPMENT_STATE)));
+                futures.get(EQUIPMENT_STATE),
+                futures.get(ALIVE)));
         return futures;
     }
 
     public static EndpointListener createEndpointListener(CompletableFuture<Object> tagValueUpdate,
                                                           CompletableFuture<Object> tagInvalidFuture,
                                                           CompletableFuture<Object> writeResponse,
-                                                          CompletableFuture<Object> stateUpdate) {
+                                                          CompletableFuture<Object> stateUpdate,
+                                                          CompletableFuture<Object> alive) {
 
         final ArrayList<EndpointListener.EquipmentState> states = new ArrayList<>();
         return new EndpointListener() {
@@ -68,6 +71,11 @@ public abstract class ServerTestListener {
             public void onWriteResponse(StatusCode statusCode, ISourceCommandTag tag) {
                 log.info("write response for {} with status code {}", tag.getName(), statusCode);
                 writeResponse.complete(statusCode);
+            }
+
+            @Override
+            public void onAlive(StatusCode statusCode) {
+                alive.complete(statusCode);
             }
 
             @Override

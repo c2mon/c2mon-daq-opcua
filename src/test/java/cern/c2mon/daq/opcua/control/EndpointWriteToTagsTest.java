@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static cern.c2mon.daq.opcua.testutils.ServerTestListener.Target.ALIVE;
 import static cern.c2mon.daq.opcua.testutils.ServerTestListener.Target.WRITE_RESPONSE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -56,8 +57,10 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
     }
 
     @Test
-    public void writeToValidAddressShouldReturnGoodStatusCode() {
-        assertEquals(StatusCode.GOOD, endpoint.write(address, value));
+    public void writeToValidAddressShouldReturnGoodStatusCode() throws ExecutionException, InterruptedException {
+        CompletableFuture<Object> aliveResponse = ServerTestListener.createListenerAndReturnFutures(publisher).get(ALIVE);
+        endpoint.writeAlive(address, value);
+        assertEquals(StatusCode.GOOD, aliveResponse.get());
     }
 
     @Test

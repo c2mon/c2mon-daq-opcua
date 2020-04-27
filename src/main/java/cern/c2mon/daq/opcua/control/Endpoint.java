@@ -16,17 +16,16 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.EndpointListener;
 import cern.c2mon.daq.opcua.EventPublisher;
+import cern.c2mon.daq.opcua.connection.ClientWrapper;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
 import java.util.Collection;
 
@@ -48,14 +47,14 @@ public interface Endpoint {
     void removeDataTag(ISourceDataTag sourceDataTag);
 
     void refreshDataTags(Collection<ISourceDataTag> dataTags);
-    StatusCode write(final OPCHardwareAddress address, final Object value);
+    void writeAlive(final OPCHardwareAddress address, final Object value);
 
     void executeCommand(ISourceCommandTag tag, SourceCommandTagValue value) throws ConfigurationException;
 
     void recreateSubscription(UaSubscription subscription);
 
     //for injection during testing
-    void setWrapper(MiloClientWrapper wrapper);
+    void setWrapper(ClientWrapper wrapper);
     EventPublisher getPublisher();
     TagSubscriptionMapper getMapper();
 }

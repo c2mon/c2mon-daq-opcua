@@ -118,7 +118,7 @@ public class AliveWriter extends TimerTask {
       log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
     }
     try {
-      endpoint.write(address, castedValue);
+      endpoint.writeAlive(address, castedValue);
       writeCounter.incrementAndGet();
       writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
     } catch (OPCCommunicationException exception) {

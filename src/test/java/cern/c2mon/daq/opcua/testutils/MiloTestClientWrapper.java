@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.ClientWrapper;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import lombok.Getter;
@@ -22,7 +22,7 @@ import java.util.function.BiConsumer;
 import static org.easymock.EasyMock.createMock;
 
 @Getter @Setter
-public class MiloTestClientWrapper implements MiloClientWrapper {
+public class MiloTestClientWrapper implements ClientWrapper {
 
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
@@ -71,6 +71,11 @@ public class MiloTestClientWrapper implements MiloClientWrapper {
     @Override
     public StatusCode write (NodeId nodeId, Object value) {
         return StatusCode.GOOD;
+    }
+
+    @Override
+    public StatusCode callMethod(NodeId objectId, NodeId methodId, Object... args) {
+        return null;
     }
 
     @Override

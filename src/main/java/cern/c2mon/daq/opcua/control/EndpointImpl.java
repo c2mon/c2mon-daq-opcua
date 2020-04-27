@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.ClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.*;
@@ -53,7 +53,7 @@ public class EndpointImpl implements Endpoint {
 
     @Setter
     @Autowired
-    private MiloClientWrapper wrapper;
+    private ClientWrapper wrapper;
 
     @Autowired
     private final TagSubscriptionMapper mapper;
@@ -63,7 +63,7 @@ public class EndpointImpl implements Endpoint {
 
     private String uri;
 
-    public EndpointImpl(MiloClientWrapper wrapper, TagSubscriptionMapper mapper, EventPublisher publisher) {
+    public EndpointImpl(ClientWrapper wrapper, TagSubscriptionMapper mapper, EventPublisher publisher) {
         this.wrapper = wrapper;
         this.mapper = mapper;
         this.publisher = publisher;
@@ -170,6 +170,7 @@ public class EndpointImpl implements Endpoint {
         OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
         switch (hardwareAddress.getCommandType()) {
             case METHOD:
+                wrapper.callMethod(def.getAddress(), def.getRedundantAddress(), value);
                 log.debug("Not yet implemented");
                 break;
             case CLASSIC:
@@ -187,9 +188,10 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public synchronized StatusCode write (final OPCHardwareAddress address, final Object value) {
+    public synchronized void writeAlive(final OPCHardwareAddress address, final Object value) {
         NodeId nodeId = ItemDefinition.toNodeId(address);
-        return wrapper.write(nodeId, value);
+        final StatusCode response = wrapper.write(nodeId, value);
+        publisher.notifyAlive(response);
     }
 
     @Override

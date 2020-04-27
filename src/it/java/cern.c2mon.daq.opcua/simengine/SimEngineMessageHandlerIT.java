@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.simengine;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.AppConfig;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapperImpl;
+import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
 import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
@@ -81,7 +81,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
         AppConfig config = TestUtils.createDefaultConfig();
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        EndpointImpl endpoint = new EndpointImpl(new MiloClientWrapperImpl(p), new TagSubscriptionMapperImpl(), new EventPublisher());
+        EndpointImpl endpoint = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), new EventPublisher());
         Controller controller = new ControllerImpl(endpoint, new AliveWriter(endpoint));
 
         handler.setController(controller);
@@ -183,6 +183,11 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
         @Override
         public void onWriteResponse(StatusCode statusCode, ISourceCommandTag tag) {
+
+        }
+
+        @Override
+        public void onAlive(StatusCode statusCode) {
 
         }
 

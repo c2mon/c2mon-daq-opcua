@@ -53,6 +53,9 @@ public class EventPublisher {
     public void notifyWriteEvent (StatusCode statusCode, ISourceCommandTag tag) {
         listeners.forEach(l -> l.onWriteResponse(statusCode, tag));
     }
+    public void notifyAlive (StatusCode statusCode) {
+        listeners.forEach(l -> l.onAlive(statusCode));
+    }
 
     public void notifyEquipmentState(EndpointListener.EquipmentState state) {
         for (EndpointListener listener : listeners) {
