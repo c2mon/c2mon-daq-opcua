@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
+import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.springframework.stereotype.Component;
 
@@ -42,6 +44,7 @@ public class NoSecurityCertifier extends CertifierBase {
      * @return whether it's possible to connect to the endpoint without security.
      */
     public boolean supportsAlgorithm(EndpointDescription endpoint) {
-        return endpoint.getSecurityLevel() != null && endpoint.getSecurityLevel().intValue() == 0;
+        return endpoint.getSecurityMode().equals(MessageSecurityMode.None)
+                && endpoint.getSecurityPolicyUri().equalsIgnoreCase(SecurityPolicy.None.getUri());
     }
 }

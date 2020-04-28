@@ -50,9 +50,14 @@ public class EventPublisher {
         }
     }
 
-    public void notifyWriteEvent (StatusCode statusCode, ISourceCommandTag tag) {
-        listeners.forEach(l -> l.onWriteResponse(statusCode, tag));
+    public void notifyCommand(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
+        listeners.forEach(l -> l.onCommandResponse(statusCode, results, tag));
     }
+
+    public void notifyCommand(StatusCode statusCode, ISourceCommandTag tag) {
+        listeners.forEach(l -> l.onCommandResponse(statusCode, tag));
+    }
+
     public void notifyAlive (StatusCode statusCode) {
         listeners.forEach(l -> l.onAlive(statusCode));
     }

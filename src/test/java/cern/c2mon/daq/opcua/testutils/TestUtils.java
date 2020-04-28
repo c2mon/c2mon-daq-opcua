@@ -27,6 +27,7 @@ public abstract class TestUtils {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
+                .requestTimeout(5000)
                 .enableInsecureCommunication(true)
                 .enableOnDemandCertification(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())

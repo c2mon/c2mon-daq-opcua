@@ -182,7 +182,12 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         }
 
         @Override
-        public void onWriteResponse(StatusCode statusCode, ISourceCommandTag tag) {
+        public void onCommandResponse(StatusCode statusCode, ISourceCommandTag tag) {
+
+        }
+
+        @Override
+        public void onCommandResponse(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
 
         }
 

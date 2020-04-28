@@ -39,7 +39,10 @@ public class OPCCommunicationException extends RuntimeException {
         SUBSCRIBE_TAGS("Could not subscribe tags"),
         READ("Could not read node values"),
         WRITE("Could not write to nodes"),
+        METHOD("Could not execute method"),
         BROWSE("Browsing node failed"),
+        GETOBJ("Could not get a corresponding object node"),
+        OBJINVALID("The corresponding object node was invalid"),
         AUTH_ERROR("Could not authenticate to any server endpoint!");
 
         public final String message;

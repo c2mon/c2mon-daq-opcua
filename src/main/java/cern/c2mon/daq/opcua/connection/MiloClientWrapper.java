@@ -3,6 +3,8 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.shared.common.type.TypeConverter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
@@ -17,11 +19,11 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.eclipse.milo.opcua.stack.core.util.ConversionUtil;
+import org.eclipse.milo.opcua.stack.core.util.TypeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
@@ -157,18 +159,68 @@ public class MiloClientWrapper implements ClientWrapper {
         }
     }
 
-    public StatusCode callMethod(NodeId objectId, NodeId methodId, Object... args) {
+    public Map.Entry<StatusCode, Object[]> callMethod(ItemDefinition definition, Object... args) {
+        return definition.getMethodNodeId() == null ?
+                callMethod(getParentObjectNodeId(definition.getNodeId()), definition.getNodeId(), args) :
+                callMethod(definition.getNodeId(), definition.getMethodNodeId(), args);
+    }
+
+    public Map.Entry<StatusCode, Object[]> callMethod(NodeId object, NodeId method, Object... args) {
         final Variant[] variants = Stream.of(args).map(Variant::new).toArray(Variant[]::new);
-        final CallMethodRequest request = new CallMethodRequest(objectId, methodId, variants);
         try {
-            return client.call(request).get().getStatusCode();
+            final CallMethodRequest request = new CallMethodRequest(object, method, variants);
+            final CallMethodResult methodResult = client.call(request).get();
+            Object[] output = Stream.of(methodResult.getOutputArguments())
+                    .map(this::toObject)
+                    .filter(Objects::nonNull)
+                    .toArray();
+            return Map.entry(methodResult.getStatusCode(), output);
         } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(WRITE, e);
+            throw asOPCCommunicationException(METHOD, e);
         }
     }
 
+    private Object toObject(Variant variant) {
+        final Optional<NodeId> dataType = variant.getDataType();
+        if (dataType.isPresent()) {
+            final Class<?> objectClass = TypeUtil.getBackingClass(dataType.get());
+            if (objectClass != null) {
+                final String className = objectClass.getName();
+                if (TypeConverter.isConvertible(variant.getValue(), className)) {
+                    return TypeConverter.cast(variant.getValue(), className);
+                }
+            }
+        }
+        return null;
+    }
+
+    private NodeId getParentObjectNodeId(NodeId nodeId) {
+        final BrowseDescription bd = new BrowseDescription(
+                nodeId,
+                BrowseDirection.Inverse,
+                Identifiers.References,
+                true,
+                uint(NodeClass.Object.getValue()),
+                uint(BrowseResultMask.All.getValue()));
+        final BrowseResult result;
+        try {
+            result = client.browse(bd).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw asOPCCommunicationException(GETOBJ, e);
+        }
+        if (result.getReferences() != null && result.getReferences().length > 0) {
+            final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(null);
+            if (result.getStatusCode().isGood() && objectNode.isPresent()) {
+                return objectNode.get();
+            }
+        }
+        throw new OPCCommunicationException(OBJINVALID);
+    }
+
+
+
     private MonitoredItemCreateRequest createItemSubscriptionRequest(DataTagDefinition definition, Deadband deadband) {
-        // What is a sensible value for the queue size? Must be large enough to hold all notifications queued in between publishing cycles.
+        // TODO: What is a sensible value for the queue size? Must be large enough to hold all notifications queued in between publishing cycles.
         // Currently, we are only keeping the newest value.
         int queueSize = 0;
         DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue, uint(deadband.getType()), (double) deadband.getValue());
@@ -179,7 +231,7 @@ public class MiloClientWrapper implements ClientWrapper {
                 encodedFilter,
                 uint(queueSize),
                 true);
-        ReadValueId id = new ReadValueId(definition.getAddress(),
+        ReadValueId id = new ReadValueId(definition.getNodeId(),
                 AttributeId.Value.uid(),
                 null,
                 QualifiedName.NULL_VALUE);

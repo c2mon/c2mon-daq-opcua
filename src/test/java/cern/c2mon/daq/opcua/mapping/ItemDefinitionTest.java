@@ -25,8 +25,8 @@ public class ItemDefinitionTest extends MappingBase {
     public void hardwareAddressCreatesSameItemDefinitionSpecs() throws ConfigurationException {
         DataTagDefinition dataTagDefinition = DataTagDefinition.of(tag);
 
-        assertEquals(opcHardwareAddress.getOPCItemName(), dataTagDefinition.getAddress().getIdentifier());
-        assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getAddress().getNamespaceIndex().intValue());
+        assertEquals(opcHardwareAddress.getOPCItemName(), dataTagDefinition.getNodeId().getIdentifier());
+        assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getNodeId().getNamespaceIndex().intValue());
         assertEquals(tag, dataTagDefinition.getTag());
     }
 
@@ -38,8 +38,8 @@ public class ItemDefinitionTest extends MappingBase {
 
         DataTagDefinition dataTagDefinition = DataTagDefinition.of(tag);
 
-        assertEquals(opcHardwareAddress.getOpcRedundantItemName(), dataTagDefinition.getRedundantAddress().getIdentifier());
-        assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getRedundantAddress().getNamespaceIndex().intValue());
+        assertEquals(opcHardwareAddress.getOpcRedundantItemName(), dataTagDefinition.getMethodNodeId().getIdentifier());
+        assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getMethodNodeId().getNamespaceIndex().intValue());
     }
 
     @Test

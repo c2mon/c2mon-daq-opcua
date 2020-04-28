@@ -1,9 +1,10 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.connection.ClientWrapper;
+import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
@@ -15,6 +16,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -70,12 +72,14 @@ public class MiloTestClientWrapper implements ClientWrapper {
 
     @Override
     public StatusCode write (NodeId nodeId, Object value) {
-        return StatusCode.GOOD;
+        return returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
     }
 
     @Override
-    public StatusCode callMethod(NodeId objectId, NodeId methodId, Object... args) {
-        return null;
+    public Map.Entry<StatusCode, Object[]> callMethod(ItemDefinition definition, Object... args) {
+        final StatusCode statusCode = returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
+        return Map.entry(statusCode, new Object[]{});
+
     }
 
     @Override

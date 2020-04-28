@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Getter
 public abstract class ItemDefinition {
 
-    private final NodeId address;
-    private final NodeId redundantAddress;
+    private final NodeId nodeId;
+    private final NodeId methodNodeId;
     /**
      * equal to the client Handle of a monitoredItem returned by a Milo subscription
      */
@@ -52,9 +52,9 @@ public abstract class ItemDefinition {
         else return new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);
     }
 
-    protected ItemDefinition(NodeId address, NodeId redundantAddress) {
-        this.address = address;
-        this.redundantAddress = redundantAddress;
+    protected ItemDefinition(NodeId nodeId, NodeId methodNodeId) {
+        this.nodeId = nodeId;
+        this.methodNodeId = methodNodeId;
         this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());
     }
 

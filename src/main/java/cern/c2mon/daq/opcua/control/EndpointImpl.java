@@ -42,6 +42,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
 
@@ -148,7 +149,7 @@ public class EndpointImpl implements Endpoint {
     @Override
     public synchronized void refreshDataTags (final Collection<ISourceDataTag> dataTags) {
         for (ISourceDataTag dataTag : dataTags) {
-            NodeId address = mapper.getDefinition(dataTag).getAddress();
+            NodeId address = mapper.getDefinition(dataTag).getNodeId();
             wrapper.read(address).forEach(value -> publisher.notifyTagEvent(value.getStatusCode(), dataTag, value));
         }
     }
@@ -170,16 +171,16 @@ public class EndpointImpl implements Endpoint {
         OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
         switch (hardwareAddress.getCommandType()) {
             case METHOD:
-                wrapper.callMethod(def.getAddress(), def.getRedundantAddress(), value);
-                log.debug("Not yet implemented");
+                final Map.Entry<StatusCode, Object[]> response = wrapper.callMethod(def, value);
+                publisher.notifyCommand(response.getKey(), response.getValue(), tag);
                 break;
             case CLASSIC:
                 int pulseLength = hardwareAddress.getCommandPulseLength();
                 if (pulseLength > 0) {
                     log.debug("Not yet implemented");
                 } else {
-                    StatusCode write = wrapper.write(def.getAddress(), value);
-                    publisher.notifyWriteEvent(write, tag);
+                    StatusCode write = wrapper.write(def.getNodeId(), value);
+                    publisher.notifyCommand(write, tag);
                 }
                 break;
             default:
