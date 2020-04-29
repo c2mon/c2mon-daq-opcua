@@ -35,6 +35,7 @@ public class SecurityIT {
     private Endpoint endpoint;
 
     AppConfig config;
+    SecurityModule p;
 
     @BeforeAll
     public static void startServer() {
@@ -52,6 +53,8 @@ public class SecurityIT {
     @BeforeEach
     public void setUp() {
         config = TestUtils.createDefaultConfig();
+        p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
+
     }
 
     @AfterEach
@@ -81,7 +84,6 @@ public class SecurityIT {
     }
 
     private void initializeEndpoint() {
-        SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         endpoint = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), new EventPublisher());
         endpoint.initialize(uri);
         endpoint.connect(false);
@@ -94,6 +96,7 @@ public class SecurityIT {
         } catch (OPCCommunicationException e) {
             // expected behavior
         }
+        endpoint.reset();
         resolver.trustCertificates();
 
         log.info("Reconnect.");
