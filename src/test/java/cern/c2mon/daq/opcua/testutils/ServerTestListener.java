@@ -15,19 +15,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static cern.c2mon.daq.opcua.testutils.ServerTestListener.Target.*;
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_LOST;
 
 @Slf4j
 public abstract class ServerTestListener {
-
-    public enum Target {TAG_UPDATE, TAG_INVALID, COMMAND_RESPONSE, METHOD_RESPONSE, EQUIPMENT_STATE, ALIVE}
-
 
     private static float valueUpdateToFloat(ValueUpdate valueUpdate) {
         final Object t = valueUpdate.getValue();
@@ -38,18 +33,10 @@ public abstract class ServerTestListener {
         return Math.abs(valueUpdateToFloat(valueUpdate) - threshold) < 0.5;
     }
 
-    public static Map<Target, CompletableFuture<?>> createListenerAndReturnFutures(EventPublisher publisher) {
+    public static TestListener subscribeAndReturnListener(EventPublisher publisher) {
         final TestListener listener = new TestListener();
         publisher.subscribe(listener);
-
-        final Map<Target, CompletableFuture<?>> futures = new HashMap<>();
-        futures.put(TAG_UPDATE, listener.getTagUpdate());
-        futures.put(TAG_INVALID, listener.getTagInvalid());
-        futures.put(COMMAND_RESPONSE, listener.getCommandResponse());
-        futures.put(METHOD_RESPONSE, listener.getMethodResponse());
-        futures.put(EQUIPMENT_STATE, listener.getStateUpdate());
-        futures.put(ALIVE, listener.getAlive());
-        return futures;
+        return listener;
     }
 
     @RequiredArgsConstructor

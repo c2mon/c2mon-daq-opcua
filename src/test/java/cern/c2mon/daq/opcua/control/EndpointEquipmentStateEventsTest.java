@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.EndpointListener;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.testutils.MiloExceptionTestClientWrapper;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
@@ -9,22 +10,22 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static cern.c2mon.daq.opcua.testutils.ServerTestListener.Target.EQUIPMENT_STATE;
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
 
-    CompletableFuture<?> f;
+    CompletableFuture<List<EndpointListener.EquipmentState>> f;
 
     @BeforeEach
     public void setup () {
         super.setup();
-        f = ServerTestListener.createListenerAndReturnFutures(publisher).get(EQUIPMENT_STATE);
+        f = ServerTestListener.subscribeAndReturnListener(publisher).getStateUpdate();
     }
 
     @Test

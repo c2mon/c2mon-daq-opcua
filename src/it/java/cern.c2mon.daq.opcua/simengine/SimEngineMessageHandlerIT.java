@@ -9,6 +9,7 @@ import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.ControllerImpl;
 import cern.c2mon.daq.opcua.control.EndpointImpl;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
@@ -21,7 +22,6 @@ import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
-import cern.c2mon.shared.common.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
@@ -152,8 +152,8 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         assertEquals(1, pwOnUpdate.getValue());
         assertEquals(0, pwOffUpdate.getValue());
 
-        // A pulse length of 1 second, plus a margin of one more second for connection lag
-        assertTrue(timeDiff > 0 && timeDiff < 2000);
+        // A pulse length of 1 second, plus a margin for connection lag
+        assertTrue(timeDiff > 0 && timeDiff < 3000);
 
 
     }

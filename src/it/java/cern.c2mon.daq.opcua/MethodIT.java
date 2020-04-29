@@ -41,7 +41,7 @@ public class MethodIT {
     static Endpoint endpoint;
     static EventPublisher publisher;
     SourceCommandTagValue value;
-
+    CompletableFuture<Map.Entry<StatusCode, Object[]>> methodResponse;
     @BeforeAll
     public static void setUpEndpoint() {
         SecurityModule p = new SecurityModule(config, new NoSecurityCertifier(), new NoSecurityCertifier(), new NoSecurityCertifier());
@@ -57,11 +57,12 @@ public class MethodIT {
         value = new SourceCommandTagValue();
         value.setDataType(Double.class.getName());
         value.setValue(4);
+
+        methodResponse = ServerTestListener.subscribeAndReturnListener(publisher).getMethodResponse();
     }
 
     @Test
     public void writeToMethodNodeWithoutParent() throws ConfigurationException, ExecutionException, InterruptedException {
-        final CompletableFuture<?> future = ServerTestListener.createListenerAndReturnFutures(publisher).get(ServerTestListener.Target.METHOD_RESPONSE);
         // Not testing security here, so skip testing secure endpoints
         final OPCHardwareAddressImpl hwAddress = new OPCHardwareAddressImpl("Methods/sqrt(x)");
         hwAddress.setNamespace(2);
@@ -69,7 +70,7 @@ public class MethodIT {
         final ISourceCommandTag tag = new SourceCommandTag(1L, "sqrt", 5000, 5, hwAddress);
 
         endpoint.executeCommand(tag, value);
-        final Map.Entry<StatusCode, Object[]> o = (Map.Entry<StatusCode, Object[]>) future.get();
+        final Map.Entry<StatusCode, Object[]> o = methodResponse.get();
         assertEquals(StatusCode.GOOD, o.getKey());
         assertEquals(2.0, o.getValue()[0]);
 
@@ -77,7 +78,6 @@ public class MethodIT {
 
     @Test
     public void writeToMethodNodeReturnsProperResult() throws ConfigurationException, ExecutionException, InterruptedException {
-        final CompletableFuture<?> future = ServerTestListener.createListenerAndReturnFutures(publisher).get(ServerTestListener.Target.METHOD_RESPONSE);
         final OPCHardwareAddressImpl hwAddress = new OPCHardwareAddressImpl("Methods");
         hwAddress.setOpcRedundantItemName("Methods/sqrt(x)");
         hwAddress.setNamespace(2);
@@ -85,7 +85,7 @@ public class MethodIT {
         final ISourceCommandTag tag = new SourceCommandTag(1L, "sqrt", 5000, 5, hwAddress);
 
         endpoint.executeCommand(tag, value);
-        final Map.Entry<StatusCode, Object[]> o = (Map.Entry<StatusCode, Object[]>) future.get();
+        final Map.Entry<StatusCode, Object[]> o = methodResponse.get();
         assertEquals(StatusCode.GOOD, o.getKey());
         assertEquals(2.0, o.getValue()[0]);
     }
