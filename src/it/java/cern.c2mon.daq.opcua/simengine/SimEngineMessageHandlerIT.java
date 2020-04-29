@@ -77,6 +77,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         capture = new CommfaultSenderCapture(messageSender);
 
         value = new SourceCommandTagValue();
+        
         value.setDataType("java.lang.Integer");
 
         AppConfig config = TestUtils.createDefaultConfig();
@@ -187,7 +188,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         }
 
         @Override
-        public void onCommandResponse(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
+        public void onMethodResponse(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
 
         }
 

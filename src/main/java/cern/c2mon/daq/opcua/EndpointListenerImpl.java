@@ -56,7 +56,7 @@ public class EndpointListenerImpl implements EndpointListener {
     }
 
     @Override
-    public void onCommandResponse(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
+    public void onMethodResponse(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
         //TODO: what should happen to method results?
         log.debug("Wrote to tag {}", tag);
     }

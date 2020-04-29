@@ -71,7 +71,7 @@ public abstract class ServerTestListener {
             }
 
             @Override
-            public void onCommandResponse(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
+            public void onMethodResponse(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
                 log.info("Method response for {} with status code {} and result {} ", tag.getName(), statusCode, results);
                 methodResponse.complete(Map.entry(statusCode, results));
             }

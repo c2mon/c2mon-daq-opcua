@@ -43,7 +43,7 @@ public interface EndpointListener {
 
     void onTagInvalid(final ISourceDataTag dataTag, final SourceDataTagQuality quality);
 
-    void onCommandResponse(final StatusCode statusCode, final Object[] results, final ISourceCommandTag tag);
+    void onMethodResponse(final StatusCode statusCode, final Object[] results, final ISourceCommandTag tag);
 
     void onCommandResponse(final StatusCode statusCode, final ISourceCommandTag tag);
 

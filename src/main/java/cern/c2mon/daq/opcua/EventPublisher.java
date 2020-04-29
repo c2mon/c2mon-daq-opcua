@@ -51,7 +51,7 @@ public class EventPublisher {
     }
 
     public void notifyCommand(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
-        listeners.forEach(l -> l.onCommandResponse(statusCode, results, tag));
+        listeners.forEach(l -> l.onMethodResponse(statusCode, results, tag));
     }
 
     public void notifyCommand(StatusCode statusCode, ISourceCommandTag tag) {
