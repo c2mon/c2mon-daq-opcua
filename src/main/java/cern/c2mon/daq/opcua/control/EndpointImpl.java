@@ -16,12 +16,12 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.EndpointListener;
+import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.daq.opcua.connection.ClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.*;
-import cern.c2mon.daq.opcua.EndpointListener;
-import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
@@ -33,6 +33,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
@@ -43,6 +44,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
 
@@ -150,7 +154,8 @@ public class EndpointImpl implements Endpoint {
     public synchronized void refreshDataTags (final Collection<ISourceDataTag> dataTags) {
         for (ISourceDataTag dataTag : dataTags) {
             NodeId address = mapper.getDefinition(dataTag).getNodeId();
-            wrapper.read(address).forEach(value -> publisher.notifyTagEvent(value.getStatusCode(), dataTag, value));
+            final DataValue value = wrapper.read(address);
+            publisher.notifyTagEvent(value.getStatusCode(), dataTag, value);
         }
     }
 
@@ -175,16 +180,27 @@ public class EndpointImpl implements Endpoint {
                 publisher.notifyCommand(response.getKey(), response.getValue(), tag);
                 break;
             case CLASSIC:
-                int pulseLength = hardwareAddress.getCommandPulseLength();
-                if (pulseLength > 0) {
-                    log.debug("Not yet implemented");
-                } else {
-                    StatusCode write = wrapper.write(def.getNodeId(), value);
-                    publisher.notifyCommand(write, tag);
-                }
+                executeClassicCommand(tag, def.getNodeId(), value, hardwareAddress.getCommandPulseLength());
                 break;
             default:
                 throw new ConfigurationException(ConfigurationException.Cause.COMMAND_TYPE_UNKNOWN);
+        }
+    }
+
+    private void executeClassicCommand(ISourceCommandTag tag, NodeId nodeId, Object value, int pulseLength) {
+        if (pulseLength > 0) {
+            final Object original = MiloMapper.toObject(wrapper.read(nodeId).getValue());
+            if (original != null && original.equals(value)) {
+                log.info("Node {} is already set to {}.", nodeId, value);
+            } else {
+                wrapper.write(nodeId, value);
+                Executor delayed = CompletableFuture.delayedExecutor(pulseLength, TimeUnit.MILLISECONDS);
+                CompletableFuture.supplyAsync(() -> wrapper.write(nodeId, original), delayed)
+                        .thenAccept(statusCode -> publisher.notifyCommand(statusCode, tag));
+            }
+        } else {
+            StatusCode write = wrapper.write(nodeId, value);
+            publisher.notifyCommand(write, tag);
         }
     }
 

@@ -47,7 +47,7 @@ public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
     }
 
     @Override
-    public List<DataValue> read (NodeId nodeIds) {
+    public DataValue read (NodeId nodeIds) {
         throw new OPCCommunicationException(OPCCommunicationException.Cause.READ);
     }
 

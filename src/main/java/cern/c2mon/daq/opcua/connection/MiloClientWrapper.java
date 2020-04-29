@@ -4,7 +4,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.shared.common.type.TypeConverter;
+import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
@@ -19,11 +19,12 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.eclipse.milo.opcua.stack.core.util.ConversionUtil;
-import org.eclipse.milo.opcua.stack.core.util.TypeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
@@ -141,9 +142,9 @@ public class MiloClientWrapper implements ClientWrapper {
         }
     }
 
-    public List<DataValue> read(NodeId nodeIds) {
+    public DataValue read(NodeId nodeIds) {
         try {
-            return client.readValues(0, TimestampsToReturn.Both, Collections.singletonList(nodeIds)).get();
+            return client.readValue(0, TimestampsToReturn.Both, nodeIds).get();
         } catch (InterruptedException | ExecutionException e) {
             throw asOPCCommunicationException(READ, e);
         }
@@ -170,28 +171,11 @@ public class MiloClientWrapper implements ClientWrapper {
         try {
             final CallMethodRequest request = new CallMethodRequest(object, method, variants);
             final CallMethodResult methodResult = client.call(request).get();
-            Object[] output = Stream.of(methodResult.getOutputArguments())
-                    .map(this::toObject)
-                    .filter(Objects::nonNull)
-                    .toArray();
+            Object[] output = MiloMapper.toObject(methodResult.getOutputArguments());
             return Map.entry(methodResult.getStatusCode(), output);
         } catch (InterruptedException | ExecutionException e) {
             throw asOPCCommunicationException(METHOD, e);
         }
-    }
-
-    private Object toObject(Variant variant) {
-        final Optional<NodeId> dataType = variant.getDataType();
-        if (dataType.isPresent()) {
-            final Class<?> objectClass = TypeUtil.getBackingClass(dataType.get());
-            if (objectClass != null) {
-                final String className = objectClass.getName();
-                if (TypeConverter.isConvertible(variant.getValue(), className)) {
-                    return TypeConverter.cast(variant.getValue(), className);
-                }
-            }
-        }
-        return null;
     }
 
     private NodeId getParentObjectNodeId(NodeId nodeId) {

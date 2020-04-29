@@ -60,9 +60,9 @@ public class MiloTestClientWrapper implements ClientWrapper {
     }
 
     @Override
-    public List<DataValue> read (NodeId nodeIds) {
+    public DataValue read (NodeId nodeIds) {
         StatusCode code = returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
-        return Collections.singletonList(new DataValue(code));
+        return new DataValue(code);
     }
 
     @Override

@@ -33,7 +33,7 @@ public interface ClientWrapper {
                                                                        List<DataTagDefinition> definitions,
                                                                        Deadband deadband,
                                                                        BiConsumer<UaMonitoredItem, Integer> itemCreationCallback);
-    List<DataValue> read(NodeId nodeIds) ;
+    DataValue read(NodeId nodeIds) ;
     void browseNode(String indent, NodeId browseRoot);
     StatusCode write(NodeId nodeId, Object value);
     Map.Entry<StatusCode, Object[]> callMethod(ItemDefinition definition, Object... args);
