@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
 
-    CompletableFuture<Object> f;
+    CompletableFuture<?> f;
 
     @BeforeEach
     public void setup () {

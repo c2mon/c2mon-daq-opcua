@@ -191,14 +191,19 @@ public class EndpointImpl implements Endpoint {
         if (pulseLength > 0) {
             final Object original = MiloMapper.toObject(wrapper.read(nodeId).getValue());
             if (original != null && original.equals(value)) {
-                log.info("Node {} is already set to {}.", nodeId, value);
+                log.info("{} is already set to {}.", nodeId, value);
             } else {
+                log.info("Setting {} to {} for {} seconds.", nodeId, value, pulseLength);
                 wrapper.write(nodeId, value);
-                Executor delayed = CompletableFuture.delayedExecutor(pulseLength, TimeUnit.MILLISECONDS);
-                CompletableFuture.supplyAsync(() -> wrapper.write(nodeId, original), delayed)
+                Executor delayed = CompletableFuture.delayedExecutor(pulseLength, TimeUnit.SECONDS);
+                CompletableFuture.supplyAsync(() -> {
+                    log.info("Resetting {} to {}.", nodeId, original);
+                    return wrapper.write(nodeId, original);
+                }, delayed)
                         .thenAccept(statusCode -> publisher.notifyCommand(statusCode, tag));
             }
         } else {
+            log.info("Writing {} to {}.", nodeId, value);
             StatusCode write = wrapper.write(nodeId, value);
             publisher.notifyCommand(write, tag);
         }

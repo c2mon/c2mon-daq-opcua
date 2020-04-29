@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.mapping.DataQualityMapper;
+import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
@@ -37,7 +38,7 @@ public class EventPublisher {
     private void itemChange(ISourceDataTag tag, final DataValue value) {
         for (EndpointListener listener : listeners) {
             SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
-            ValueUpdate valueUpdate = new ValueUpdate(value, value.getSourceTime().getUtcTime());
+            ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
             listener.onNewTagValue(tag, valueUpdate, new SourceDataTagQuality(tagQuality));
         }
     }

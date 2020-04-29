@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class EdgeIT {
 
     private static int TIMEOUT = 6000;
-    private Map<ServerTestListener.Target, CompletableFuture<Object>> future;
+    private Map<ServerTestListener.Target, CompletableFuture<?>> future;
 
     private Endpoint endpoint;
     private final TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();

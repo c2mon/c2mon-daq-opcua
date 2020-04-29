@@ -20,14 +20,14 @@ import static org.junit.Assert.assertFalse;
 public class EndpointTagEventsTest extends EndpointTestBase {
 
     public static int TIMEOUT = 200;
-    CompletableFuture<Object> tagUpdateFuture;
-    CompletableFuture<Object> tagInvalidFuture;
+    CompletableFuture<?> tagUpdateFuture;
+    CompletableFuture<?> tagInvalidFuture;
 
     @BeforeEach
     public void setup() {
         super.setup();
         endpoint.connect(false);
-        Map<ServerTestListener.Target, CompletableFuture<Object>> f = ServerTestListener.createListenerAndReturnFutures(publisher);
+        Map<ServerTestListener.Target, CompletableFuture<?>> f = ServerTestListener.createListenerAndReturnFutures(publisher);
         tagUpdateFuture = f.get(TAG_UPDATE);
         tagInvalidFuture = f.get(TAG_INVALID);
     }

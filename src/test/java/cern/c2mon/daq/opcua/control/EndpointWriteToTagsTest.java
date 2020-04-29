@@ -45,7 +45,7 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
 
     @Test
     public void executeClassicCommandWithoutPulseShouldNotifyListener() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
-        CompletableFuture<Object> writeResponse = ServerTestListener.createListenerAndReturnFutures(publisher).get(COMMAND_RESPONSE);
+        CompletableFuture<?> writeResponse = ServerTestListener.createListenerAndReturnFutures(publisher).get(COMMAND_RESPONSE);
         endpoint.executeCommand(tag, value);
         assertEquals(StatusCode.GOOD, writeResponse.get(3000, TimeUnit.MILLISECONDS));
     }
@@ -70,7 +70,7 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
 
     @Test
     public void executeMethodShouldNotifyListener() throws ConfigurationException, InterruptedException, ExecutionException, TimeoutException {
-        CompletableFuture<Object> methodFuture = ServerTestListener.createListenerAndReturnFutures(publisher).get(METHOD_RESPONSE);
+        CompletableFuture<?> methodFuture = ServerTestListener.createListenerAndReturnFutures(publisher).get(METHOD_RESPONSE);
         address.setOpcRedundantItemName("method");
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
         endpoint.executeCommand(tag, value);
@@ -85,7 +85,7 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
 
     @Test
     public void executeMethodWithoutMethodAddressShouldNotifyListener() throws ConfigurationException, InterruptedException, ExecutionException, TimeoutException {
-        CompletableFuture<Object> methodFuture = ServerTestListener.createListenerAndReturnFutures(publisher).get(METHOD_RESPONSE);
+        CompletableFuture<?> methodFuture = ServerTestListener.createListenerAndReturnFutures(publisher).get(METHOD_RESPONSE);
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
         endpoint.executeCommand(tag, value);
         final Map.Entry<StatusCode, ISourceCommandTag> methodResponse = (Map.Entry<StatusCode, ISourceCommandTag>)methodFuture.get(3000, TimeUnit.MILLISECONDS);
@@ -94,7 +94,7 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
 
     @Test
     public void writeAliveShouldNotifyListenerWithGoodStatusCode() throws ExecutionException, InterruptedException {
-        CompletableFuture<Object> aliveResponse = ServerTestListener.createListenerAndReturnFutures(publisher).get(ALIVE);
+        CompletableFuture<?> aliveResponse = ServerTestListener.createListenerAndReturnFutures(publisher).get(ALIVE);
         endpoint.writeAlive(address, value);
         assertEquals(StatusCode.GOOD, aliveResponse.get());
     }
@@ -103,7 +103,7 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
     public void exceptionInWriteAliveShouldNotNotifyListener() {
         final MiloTestClientWrapper wrapper = new MiloExceptionTestClientWrapper();
         endpoint.setWrapper(wrapper);
-        CompletableFuture<Object> aliveResponse = ServerTestListener.createListenerAndReturnFutures(publisher).get(ALIVE);
+        CompletableFuture<?> aliveResponse = ServerTestListener.createListenerAndReturnFutures(publisher).get(ALIVE);
         try{
             endpoint.writeAlive(address, value);
         } catch (OPCCommunicationException e) {

@@ -6,8 +6,6 @@ import cern.c2mon.daq.opcua.control.Endpoint;
 import cern.c2mon.daq.opcua.control.EndpointImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.security.CertificateGenerator;
-import cern.c2mon.daq.opcua.security.CertificateLoader;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -29,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MethodIT {
 
-    @Test
+/*    @Test
     public void test() {
         config.setEnableOnDemandCertification(false);
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
@@ -37,7 +35,7 @@ public class MethodIT {
         final EndpointImpl endpoint = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), new EventPublisher());
         endpoint.initialize("opc.tcp://cs-ccr-mpetb01.cern.ch:4841");
         endpoint.connect(false);
-    }
+    }*/
 
     static AppConfig config = TestUtils.createDefaultConfig();
     static Endpoint endpoint;
@@ -63,7 +61,7 @@ public class MethodIT {
 
     @Test
     public void writeToMethodNodeWithoutParent() throws ConfigurationException, ExecutionException, InterruptedException {
-        final CompletableFuture<Object> future = ServerTestListener.createListenerAndReturnFutures(publisher).get(ServerTestListener.Target.METHOD_RESPONSE);
+        final CompletableFuture<?> future = ServerTestListener.createListenerAndReturnFutures(publisher).get(ServerTestListener.Target.METHOD_RESPONSE);
         // Not testing security here, so skip testing secure endpoints
         final OPCHardwareAddressImpl hwAddress = new OPCHardwareAddressImpl("Methods/sqrt(x)");
         hwAddress.setNamespace(2);
@@ -79,7 +77,7 @@ public class MethodIT {
 
     @Test
     public void writeToMethodNodeReturnsProperResult() throws ConfigurationException, ExecutionException, InterruptedException {
-        final CompletableFuture<Object> future = ServerTestListener.createListenerAndReturnFutures(publisher).get(ServerTestListener.Target.METHOD_RESPONSE);
+        final CompletableFuture<?> future = ServerTestListener.createListenerAndReturnFutures(publisher).get(ServerTestListener.Target.METHOD_RESPONSE);
         final OPCHardwareAddressImpl hwAddress = new OPCHardwareAddressImpl("Methods");
         hwAddress.setOpcRedundantItemName("Methods/sqrt(x)");
         hwAddress.setNamespace(2);
