@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.opcua.connection.ClientWrapper;
 import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
-import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.Getter;
 import lombok.Setter;
@@ -54,7 +53,7 @@ public class MiloTestClientWrapper implements ClientWrapper {
     public void deleteSubscription (UaSubscription subscription) { }
 
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
+    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
         final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
         return Collections.nCopies(definitions.size(), monitoredItem);

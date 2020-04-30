@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
-import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +33,6 @@ import java.util.stream.Stream;
 
 import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Context.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
-
 /**
  * The implementation of custom wrapper for the OPC UA milo client
  */
@@ -70,7 +68,6 @@ public class MiloClientWrapper implements ClientWrapper {
     }
 
     public void disconnect() {
-        //TODO: find a more elegant way to do this that works with the test MessageHandlerTest framework
         if (client != null) {
             try {
                 client = client.disconnect().get();
@@ -82,9 +79,8 @@ public class MiloClientWrapper implements ClientWrapper {
     }
 
     /**
-     *
-     * @param timeDeadband The subscription's publishing interval in milliseconds.
-     *                     If 0, the Server will use the fastest supported interval
+     * Create and return a new subscription.
+     * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest supported interval.
      * @return the newly created subscription
      */
     public UaSubscription createSubscription(int timeDeadband) {
@@ -128,12 +124,12 @@ public class MiloClientWrapper implements ClientWrapper {
         }
     }
 
+    @Override
     public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription,
                                                                               List<DataTagDefinition> definitions,
-                                                                              Deadband deadband,
                                                                               BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
         List<MonitoredItemCreateRequest> requests = definitions.stream()
-                .map(d -> createItemSubscriptionRequest(d, deadband))
+                .map(this::createItemSubscriptionRequest)
                 .collect(Collectors.toList());
         try {
             return subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback).get();
@@ -160,13 +156,22 @@ public class MiloClientWrapper implements ClientWrapper {
         }
     }
 
+    /***
+     *
+     * @param definition the item definition referring to the Node of class Method which shall be called
+     * @param args the input arguments to pass to the method call.
+     * @return A Map.Entry containing the StatusCode of the method response as key, and the method's output arguments (if applicable)
+     */
     public Map.Entry<StatusCode, Object[]> callMethod(ItemDefinition definition, Object... args) {
+        // If an itemDefinition does not contain a redundant NodeId, then it is assumed that the primary NodeId refers
+        // to the method node, and that it refers to at least one object node, the first of which is used in the method
+        // call as object.
         return definition.getMethodNodeId() == null ?
                 callMethod(getParentObjectNodeId(definition.getNodeId()), definition.getNodeId(), args) :
                 callMethod(definition.getNodeId(), definition.getMethodNodeId(), args);
     }
 
-    public Map.Entry<StatusCode, Object[]> callMethod(NodeId object, NodeId method, Object... args) {
+    private Map.Entry<StatusCode, Object[]> callMethod(NodeId object, NodeId method, Object... args) {
         final Variant[] variants = Stream.of(args).map(Variant::new).toArray(Variant[]::new);
         try {
             final CallMethodRequest request = new CallMethodRequest(object, method, variants);
@@ -178,6 +183,12 @@ public class MiloClientWrapper implements ClientWrapper {
         }
     }
 
+    /**
+     * Fetches the node's first parent object node, if such a node exists. An @{@link OPCCommunicationException} is
+     * thrown if no such object node is found, or an error occurs during browsing.
+     * @param nodeId the node whose parent to fetch
+     * @return the parent node's NodeId
+     */
     private NodeId getParentObjectNodeId(NodeId nodeId) {
         final BrowseDescription bd = new BrowseDescription(
                 nodeId,
@@ -201,19 +212,21 @@ public class MiloClientWrapper implements ClientWrapper {
         throw new OPCCommunicationException(OBJINVALID);
     }
 
+    private MonitoredItemCreateRequest createItemSubscriptionRequest(DataTagDefinition definition) {
+        // If a static time deadband is configured, only one value per publishing cycle will be kept by the DAQ core.
+        // Therefore queueSize can be 0 (only the newest value is held in between publishing cycles)
+        UInteger queueSize = uint(0);
 
+        // If the samplingInterval is set to 0, the source will provide updates at the fastest possible rate.
+        double samplingInterval = 0;
 
-    private MonitoredItemCreateRequest createItemSubscriptionRequest(DataTagDefinition definition, Deadband deadband) {
-        // TODO: What is a sensible value for the queue size? Must be large enough to hold all notifications queued in between publishing cycles.
-        // Currently, we are only keeping the newest value.
-        int queueSize = 0;
-        DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue, uint(deadband.getType()), (double) deadband.getValue());
-        ExtensionObject encodedFilter =  ExtensionObject.encode(client.getSerializationContext(), filter);
-        MonitoringParameters mp = new MonitoringParameters(
-                definition.getClientHandle(),
-                (double) deadband.getTime(),
-                encodedFilter,
-                uint(queueSize),
+        DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue,
+                uint(definition.getTag().getValueDeadbandType()),
+                (double) definition.getTag().getValueDeadband());
+        MonitoringParameters mp = new MonitoringParameters(definition.getClientHandle(),
+                samplingInterval,
+                ExtensionObject.encode(client.getSerializationContext(), filter),
+                queueSize,
                 true);
         ReadValueId id = new ReadValueId(definition.getNodeId(),
                 AttributeId.Value.uid(),

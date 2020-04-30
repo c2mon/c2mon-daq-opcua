@@ -1,13 +1,12 @@
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
 import cern.c2mon.daq.opcua.testutils.MiloTestClientWrapper;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
-import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.SneakyThrows;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -17,10 +16,9 @@ import java.util.Arrays;
 
 public abstract class EndpointTestBase {
 
-    protected Deadband deadband = Deadband.of(800,5f,(short) 5);
     protected ISourceDataTag tag1 = ServerTagFactory.RandomUnsignedInt32.createDataTag();
     protected ISourceDataTag tag2 = ServerTagFactory.DipData.createDataTag();
-    protected ISourceDataTag tagWithDeadband = ServerTagFactory.RandomBoolean.createDataTag(deadband);
+    protected ISourceDataTag tagWithDeadband = ServerTagFactory.RandomBoolean.createDataTag(5f, (short)2, 800);
 
     TagSubscriptionMapper mapper;
     EventPublisher publisher;

@@ -32,7 +32,7 @@ import static java.util.stream.Collectors.*;
 @Component("mapper")
 public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
-    private final Map<Deadband, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
+    private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
 
     private final Map<ISourceDataTag, DataTagDefinition> tag2Definition = new ConcurrentHashMap<>();
     private final Map<ISourceCommandTag, CommandTagDefinition> command2Definition = new ConcurrentHashMap<>();
@@ -46,7 +46,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     public Map<SubscriptionGroup, List<DataTagDefinition>> maptoGroupsWithDefinitions (Collection<ISourceDataTag> tags) {
         return tags
                 .stream()
-                .collect(groupingBy(Deadband::of))
+                .collect(groupingBy(ISourceDataTag::getTimeDeadband))
                 .entrySet()
                 .stream()
                 .collect(toMap(e -> getOrCreateGroup(e.getKey()), e -> getOrMakeDefinitionsFrom(e.getValue())));
@@ -54,7 +54,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public SubscriptionGroup getGroup (ISourceDataTag tag) {
-        return getOrCreateGroup(Deadband.of(tag));
+        return getOrCreateGroup(tag.getTimeDeadband());
     }
 
     @Override
@@ -81,20 +81,29 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public ISourceDataTag getTag (UInteger clientHandle) {
-        return findDefinitionWithClientHandle(clientHandle).getTag();
+        Optional<DataTagDefinition> definitionWithMatchingHandle = tag2Definition
+                .values()
+                .stream()
+                .filter(def -> def.getClientHandle().equals(clientHandle))
+                .findAny();
+
+        if(!definitionWithMatchingHandle.isPresent()) {
+            throw new IllegalArgumentException("This clientHandle is not associated with any tag.");
+        }
+        return definitionWithMatchingHandle.get().getTag();
     }
 
     @Override
     public void addDefinitionsToGroups (Collection<DataTagDefinition> definitions) {
         definitions
                 .stream()
-                .collect(groupingBy(itemDefinition -> Deadband.of(itemDefinition.getTag())))
-                .forEach((deadband, definitionList) -> definitionList.forEach(i -> getOrCreateGroup(deadband).add(i)));
+                .collect(groupingBy(itemDefinition -> itemDefinition.getTag().getTimeDeadband()))
+                .forEach((timeDB, definitionList) -> definitionList.forEach(i -> getOrCreateGroup(timeDB).add(i)));
     }
 
     @Override
     public void addDefinitionToGroup (DataTagDefinition definition) {
-        getOrCreateGroup(Deadband.of(definition.getTag())).add(definition);
+        getOrCreateGroup(definition.getTag().getTimeDeadband()).add(definition);
     }
 
     @Override
@@ -118,7 +127,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public boolean isSubscribed(ISourceDataTag tag) {
-        SubscriptionGroup group = subscriptionGroups.get(Deadband.of(tag));
+        SubscriptionGroup group = subscriptionGroups.get(tag.getTimeDeadband());
         return group != null && group.isSubscribed() && group.contains(getDefinition(tag));
     }
 
@@ -139,31 +148,18 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         }
     }
 
-    private SubscriptionGroup getOrCreateGroup(Deadband deadband) {
-        if (groupExists(deadband)) {
-            return subscriptionGroups.get(deadband);
+    private SubscriptionGroup getOrCreateGroup(int timeDeadband) {
+        if (groupExists(timeDeadband)) {
+            return subscriptionGroups.get(timeDeadband);
         } else {
-            SubscriptionGroup group = new SubscriptionGroup(deadband);
-            subscriptionGroups.put(deadband, group);
+            SubscriptionGroup group = new SubscriptionGroup(timeDeadband);
+            subscriptionGroups.put(timeDeadband, group);
             return group;
         }
     }
 
-    private boolean groupExists (Deadband deadband) {
+    private boolean groupExists (int deadband) {
         return subscriptionGroups.get(deadband) != null;
-    }
-
-    private DataTagDefinition findDefinitionWithClientHandle(UInteger clientHandle){
-        Optional<DataTagDefinition> definitionWithMatchingHandle = tag2Definition
-                .values()
-                .stream()
-                .filter(def -> def.getClientHandle().equals(clientHandle))
-                .findAny();
-
-        if(!definitionWithMatchingHandle.isPresent()) {
-            throw new IllegalArgumentException("This clientHandle is not associated with any tag.");
-        }
-        return definitionWithMatchingHandle.get();
     }
 
     private List<DataTagDefinition> getOrMakeDefinitionsFrom(Collection<ISourceDataTag> tags) {

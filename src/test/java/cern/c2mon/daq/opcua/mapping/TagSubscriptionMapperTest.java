@@ -46,7 +46,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
     public void tagToNewGroupCreatesProperDeadband() {
         SubscriptionGroup group = mapper.getGroup(tag);
 
-        assertEquals(Deadband.of(tag), group.getDeadband());
+        assertEquals(tag.getTimeDeadband(), group.getPublishInterval());
     }
 
     @Test

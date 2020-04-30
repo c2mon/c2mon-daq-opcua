@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
-import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -31,7 +30,6 @@ public interface ClientWrapper {
     void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription);
     List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription,
                                                                        List<DataTagDefinition> definitions,
-                                                                       Deadband deadband,
                                                                        BiConsumer<UaMonitoredItem, Integer> itemCreationCallback);
     DataValue read(NodeId nodeIds) ;
     void browseNode(String indent, NodeId browseRoot);

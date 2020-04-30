@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.mapping.Deadband;
 import cern.c2mon.shared.common.datatag.DataTagAddress;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTag;
@@ -19,10 +18,6 @@ public enum ServerTagFactory {
 
     public ISourceDataTag createDataTag() {
         return createDataTag(0, (short) 0, 0);
-    }
-
-    public ISourceDataTag createDataTag(Deadband deadband) {
-        return createDataTag(deadband.getValue(), deadband.getType(), deadband.getTime());
     }
 
     public ISourceDataTag createDataTag(float valueDeadband, short deadbandType, int timeDeadband) {

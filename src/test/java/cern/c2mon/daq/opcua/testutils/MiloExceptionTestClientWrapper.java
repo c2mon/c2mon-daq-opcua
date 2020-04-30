@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
-import cern.c2mon.daq.opcua.mapping.Deadband;
 import lombok.Getter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -42,7 +41,7 @@ public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
         throw new OPCCommunicationException(OPCCommunicationException.Context.DELETE_SUBSCRIPTION);}
 
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
+    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
         throw new OPCCommunicationException(OPCCommunicationException.Context.SUBSCRIBE_TAGS);
     }
 

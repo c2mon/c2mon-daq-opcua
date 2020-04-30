@@ -33,10 +33,10 @@ public class SubscriptionGroup{
     private UaSubscription subscription;
 
     @Getter
-    private final Deadband deadband;
+    private final int publishInterval;
 
-    public SubscriptionGroup(Deadband deadband) {
-        this.deadband = deadband;
+    public SubscriptionGroup(int publishInterval) {
+        this.publishInterval = publishInterval;
     }
 
     public int size() {
@@ -52,7 +52,7 @@ public class SubscriptionGroup{
             throw new IllegalArgumentException("The item definition has already been subscribed.");
         }
 
-        if (!Deadband.of(dataTagDefinition.getTag()).equals(deadband)) {
+        if (dataTagDefinition.getTag().getTimeDeadband() != publishInterval) {
             throw new IllegalArgumentException("This item does not belong to this group.");
         }
 

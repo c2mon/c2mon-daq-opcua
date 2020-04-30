@@ -124,10 +124,10 @@ public class EndpointImpl implements Endpoint {
 
     private void subscribeToGroup (SubscriptionGroup group, List<DataTagDefinition> definitions) {
         UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription()
-                : wrapper.createSubscription(group.getDeadband().getTime());
+                : wrapper.createSubscription(group.getPublishInterval());
         group.setSubscription(subscription);
 
-        List<UaMonitoredItem> monitoredItems = wrapper.subscribeItemDefinitions(subscription, definitions, group.getDeadband(), this::itemCreationCallback);
+        List<UaMonitoredItem> monitoredItems = wrapper.subscribeItemDefinitions(subscription, definitions, this::itemCreationCallback);
         completeSubscription(monitoredItems);
     }
 
@@ -171,7 +171,7 @@ public class EndpointImpl implements Endpoint {
         log.info("Executing method of tag {} with argument {}.", tag, arg);
         final Map.Entry<StatusCode, Object[]> response = wrapper.callMethod(mapper.getDefinition(tag), arg);
         log.info("Executing commandTag returned status code {} and output {} .", response.getKey(), response.getValue());
-        handleStatusCode(response.getKey(), METHOD);
+        handleCommandResponseStatusCode(response.getKey(), METHOD);
         return response.getValue();
     }
 
@@ -179,7 +179,7 @@ public class EndpointImpl implements Endpoint {
     public void executeCommand(ISourceCommandTag tag, Object arg) {
         log.info("Writing {} to {}.", tag, arg);
         StatusCode write = wrapper.write(mapper.getDefinition(tag).getNodeId(), arg);
-        handleStatusCode(write, COMMAND_WRITE);
+        handleCommandResponseStatusCode(write, COMMAND_WRITE);
     }
 
     @Override
@@ -194,10 +194,10 @@ public class EndpointImpl implements Endpoint {
             CompletableFuture.runAsync(() -> {
                 final StatusCode statusCode = wrapper.write(nodeId, original);
                 log.info("Resetting {} to {} returned statusCode {}. ", tag, original, statusCode);
-                handleStatusCode(statusCode, COMMAND_REWRITE);
+                handleCommandResponseStatusCode(statusCode, COMMAND_REWRITE);
             }, delayed);
             final StatusCode statusCode = wrapper.write(nodeId, arg);
-            handleStatusCode(statusCode, COMMAND_WRITE);
+            handleCommandResponseStatusCode(statusCode, COMMAND_WRITE);
         }
     }
 
@@ -226,17 +226,16 @@ public class EndpointImpl implements Endpoint {
         }
     }
 
-    private void handleStatusCode(StatusCode statusCode, OPCCommunicationException.Context context) {
-        if (!statusCode.isGood()) {
-            throw new OPCCommunicationException(context);
-        }
-    }
-
     private void itemCreationCallback (UaMonitoredItem item, Integer i) {
         ISourceDataTag tag = mapper.getTag(item.getClientHandle());
         item.setValueConsumer(value -> notifyPublisherOfEvent(tag, value));
     }
 
+    private void handleCommandResponseStatusCode(StatusCode statusCode, OPCCommunicationException.Context context) {
+        if (!statusCode.isGood()) {
+            throw new OPCCommunicationException(context);
+        }
+    }
 
     private void notifyPublisherOfEvent(ISourceDataTag dataTag, DataValue value) {
         SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());

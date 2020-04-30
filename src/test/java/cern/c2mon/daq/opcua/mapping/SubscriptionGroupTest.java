@@ -23,8 +23,8 @@ public class SubscriptionGroupTest extends MappingBase {
         definitionWithDifferentDeadband = mapper.getDefinition(tagWithDifferentDeadband);
         definitionWithSameDeadband = mapper.getDefinition(tagWithSameDeadband);
 
-        group = new SubscriptionGroup(Deadband.of(tag));
-        groupWithDifferentDeadband = new SubscriptionGroup(Deadband.of(tagWithDifferentDeadband));
+        group = new SubscriptionGroup(tag.getTimeDeadband());
+        groupWithDifferentDeadband = new SubscriptionGroup(tagWithDifferentDeadband.getTimeDeadband());
     }
 
     @Test
