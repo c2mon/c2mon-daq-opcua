@@ -44,9 +44,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
 import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Context.*;
@@ -190,12 +188,13 @@ public class EndpointImpl implements Endpoint {
             log.info("{} is already set to {}. Skipping command with pulse.", nodeId, arg);
         } else {
             log.info("Setting {} to {} for {} seconds.", nodeId, arg, pulseLength);
-            Executor delayed = CompletableFuture.delayedExecutor(pulseLength, TimeUnit.SECONDS);
-            CompletableFuture.runAsync(() -> {
+            ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+            scheduler.schedule(() -> {
                 final StatusCode statusCode = wrapper.write(nodeId, original);
                 log.info("Resetting {} to {} returned statusCode {}. ", tag, original, statusCode);
                 handleCommandResponseStatusCode(statusCode, COMMAND_REWRITE);
-            }, delayed);
+            }, pulseLength, TimeUnit.SECONDS);
+            scheduler.shutdown();
             final StatusCode statusCode = wrapper.write(nodeId, arg);
             handleCommandResponseStatusCode(statusCode, COMMAND_WRITE);
         }
