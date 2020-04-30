@@ -142,7 +142,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
         switch (hardwareAddress.getCommandType()) {
             case METHOD:
-                final Object response = endpoint.executeMethod(tag, arg);
+                final Object[] response = endpoint.executeMethod(tag, arg);
                 log.info("Successfully executed method {} with arg {}", tag, arg);
                 result = Stream.of(response).map(Object::toString).collect(Collectors.joining(", "));
                 break;

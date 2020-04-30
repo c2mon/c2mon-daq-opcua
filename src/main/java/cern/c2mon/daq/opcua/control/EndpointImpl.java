@@ -191,13 +191,13 @@ public class EndpointImpl implements Endpoint {
         } else {
             log.info("Setting {} to {} for {} seconds.", nodeId, arg, pulseLength);
             Executor delayed = CompletableFuture.delayedExecutor(pulseLength, TimeUnit.SECONDS);
-            CompletableFuture.supplyAsync(() -> {
+            CompletableFuture.runAsync(() -> {
                 final StatusCode statusCode = wrapper.write(nodeId, original);
                 log.info("Resetting {} to {} returned statusCode {}. ", tag, original, statusCode);
-                return statusCode;
-            }, delayed)
-                    .thenAcceptAsync(statusCode -> handleStatusCode(statusCode, COMMAND_REWRITE));
-            wrapper.write(nodeId, arg);
+                handleStatusCode(statusCode, COMMAND_REWRITE);
+            }, delayed);
+            final StatusCode statusCode = wrapper.write(nodeId, arg);
+            handleStatusCode(statusCode, COMMAND_WRITE);
         }
     }
 

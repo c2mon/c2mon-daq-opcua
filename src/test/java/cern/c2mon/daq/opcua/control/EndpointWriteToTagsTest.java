@@ -9,7 +9,6 @@ import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,8 +16,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class EndpointWriteToTagsTest extends EndpointTestBase {
 
@@ -43,7 +41,7 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
     @Test
     public void executeCommandShouldThrowErrorOnWrongStatusCode() {
         client.setReturnGoodStatusCodes(false);
-        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.executeCommand(tag, value), OPCCommunicationException.Context.WRITE.message);
+        assertThrows(OPCCommunicationException.class, () -> endpoint.executeCommand(tag, value), OPCCommunicationException.Context.WRITE.message);
     }
 
 
@@ -69,6 +67,29 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
         assertEquals(1, output.length);
         assertEquals(1, output[0]);
     }
+
+    @Test
+    public void commandWithPulseShouldNotDoAnythingIfAlreadySet() {
+        client.setReturnGoodStatusCodes(false);
+        assertDoesNotThrow(() -> endpoint.executePulseCommand(tag, 0, 2));
+    }
+
+    @Test
+    public void commandWithPulseShouldThrowExceptionOnBadStatusCode() {
+        client.setReturnGoodStatusCodes(false);
+        assertThrows(OPCCommunicationException.class,
+                () -> endpoint.executePulseCommand(tag, 1, 2),
+                OPCCommunicationException.Context.WRITE.message);
+    }
+
+    @Test
+    public void commandShouldThrowExceptionOnBadStatusCode() {
+        client.setReturnGoodStatusCodes(false);
+        assertThrows(OPCCommunicationException.class,
+                () -> endpoint.executeCommand(tag, 1),
+                OPCCommunicationException.Context.WRITE.message);
+    }
+
 
     @Test
     public void writeAliveShouldNotifyListenerWithGoodStatusCode() throws ExecutionException, InterruptedException, TimeoutException {

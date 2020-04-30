@@ -12,6 +12,7 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collections;
@@ -62,7 +63,7 @@ public class MiloTestClientWrapper implements ClientWrapper {
     @Override
     public DataValue read (NodeId nodeIds) {
         StatusCode code = returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
-        return new DataValue(code);
+        return new DataValue(new Variant(0), code);
     }
 
     @Override

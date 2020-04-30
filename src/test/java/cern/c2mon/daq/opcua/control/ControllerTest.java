@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ControllerTest extends ControllerTestBase {
@@ -46,10 +47,17 @@ public class ControllerTest extends ControllerTestBase {
 
 
     @Test
-    public void executeMethodWithInvalidValueShouldThrowConfigException() {
+    public void runCommandWithInvalidValueShouldThrowConfigException() {
         value.setDataType("invalid");
         assertThrows(ConfigurationException.class,
                 () ->  controller.runCommand(tag, value),
                 ConfigurationException.Cause.COMMAND_VALUE_ERROR.message);
+    }
+
+    @Test
+    public void runMethodShouldReturnMethodValuesAsString() throws ConfigurationException {
+        address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
+        final String s = controller.runCommand(tag, value);
+        assertEquals("1", s);
     }
 }
