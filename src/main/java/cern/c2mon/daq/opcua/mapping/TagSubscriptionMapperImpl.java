@@ -16,7 +16,6 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.NoArgsConstructor;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -26,7 +25,8 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toMap;
 
 @NoArgsConstructor
 @Component("mapper")
@@ -35,7 +35,6 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
 
     private final Map<ISourceDataTag, DataTagDefinition> tag2Definition = new ConcurrentHashMap<>();
-    private final Map<ISourceCommandTag, CommandTagDefinition> command2Definition = new ConcurrentHashMap<>();
 
     @Override
     public Collection<SubscriptionGroup> getGroups() {
@@ -135,17 +134,6 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     public void clear() {
         subscriptionGroups.clear();
         tag2Definition.clear();
-    }
-
-    @Override
-    public CommandTagDefinition getDefinition(ISourceCommandTag tag) {
-        if (command2Definition.containsKey(tag)) {
-            return command2Definition.get(tag);
-        } else {
-            CommandTagDefinition definition = ItemDefinition.of(tag);
-            command2Definition.put(tag, definition);
-            return definition;
-        }
     }
 
     private SubscriptionGroup getOrCreateGroup(int timeDeadband) {

@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -157,24 +156,30 @@ public class MiloClientWrapper implements ClientWrapper {
     }
 
     /***
-     *
-     * @param definition the item definition referring to the Node of class Method which shall be called
+     * Called if a command tag does not contain a redundant item name. In this case it is assumed that the given item name
+     * refers to the method node, and that the method node is not orphaned. In this case the first refered object node
+     * in reverse browse direction is used in the method call as an object.
+     * @param methodId the nodeId of class Method which shall be called
      * @param args the input arguments to pass to the method call.
      * @return A Map.Entry containing the StatusCode of the method response as key, and the method's output arguments (if applicable)
      */
-    public Map.Entry<StatusCode, Object[]> callMethod(ItemDefinition definition, Object... args) {
-        // If an itemDefinition does not contain a redundant NodeId, then it is assumed that the primary NodeId refers
-        // to the method node, and that it refers to at least one object node, the first of which is used in the method
-        // call as object.
-        return definition.getMethodNodeId() == null ?
-                callMethod(getParentObjectNodeId(definition.getNodeId()), definition.getNodeId(), args) :
-                callMethod(definition.getNodeId(), definition.getMethodNodeId(), args);
+    public Map.Entry<StatusCode, Object[]> callMethod(NodeId methodId, Object... args) {
+        return callMethod(getParentObjectNodeId(methodId), methodId, args);
     }
 
-    private Map.Entry<StatusCode, Object[]> callMethod(NodeId object, NodeId method, Object... args) {
+
+    /***
+     * Called if a command tag contains a redundant item name. In this case it is assumed that the primary item name
+     * refers to the object node containing the methodId, and that the redundant item name refers to the method node.
+     * @param objectId the nodeId of class Object containing the method node
+     * @param methodId the nodeId of class Method which shall be called
+     * @param args the input arguments to pass to the methodId call.
+     * @return A Map.Entry containing the StatusCode of the methodId response as key, and the methodId's output arguments (if applicable)
+     */
+    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) {
         final Variant[] variants = Stream.of(args).map(Variant::new).toArray(Variant[]::new);
         try {
-            final CallMethodRequest request = new CallMethodRequest(object, method, variants);
+            final CallMethodRequest request = new CallMethodRequest(objectId, methodId, variants);
             final CallMethodResult methodResult = client.call(request).get();
             Object[] output = MiloMapper.toObject(methodResult.getOutputArguments());
             return Map.entry(methodResult.getStatusCode(), output);

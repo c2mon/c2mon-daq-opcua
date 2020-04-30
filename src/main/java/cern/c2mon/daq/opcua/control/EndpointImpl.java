@@ -167,7 +167,10 @@ public class EndpointImpl implements Endpoint {
     @Override
     public Object[] executeMethod(ISourceCommandTag tag, Object arg) {
         log.info("Executing method of tag {} with argument {}.", tag, arg);
-        final Map.Entry<StatusCode, Object[]> response = wrapper.callMethod(mapper.getDefinition(tag), arg);
+        final NodeId[] nodeIds = ItemDefinition.toNodeIds(tag);
+        final Map.Entry<StatusCode, Object[]> response = nodeIds.length == 1 ?
+                wrapper.callMethod(nodeIds[0], arg) :
+                wrapper.callMethod(nodeIds[0], nodeIds[1], arg);
         log.info("Executing commandTag returned status code {} and output {} .", response.getKey(), response.getValue());
         handleCommandResponseStatusCode(response.getKey(), METHOD);
         return response.getValue();
@@ -176,13 +179,13 @@ public class EndpointImpl implements Endpoint {
     @Override
     public void executeCommand(ISourceCommandTag tag, Object arg) {
         log.info("Writing {} to {}.", tag, arg);
-        StatusCode write = wrapper.write(mapper.getDefinition(tag).getNodeId(), arg);
+        StatusCode write = wrapper.write(ItemDefinition.toNodeId(tag), arg);
         handleCommandResponseStatusCode(write, COMMAND_WRITE);
     }
 
     @Override
     public void executePulseCommand(ISourceCommandTag tag, Object arg, int pulseLength) {
-        final NodeId nodeId = mapper.getDefinition(tag).getNodeId();
+        final NodeId nodeId = ItemDefinition.toNodeId(tag);
         final Object original = MiloMapper.toObject(wrapper.read(nodeId).getValue());
         if (original != null && original.equals(arg)) {
             log.info("{} is already set to {}. Skipping command with pulse.", nodeId, arg);

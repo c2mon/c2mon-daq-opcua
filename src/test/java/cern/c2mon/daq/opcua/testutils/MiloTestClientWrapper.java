@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.opcua.connection.ClientWrapper;
 import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
@@ -76,10 +75,14 @@ public class MiloTestClientWrapper implements ClientWrapper {
     }
 
     @Override
-    public Map.Entry<StatusCode, Object[]> callMethod(ItemDefinition definition, Object... args) {
+    public Map.Entry<StatusCode, Object[]> callMethod(NodeId methodId, Object... args) {
+        return callMethod(methodId, methodId, args);
+    }
+
+    @Override
+    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) {
         final StatusCode statusCode = returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
         return Map.entry(statusCode, args);
-
     }
 
     @Override

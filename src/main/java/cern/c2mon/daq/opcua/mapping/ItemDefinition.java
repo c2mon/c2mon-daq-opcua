@@ -30,13 +30,26 @@ public abstract class ItemDefinition {
     }
 
     @SneakyThrows
-    public static CommandTagDefinition of(final ISourceCommandTag tag) {
+    public static NodeId toNodeId(final ISourceCommandTag tag) {
         OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
-        return new CommandTagDefinition(tag, toNodeId(opcAddress), toRedundantNodeId(opcAddress));
+        return toNodeId(opcAddress);
+    }
+
+    @SneakyThrows
+    public static NodeId[] toNodeIds(final ISourceCommandTag tag) {
+        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+        final NodeId redundantId = toRedundantNodeId(opcAddress);
+        return redundantId == null ? new NodeId[]{toNodeId(opcAddress)} :  new NodeId[]{toNodeId(opcAddress), redundantId};
     }
 
     public static NodeId toNodeId(OPCHardwareAddress opcAddress) {
         return new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName());
+    }
+
+    public static NodeId toRedundantNodeId(OPCHardwareAddress opcAddress) {
+        String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
+        if (redundantOPCItemName == null || redundantOPCItemName.trim().equals("")) return null;
+        else return new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);
     }
 
     protected static OPCHardwareAddress extractOpcAddress(HardwareAddress address) throws ConfigurationException {
@@ -46,11 +59,6 @@ public abstract class ItemDefinition {
         return (OPCHardwareAddress) address;
     }
 
-    protected static NodeId toRedundantNodeId(OPCHardwareAddress opcAddress) {
-        String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
-        if (redundantOPCItemName == null || redundantOPCItemName.trim().equals("")) return null;
-        else return new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);
-    }
 
     protected ItemDefinition(NodeId nodeId, NodeId methodNodeId) {
         this.nodeId = nodeId;
