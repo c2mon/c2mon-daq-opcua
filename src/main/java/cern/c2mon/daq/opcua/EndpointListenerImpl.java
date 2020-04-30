@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -47,18 +46,6 @@ public class EndpointListenerImpl implements EndpointListener {
         } else {
             sender.confirmEquipmentStateIncorrect(state.message);
         }
-    }
-
-    @Override
-    public void onCommandResponse(StatusCode statusCode, ISourceCommandTag tag) {
-        //TODO: what should happen to method results?
-        log.debug("Wrote to tag {}", tag);
-    }
-
-    @Override
-    public void onMethodResponse(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
-        //TODO: what should happen to method results?
-        log.debug("Wrote to tag {}", tag);
     }
 
     @Override

@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.EndpointListener;
 import cern.c2mon.daq.opcua.EventPublisher;
-import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -44,7 +43,6 @@ public abstract class ServerTestListener {
     @Setter
     public static class PulseTestListener extends TestListener {
         private final long sourceID;
-        private final long commandID;
         private int threshold = 0;
         CompletableFuture<ValueUpdate> pulseTagUpdate = new CompletableFuture<>();
         CompletableFuture<ValueUpdate> tagValUpdate = new CompletableFuture<>();
@@ -62,14 +60,6 @@ public abstract class ServerTestListener {
                 }
             }
         }
-
-        @Override
-        public void onCommandResponse(StatusCode statusCode, ISourceCommandTag tag) {
-            if (tag.getId().equals(commandID)) {
-                log.info("onCommandResponse: dataTag {}, quality {}", tag, statusCode);
-                commandResponse.complete(statusCode);
-            }
-        }
     }
 
     @Getter
@@ -78,8 +68,6 @@ public abstract class ServerTestListener {
         final ArrayList<EndpointListener.EquipmentState> states = new ArrayList<>();
         CompletableFuture<ISourceDataTag> tagUpdate = new CompletableFuture<>();
         CompletableFuture<ISourceDataTag> tagInvalid = new CompletableFuture<>();
-        CompletableFuture<StatusCode> commandResponse = new CompletableFuture<>();
-        CompletableFuture<Map.Entry<StatusCode, Object[]>> methodResponse = new CompletableFuture<>();
         CompletableFuture<List<EquipmentState>> stateUpdate = new CompletableFuture<>();
         CompletableFuture<StatusCode> alive = new CompletableFuture<>();
 
@@ -101,19 +89,6 @@ public abstract class ServerTestListener {
         public void onTagInvalid (ISourceDataTag dataTag, SourceDataTagQuality quality) {
             log.info("data tag {} invalid with quality {}", dataTag.getName(), quality);
             tagInvalid.complete(dataTag);
-        }
-
-        @Override
-        public void onMethodResponse(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
-            log.info("Method response for {} with status code {} and result {} ", tag.getName(), statusCode, results);
-            methodResponse.complete(Map.entry(statusCode, results));
-        }
-
-        @Override
-        public void onCommandResponse(StatusCode statusCode, ISourceCommandTag tag) {
-            log.info("write response for {} with status code {}", tag.getName(), statusCode);
-            commandResponse.complete(statusCode);
-
         }
 
         @Override

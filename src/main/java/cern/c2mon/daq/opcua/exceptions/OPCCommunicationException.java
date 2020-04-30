@@ -29,7 +29,7 @@ import lombok.AllArgsConstructor;
 public class OPCCommunicationException extends RuntimeException {
 
     @AllArgsConstructor
-    public enum Cause {
+    public enum Context {
         CREATE_CLIENT("Could not create the OPC UA Client"),
         CONNECT("Could not connect to the OPC UA Server"),
         DISCONNECT("Could not disconnect from the OPC UA Server"),
@@ -40,6 +40,8 @@ public class OPCCommunicationException extends RuntimeException {
         READ("Could not read node values"),
         WRITE("Could not write to nodes"),
         METHOD("Could not execute method"),
+        COMMAND_REWRITE("Could not rewrite command value"),
+        COMMAND_WRITE("Could not write command value"),
         BROWSE("Browsing node failed"),
         GETOBJ("Could not get a corresponding object node"),
         OBJINVALID("The corresponding object node was invalid"),
@@ -49,11 +51,15 @@ public class OPCCommunicationException extends RuntimeException {
 
     }
 
-    public OPCCommunicationException(final Cause type, final Throwable e) {
-        super(type.message, e);
+    public OPCCommunicationException(final Context ctx, final Throwable e) {
+        super(ctx.message, e);
     }
 
-    public OPCCommunicationException(final Cause type) {
-        super(type.message);
+    public OPCCommunicationException(final Context ctx) {
+        super(ctx.message);
+    }
+
+    public OPCCommunicationException(final Context ctx, String message) {
+        super(ctx.message + message);
     }
 }

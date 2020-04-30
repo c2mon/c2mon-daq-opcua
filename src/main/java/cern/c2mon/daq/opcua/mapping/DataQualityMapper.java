@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
@@ -13,6 +14,10 @@ public interface DataQualityMapper {
             return SourceDataTagQualityCode.VALUE_CORRUPTED;
         }
         return SourceDataTagQualityCode.UNKNOWN;
+    }
+
+    static SourceDataTagQuality getDataTagQuality(StatusCode miloQualityCode) {
+        return new SourceDataTagQuality(SourceDataTagQualityCode.UNKNOWN);
     }
 
     static SourceDataTagQualityCode getBadNodeIdCode() {

@@ -18,13 +18,15 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
+import cern.c2mon.daq.opcua.EndpointListener;
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.EndpointListener;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
+import cern.c2mon.shared.common.type.TypeConverter;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.Getter;
@@ -35,6 +37,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
@@ -129,8 +133,31 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     }
 
     @Override
-    public void runCommand(ISourceCommandTag tag, SourceCommandTagValue value) throws ConfigurationException {
-        endpoint.executeCommand(tag, value);
+    public String runCommand(ISourceCommandTag tag, SourceCommandTagValue command) throws ConfigurationException {
+        String result = "";
+        Object arg = TypeConverter.cast(command.getValue(), command.getDataType());
+        if (arg == null) {
+            throw new ConfigurationException(ConfigurationException.Cause.COMMAND_VALUE_ERROR);
+        }
+        OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
+        switch (hardwareAddress.getCommandType()) {
+            case METHOD:
+                final Object response = endpoint.executeMethod(tag, arg);
+                log.info("Successfully executed method {} with arg {}", tag, arg);
+                result = Stream.of(response).map(Object::toString).collect(Collectors.joining(", "));
+                break;
+            case CLASSIC:
+                final int pulse = hardwareAddress.getCommandPulseLength();
+                if (pulse > 0)  {
+                    endpoint.executePulseCommand(tag, arg, pulse);
+                } else {
+                    endpoint.executeCommand(tag, arg);
+                }
+                break;
+            default:
+                throw new ConfigurationException(ConfigurationException.Cause.COMMAND_TYPE_UNKNOWN);
+        }
+        return result;
 
     }
 

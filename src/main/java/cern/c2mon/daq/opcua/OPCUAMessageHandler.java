@@ -131,11 +131,12 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    * Executes a specific command.
    * @param value defines the command to run. The id of the value must correspond to the id of a command tag in the
    *              configuration.
-   * @return null
-   * @throws EqCommandTagException thrown when the command cannot be executed.
+   * @return If the command is of type method and returns values, the toString representation of the output is returned. Otherwise null.
+   * @throws EqCommandTagException thrown when the command cannot be executed, or the status is erraneous or uncertain.
    */
   @Override
   public String runCommand(SourceCommandTagValue value) throws EqCommandTagException {
+    String result;
     Long id = value.getId();
     ISourceCommandTag tag = getEquipmentConfiguration().getSourceCommandTag(id);
     if (tag == null) {
@@ -145,14 +146,13 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
       if (log.isDebugEnabled()) {
         log.debug("running command {} with value {}", id, value.getValue());
       }
-      controller.runCommand(tag, value);
+      result = controller.runCommand(tag, value);
     } catch (OPCCommunicationException e) {
       throw new EqCommandTagException("The client could not write to the specified hardware address", e);
     } catch (ConfigurationException e) {
       throw new EqCommandTagException("Please check whether the configuration is correct.", e);
     }
-    return null;
-
+    return result == null || result.trim().isEmpty() ? null : result;
   }
 
   /**

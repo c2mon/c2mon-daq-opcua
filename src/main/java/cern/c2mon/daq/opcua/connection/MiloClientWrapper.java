@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.*;
+import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Context.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 /**
@@ -249,7 +249,7 @@ public class MiloClientWrapper implements ClientWrapper {
                 rd.getNodeId().local().ifPresent(nodeId -> browseNode(indent + "  ", nodeId));
             }
         } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(OPCCommunicationException.Cause.BROWSE, e);
+            throw asOPCCommunicationException(OPCCommunicationException.Context.BROWSE, e);
         }
     }
 
@@ -281,7 +281,7 @@ public class MiloClientWrapper implements ClientWrapper {
         return originalEndpoints;
     }
 
-    private OPCCommunicationException asOPCCommunicationException(OPCCommunicationException.Cause cause, Exception e) {
+    private OPCCommunicationException asOPCCommunicationException(OPCCommunicationException.Context context, Exception e) {
         Throwable t = e;
         if (e instanceof InterruptedException) {
             Thread.currentThread().interrupt();
@@ -289,6 +289,6 @@ public class MiloClientWrapper implements ClientWrapper {
         } else if (e instanceof ExecutionException) {
             t = e.getCause();
         }
-        return new OPCCommunicationException(cause, t);
+        return new OPCCommunicationException(context, t);
     }
 }

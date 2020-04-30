@@ -17,7 +17,6 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -42,10 +41,6 @@ public interface EndpointListener {
     void onNewTagValue(final ISourceDataTag dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality);
 
     void onTagInvalid(final ISourceDataTag dataTag, final SourceDataTagQuality quality);
-
-    void onMethodResponse(final StatusCode statusCode, final Object[] results, final ISourceCommandTag tag);
-
-    void onCommandResponse(final StatusCode statusCode, final ISourceCommandTag tag);
 
     void onAlive(final StatusCode statusCode);
 }

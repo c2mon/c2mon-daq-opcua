@@ -24,36 +24,36 @@ public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
 
     @Override
     public void initialize(String uri) {
-        throw new OPCCommunicationException(OPCCommunicationException.Cause.CONNECT);
+        throw new OPCCommunicationException(OPCCommunicationException.Context.CONNECT);
     }
 
     @Override
     public void disconnect () {
-        throw new OPCCommunicationException(OPCCommunicationException.Cause.DISCONNECT);
+        throw new OPCCommunicationException(OPCCommunicationException.Context.DISCONNECT);
     }
 
     @Override
     public UaSubscription createSubscription (int timeDeadband) {
-        throw new OPCCommunicationException(OPCCommunicationException.Cause.CREATE_SUBSCRIPTION);
+        throw new OPCCommunicationException(OPCCommunicationException.Context.CREATE_SUBSCRIPTION);
     }
 
     @Override
     public void deleteSubscription (UaSubscription subscription) {
-        throw new OPCCommunicationException(OPCCommunicationException.Cause.DELETE_SUBSCRIPTION);}
+        throw new OPCCommunicationException(OPCCommunicationException.Context.DELETE_SUBSCRIPTION);}
 
     @Override
     public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, Deadband deadband, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
-        throw new OPCCommunicationException(OPCCommunicationException.Cause.SUBSCRIBE_TAGS);
+        throw new OPCCommunicationException(OPCCommunicationException.Context.SUBSCRIBE_TAGS);
     }
 
     @Override
     public DataValue read (NodeId nodeIds) {
-        throw new OPCCommunicationException(OPCCommunicationException.Cause.READ);
+        throw new OPCCommunicationException(OPCCommunicationException.Context.READ);
     }
 
     @Override
     public StatusCode write (NodeId nodeId, Object value) {
-        throw new OPCCommunicationException(OPCCommunicationException.Cause.WRITE);
+        throw new OPCCommunicationException(OPCCommunicationException.Context.WRITE);
     }
 
     @Override
@@ -62,6 +62,6 @@ public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
     }
 
     public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
-        throw new OPCCommunicationException(OPCCommunicationException.Cause.DELETE_MONITORED_ITEM);
+        throw new OPCCommunicationException(OPCCommunicationException.Context.DELETE_MONITORED_ITEM);
     }
 }

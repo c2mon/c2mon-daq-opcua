@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Cause.AUTH_ERROR;
+import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Context.AUTH_ERROR;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 @Component("securityModule")

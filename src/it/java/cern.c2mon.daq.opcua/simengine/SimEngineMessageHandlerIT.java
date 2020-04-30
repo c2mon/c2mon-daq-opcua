@@ -91,6 +91,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
         super.cleanUp();
     }
+
     @Override
     protected void afterTest () throws Exception {
     }
@@ -104,7 +105,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Test
     @UseConf("simengine_power.xml")
     public void write1SetsValueTo1() throws EqIOException, EqCommandTagException, InterruptedException, ExecutionException, TimeoutException {
-        final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_PW, 0L);
+        final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_PW);
         handler.setEndpointListener(listener);
 
         handler.connectToDataSource();
@@ -119,8 +120,8 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     @Test
     @UseConf("simengine_power.xml")
-    public void testPowerOnAndSetV0ShouldNotifyVMon() throws EqIOException, EqCommandTagException, InterruptedException, ExecutionException, TimeoutException {
-        final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_VMON, 0L);
+    public void testPowerOnAndSetV0ShouldNotifyVMon() throws EqIOException, EqCommandTagException {
+        final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_VMON);
         listener.setThreshold(10);
         handler.setEndpointListener(listener);
 
@@ -136,14 +137,11 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Test
     @UseConf("simengine_power_pulse.xml")
     public void testPowerOnAndOff() throws EqIOException, ExecutionException, InterruptedException, EqCommandTagException, TimeoutException {
-        final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_PW, CMDID_PW);
+        final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_PW);
         listener.setThreshold(1);
         handler.setEndpointListener(listener);
         handler.connectToDataSource();
         setIDTo(CMDID_PW, 1);
-
-        // Wait for command to complete
-        listener.getCommandResponse().get(3000, TimeUnit.MILLISECONDS);
 
         final ValueUpdate pwOnUpdate = listener.getTagValUpdate().get(3000, TimeUnit.MILLISECONDS);
         final ValueUpdate pwOffUpdate = listener.getPulseTagUpdate().get(3000, TimeUnit.MILLISECONDS);

@@ -17,7 +17,7 @@ public interface Controller {
     void refreshDataTag(ISourceDataTag sourceDataTag);
     String updateAliveWriterAndReport ();
     void subscribe (EndpointListener listener);
-    void runCommand(ISourceCommandTag tag, SourceCommandTagValue value) throws ConfigurationException;
+    String runCommand(ISourceCommandTag tag, SourceCommandTagValue value) throws ConfigurationException;
 
     // for dependency injection during testing
     Endpoint getEndpoint();

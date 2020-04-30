@@ -78,7 +78,7 @@ public class MiloTestClientWrapper implements ClientWrapper {
     @Override
     public Map.Entry<StatusCode, Object[]> callMethod(ItemDefinition definition, Object... args) {
         final StatusCode statusCode = returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
-        return Map.entry(statusCode, new Object[]{});
+        return Map.entry(statusCode, args);
 
     }
 

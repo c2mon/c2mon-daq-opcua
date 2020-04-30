@@ -24,7 +24,6 @@ import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
-import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 
 import java.util.Collection;
@@ -49,7 +48,11 @@ public interface Endpoint {
     void refreshDataTags(Collection<ISourceDataTag> dataTags);
     void writeAlive(final OPCHardwareAddress address, final Object value);
 
-    void executeCommand(ISourceCommandTag tag, SourceCommandTagValue value) throws ConfigurationException;
+    void executeCommand(ISourceCommandTag tag, Object arg);
+
+    void executePulseCommand(ISourceCommandTag tag, Object arg, int pulseLength);
+
+    Object[] executeMethod(ISourceCommandTag tag, Object arg);
 
     void recreateSubscription(UaSubscription subscription);
 

@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.testutils.MiloExceptionTestClientWrapper;
 import cern.c2mon.daq.opcua.testutils.MiloTestClientWrapper;
@@ -10,10 +9,10 @@ import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -31,62 +30,44 @@ public class EndpointWriteToTagsTest extends EndpointTestBase {
     @BeforeEach
     public void setupCommandTagAndValue() {
         tag = new SourceCommandTag(0L, "Power");
-        value = new SourceCommandTagValue();
 
         address = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw");
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.CLASSIC);
         tag.setHardwareAddress(address);
 
-        value.setValue(1);
-        value.setDataType("Integer");
-
         listener = ServerTestListener.subscribeAndReturnListener(publisher);
+        client.setReturnGoodStatusCodes(true);
+        endpoint.setWrapper(client);
     }
 
     @Test
-    public void executeClassicCommandWithoutPulseShouldNotifyListener() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
-        endpoint.executeCommand(tag, value);
-        assertEquals(StatusCode.GOOD, listener.getCommandResponse().get(3000, TimeUnit.MILLISECONDS));
+    public void executeCommandShouldThrowErrorOnWrongStatusCode() {
+        client.setReturnGoodStatusCodes(false);
+        Assertions.assertThrows(OPCCommunicationException.class, () -> endpoint.executeCommand(tag, value), OPCCommunicationException.Context.WRITE.message);
     }
 
-    @Test
-    public void executeCommandWithBadValueShouldThrowException() {
-        value.setDataType("Invalid");
-        assertThrows(ConfigurationException.class,
-                () -> endpoint.executeCommand(tag, value),
-                ConfigurationException.Cause.COMMAND_VALUE_ERROR.message);
-    }
 
     @Test
     public void writeBadClientShouldThrowException() {
         endpoint.setWrapper(new MiloExceptionTestClientWrapper());
         assertThrows(OPCCommunicationException.class,
                 () -> endpoint.executeCommand(tag, value),
-                OPCCommunicationException.Cause.WRITE.message);
-        //clean up
-        endpoint.setWrapper(client);
+                OPCCommunicationException.Context.WRITE.message);
     }
 
     @Test
-    public void executeMethodShouldNotifyListener() throws ConfigurationException, InterruptedException, ExecutionException, TimeoutException {
+    public void executeMethodWithMethodAddress() {
         address.setOpcRedundantItemName("method");
-        address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
-        endpoint.executeCommand(tag, value);
-        final Map.Entry<StatusCode, Object[]> methodResponse = listener.getMethodResponse().get(3000, TimeUnit.MILLISECONDS);
-        assertEquals(StatusCode.GOOD, methodResponse.getKey());
-    }
-    @Test
-    public void executeMethodWithInvalidValueShouldThrowConfigException() {
-        value.setDataType("invalid");
-        assertThrows(ConfigurationException.class, () ->  endpoint.executeCommand(tag, value));
+        final Object[] output = endpoint.executeMethod(tag, 1);
+        assertEquals(1, output.length);
+        assertEquals(1, output[0]);
     }
 
     @Test
-    public void executeMethodWithoutMethodAddressShouldNotifyListener() throws ConfigurationException, InterruptedException, ExecutionException, TimeoutException {
-        address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
-        endpoint.executeCommand(tag, value);
-        final Map.Entry<StatusCode, Object[]> methodResponse = listener.getMethodResponse().get(3000, TimeUnit.MILLISECONDS);
-        assertEquals(StatusCode.GOOD, methodResponse.getKey());
+    public void executeMethodWithoutMethodAddressShouldReturnValue() {
+        final Object[] output = endpoint.executeMethod(tag, 1);
+        assertEquals(1, output.length);
+        assertEquals(1, output[0]);
     }
 
     @Test

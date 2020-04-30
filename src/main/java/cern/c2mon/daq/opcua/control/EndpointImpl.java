@@ -24,9 +24,9 @@ import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.*;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
-import cern.c2mon.shared.common.type.TypeConverter;
-import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -49,6 +49,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
+import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Context.*;
 
 
 @Slf4j
@@ -155,7 +156,7 @@ public class EndpointImpl implements Endpoint {
         for (ISourceDataTag dataTag : dataTags) {
             NodeId address = mapper.getDefinition(dataTag).getNodeId();
             final DataValue value = wrapper.read(address);
-            publisher.notifyTagEvent(value.getStatusCode(), dataTag, value);
+            notifyPublisherOfEvent(dataTag, value);
         }
     }
 
@@ -166,48 +167,40 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public void executeCommand(ISourceCommandTag tag, SourceCommandTagValue command) throws ConfigurationException {
-        CommandTagDefinition def = mapper.getDefinition(tag);
-        Object value = TypeConverter.cast(command.getValue(), command.getDataType());
-        if (value == null) {
-            throw new ConfigurationException(ConfigurationException.Cause.COMMAND_VALUE_ERROR);
-        }
-
-        OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
-        switch (hardwareAddress.getCommandType()) {
-            case METHOD:
-                final Map.Entry<StatusCode, Object[]> response = wrapper.callMethod(def, value);
-                publisher.notifyCommand(response.getKey(), response.getValue(), tag);
-                break;
-            case CLASSIC:
-                executeClassicCommand(tag, def.getNodeId(), value, hardwareAddress.getCommandPulseLength());
-                break;
-            default:
-                throw new ConfigurationException(ConfigurationException.Cause.COMMAND_TYPE_UNKNOWN);
-        }
+    public Object[] executeMethod(ISourceCommandTag tag, Object arg) {
+        log.info("Executing method of tag {} with argument {}.", tag, arg);
+        final Map.Entry<StatusCode, Object[]> response = wrapper.callMethod(mapper.getDefinition(tag), arg);
+        log.info("Executing commandTag returned status code {} and output {} .", response.getKey(), response.getValue());
+        handleStatusCode(response.getKey(), METHOD);
+        return response.getValue();
     }
 
-    private void executeClassicCommand(ISourceCommandTag tag, NodeId nodeId, Object value, int pulseLength) {
-        if (pulseLength > 0) {
-            final Object original = MiloMapper.toObject(wrapper.read(nodeId).getValue());
-            if (original != null && original.equals(value)) {
-                log.info("{} is already set to {}.", nodeId, value);
-            } else {
-                log.info("Setting {} to {} for {} seconds.", nodeId, value, pulseLength);
-                wrapper.write(nodeId, value);
-                Executor delayed = CompletableFuture.delayedExecutor(pulseLength, TimeUnit.SECONDS);
-                CompletableFuture.supplyAsync(() -> {
-                    log.info("Resetting {} to {}.", nodeId, original);
-                    return wrapper.write(nodeId, original);
-                }, delayed)
-                        .thenAccept(statusCode -> publisher.notifyCommand(statusCode, tag));
-            }
+    @Override
+    public void executeCommand(ISourceCommandTag tag, Object arg) {
+        log.info("Writing {} to {}.", tag, arg);
+        StatusCode write = wrapper.write(mapper.getDefinition(tag).getNodeId(), arg);
+        handleStatusCode(write, COMMAND_WRITE);
+    }
+
+    @Override
+    public void executePulseCommand(ISourceCommandTag tag, Object arg, int pulseLength) {
+        final NodeId nodeId = mapper.getDefinition(tag).getNodeId();
+        final Object original = MiloMapper.toObject(wrapper.read(nodeId).getValue());
+        if (original != null && original.equals(arg)) {
+            log.info("{} is already set to {}. Skipping command with pulse.", nodeId, arg);
         } else {
-            log.info("Writing {} to {}.", nodeId, value);
-            StatusCode write = wrapper.write(nodeId, value);
-            publisher.notifyCommand(write, tag);
+            log.info("Setting {} to {} for {} seconds.", nodeId, arg, pulseLength);
+            Executor delayed = CompletableFuture.delayedExecutor(pulseLength, TimeUnit.SECONDS);
+            CompletableFuture.supplyAsync(() -> {
+                final StatusCode statusCode = wrapper.write(nodeId, original);
+                log.info("Resetting {} to {} returned statusCode {}. ", tag, original, statusCode);
+                return statusCode;
+            }, delayed)
+                    .thenAcceptAsync(statusCode -> handleStatusCode(statusCode, COMMAND_REWRITE));
+            wrapper.write(nodeId, arg);
         }
     }
+
 
     @Override
     public synchronized void writeAlive(final OPCHardwareAddress address, final Object value) {
@@ -233,8 +226,22 @@ public class EndpointImpl implements Endpoint {
         }
     }
 
+    private void handleStatusCode(StatusCode statusCode, OPCCommunicationException.Context context) {
+        if (!statusCode.isGood()) {
+            throw new OPCCommunicationException(context);
+        }
+    }
+
     private void itemCreationCallback (UaMonitoredItem item, Integer i) {
         ISourceDataTag tag = mapper.getTag(item.getClientHandle());
-        item.setValueConsumer(value -> publisher.notifyTagEvent(item.getStatusCode(), tag, value));
+        item.setValueConsumer(value -> notifyPublisherOfEvent(tag, value));
+    }
+
+
+    private void notifyPublisherOfEvent(ISourceDataTag dataTag, DataValue value) {
+        SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
+        ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
+
+        publisher.notifyTagEvent(dataTag, tagQuality, valueUpdate);
     }
 }

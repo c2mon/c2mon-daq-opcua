@@ -1,14 +1,11 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.mapping.DataQualityMapper;
-import cern.c2mon.daq.opcua.mapping.MiloMapper;
-import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.NoArgsConstructor;
-import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.springframework.stereotype.Component;
 
@@ -35,28 +32,18 @@ public class EventPublisher {
         }
     }
 
-    private void itemChange(ISourceDataTag tag, final DataValue value) {
+    private void itemChange(ISourceDataTag tag, SourceDataTagQualityCode tagQuality, final ValueUpdate value) {
         for (EndpointListener listener : listeners) {
-            SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
-            ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
-            listener.onNewTagValue(tag, valueUpdate, new SourceDataTagQuality(tagQuality));
+            listener.onNewTagValue(tag, value, new SourceDataTagQuality(tagQuality));
         }
     }
 
-    public void notifyTagEvent (StatusCode statusCode, ISourceDataTag tag, DataValue value) {
-        if (statusCode.isBad()) {
+    public void notifyTagEvent (ISourceDataTag tag, SourceDataTagQualityCode tagQuality, ValueUpdate value) {
+        if (!tagQuality.equals(SourceDataTagQualityCode.OK)) {
             invalidTag(tag);
         } else {
-            itemChange(tag, value);
+            itemChange(tag, tagQuality, value);
         }
-    }
-
-    public void notifyCommand(StatusCode statusCode, Object[] results, ISourceCommandTag tag) {
-        listeners.forEach(l -> l.onMethodResponse(statusCode, results, tag));
-    }
-
-    public void notifyCommand(StatusCode statusCode, ISourceCommandTag tag) {
-        listeners.forEach(l -> l.onCommandResponse(statusCode, tag));
     }
 
     public void notifyAlive (StatusCode statusCode) {
