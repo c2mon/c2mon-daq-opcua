@@ -17,10 +17,8 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import lombok.Getter;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 
-@Getter
 public class DataTagDefinition extends ItemDefinition {
 
     /**
@@ -28,7 +26,7 @@ public class DataTagDefinition extends ItemDefinition {
      */
     private final ISourceDataTag tag;
 
-    protected Long getTagId() {
+    public Long getTagId() {
         return tag.getId();
     }
 
@@ -37,13 +35,33 @@ public class DataTagDefinition extends ItemDefinition {
         this.tag = tag;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        return super.equals(o);
+    public ISourceDataTag getTag() {
+        return tag;
     }
 
+
+    /**
+     * The objects are considered equal if their tags have the same id.
+     *
+     * @param o The object to compare to.
+     * @return true if the objects equal else false.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DataTagDefinition that = (DataTagDefinition) o;
+        return getTagId().equals(that.getTagId());
+    }
+
+    /**
+     * Returns the hash code of this object.
+     *
+     * @return The hash code of this object which equals the hash code of its
+     * ID.
+     */
     @Override
     public int hashCode() {
-        return super.hashCode();
+        return getTagId().hashCode();
     }
 }

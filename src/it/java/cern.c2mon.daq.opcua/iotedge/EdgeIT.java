@@ -102,14 +102,14 @@ public class EdgeIT {
         float valueDeadband = 10;
         final ISourceDataTag tag = ServerTagFactory.DipData.createDataTag(valueDeadband, (short) DeadbandType.Absolute.getValue(), 0);
         endpoint.subscribeTag(tag);
-        assertEquals(tag, future.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertEquals(tag.getId(), future.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void refreshProperTag () throws InterruptedException, ExecutionException, TimeoutException {
         final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
         endpoint.refreshDataTags(Collections.singletonList(tag));
-        assertEquals(tag, future.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertEquals(tag.getId(), future.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
 }

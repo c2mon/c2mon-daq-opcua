@@ -17,7 +17,6 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.AllArgsConstructor;
@@ -38,9 +37,9 @@ public interface EndpointListener {
 
     void update (EquipmentState state);
 
-    void onNewTagValue(final ISourceDataTag dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality);
+    void onNewTagValue(final Long dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality);
 
-    void onTagInvalid(final ISourceDataTag dataTag, final SourceDataTagQuality quality);
+    void onTagInvalid(final Long dataTag, final SourceDataTagQuality quality);
 
     void onAlive(final StatusCode statusCode);
 }

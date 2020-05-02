@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.NoArgsConstructor;
@@ -22,19 +21,19 @@ public class EndpointListenerImpl implements EndpointListener {
     }
 
     @Override
-    public void onNewTagValue(final ISourceDataTag dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality) {
-        this.sender.update(dataTag.getId(), valueUpdate, quality);
+    public void onNewTagValue(final Long tagId, final ValueUpdate valueUpdate, final SourceDataTagQuality quality) {
+        this.sender.update(tagId, valueUpdate, quality);
 
         if (log.isDebugEnabled()) {
-            log.debug("onNewTagValue - Tag value " + valueUpdate + " sent for Tag #" + dataTag.getId());
+            log.debug("onNewTagValue - Tag value " + valueUpdate + " sent for Tag #" + tagId);
         }
     }
 
     @Override
-    public void onTagInvalid (ISourceDataTag dataTag, final SourceDataTagQuality quality) {
-        this.sender.update(dataTag.getId(), quality);
+    public void onTagInvalid (Long tagId, final SourceDataTagQuality quality) {
+        this.sender.update(tagId, quality);
         if (log.isDebugEnabled()) {
-            log.debug("onTagInvalid - sent for Tag #" + dataTag.getId());
+            log.debug("onTagInvalid - sent for Tag #" + tagId);
         }
 
     }

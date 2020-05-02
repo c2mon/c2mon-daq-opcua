@@ -75,8 +75,8 @@ public class MiloTestClientWrapper implements ClientWrapper {
     }
 
     @Override
-    public Map.Entry<StatusCode, Object[]> callMethod(NodeId methodId, Object... args) {
-        return callMethod(methodId, methodId, args);
+    public NodeId getParentObjectNodeId(NodeId nodeId) {
+        return nodeId;
     }
 
     @Override

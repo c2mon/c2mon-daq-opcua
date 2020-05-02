@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.mapping.DataQualityMapper;
-import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -25,24 +24,24 @@ public class EventPublisher {
         listeners.remove(listener);
     }
 
-    public void invalidTag(ISourceDataTag tag) {
+    public void invalidTag(Long tagId) {
         for (EndpointListener listener : listeners) {
             SourceDataTagQualityCode tagQuality = DataQualityMapper.getBadNodeIdCode();
-            listener.onTagInvalid(tag, new SourceDataTagQuality(tagQuality));
+            listener.onTagInvalid(tagId, new SourceDataTagQuality(tagQuality));
         }
     }
 
-    private void itemChange(ISourceDataTag tag, SourceDataTagQualityCode tagQuality, final ValueUpdate value) {
+    private void itemChange(Long tagId, SourceDataTagQualityCode tagQuality, final ValueUpdate value) {
         for (EndpointListener listener : listeners) {
-            listener.onNewTagValue(tag, value, new SourceDataTagQuality(tagQuality));
+            listener.onNewTagValue(tagId, value, new SourceDataTagQuality(tagQuality));
         }
     }
 
-    public void notifyTagEvent (ISourceDataTag tag, SourceDataTagQualityCode tagQuality, ValueUpdate value) {
+    public void notifyTagEvent (Long tagId, SourceDataTagQualityCode tagQuality, ValueUpdate value) {
         if (!tagQuality.equals(SourceDataTagQualityCode.OK)) {
-            invalidTag(tag);
+            invalidTag(tagId);
         } else {
-            itemChange(tag, tagQuality, value);
+            itemChange(tagId, tagQuality, value);
         }
     }
 

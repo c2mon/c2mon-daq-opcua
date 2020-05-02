@@ -34,7 +34,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
 
-    private final Map<ISourceDataTag, DataTagDefinition> tag2Definition = new ConcurrentHashMap<>();
+    private final Map<Long, DataTagDefinition> tagIdToDefinition = new ConcurrentHashMap<>();
 
     @Override
     public Collection<SubscriptionGroup> getGroups() {
@@ -66,30 +66,37 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         throw new IllegalArgumentException("This subscription does not correspond to a subscription group.");
     }
 
-
     @Override
-    public DataTagDefinition getDefinition(ISourceDataTag tag) {
-        if (tag2Definition.containsKey(tag)) {
-            return tag2Definition.get(tag);
+    public DataTagDefinition getOrCreateDefinition(ISourceDataTag tag) {
+        if (tagIdToDefinition.containsKey(tag.getId())) {
+            return tagIdToDefinition.get(tag.getId());
         } else {
-            DataTagDefinition definition = ItemDefinition.of(tag);
-            tag2Definition.put(tag, definition);
+            final DataTagDefinition definition = ItemDefinition.of(tag);
+            tagIdToDefinition.put(tag.getId(), definition);
             return definition;
         }
     }
 
     @Override
-    public ISourceDataTag getTag (UInteger clientHandle) {
-        Optional<DataTagDefinition> definitionWithMatchingHandle = tag2Definition
-                .values()
-                .stream()
-                .filter(def -> def.getClientHandle().equals(clientHandle))
-                .findAny();
-
-        if(!definitionWithMatchingHandle.isPresent()) {
-            throw new IllegalArgumentException("This clientHandle is not associated with any tag.");
+    public DataTagDefinition getOrCreateDefinition(Long tagId) {
+        if (tagIdToDefinition.containsKey(tagId)) {
+            return tagIdToDefinition.get(tagId);
+        } else {
+            throw new IllegalArgumentException("The tag id is unknown.");
         }
-        return definitionWithMatchingHandle.get().getTag();
+    }
+
+    @Override
+    public Long getTagId(UInteger clientHandle) {
+        final Optional<Map.Entry<Long, DataTagDefinition>> mapEntry = tagIdToDefinition.entrySet()
+                .stream()
+                .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
+                .findFirst();
+
+        if(!mapEntry.isPresent()) {
+            throw new IllegalArgumentException("This clientHandle is not associated with mapEntry tag.");
+        }
+        return mapEntry.get().getKey();
     }
 
     @Override
@@ -106,13 +113,13 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public void addTagToGroup(ISourceDataTag tag) {
-        addDefinitionToGroup(getDefinition(tag));
+    public void addTagToGroup(Long tagId) {
+        addDefinitionToGroup(getOrCreateDefinition(tagId));
     }
 
     @Override
     public void removeTagFromGroup(ISourceDataTag dataTag) {
-        DataTagDefinition definition = tag2Definition.remove(dataTag);
+        DataTagDefinition definition = tagIdToDefinition.get(dataTag.getId());
         if (definition == null) {
             throw new IllegalArgumentException("The tag cannot be removed, since it has not been added to the endpoint.");
         }
@@ -127,13 +134,13 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     @Override
     public boolean isSubscribed(ISourceDataTag tag) {
         SubscriptionGroup group = subscriptionGroups.get(tag.getTimeDeadband());
-        return group != null && group.isSubscribed() && group.contains(getDefinition(tag));
+        return group != null && group.isSubscribed() && group.contains(getOrCreateDefinition(tag.getId()));
     }
 
     @Override
     public void clear() {
         subscriptionGroups.clear();
-        tag2Definition.clear();
+        tagIdToDefinition.clear();
     }
 
     private SubscriptionGroup getOrCreateGroup(int timeDeadband) {
@@ -153,7 +160,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     private List<DataTagDefinition> getOrMakeDefinitionsFrom(Collection<ISourceDataTag> tags) {
         List<DataTagDefinition> result = new ArrayList<>();
         for (ISourceDataTag tag : tags) {
-            result.add(getDefinition(tag));
+            result.add(getOrCreateDefinition(tag));
         }
         return result;
 

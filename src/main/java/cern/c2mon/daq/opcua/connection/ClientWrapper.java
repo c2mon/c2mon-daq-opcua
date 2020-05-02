@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -33,20 +34,18 @@ public interface ClientWrapper {
     DataValue read(NodeId nodeIds) ;
     void browseNode(String indent, NodeId browseRoot);
     StatusCode write(NodeId nodeId, Object value);
-    /***
-     * Called if a command tag does not contain a redundant item name. In this case it is assumed that the given item name
-     * refers to the method node, and that the method node is not orphaned. In this case the first refered object node
-     * in reverse browse direction is used in the method call as an object.
-     * @param methodId the nodeId of class Method which shall be called
-     * @param args the input arguments to pass to the method call.
-     * @return A Map.Entry containing the StatusCode of the method response as key, and the method's output arguments (if applicable)
+
+
+    /**
+     * Fetches the node's first parent object node, if such a node exists. An @{@link OPCCommunicationException} is
+     * thrown if no such object node is found, or an error occurs during browsing.
+     * @param nodeId the node whose parent to fetch
+     * @return the parent node's NodeId
      */
-    Map.Entry<StatusCode, Object[]> callMethod(NodeId methodId, Object... args);
-
+    NodeId getParentObjectNodeId(NodeId nodeId);
 
     /***
-     * Called if a command tag contains a redundant item name. In this case it is assumed that the primary item name
-     * refers to the object node containing the methodId, and that the redundant item name refers to the method node.
+     * Call the method Node with ID methodId contained in the object with ID objectId.
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
      * @param args the input arguments to pass to the methodId call.

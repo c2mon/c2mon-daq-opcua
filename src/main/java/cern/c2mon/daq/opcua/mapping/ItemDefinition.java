@@ -13,7 +13,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
-public abstract class ItemDefinition {
+public class ItemDefinition {
 
     private final NodeId nodeId;
     private final NodeId methodNodeId;
@@ -27,6 +27,12 @@ public abstract class ItemDefinition {
     public static DataTagDefinition of(final ISourceDataTag tag) {
         OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
         return new DataTagDefinition(tag, toNodeId(opcAddress), toRedundantNodeId(opcAddress));
+    }
+
+    @SneakyThrows
+    public static ItemDefinition of(final ISourceCommandTag tag) {
+        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+        return new ItemDefinition(toNodeId(opcAddress), toRedundantNodeId(opcAddress));
     }
 
     @SneakyThrows
@@ -64,32 +70,5 @@ public abstract class ItemDefinition {
         this.nodeId = nodeId;
         this.methodNodeId = methodNodeId;
         this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());
-    }
-
-    protected abstract Long getTagId();
-
-    /**
-     * The objects are considered equal if their tags have the same id.
-     *
-     * @param o The object to compare to.
-     * @return true if the objects equal else false.
-     */
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ItemDefinition that = (ItemDefinition) o;
-        return getTagId().equals(that.getTagId());
-    }
-
-    /**
-     * Returns the hash code of this object.
-     *
-     * @return The hash code of this object which equals the hash code of its
-     * ID.
-     */
-    @Override
-    public int hashCode() {
-        return getTagId().hashCode();
     }
 }

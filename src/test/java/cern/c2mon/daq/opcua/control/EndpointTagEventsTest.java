@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
-import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,8 +17,8 @@ import static org.junit.Assert.assertFalse;
 public class EndpointTagEventsTest extends EndpointTestBase {
 
     public static int TIMEOUT = 200;
-    CompletableFuture<ISourceDataTag> tagUpdate;
-    CompletableFuture<ISourceDataTag> tagInvalid;
+    CompletableFuture<Long> tagUpdate;
+    CompletableFuture<Long> tagInvalid;
 
     @BeforeEach
     public void setup() {
@@ -33,7 +32,7 @@ public class EndpointTagEventsTest extends EndpointTestBase {
     @Test
     public void subscribeWithInvalidTagShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
         subscribeTagsAndMockStatusCode(StatusCode.BAD, tag1);
-        assertEquals(tag1, tagInvalid.get(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertEquals(tag1.getId(), tagInvalid.get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -46,20 +45,20 @@ public class EndpointTagEventsTest extends EndpointTestBase {
     public void refreshInvalidTagShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
         client.setReturnGoodStatusCodes(false);
         endpoint.refreshDataTags(Collections.singletonList(tag1));
-        assertEquals(tag1, tagInvalid.get(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertEquals(tag1.getId(), tagInvalid.get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void refreshValidShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
         endpoint.refreshDataTags(Collections.singletonList(tag1));
-        assertEquals(tag1, tagUpdate.get(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertEquals(tag1.getId(), tagUpdate.get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void validSubscriptionEventShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
         mocker.mockValueConsumerAndSubscribeTagAndReplay(StatusCode.GOOD, tag1);
         endpoint.subscribeTag(tag1);
-        assertEquals(tag1, tagUpdate.get(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertEquals(tag1.getId(), tagUpdate.get(TIMEOUT, TimeUnit.MILLISECONDS));
         assertFalse(tagInvalid.isDone());
     }
 
@@ -67,7 +66,7 @@ public class EndpointTagEventsTest extends EndpointTestBase {
     public void invalidSubscriptionEventShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
         mocker.mockValueConsumerAndSubscribeTagAndReplay(StatusCode.BAD, tag1);
         endpoint.subscribeTag(tag1);
-        assertEquals(tag1, tagInvalid.get(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertEquals(tag1.getId(), tagInvalid.get(TIMEOUT, TimeUnit.MILLISECONDS));
         assertFalse(tagUpdate.isDone());
     }
 }

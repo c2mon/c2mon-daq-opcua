@@ -19,9 +19,9 @@ public class SubscriptionGroupTest extends MappingBase {
     public void setup() {
         super.setup();
 
-        definition = mapper.getDefinition(tag);
-        definitionWithDifferentDeadband = mapper.getDefinition(tagWithDifferentDeadband);
-        definitionWithSameDeadband = mapper.getDefinition(tagWithSameDeadband);
+        definition = mapper.getOrCreateDefinition(tag);
+        definitionWithDifferentDeadband = mapper.getOrCreateDefinition(tagWithDifferentDeadband);
+        definitionWithSameDeadband = mapper.getOrCreateDefinition(tagWithSameDeadband);
 
         group = new SubscriptionGroup(tag.getTimeDeadband());
         groupWithDifferentDeadband = new SubscriptionGroup(tagWithDifferentDeadband.getTimeDeadband());

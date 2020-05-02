@@ -115,7 +115,7 @@ public class EndpointImpl implements Endpoint {
     @Override
     public synchronized void subscribeTag (@NonNull final ISourceDataTag sourceDataTag) {
         SubscriptionGroup group = mapper.getGroup(sourceDataTag);
-        DataTagDefinition definition = mapper.getDefinition(sourceDataTag);
+        DataTagDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
 
         subscribeToGroup(group, Collections.singletonList(definition));
     }
@@ -138,7 +138,7 @@ public class EndpointImpl implements Endpoint {
         }
 
         UaSubscription subscription = group.getSubscription();
-        UInteger clientHandle = mapper.getDefinition(dataTag).getClientHandle();
+        UInteger clientHandle = mapper.getOrCreateDefinition(dataTag.getId()).getClientHandle();
 
         wrapper.deleteItemFromSubscription(clientHandle, subscription);
         mapper.removeTagFromGroup(dataTag);
@@ -152,9 +152,9 @@ public class EndpointImpl implements Endpoint {
     @Override
     public synchronized void refreshDataTags (final Collection<ISourceDataTag> dataTags) {
         for (ISourceDataTag dataTag : dataTags) {
-            NodeId address = mapper.getDefinition(dataTag).getNodeId();
+            NodeId address = mapper.getOrCreateDefinition(dataTag).getNodeId();
             final DataValue value = wrapper.read(address);
-            notifyPublisherOfEvent(dataTag, value);
+            notifyPublisherOfEvent(dataTag.getId(), value);
         }
     }
 
@@ -164,27 +164,36 @@ public class EndpointImpl implements Endpoint {
         wrapper.disconnect();
     }
 
+    /**
+     * Executes the method associated with the tag. If the tag contains both a primary and a reduntand item name,
+     * it is assumed that the primary item name refers to the object node containing the methodId, and that the
+     * redundant item name refers to the method node.
+     * @param tag the command tag associated with a method node.
+     * @param arg the input arguments to pass to the method.
+     * @return an array of the method's output arguments. If there are none, an empty array is returned.
+     */
     @Override
     public Object[] executeMethod(ISourceCommandTag tag, Object arg) {
-        log.info("Executing method of tag {} with argument {}.", tag, arg);
-        final NodeId[] nodeIds = ItemDefinition.toNodeIds(tag);
-        final Map.Entry<StatusCode, Object[]> response = nodeIds.length == 1 ?
-                wrapper.callMethod(nodeIds[0], arg) :
-                wrapper.callMethod(nodeIds[0], nodeIds[1], arg);
-        log.info("Executing commandTag returned status code {} and output {} .", response.getKey(), response.getValue());
+        log.info("executeMethod of tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
+        final ItemDefinition def = ItemDefinition.of(tag);
+        final Map.Entry<StatusCode, Object[]> response = def.getMethodNodeId() == null ?
+                wrapper.callMethod(wrapper.getParentObjectNodeId(def.getNodeId()), def.getNodeId(), arg):
+                wrapper.callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
+        log.info("executeMethod returned status code {} and output {} .", response.getKey(), response.getValue());
         handleCommandResponseStatusCode(response.getKey(), METHOD);
         return response.getValue();
     }
 
     @Override
     public void executeCommand(ISourceCommandTag tag, Object arg) {
-        log.info("Writing {} to {}.", tag, arg);
+        log.info("executeCommand on tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
         StatusCode write = wrapper.write(ItemDefinition.toNodeId(tag), arg);
         handleCommandResponseStatusCode(write, COMMAND_WRITE);
     }
 
     @Override
     public void executePulseCommand(ISourceCommandTag tag, Object arg, int pulseLength) {
+        log.info("executePulseCommand on tag with ID {} and name {} with argument {} and pulse length {}.", tag.getId(), tag.getName(), arg, pulseLength);
         final NodeId nodeId = ItemDefinition.toNodeId(tag);
         final Object original = MiloMapper.toObject(wrapper.read(nodeId).getValue());
         if (original != null && original.equals(arg)) {
@@ -194,7 +203,7 @@ public class EndpointImpl implements Endpoint {
             ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
             scheduler.schedule(() -> {
                 final StatusCode statusCode = wrapper.write(nodeId, original);
-                log.info("Resetting {} to {} returned statusCode {}. ", tag, original, statusCode);
+                log.info("Resetting tag with ID {} and name {} to {} returned statusCode {}. ", tag.getId(), tag.getName(), original, statusCode);
                 handleCommandResponseStatusCode(statusCode, COMMAND_REWRITE);
             }, pulseLength, TimeUnit.SECONDS);
             scheduler.shutdown();
@@ -218,18 +227,18 @@ public class EndpointImpl implements Endpoint {
 
     private void completeSubscription (List<UaMonitoredItem> monitoredItems) {
         for (UaMonitoredItem item : monitoredItems) {
-            ISourceDataTag dataTag = mapper.getTag(item.getClientHandle());
+            Long tagId = mapper.getTagId(item.getClientHandle());
             if (item.getStatusCode().isBad()) {
-                publisher.invalidTag(dataTag);
+                publisher.invalidTag(tagId);
             }
             else {
-                mapper.addTagToGroup(dataTag);
+                mapper.addTagToGroup(tagId);
             }
         }
     }
 
     private void itemCreationCallback (UaMonitoredItem item, Integer i) {
-        ISourceDataTag tag = mapper.getTag(item.getClientHandle());
+        Long tag = mapper.getTagId(item.getClientHandle());
         item.setValueConsumer(value -> notifyPublisherOfEvent(tag, value));
     }
 
@@ -239,10 +248,10 @@ public class EndpointImpl implements Endpoint {
         }
     }
 
-    private void notifyPublisherOfEvent(ISourceDataTag dataTag, DataValue value) {
+    private void notifyPublisherOfEvent(Long tagId, DataValue value) {
         SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
         ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
 
-        publisher.notifyTagEvent(dataTag, tagQuality, valueUpdate);
+        publisher.notifyTagEvent(tagId, tagQuality, valueUpdate);
     }
 }

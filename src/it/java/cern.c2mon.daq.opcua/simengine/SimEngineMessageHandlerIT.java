@@ -46,10 +46,10 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     SourceCommandTagValue value;
     CommfaultSenderCapture capture;
 
-    private static long DATAID_VMON = 1L;
-    private static long DATAID_PW = 2L;
-    private static long CMDID_PW = 10L;
-    private static long CMDID_V0SET = 20L;
+    private static final long DATAID_VMON = 1L;
+    private static final long DATAID_PW = 2L;
+    private static final long CMDID_PW = 10L;
+    private static final long CMDID_V0SET = 20L;
 
     @BeforeClass
     public static void startServer() {
@@ -106,13 +106,14 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @UseConf("simengine_power.xml")
     public void write1SetsValueTo1() throws EqIOException, EqCommandTagException, InterruptedException, ExecutionException, TimeoutException {
         final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_PW);
+        listener.setThreshold(1);
         handler.setEndpointListener(listener);
-
         handler.connectToDataSource();
+
         setIDTo(CMDID_PW, 1);
 
         // Assert power is set to 1
-        final ValueUpdate valueUpdate = listener.getTagValUpdate().get(6000, TimeUnit.MILLISECONDS);
+        final ValueUpdate valueUpdate = listener.getTagValUpdate().get(3000, TimeUnit.MILLISECONDS);
         assertEquals(1, valueUpdate.getValue());
 
     }

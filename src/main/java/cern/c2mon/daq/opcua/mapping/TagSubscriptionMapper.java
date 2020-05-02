@@ -35,15 +35,17 @@ public interface TagSubscriptionMapper {
 
     SubscriptionGroup getGroup (UaSubscription subscription);
 
-    DataTagDefinition getDefinition(ISourceDataTag dataTag);
+    DataTagDefinition getOrCreateDefinition(Long tagId);
 
-    ISourceDataTag getTag (UInteger clientHandle);
+    DataTagDefinition getOrCreateDefinition(ISourceDataTag tag);
+
+    Long getTagId(UInteger clientHandle);
 
     void addDefinitionsToGroups (Collection<DataTagDefinition> definitions);
 
     void addDefinitionToGroup (DataTagDefinition definition);
 
-    void addTagToGroup (ISourceDataTag dataTag);
+    void addTagToGroup (Long dataTag);
 
     void removeTagFromGroup (ISourceDataTag dataTag);
 
