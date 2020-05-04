@@ -51,7 +51,7 @@ public class EventPublisher {
 
     public void notifyEquipmentState(EndpointListener.EquipmentState state) {
         for (EndpointListener listener : listeners) {
-            listener.update(state);
+            listener.onEquipmentStateUpdate(state);
         }
     }
 

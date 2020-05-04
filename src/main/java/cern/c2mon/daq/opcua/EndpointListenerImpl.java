@@ -39,7 +39,7 @@ public class EndpointListenerImpl implements EndpointListener {
     }
 
     @Override
-    public void update (EquipmentState state) {
+    public void onEquipmentStateUpdate(EquipmentState state) {
         if (state == EquipmentState.OK) {
             sender.confirmEquipmentStateOK(state.message);
         } else {

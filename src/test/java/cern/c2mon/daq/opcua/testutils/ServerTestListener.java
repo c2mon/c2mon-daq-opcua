@@ -71,7 +71,7 @@ public abstract class ServerTestListener {
         CompletableFuture<StatusCode> alive = new CompletableFuture<>();
 
         @Override
-        public void update (EquipmentState state) {
+        public void onEquipmentStateUpdate(EquipmentState state) {
             states.add(state);
             if (!state.equals(CONNECTION_LOST)) {
                 stateUpdate.complete(states);

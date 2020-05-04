@@ -15,7 +15,7 @@ public interface Controller {
     void checkConnection() throws ConfigurationException;
     void refreshAllDataTags();
     void refreshDataTag(ISourceDataTag sourceDataTag);
-    String updateAliveWriterAndReport ();
+    String updateAliveWriter();
     void subscribe (EndpointListener listener);
     String runCommand(ISourceCommandTag tag, SourceCommandTagValue value) throws ConfigurationException;
 

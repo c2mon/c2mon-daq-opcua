@@ -64,7 +64,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   private Controller controller;
 
   @Setter
-  private EndpointListener endpointListener = new EndpointListenerImpl();
+  private EndpointListener listener = new EndpointListenerImpl();
 
   @Autowired
   public void setController(Controller controller) {
@@ -84,8 +84,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     IEquipmentMessageSender sender = getEquipmentMessageSender();
 
     log.debug("connect to the OPC UA data source...");
-    endpointListener.initialize(sender);
-    controller.subscribe(endpointListener);
+    listener.initialize(sender);
+    controller.subscribe(listener);
     controller.initialize(config);
     log.debug("connected");
 
@@ -181,7 +181,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
       }
     } else if (equipmentConfiguration.getAliveTagId() != oldEquipmentConfiguration.getAliveTagId()
             || equipmentConfiguration.getAliveTagInterval() != oldEquipmentConfiguration.getAliveTagInterval()) {
-      changeReport.appendInfo(controller.updateAliveWriterAndReport());
+      changeReport.appendInfo(controller.updateAliveWriter());
     }
     changeReport.setState(CHANGE_STATE.SUCCESS);
   }

@@ -35,7 +35,7 @@ public interface EndpointListener {
     }
     void initialize(IEquipmentMessageSender sender);
 
-    void update (EquipmentState state);
+    void onEquipmentStateUpdate(EquipmentState state);
 
     void onNewTagValue(final Long dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality);
 

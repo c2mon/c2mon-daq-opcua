@@ -107,7 +107,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     public void write1SetsValueTo1() throws EqIOException, EqCommandTagException, InterruptedException, ExecutionException, TimeoutException {
         final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_PW);
         listener.setThreshold(1);
-        handler.setEndpointListener(listener);
+        handler.setListener(listener);
         handler.connectToDataSource();
 
         setIDTo(CMDID_PW, 1);
@@ -124,7 +124,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     public void testPowerOnAndSetV0ShouldNotifyVMon() throws EqIOException, EqCommandTagException {
         final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_VMON);
         listener.setThreshold(10);
-        handler.setEndpointListener(listener);
+        handler.setListener(listener);
 
         handler.connectToDataSource();
         setIDTo(CMDID_PW, 1);
@@ -140,7 +140,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     public void testPowerOnAndOff() throws EqIOException, ExecutionException, InterruptedException, EqCommandTagException, TimeoutException {
         final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_PW);
         listener.setThreshold(1);
-        handler.setEndpointListener(listener);
+        handler.setListener(listener);
         handler.connectToDataSource();
         setIDTo(CMDID_PW, 1);
 

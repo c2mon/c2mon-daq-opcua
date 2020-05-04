@@ -57,7 +57,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     @Setter
     private IEquipmentConfiguration config;
 
-
+    @Override
     public synchronized void initialize(IEquipmentConfiguration config) throws ConfigurationException {
         this.config = config;
         String uaTcpType = "opc.tcp";
@@ -78,10 +78,12 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         }
     }
 
+    @Override
     public synchronized void stop () {
         endpoint.reset();
     }
 
+    @Override
     public void checkConnection () throws ConfigurationException {
         if (!endpoint.isConnected()) {
             endpoint.reset();
@@ -90,15 +92,18 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         }
     }
 
+    @Override
     public synchronized void refreshAllDataTags () {
         endpoint.refreshDataTags(config.getSourceDataTags().values());
     }
 
+    @Override
     public synchronized void refreshDataTag (ISourceDataTag sourceDataTag) {
         endpoint.refreshDataTags(Collections.singletonList(sourceDataTag));
     }
 
-    public String updateAliveWriterAndReport () {
+    @Override
+    public String updateAliveWriter() {
         return aliveWriter.updateAndReport();
     }
 
@@ -107,30 +112,6 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         endpoint.subscribe(listener);
     }
 
-    @Override
-    public void onAddDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        doAndReport(changeReport, ReportMessages.TAG_ADDED.message, () -> {
-            endpoint.subscribeTag(sourceDataTag);
-            refreshDataTag(sourceDataTag);
-        });
-    }
-
-    @Override
-    public void onRemoveDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        doAndReport(changeReport, ReportMessages.TAG_REMOVED.message, () -> endpoint.removeDataTag(sourceDataTag));
-    }
-
-    @Override
-    public void onUpdateDataTag (final ISourceDataTag sourceDataTag, final ISourceDataTag oldSourceDataTag, final ChangeReport changeReport) {
-        if (sourceDataTag.getHardwareAddress().equals(oldSourceDataTag.getHardwareAddress())) {
-            completeSuccessFullyWithMessage(changeReport, ReportMessages.NO_UPDATE_REQUIRED.message);
-        } else {
-            doAndReport(changeReport, ReportMessages.TAG_UPDATED.message, () -> {
-                endpoint.removeDataTag(oldSourceDataTag);
-                endpoint.subscribeTag(sourceDataTag);
-            });
-        }
-    }
 
     @Override
     public String runCommand(ISourceCommandTag tag, SourceCommandTagValue command) throws ConfigurationException {
@@ -158,7 +139,30 @@ public class ControllerImpl implements Controller, IDataTagChanger {
                 throw new ConfigurationException(ConfigurationException.Cause.COMMAND_TYPE_UNKNOWN);
         }
         return result;
+    }
+    @Override
+    public void onAddDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
+        doAndReport(changeReport, ReportMessages.TAG_ADDED.message, () -> {
+            endpoint.subscribeTag(sourceDataTag);
+            refreshDataTag(sourceDataTag);
+        });
+    }
 
+    @Override
+    public void onRemoveDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
+        doAndReport(changeReport, ReportMessages.TAG_REMOVED.message, () -> endpoint.removeDataTag(sourceDataTag));
+    }
+
+    @Override
+    public void onUpdateDataTag (final ISourceDataTag sourceDataTag, final ISourceDataTag oldSourceDataTag, final ChangeReport changeReport) {
+        if (sourceDataTag.getHardwareAddress().equals(oldSourceDataTag.getHardwareAddress())) {
+            completeSuccessFullyWithMessage(changeReport, ReportMessages.NO_UPDATE_REQUIRED.message);
+        } else {
+            doAndReport(changeReport, ReportMessages.TAG_UPDATED.message, () -> {
+                endpoint.removeDataTag(oldSourceDataTag);
+                endpoint.subscribeTag(sourceDataTag);
+            });
+        }
     }
 
     private void doAndReport (ChangeReport changeReport, String message, Runnable runnable) {
