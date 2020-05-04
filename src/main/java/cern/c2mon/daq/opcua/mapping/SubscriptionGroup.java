@@ -16,6 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -26,7 +27,7 @@ import java.util.List;
 public class SubscriptionGroup{
 
     @Getter
-    private final List<DataTagDefinition> definitions = new ArrayList<>();
+    private final List<Long> tagIds = new ArrayList<>();
 
     @Getter
     @Setter
@@ -40,36 +41,37 @@ public class SubscriptionGroup{
     }
 
     public int size() {
-        return this.definitions.size();
+        return this.tagIds.size();
     }
 
     public boolean isSubscribed() {
         return this.subscription != null;
     }
 
-    public void add(final DataTagDefinition dataTagDefinition) {
-        if (this.definitions.contains(dataTagDefinition)) {
+    public void add(final long tagId) {
+        if (this.tagIds.contains(tagId)) {
             throw new IllegalArgumentException("The item definition has already been subscribed.");
         }
+        this.tagIds.add(tagId);
+    }
 
-        if (dataTagDefinition.getTag().getTimeDeadband() != publishInterval) {
+    public void add(final ISourceDataTag tag) {
+        if (tag.getTimeDeadband() != publishInterval) {
             throw new IllegalArgumentException("This item does not belong to this group.");
         }
-
-        this.definitions.add(dataTagDefinition);
+        add(tag.getId());
     }
 
     public void reset() {
-        definitions.clear();
+        tagIds.clear();
         subscription = null;
     }
 
-    public void remove(final DataTagDefinition dataTagDefinition) {
-        this.definitions.remove(dataTagDefinition);
+    public void remove(final ISourceDataTag tag) {
+        this.tagIds.remove(tag.getId());
     }
 
-    public boolean contains(DataTagDefinition definition) {
-        return definitions.contains(definition);
+    public boolean contains(ISourceDataTag tag) {
+        return tagIds.contains(tag.getId());
     }
-
 }

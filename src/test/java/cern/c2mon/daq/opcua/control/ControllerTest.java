@@ -36,13 +36,13 @@ public class ControllerTest extends ControllerTestBase {
 
     @Test
     public void initializeShouldSubscribeTags() {
-        sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.isSubscribed(dataTag)));
+        sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag).isSubscribed()));
     }
 
     @Test
     public void stopShouldResetEndpoint() {
         controller.stop();
-        Assertions.assertTrue(mapper.getGroups().isEmpty());
+        Assertions.assertTrue(mapper.getTagIdDefinitionMap().isEmpty());
     }
 
 

@@ -8,10 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SubscriptionGroupTest extends MappingBase {
 
-    DataTagDefinition definition;
-    DataTagDefinition definitionWithSameDeadband;
-    DataTagDefinition definitionWithDifferentDeadband;
-
     SubscriptionGroup group;
     SubscriptionGroup groupWithDifferentDeadband;
 
@@ -19,32 +15,28 @@ public class SubscriptionGroupTest extends MappingBase {
     public void setup() {
         super.setup();
 
-        definition = mapper.getOrCreateDefinition(tag);
-        definitionWithDifferentDeadband = mapper.getOrCreateDefinition(tagWithDifferentDeadband);
-        definitionWithSameDeadband = mapper.getOrCreateDefinition(tagWithSameDeadband);
-
         group = new SubscriptionGroup(tag.getTimeDeadband());
         groupWithDifferentDeadband = new SubscriptionGroup(tagWithDifferentDeadband.getTimeDeadband());
     }
 
     @Test
-    public void addDefinitionWithBadDeadbandShouldThrowError() {
-        assertThrows(IllegalArgumentException.class, () -> group.add(definitionWithDifferentDeadband));
+    public void addTagWithBadDeadbandShouldThrowError() {
+        assertThrows(IllegalArgumentException.class, () -> group.add(tagWithDifferentDeadband));
     }
 
     @Test
     public void addDefinitionTwiceShouldThrowError() {
-        group.add(definition);
+        group.add(tag);
 
-        assertThrows(IllegalArgumentException.class, () -> group.add(definition));
+        assertThrows(IllegalArgumentException.class, () -> group.add(tag));
     }
 
     @Test
     public void removeDefinitionShouldRemoveDefinitionFromGroup() {
-        group.add(definition);
-        group.remove(definition);
+        group.add(tag);
+        group.remove(tag);
 
-        assertFalse(group.contains(definition));
+        assertFalse(group.contains(tag));
     }
 
 

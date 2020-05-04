@@ -17,7 +17,6 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.EndpointListener;
-import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.daq.opcua.connection.ClientWrapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
@@ -37,15 +36,17 @@ public interface Endpoint {
 
     boolean isConnected ();
     void initialize(String uri);
-    void connect(boolean connectionLost);
+    void connect();
+    void reconnect();
     void reset();
     void subscribe (EndpointListener listener);
 
     void subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException;
     void subscribeTag(ISourceDataTag sourceDataTag);
-    void removeDataTag(ISourceDataTag sourceDataTag);
+    void removeTag(ISourceDataTag sourceDataTag);
 
-    void refreshDataTags(Collection<ISourceDataTag> dataTags);
+    void refreshAllTags();
+    void refreshTags(Collection<ISourceDataTag> dataTags);
     void writeAlive(final OPCHardwareAddress address, final Object value);
 
     void executeCommand(ISourceCommandTag tag, Object arg);
@@ -58,6 +59,5 @@ public interface Endpoint {
 
     //for injection during testing
     void setWrapper(ClientWrapper wrapper);
-    EventPublisher getPublisher();
     TagSubscriptionMapper getMapper();
 }

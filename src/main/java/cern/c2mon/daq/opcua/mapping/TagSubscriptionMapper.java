@@ -27,31 +27,30 @@ import java.util.Map;
 
 public interface TagSubscriptionMapper {
 
-    Collection<SubscriptionGroup> getGroups();
+    Map<Long, DataTagDefinition> getTagIdDefinitionMap();
 
-    Map<SubscriptionGroup, List<DataTagDefinition>> maptoGroupsWithDefinitions (Collection<ISourceDataTag> dataTags);
+    void addToTagDefinitionMap(Map<Long, DataTagDefinition> newMap);
+
+    Map<SubscriptionGroup, List<DataTagDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> dataTags);
+
+    Map<SubscriptionGroup, List<DataTagDefinition>> mapToGroups(Collection<DataTagDefinition> definitions);
 
     SubscriptionGroup getGroup (ISourceDataTag dataTags);
 
     SubscriptionGroup getGroup (UaSubscription subscription);
 
-    DataTagDefinition getOrCreateDefinition(Long tagId);
+    DataTagDefinition getDefinition(Long tagId);
 
     DataTagDefinition getOrCreateDefinition(ISourceDataTag tag);
 
     Long getTagId(UInteger clientHandle);
 
-    void addDefinitionsToGroups (Collection<DataTagDefinition> definitions);
-
-    void addDefinitionToGroup (DataTagDefinition definition);
-
     void addTagToGroup (Long dataTag);
 
-    void removeTagFromGroup (ISourceDataTag dataTag);
+    void removeTag(ISourceDataTag dataTag);
 
     void clear();
 
     boolean isSubscribed(ISourceDataTag tag);
-
 }
 

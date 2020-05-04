@@ -71,7 +71,7 @@ public class SecurityIT {
 
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException {
-        config.setEnableInsecureCommunication(false);
+        config.setInsecureCommunicationEnabled(false);
         trustAndConnect();
         assertDoesNotThrow(()-> endpoint.isConnected());
     }
@@ -86,7 +86,7 @@ public class SecurityIT {
     private void initializeEndpoint() {
         endpoint = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), new EventPublisher());
         endpoint.initialize(uri);
-        endpoint.connect(false);
+        endpoint.connect();
     }
 
     private void trustAndConnect() throws IOException, InterruptedException {
@@ -105,8 +105,8 @@ public class SecurityIT {
     }
 
     private void setupAuthForCertificate(){
-        config.setEnableInsecureCommunication(false);
-        config.setEnableOnDemandCertification(false);
+        config.setInsecureCommunicationEnabled(false);
+        config.setOnDemandCertificationEnabled(false);
         String path = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
         config.getKeystore().setType("PKCS12");
         config.getKeystore().setPath(path);
@@ -115,8 +115,8 @@ public class SecurityIT {
     }
 
     private void setupAuthForPassword(){
-        config.setEnableInsecureCommunication(true);
-        config.setEnableOnDemandCertification(false);
+        config.setInsecureCommunicationEnabled(true);
+        config.setOnDemandCertificationEnabled(false);
         AppConfig.UsrPwdConfig usrPwdConfig = AppConfig.UsrPwdConfig.builder()
                 .usr("user1")
                 .pwd("password")

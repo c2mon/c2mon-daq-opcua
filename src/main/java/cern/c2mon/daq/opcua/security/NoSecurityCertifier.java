@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @Getter
 @Slf4j
 @RequiredArgsConstructor
-public class NoSecurityCertifier extends CertifierBase {
+public class NoSecurityCertifier implements Certifier {
     /**
      * Append configures the builder to connect to the endpoint without security.
      * @param builder the builder to configure for connection

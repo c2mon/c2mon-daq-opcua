@@ -27,11 +27,6 @@ public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
     }
 
     @Override
-    public void disconnect () {
-        throw new OPCCommunicationException(OPCCommunicationException.Context.DISCONNECT);
-    }
-
-    @Override
     public UaSubscription createSubscription (int timeDeadband) {
         throw new OPCCommunicationException(OPCCommunicationException.Context.CREATE_SUBSCRIPTION);
     }

@@ -17,28 +17,28 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import lombok.Getter;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+
+import java.util.Objects;
 
 public class DataTagDefinition extends ItemDefinition {
 
-    /**
-     * the c2mon source data tag
-     */
-    private final ISourceDataTag tag;
+    @Getter
+    private final int timeDeadband;
 
-    public Long getTagId() {
-        return tag.getId();
-    }
+    @Getter
+    private final short valueDeadbandType;
+
+    @Getter
+    private final float valueDeadband;
 
     protected DataTagDefinition(final ISourceDataTag tag, final NodeId address, final NodeId redundantAddress) {
         super(address, redundantAddress);
-        this.tag = tag;
+        this.timeDeadband = tag.getTimeDeadband();
+        this.valueDeadbandType = tag.getValueDeadbandType();
+        this.valueDeadband = tag.getValueDeadband();
     }
-
-    public ISourceDataTag getTag() {
-        return tag;
-    }
-
 
     /**
      * The objects are considered equal if their tags have the same id.
@@ -48,10 +48,16 @@ public class DataTagDefinition extends ItemDefinition {
      */
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        } else if (o == null || getClass() != o.getClass() || !super.equals(o)) {
+            return false;
+        }
         DataTagDefinition that = (DataTagDefinition) o;
-        return getTagId().equals(that.getTagId());
+        return super.equals(that) &&
+                timeDeadband == that.timeDeadband &&
+                valueDeadbandType == that.valueDeadbandType &&
+                valueDeadband == that.valueDeadband;
     }
 
     /**
@@ -62,6 +68,6 @@ public class DataTagDefinition extends ItemDefinition {
      */
     @Override
     public int hashCode() {
-        return getTagId().hashCode();
+        return Objects.hash(timeDeadband, valueDeadbandType, valueDeadband);
     }
 }

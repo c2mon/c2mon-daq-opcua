@@ -17,6 +17,7 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
@@ -34,31 +36,45 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
 
-    private final Map<Long, DataTagDefinition> tagIdToDefinition = new ConcurrentHashMap<>();
+    @Getter
+    private final Map<Long, DataTagDefinition> tagIdDefinitionMap = new ConcurrentHashMap<>();
 
     @Override
-    public Collection<SubscriptionGroup> getGroups() {
-        return subscriptionGroups.values();
-    }
-
-    @Override
-    public Map<SubscriptionGroup, List<DataTagDefinition>> maptoGroupsWithDefinitions (Collection<ISourceDataTag> tags) {
+    public Map<SubscriptionGroup, List<DataTagDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> tags) {
         return tags
                 .stream()
                 .collect(groupingBy(ISourceDataTag::getTimeDeadband))
                 .entrySet()
                 .stream()
-                .collect(toMap(e -> getOrCreateGroup(e.getKey()), e -> getOrMakeDefinitionsFrom(e.getValue())));
+                .collect(toMap(e -> getOrCreateGroup(e.getKey()), e -> e.getValue().stream()
+                        .map(this::getOrCreateDefinition)
+                        .collect(Collectors.toList())));
+    }
+
+    @Override
+    public void addToTagDefinitionMap(Map<Long, DataTagDefinition> newMap) {
+        newMap.forEach(tagIdDefinitionMap::putIfAbsent);
+    }
+
+    @Override
+    public Map<SubscriptionGroup, List<DataTagDefinition>> mapToGroups(Collection<DataTagDefinition> definitions) {
+        return definitions
+                .stream()
+                .collect(groupingBy(DataTagDefinition::getTimeDeadband))
+                .entrySet()
+                .stream()
+                .collect(toMap(e -> getOrCreateGroup(e.getKey()), Map.Entry::getValue));
     }
 
     @Override
     public SubscriptionGroup getGroup (ISourceDataTag tag) {
+        getOrCreateDefinition(tag);
         return getOrCreateGroup(tag.getTimeDeadband());
     }
 
     @Override
     public SubscriptionGroup getGroup (UaSubscription subscription) {
-        for(SubscriptionGroup group : getGroups()) {
+        for(SubscriptionGroup group : subscriptionGroups.values()) {
             if (group.getSubscription().equals(subscription)) {
                 return  group;
             }
@@ -68,19 +84,19 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public DataTagDefinition getOrCreateDefinition(ISourceDataTag tag) {
-        if (tagIdToDefinition.containsKey(tag.getId())) {
-            return tagIdToDefinition.get(tag.getId());
+        if (tagIdDefinitionMap.containsKey(tag.getId())) {
+            return tagIdDefinitionMap.get(tag.getId());
         } else {
             final DataTagDefinition definition = ItemDefinition.of(tag);
-            tagIdToDefinition.put(tag.getId(), definition);
+            tagIdDefinitionMap.put(tag.getId(), definition);
             return definition;
         }
     }
 
     @Override
-    public DataTagDefinition getOrCreateDefinition(Long tagId) {
-        if (tagIdToDefinition.containsKey(tagId)) {
-            return tagIdToDefinition.get(tagId);
+    public DataTagDefinition getDefinition(Long tagId) {
+        if (tagIdDefinitionMap.containsKey(tagId)) {
+            return tagIdDefinitionMap.get(tagId);
         } else {
             throw new IllegalArgumentException("The tag id is unknown.");
         }
@@ -88,8 +104,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public Long getTagId(UInteger clientHandle) {
-        final Optional<Map.Entry<Long, DataTagDefinition>> mapEntry = tagIdToDefinition.entrySet()
-                .stream()
+        final Optional<Map.Entry<Long, DataTagDefinition>> mapEntry = tagIdDefinitionMap.entrySet().stream()
                 .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
                 .findFirst();
 
@@ -100,47 +115,37 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public void addDefinitionsToGroups (Collection<DataTagDefinition> definitions) {
-        definitions
-                .stream()
-                .collect(groupingBy(itemDefinition -> itemDefinition.getTag().getTimeDeadband()))
-                .forEach((timeDB, definitionList) -> definitionList.forEach(i -> getOrCreateGroup(timeDB).add(i)));
-    }
-
-    @Override
-    public void addDefinitionToGroup (DataTagDefinition definition) {
-        getOrCreateGroup(definition.getTag().getTimeDeadband()).add(definition);
-    }
-
-    @Override
     public void addTagToGroup(Long tagId) {
-        addDefinitionToGroup(getOrCreateDefinition(tagId));
+        final SubscriptionGroup group = getOrCreateGroup(tagIdDefinitionMap.get(tagId).getTimeDeadband());
+        group.add(tagId);
     }
 
+
     @Override
-    public void removeTagFromGroup(ISourceDataTag dataTag) {
-        DataTagDefinition definition = tagIdToDefinition.get(dataTag.getId());
+    public void removeTag(ISourceDataTag dataTag) {
+        DataTagDefinition definition = tagIdDefinitionMap.get(dataTag.getId());
         if (definition == null) {
             throw new IllegalArgumentException("The tag cannot be removed, since it has not been added to the endpoint.");
         }
         SubscriptionGroup subscriptionGroup = getGroup(dataTag);
 
-        if (!subscriptionGroup.contains(definition)) {
+        if (!subscriptionGroup.contains(dataTag)) {
             throw new IllegalArgumentException("The tag cannot be removed, since it has not been registered in a subscription group.");
         }
-        subscriptionGroup.remove(definition);
+        subscriptionGroup.remove(dataTag);
+        tagIdDefinitionMap.remove(dataTag.getId());
     }
 
     @Override
     public boolean isSubscribed(ISourceDataTag tag) {
         SubscriptionGroup group = subscriptionGroups.get(tag.getTimeDeadband());
-        return group != null && group.isSubscribed() && group.contains(getOrCreateDefinition(tag.getId()));
+        return group != null && group.isSubscribed() && group.contains(tag);
     }
 
     @Override
     public void clear() {
+        tagIdDefinitionMap.clear();
         subscriptionGroups.clear();
-        tagIdToDefinition.clear();
     }
 
     private SubscriptionGroup getOrCreateGroup(int timeDeadband) {
@@ -156,14 +161,4 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     private boolean groupExists (int deadband) {
         return subscriptionGroups.get(deadband) != null;
     }
-
-    private List<DataTagDefinition> getOrMakeDefinitionsFrom(Collection<ISourceDataTag> tags) {
-        List<DataTagDefinition> result = new ArrayList<>();
-        for (ISourceDataTag tag : tags) {
-            result.add(getOrCreateDefinition(tag));
-        }
-        return result;
-
-    }
-
 }

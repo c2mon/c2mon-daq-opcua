@@ -18,7 +18,7 @@ public abstract class EndpointTestBase {
 
     protected ISourceDataTag tag1 = ServerTagFactory.RandomUnsignedInt32.createDataTag();
     protected ISourceDataTag tag2 = ServerTagFactory.DipData.createDataTag();
-    protected ISourceDataTag tagWithDeadband = ServerTagFactory.RandomBoolean.createDataTag(5f, (short)2, 800);
+    protected ISourceDataTag tagWithDeadband = ServerTagFactory.AlternatingBoolean.createDataTag(5f, (short)2, 800);
 
     TagSubscriptionMapper mapper;
     EventPublisher publisher;
@@ -27,7 +27,7 @@ public abstract class EndpointTestBase {
     MiloMocker mocker;
 
     @BeforeEach
-    public void setup() {
+    public void setUp() {
         mapper =  new TagSubscriptionMapperImpl();
         client = new MiloTestClientWrapper();
         publisher = new EventPublisher();

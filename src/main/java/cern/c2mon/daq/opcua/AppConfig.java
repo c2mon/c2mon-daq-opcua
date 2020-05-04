@@ -24,8 +24,8 @@ public class AppConfig {
     private String stateName;
     private String countryCode;
     private int requestTimeout;
-    private boolean enableInsecureCommunication = true;
-    private boolean enableOnDemandCertification = true;
+    private boolean insecureCommunicationEnabled = true;
+    private boolean onDemandCertificationEnabled = true;
 
     private KeystoreConfig keystore = new KeystoreConfig();
     private UsrPwdConfig usrPwd = new UsrPwdConfig();

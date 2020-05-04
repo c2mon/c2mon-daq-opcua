@@ -21,9 +21,9 @@ public class EndpointTagEventsTest extends EndpointTestBase {
     CompletableFuture<Long> tagInvalid;
 
     @BeforeEach
-    public void setup() {
-        super.setup();
-        endpoint.connect(false);
+    public void setUp() {
+        super.setUp();
+        endpoint.connect();
         ServerTestListener.TestListener l = ServerTestListener.subscribeAndReturnListener(publisher);
         tagUpdate = l.getTagUpdate();
         tagInvalid = l.getTagInvalid();
@@ -44,13 +44,13 @@ public class EndpointTagEventsTest extends EndpointTestBase {
     @Test
     public void refreshInvalidTagShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
         client.setReturnGoodStatusCodes(false);
-        endpoint.refreshDataTags(Collections.singletonList(tag1));
+        endpoint.refreshTags(Collections.singletonList(tag1));
         assertEquals(tag1.getId(), tagInvalid.get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void refreshValidShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
-        endpoint.refreshDataTags(Collections.singletonList(tag1));
+        endpoint.refreshTags(Collections.singletonList(tag1));
         assertEquals(tag1.getId(), tagUpdate.get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 

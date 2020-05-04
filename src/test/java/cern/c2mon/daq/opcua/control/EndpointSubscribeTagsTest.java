@@ -73,20 +73,20 @@ public class EndpointSubscribeTagsTest extends EndpointTestBase{
 
     @Test
     public void removeUnsubscribedDataTagShouldThrowError() {
-        assertThrows(IllegalArgumentException.class, () -> endpoint.removeDataTag(tag1));
+        assertThrows(IllegalArgumentException.class, () -> endpoint.removeTag(tag1));
     }
 
     @Test
     public void removeDataTagShouldUnsubscribeDataTag() {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD,tag1);
-        endpoint.removeDataTag(tag1);
+        endpoint.removeTag(tag1);
         assertFalse(mapper.isSubscribed(tag1));
     }
 
     @Test
     public void removeOneOfTwoTagsShouldUnsubscribeDataTag() {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tag2);
-        endpoint.removeDataTag(tag1);
+        endpoint.removeTag(tag1);
         assertTrue(!mapper.isSubscribed(tag1) && mapper.isSubscribed(tag2));
     }
 }

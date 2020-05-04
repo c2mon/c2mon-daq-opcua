@@ -54,13 +54,11 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
     @Override
     public void onPublishFailure (UaException exception) {
         log.error("onPublishFailure event", exception);
-        //TODO: should this call something?
     }
 
     @Override
     public void onNotificationDataLost (UaSubscription subscription) {
         log.info("onNotificationDataLost event for {}", subscription.toString());
-        //TODO: should this call something?
     }
 
     /**
@@ -72,6 +70,5 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
     @Override
     public void onSubscriptionTransferFailed (UaSubscription subscription, StatusCode statusCode) {
         log.info("onSubscriptionTransferFailed event for {} : StatusCode {}", subscription.toString(), statusCode);
-        //TODO: should this call something?
     }
 }

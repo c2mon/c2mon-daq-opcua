@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public enum ServerTagFactory {
     RandomUnsignedInt32,
-    RandomBoolean,
+    AlternatingBoolean,
     Invalid,
     DipData;
 

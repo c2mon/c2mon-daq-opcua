@@ -27,7 +27,9 @@ public class ItemDefinitionTest extends MappingBase {
 
         assertEquals(opcHardwareAddress.getOPCItemName(), dataTagDefinition.getNodeId().getIdentifier());
         assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getNodeId().getNamespaceIndex().intValue());
-        assertEquals(tag, dataTagDefinition.getTag());
+        assertEquals(tag.getTimeDeadband(), dataTagDefinition.getTimeDeadband());
+        assertEquals(tag.getValueDeadband(), dataTagDefinition.getValueDeadband());
+        assertEquals(tag.getValueDeadbandType(), dataTagDefinition.getValueDeadbandType());
     }
 
     @Test
@@ -41,15 +43,4 @@ public class ItemDefinitionTest extends MappingBase {
         assertEquals(opcHardwareAddress.getOpcRedundantItemName(), dataTagDefinition.getMethodNodeId().getIdentifier());
         assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getMethodNodeId().getNamespaceIndex().intValue());
     }
-
-    @Test
-    public void sameTagShouldResultInSameDefinition() throws ConfigurationException {
-        assertEquals(DataTagDefinition.of(tag), DataTagDefinition.of(tag));
-    }
-
-    @Test
-    public void differentTagIdShouldResultInDifferentDefinitions() throws ConfigurationException {
-        assertNotEquals(DataTagDefinition.of(tag), DataTagDefinition.of(tagWithSameDeadband));
-    }
-
 }

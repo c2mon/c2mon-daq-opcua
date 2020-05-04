@@ -40,11 +40,9 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
 import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Context.*;
@@ -77,10 +75,7 @@ public class EndpointImpl implements Endpoint {
         this.uri = uri;
     }
 
-    public void connect(boolean connectionLost){
-        if (connectionLost) {
-            publisher.notifyEquipmentState(CONNECTION_LOST);
-        }
+    public void connect(){
         try {
             wrapper.initialize(uri);
             publisher.notifyEquipmentState(OK);
@@ -88,6 +83,15 @@ public class EndpointImpl implements Endpoint {
             publisher.notifyEquipmentState(CONNECTION_FAILED);
             throw e;
         }
+    }
+
+    public void reconnect() {
+        publisher.notifyEquipmentState(CONNECTION_LOST);
+        final Map<Long, DataTagDefinition> currentConfig = new ConcurrentHashMap<>(mapper.getTagIdDefinitionMap());
+        reset();
+        connect();
+        mapper.addToTagDefinitionMap(currentConfig);
+        mapper.mapToGroups(currentConfig.values()).forEach(this::subscribeToGroup);
     }
 
     @Override
@@ -99,8 +103,9 @@ public class EndpointImpl implements Endpoint {
     public void recreateSubscription (UaSubscription subscription) {
         wrapper.deleteSubscription(subscription);
         SubscriptionGroup group = mapper.getGroup(subscription);
-        List<DataTagDefinition> definitions = group.getDefinitions();
+        final List<Long> tagIds = group.getTagIds();
         group.reset();
+        final List<DataTagDefinition> definitions = tagIds.stream().map(mapper::getDefinition).collect(Collectors.toList());
         subscribeToGroup(group, definitions);
     }
 
@@ -109,7 +114,7 @@ public class EndpointImpl implements Endpoint {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
         }
-        mapper.maptoGroupsWithDefinitions(dataTags).forEach(this::subscribeToGroup);
+        mapper.mapTagsToGroupsAndDefinitions(dataTags).forEach(this::subscribeToGroup);
     }
 
     @Override
@@ -130,36 +135,40 @@ public class EndpointImpl implements Endpoint {
     }
 
     @Override
-    public synchronized void removeDataTag (final ISourceDataTag dataTag) {
+    public synchronized void removeTag(final ISourceDataTag dataTag) {
         SubscriptionGroup group = mapper.getGroup(dataTag);
 
-        if (!group.isSubscribed()) {
-            throw new IllegalArgumentException("The tag cannot be removed, since the subscription group is not subscribed.");
+        if (group.isSubscribed() && group.contains(dataTag)) {
+            log.info("Unsubscribing tag from server.");
+            UaSubscription subscription = group.getSubscription();
+            UInteger clientHandle = mapper.getDefinition(dataTag.getId()).getClientHandle();
+            wrapper.deleteItemFromSubscription(clientHandle, subscription);
+            if (group.size() < 1) {
+                log.info("Subscription is empty. Deleting subscription.");
+                wrapper.deleteSubscription(subscription);
+            }
+        } else {
+            log.info("The tag was not subscribed.");
         }
-
-        UaSubscription subscription = group.getSubscription();
-        UInteger clientHandle = mapper.getOrCreateDefinition(dataTag.getId()).getClientHandle();
-
-        wrapper.deleteItemFromSubscription(clientHandle, subscription);
-        mapper.removeTagFromGroup(dataTag);
-        
+        log.info("Removing tag from configuration.");
+        mapper.removeTag(dataTag);
         if (group.size() < 1) {
             group.reset();
-            wrapper.deleteSubscription(subscription);
         }
     }
 
     @Override
-    public synchronized void refreshDataTags (final Collection<ISourceDataTag> dataTags) {
-        for (ISourceDataTag dataTag : dataTags) {
-            NodeId address = mapper.getOrCreateDefinition(dataTag).getNodeId();
-            final DataValue value = wrapper.read(address);
-            notifyPublisherOfEvent(dataTag.getId(), value);
-        }
+    public synchronized void refreshAllTags () {
+        mapper.getTagIdDefinitionMap().forEach((tagId, definition) -> refresh(tagId, definition.getNodeId()));
     }
 
     @Override
-    public synchronized void reset () {
+    public void refreshTags(Collection<ISourceDataTag> dataTags) {
+        dataTags.forEach(tag  -> refresh(tag.getId(), mapper.getOrCreateDefinition(tag).getNodeId()));
+    }
+
+    @Override
+    public synchronized void reset() {
         mapper.clear();
         wrapper.disconnect();
     }
@@ -223,6 +232,11 @@ public class EndpointImpl implements Endpoint {
     @Override
     public synchronized boolean isConnected () {
         return wrapper.isConnected();
+    }
+
+    private void refresh(long tagId, NodeId address) {
+        final DataValue value = wrapper.read(address);
+        notifyPublisherOfEvent(tagId, value);
     }
 
     private void completeSubscription (List<UaMonitoredItem> monitoredItems) {

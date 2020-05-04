@@ -32,7 +32,7 @@ public class MethodIT {
         publisher = new EventPublisher();
         endpoint = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), publisher);
         endpoint.initialize("opc.tcp://milo.digitalpetri.com:62541/milo");
-        endpoint.connect(false);
+        endpoint.connect();
 
     }
 

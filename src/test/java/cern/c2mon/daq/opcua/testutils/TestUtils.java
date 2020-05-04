@@ -28,8 +28,8 @@ public abstract class TestUtils {
                 .stateName("Geneva")
                 .countryCode("CH")
                 .requestTimeout(5000)
-                .enableInsecureCommunication(true)
-                .enableOnDemandCertification(true)
+                .insecureCommunicationEnabled(true)
+                .onDemandCertificationEnabled(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())
                 .build();
     }

@@ -23,29 +23,28 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
     CompletableFuture<List<EndpointListener.EquipmentState>> f;
 
     @BeforeEach
-    public void setup () {
-        super.setup();
+    public void setUp() {
+        super.setUp();
         f = ServerTestListener.subscribeAndReturnListener(publisher).getStateUpdate();
     }
 
     @Test
     public void goodStatusCodesShouldSendOK () throws ExecutionException, InterruptedException {
-        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tag1);
-        endpoint.connect(false);
+        endpoint.connect();
         assertEquals(Collections.singletonList(OK), f.get());
     }
 
     @Test
     public void badStatusCodesShouldSendOK () throws ExecutionException, InterruptedException {
-        mocker.mockStatusCodeAndClientHandle(StatusCode.BAD, tag1);
-        endpoint.connect(false);
+        endpoint.connect();
         assertEquals(Collections.singletonList(OK), f.get());
     }
 
     @Test
-    public void initializeAfterLostConnectionShouldSendLostAndOK () throws ExecutionException, InterruptedException {
+    public void reconnectShouldSendLostAndOK () throws ExecutionException, InterruptedException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.BAD, tag1);
-        endpoint.connect(true);
+        mocker.replay();
+        endpoint.reconnect();
         assertEquals(Arrays.asList(CONNECTION_LOST, OK), f.get());
     }
 
@@ -53,14 +52,14 @@ public class EndpointEquipmentStateEventsTest extends EndpointTestBase {
     public void errorOnInitializeShouldSendFail () throws ExecutionException, InterruptedException {
         endpoint.setWrapper(new MiloExceptionTestClientWrapper());
         endpoint.initialize("uri");
-        assertThrows(OPCCommunicationException.class, () -> endpoint.connect(false));
+        assertThrows(OPCCommunicationException.class, endpoint::connect);
         assertEquals(Collections.singletonList(CONNECTION_FAILED), f.get());
     }
 
     @Test
     public void errorOnInitializeAfterLostConnectionShouldSendBoth () throws ExecutionException, InterruptedException {
         endpoint.setWrapper(new MiloExceptionTestClientWrapper());
-        assertThrows(OPCCommunicationException.class, () -> endpoint.connect(true));
+        assertThrows(OPCCommunicationException.class, endpoint::reconnect);
         assertEquals(Arrays.asList(CONNECTION_LOST, CONNECTION_FAILED), f.get());
     }
 }

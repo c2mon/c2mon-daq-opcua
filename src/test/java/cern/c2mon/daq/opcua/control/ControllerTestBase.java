@@ -42,7 +42,7 @@ public abstract class ControllerTestBase {
     public static Map<Long, ISourceDataTag> generateSourceTags () {
         Map<Long, ISourceDataTag> sourceTags = new HashMap<>();
         sourceTags.put(2L, ServerTagFactory.RandomUnsignedInt32.createDataTag());
-        sourceTags.put(3L, ServerTagFactory.RandomBoolean.createDataTag());
+        sourceTags.put(3L, ServerTagFactory.AlternatingBoolean.createDataTag());
         return sourceTags;
     }
 

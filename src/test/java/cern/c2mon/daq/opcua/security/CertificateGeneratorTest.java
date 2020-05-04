@@ -33,8 +33,8 @@ class CertificateGeneratorTest {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
-                .enableInsecureCommunication(false)
-                .enableOnDemandCertification(true)
+                .insecureCommunicationEnabled(false)
+                .onDemandCertificationEnabled(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())
                 .build();
         generator = new CertificateGenerator(config);

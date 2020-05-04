@@ -10,9 +10,7 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 public interface Controller {
 
     void initialize(IEquipmentConfiguration config) throws ConfigurationException;
-    void connect(boolean connectionLost) throws ConfigurationException;
     void stop();
-    void checkConnection() throws ConfigurationException;
     void refreshAllDataTags();
     void refreshDataTag(ISourceDataTag sourceDataTag);
     String updateAliveWriter();
@@ -21,5 +19,4 @@ public interface Controller {
 
     // for dependency injection during testing
     Endpoint getEndpoint();
-    void setConfig(IEquipmentConfiguration config);
 }

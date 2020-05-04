@@ -50,8 +50,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
                 .localityName("Geneva")
                 .stateName("Geneva")
                 .countryCode("CH")
-                .enableInsecureCommunication(true)
-                .enableOnDemandCertification(true)
+                .insecureCommunicationEnabled(true)
+                .onDemandCertificationEnabled(true)
                 .build();
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         ClientWrapper wrapper = new MiloClientWrapper(p);

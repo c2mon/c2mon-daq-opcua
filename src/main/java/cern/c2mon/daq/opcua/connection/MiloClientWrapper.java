@@ -212,8 +212,8 @@ public class MiloClientWrapper implements ClientWrapper {
         double samplingInterval = 0;
 
         DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue,
-                uint(definition.getTag().getValueDeadbandType()),
-                (double) definition.getTag().getValueDeadband());
+                uint(definition.getValueDeadbandType()),
+                (double) definition.getValueDeadband());
         MonitoringParameters mp = new MonitoringParameters(definition.getClientHandle(),
                 samplingInterval,
                 ExtensionObject.encode(client.getSerializationContext(), filter),

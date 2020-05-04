@@ -31,7 +31,6 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -54,28 +53,17 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     @Autowired
     private final AliveWriter aliveWriter;
 
-    @Setter
-    private IEquipmentConfiguration config;
-
     @Override
     public synchronized void initialize(IEquipmentConfiguration config) throws ConfigurationException {
-        this.config = config;
         String uaTcpType = "opc.tcp";
-        EquipmentAddress addr = AddressStringParser.parse(config.getAddress());
-        if (!addr.supportsProtocol(uaTcpType)) {
+        EquipmentAddress address = AddressStringParser.parse(config.getAddress());
+        if (!address.supportsProtocol(uaTcpType)) {
             throw new ConfigurationException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN);
         }
-        aliveWriter.initialize(config, addr.isAliveWriterEnabled());
-        endpoint.initialize(addr.getServerAddressOfType(uaTcpType).getUriString());
-        connect(false);
-    }
-
-    @Override
-    public void connect(boolean connectionLost) throws ConfigurationException {
-        endpoint.connect(connectionLost);
-        synchronized (this) {
-            endpoint.subscribeTags(config.getSourceDataTags().values());
-        }
+        aliveWriter.initialize(config, address.isAliveWriterEnabled());
+        endpoint.initialize(address.getServerAddressOfType(uaTcpType).getUriString());
+        endpoint.connect();
+        endpoint.subscribeTags(config.getSourceDataTags().values());
     }
 
     @Override
@@ -84,22 +72,13 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     }
 
     @Override
-    public void checkConnection () throws ConfigurationException {
-        if (!endpoint.isConnected()) {
-            endpoint.reset();
-            connect(true);
-            refreshAllDataTags();
-        }
-    }
-
-    @Override
     public synchronized void refreshAllDataTags () {
-        endpoint.refreshDataTags(config.getSourceDataTags().values());
+        endpoint.refreshAllTags();
     }
 
     @Override
     public synchronized void refreshDataTag (ISourceDataTag sourceDataTag) {
-        endpoint.refreshDataTags(Collections.singletonList(sourceDataTag));
+        endpoint.refreshTags(Collections.singletonList(sourceDataTag));
     }
 
     @Override
@@ -150,7 +129,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     @Override
     public void onRemoveDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        doAndReport(changeReport, ReportMessages.TAG_REMOVED.message, () -> endpoint.removeDataTag(sourceDataTag));
+        doAndReport(changeReport, ReportMessages.TAG_REMOVED.message, () -> endpoint.removeTag(sourceDataTag));
     }
 
     @Override
@@ -159,7 +138,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
             completeSuccessFullyWithMessage(changeReport, ReportMessages.NO_UPDATE_REQUIRED.message);
         } else {
             doAndReport(changeReport, ReportMessages.TAG_UPDATED.message, () -> {
-                endpoint.removeDataTag(oldSourceDataTag);
+                endpoint.removeTag(oldSourceDataTag);
                 endpoint.subscribeTag(sourceDataTag);
             });
         }
@@ -167,12 +146,20 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     private void doAndReport (ChangeReport changeReport, String message, Runnable runnable) {
         try {
-            checkConnection();
+            reconnectIfRequired();
             runnable.run();
             completeSuccessFullyWithMessage(changeReport, message);
         } catch (Exception e) {
             changeReport.appendError(e.getMessage());
             changeReport.setState(FAIL);
+        }
+    }
+
+    private void reconnectIfRequired() {
+        if (!endpoint.isConnected()) {
+            log.info("Connection lost. Reconnecting.");
+            endpoint.reconnect();
+            refreshAllDataTags();
         }
     }
 

@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class EdgeIT {
 
     private static int TIMEOUT = 6000;
-    private ServerTestListener.TestListener future;
+    private ServerTestListener.TestListener listener;
 
     private Endpoint endpoint;
     private final TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
@@ -55,13 +55,13 @@ public class EdgeIT {
 
     @BeforeEach
     public void setupEndpoint() {
-        future = ServerTestListener.subscribeAndReturnListener(publisher);
+        listener = ServerTestListener.subscribeAndReturnListener(publisher);
         config = TestUtils.createDefaultConfig();
-        config.setEnableOnDemandCertification(false);
+        config.setOnDemandCertificationEnabled(false);
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         endpoint = new EndpointImpl(new MiloClientWrapper(p), mapper, publisher);
         endpoint.initialize(resolver.getURI(ConnectionResolver.Ports.IOTEDGE));
-        endpoint.connect(false);
+        endpoint.connect();
         log.info("Client ready");
     }
 
@@ -80,21 +80,36 @@ public class EdgeIT {
     @Test
     public void connectToBadServer() {
         endpoint.initialize("opc.tcp://somehost/somepath");
-        assertThrows(OPCCommunicationException.class, () -> endpoint.connect(false));
+        assertThrows(OPCCommunicationException.class, endpoint::connect);
     }
 
     @Test
     public void subscribingProperDataTagShouldReturnValue() {
         endpoint.subscribeTag(ServerTagFactory.RandomUnsignedInt32.createDataTag());
 
-        Object o = assertDoesNotThrow(() -> future.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
+        Object o = assertDoesNotThrow(() -> listener.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
         assertNotNull(o);
+    }
+
+    @Test
+    public void subscribingProperTagAndReconnectingShouldKeepResubscribeTags() throws InterruptedException, ExecutionException, TimeoutException {
+        final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
+        endpoint.subscribeTag(tag);
+
+        final ServerTestListener.PulseTestListener pulseTestListener = new ServerTestListener.PulseTestListener(tag.getId());
+        pulseTestListener.setThreshold(0);
+        publisher.subscribe(pulseTestListener);
+
+        endpoint.reconnect();
+        pulseTestListener.getTagValUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS);
+
+        assertTrue(mapper.isSubscribed(tag));
     }
 
     @Test
     public void subscribingImproperDataTagShouldReturnOnTagInvalid () {
         endpoint.subscribeTag(ServerTagFactory.Invalid.createDataTag());
-        assertDoesNotThrow(() -> future.getTagInvalid().get(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> listener.getTagInvalid().get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -102,14 +117,14 @@ public class EdgeIT {
         float valueDeadband = 10;
         final ISourceDataTag tag = ServerTagFactory.DipData.createDataTag(valueDeadband, (short) DeadbandType.Absolute.getValue(), 0);
         endpoint.subscribeTag(tag);
-        assertEquals(tag.getId(), future.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertEquals(tag.getId(), listener.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void refreshProperTag () throws InterruptedException, ExecutionException, TimeoutException {
         final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
-        endpoint.refreshDataTags(Collections.singletonList(tag));
-        assertEquals(tag.getId(), future.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
+        endpoint.refreshTags(Collections.singletonList(tag));
+        assertEquals(tag.getId(), listener.getTagUpdate().get(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
 }

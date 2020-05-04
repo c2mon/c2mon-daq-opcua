@@ -78,11 +78,11 @@ public class SecurityModule {
         //connect with existing certificate if present
         OpcUaClient client = connectIfPossible(endpoints, loader);
 
-        if (client == null && config.isEnableOnDemandCertification()) {
+        if (client == null && config.isOnDemandCertificationEnabled()) {
             log.info("Authenticate with generated certificate. ");
             client = connectIfPossible(endpoints, generator);
         }
-        if (client == null && config.isEnableInsecureCommunication()) {
+        if (client == null && config.isInsecureCommunicationEnabled()) {
             log.info("Attempt insecure connection. ");
             client = connectIfPossible(endpoints, noSecurity);
         }
