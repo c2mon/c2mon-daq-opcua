@@ -16,7 +16,7 @@ import java.util.function.BiConsumer;
 import static org.easymock.EasyMock.createMock;
 
 @Getter
-public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
+public class ExceptionTestEndpoint extends TestEndpoint {
 
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
@@ -52,7 +52,7 @@ public class MiloExceptionTestClientWrapper extends MiloTestClientWrapper {
 
     @Override
     public boolean isConnected () {
-        return true;
+        return false;
     }
 
     public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {

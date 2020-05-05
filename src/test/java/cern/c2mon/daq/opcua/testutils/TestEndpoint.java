@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.connection.ClientWrapper;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import lombok.Getter;
@@ -23,11 +23,12 @@ import java.util.function.BiConsumer;
 import static org.easymock.EasyMock.createMock;
 
 @Getter @Setter
-public class MiloTestClientWrapper implements ClientWrapper {
+public class TestEndpoint implements Endpoint {
 
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
     boolean returnGoodStatusCodes = true;
+    boolean isConnected = true;
 
     @Override
     public void initialize(String uri) {
@@ -87,7 +88,7 @@ public class MiloTestClientWrapper implements ClientWrapper {
 
     @Override
     public boolean isConnected () {
-        return true;
+        return isConnected;
     }
 
     public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) { }

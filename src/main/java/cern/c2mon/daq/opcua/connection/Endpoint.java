@@ -17,7 +17,7 @@ import java.util.function.BiConsumer;
  * We have a one-to-one mapping in between Endpoint and Server. We cannot trust the server to handle concurrency properly.
  * Therefore, let's keep things synchronous.
  */
-public interface ClientWrapper {
+public interface Endpoint {
     void initialize(String uri);
     void disconnect();
     boolean isConnected();

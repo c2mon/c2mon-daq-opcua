@@ -21,6 +21,10 @@ import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
+import cern.c2mon.daq.opcua.address.AddressStringParser;
+import cern.c2mon.daq.opcua.address.EquipmentAddress;
+import cern.c2mon.daq.opcua.control.AliveWriter;
+import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
@@ -63,12 +67,28 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   @Getter
   private Controller controller;
 
+  @Getter
+  private CommandRunner commandRunner;
+
+  @Autowired
+  public AliveWriter aliveWriter;
+
   @Setter
   private EndpointListener listener = new EndpointListenerImpl();
 
   @Autowired
   public void setController(Controller controller) {
     this.controller = controller;
+  }
+
+  @Autowired
+  public void setCommandRunner(CommandRunner commandRunner) {
+    this.commandRunner = commandRunner;
+  }
+
+  @Autowired
+  public void setAliveWriter(AliveWriter writer) {
+    this.aliveWriter = writer;
   }
 
   /**
@@ -86,7 +106,15 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     log.debug("connect to the OPC UA data source...");
     listener.initialize(sender);
     controller.subscribe(listener);
-    controller.initialize(config);
+
+    String uaTcpType = "opc.tcp";
+    EquipmentAddress address = AddressStringParser.parse(config.getAddress());
+    if (!address.supportsProtocol(uaTcpType)) {
+      throw new ConfigurationException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN);
+    }
+    aliveWriter.initialize(config, address.isAliveWriterEnabled());
+
+    controller.initialize(address.getServerAddressOfType(uaTcpType).getUriString(), config.getSourceDataTags().values());
     log.debug("connected");
 
     getEquipmentConfigurationHandler().setDataTagChanger((IDataTagChanger) controller);
@@ -101,7 +129,12 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   @Override
   public synchronized void disconnectFromDataSource() {
     log.debug("disconnecting from OPC data source...");
-    if (controller != null) controller.stop();
+    if (controller != null) {
+      controller.stop();
+    }
+    if (aliveWriter != null) {
+      aliveWriter.cancel();
+    }
     log.debug("disconnected");
   }
 
@@ -129,6 +162,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
   /**
    * Executes a specific command.
+   *
    * @param value defines the command to run. The id of the value must correspond to the id of a command tag in the
    *              configuration.
    * @return If the command is of type method and returns values, the toString representation of the output is returned. Otherwise null.
@@ -146,7 +180,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
       if (log.isDebugEnabled()) {
         log.debug("running command {} with value {}", id, value.getValue());
       }
-      result = controller.runCommand(tag, value);
+      result = commandRunner.runCommand(tag, value);
     } catch (OPCCommunicationException e) {
       throw new EqCommandTagException("The client could not write to the specified hardware address", e);
     } catch (ConfigurationException e) {
@@ -179,9 +213,10 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         changeReport.appendError("Restart delay interrupted. DAQ will not connect.");
         Thread.currentThread().interrupt();
       }
-    } else if (equipmentConfiguration.getAliveTagId() != oldEquipmentConfiguration.getAliveTagId()
-            || equipmentConfiguration.getAliveTagInterval() != oldEquipmentConfiguration.getAliveTagInterval()) {
-      changeReport.appendInfo(controller.updateAliveWriter());
+    } else if ((equipmentConfiguration.getAliveTagId() != oldEquipmentConfiguration.getAliveTagId()
+            || equipmentConfiguration.getAliveTagInterval() != oldEquipmentConfiguration.getAliveTagInterval())
+            && aliveWriter != null) {
+      changeReport.appendInfo(aliveWriter.updateAndReport());
     }
     changeReport.setState(CHANGE_STATE.SUCCESS);
   }

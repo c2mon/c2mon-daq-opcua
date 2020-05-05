@@ -19,136 +19,192 @@ package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.EndpointListener;
-import cern.c2mon.daq.opcua.address.AddressStringParser;
-import cern.c2mon.daq.opcua.address.EquipmentAddress;
+import cern.c2mon.daq.opcua.EventPublisher;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.shared.common.command.ISourceCommandTag;
+import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.mapping.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
-import cern.c2mon.shared.common.process.IEquipmentConfiguration;
-import cern.c2mon.shared.common.type.TypeConverter;
-import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NonNull;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
+import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
+import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 
 @Component("controller")
 @Slf4j
-@RequiredArgsConstructor
 public class ControllerImpl implements Controller, IDataTagChanger {
 
-    @Getter
-    private final Endpoint endpoint;
+    @Setter
+    @Autowired
+    private Endpoint wrapper;
 
     @Autowired
-    private final AliveWriter aliveWriter;
+    private final TagSubscriptionMapper mapper;
+
+    @Autowired
+    private final EventPublisher publisher;
+
+    private String uri;
+
+    public ControllerImpl(Endpoint wrapper, TagSubscriptionMapper mapper, EventPublisher publisher) {
+        this.wrapper = wrapper;
+        this.mapper = mapper;
+        this.publisher = publisher;
+    }
 
     @Override
-    public synchronized void initialize(IEquipmentConfiguration config) throws ConfigurationException {
-        String uaTcpType = "opc.tcp";
-        EquipmentAddress address = AddressStringParser.parse(config.getAddress());
-        if (!address.supportsProtocol(uaTcpType)) {
-            throw new ConfigurationException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN);
+    public synchronized void initialize(String uri, Collection<ISourceDataTag> dataTags) throws ConfigurationException {
+        this.uri = uri;
+        connect();
+        subscribeTags(dataTags);
+    }
+
+
+    @Override
+    public synchronized void subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
+        if (dataTags.isEmpty()) {
+            throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
         }
-        aliveWriter.initialize(config, address.isAliveWriterEnabled());
-        endpoint.initialize(address.getServerAddressOfType(uaTcpType).getUriString());
-        endpoint.connect();
-        endpoint.subscribeTags(config.getSourceDataTags().values());
+        mapper.mapTagsToGroupsAndDefinitions(dataTags).forEach(this::subscribeToGroup);
     }
 
     @Override
     public synchronized void stop () {
-        endpoint.reset();
+        mapper.clear();
+        wrapper.disconnect();
     }
 
     @Override
     public synchronized void refreshAllDataTags () {
-        endpoint.refreshAllTags();
+        mapper.getTagIdDefinitionMap().forEach((tagId, definition) -> refresh(tagId, definition.getNodeId()));
     }
 
     @Override
     public synchronized void refreshDataTag (ISourceDataTag sourceDataTag) {
-        endpoint.refreshTags(Collections.singletonList(sourceDataTag));
-    }
-
-    @Override
-    public String updateAliveWriter() {
-        return aliveWriter.updateAndReport();
+        refresh(sourceDataTag.getId(), mapper.getOrCreateDefinition(sourceDataTag).getNodeId());
     }
 
     @Override
     public void subscribe (EndpointListener listener) {
-        endpoint.subscribe(listener);
+        publisher.subscribe(listener);
     }
-
 
     @Override
-    public String runCommand(ISourceCommandTag tag, SourceCommandTagValue command) throws ConfigurationException {
-        String result = "";
-        Object arg = TypeConverter.cast(command.getValue(), command.getDataType());
-        if (arg == null) {
-            throw new ConfigurationException(ConfigurationException.Cause.COMMAND_VALUE_ERROR);
-        }
-        OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
-        switch (hardwareAddress.getCommandType()) {
-            case METHOD:
-                final Object[] response = endpoint.executeMethod(tag, arg);
-                log.info("Successfully executed method {} with arg {}", tag, arg);
-                result = Stream.of(response).map(Object::toString).collect(Collectors.joining(", "));
-                break;
-            case CLASSIC:
-                final int pulse = hardwareAddress.getCommandPulseLength();
-                if (pulse > 0)  {
-                    endpoint.executePulseCommand(tag, arg, pulse);
-                } else {
-                    endpoint.executeCommand(tag, arg);
-                }
-                break;
-            default:
-                throw new ConfigurationException(ConfigurationException.Cause.COMMAND_TYPE_UNKNOWN);
-        }
-        return result;
+    public synchronized void writeAlive(final OPCHardwareAddress address, final Object value) {
+        NodeId nodeId = ItemDefinition.toNodeId(address);
+        final StatusCode response = wrapper.write(nodeId, value);
+        publisher.notifyAlive(response);
     }
+
+    @Override
+    public synchronized boolean isConnected () {
+        return wrapper.isConnected();
+    }
+
+    @Override
+    public void recreateSubscription (UaSubscription subscription) {
+        wrapper.deleteSubscription(subscription);
+        SubscriptionGroup group = mapper.getGroup(subscription);
+        final List<Long> tagIds = group.getTagIds();
+        group.reset();
+        final List<DataTagDefinition> definitions = tagIds.stream().map(mapper::getDefinition).collect(Collectors.toList());
+        subscribeToGroup(group, definitions);
+    }
+
     @Override
     public void onAddDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        doAndReport(changeReport, ReportMessages.TAG_ADDED.message, () -> {
-            endpoint.subscribeTag(sourceDataTag);
-            refreshDataTag(sourceDataTag);
-        });
+        doAndReport(changeReport,
+                () -> {
+                    String s = subscribeTag(sourceDataTag);
+                    refreshDataTag(sourceDataTag);
+                    return s;
+                });
     }
 
     @Override
     public void onRemoveDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        doAndReport(changeReport, ReportMessages.TAG_REMOVED.message, () -> endpoint.removeTag(sourceDataTag));
+        doAndReport(changeReport, () -> removeTag(sourceDataTag));
     }
 
     @Override
     public void onUpdateDataTag (final ISourceDataTag sourceDataTag, final ISourceDataTag oldSourceDataTag, final ChangeReport changeReport) {
         if (sourceDataTag.getHardwareAddress().equals(oldSourceDataTag.getHardwareAddress())) {
-            completeSuccessFullyWithMessage(changeReport, ReportMessages.NO_UPDATE_REQUIRED.message);
+            completeSuccessFullyWithMessage(changeReport, "The new and old sourceDataTags have the same hardware address, no update was required.");
         } else {
-            doAndReport(changeReport, ReportMessages.TAG_UPDATED.message, () -> {
-                endpoint.removeTag(oldSourceDataTag);
-                endpoint.subscribeTag(sourceDataTag);
+            doAndReport(changeReport, () -> {
+                String s = removeTag(oldSourceDataTag) + subscribeTag(sourceDataTag);
+                refreshDataTag(sourceDataTag);
+                return s;
             });
         }
     }
 
-    private void doAndReport (ChangeReport changeReport, String message, Runnable runnable) {
+    private synchronized String subscribeTag (@NonNull final ISourceDataTag sourceDataTag) {
+        SubscriptionGroup group = mapper.getGroup(sourceDataTag);
+        DataTagDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
+
+        if (subscribeToGroup(group, Collections.singletonList(definition))) {
+            return "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId() + " was subscribed. ";
+        } else {
+            throw new RuntimeException("Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId() + " could not be subscribed. ");
+        }
+    }
+
+    private synchronized String removeTag(final ISourceDataTag dataTag) {
+        String report = "";
+        SubscriptionGroup group = mapper.getGroup(dataTag);
+        if (group.isSubscribed() && group.contains(dataTag)) {
+            log.info("Unsubscribing tag from server.");
+            UaSubscription subscription = group.getSubscription();
+            UInteger clientHandle = mapper.getDefinition(dataTag.getId()).getClientHandle();
+            wrapper.deleteItemFromSubscription(clientHandle, subscription);
+            report += "Tag " + dataTag.getName() + " with ID " + dataTag.getId() + " was unsubscribed";
+            if (group.size() < 1) {
+                log.info("Subscription is empty. Deleting subscription.");
+                wrapper.deleteSubscription(subscription);
+            }
+        } else {
+            log.info("The tag was not subscribed.");
+        }
+        if (mapper.removeTag(dataTag)) {
+            report += report.trim().length() > 0 ? ". " : "and removed from configuration. ";
+            log.info("Removing tag from configuration.");
+        } else {
+            report += "Tag " + dataTag.getName() + " with ID " + dataTag.getId() + " was not subscribed or configured. No change required. ";
+        }
+        if (group.size() < 1) {
+            group.reset();
+        }
+        return report;
+    }
+
+    private void doAndReport (ChangeReport changeReport, Supplier<String> supplier) {
         try {
             reconnectIfRequired();
-            runnable.run();
-            completeSuccessFullyWithMessage(changeReport, message);
+            completeSuccessFullyWithMessage(changeReport, supplier.get());
         } catch (Exception e) {
             changeReport.appendError(e.getMessage());
             changeReport.setState(FAIL);
@@ -156,9 +212,9 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     }
 
     private void reconnectIfRequired() {
-        if (!endpoint.isConnected()) {
+        if (!isConnected()) {
             log.info("Connection lost. Reconnecting.");
-            endpoint.reconnect();
+            reconnect();
             refreshAllDataTags();
         }
     }
@@ -166,5 +222,69 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     private void completeSuccessFullyWithMessage (ChangeReport changeReport, String message) {
         changeReport.appendInfo(message);
         changeReport.setState(SUCCESS);
+    }
+
+    private void connect(){
+        try {
+            wrapper.initialize(uri);
+            publisher.notifyEquipmentState(OK);
+        } catch (OPCCommunicationException e) {
+            publisher.notifyEquipmentState(CONNECTION_FAILED);
+            throw e;
+        }
+    }
+
+    private void reconnect() {
+        publisher.notifyEquipmentState(CONNECTION_LOST);
+        final Map<Long, DataTagDefinition> currentConfig = new ConcurrentHashMap<>(mapper.getTagIdDefinitionMap());
+        mapper.clear();
+        if (wrapper.isConnected()) {
+            wrapper.disconnect();
+        }
+        connect();
+        mapper.addToTagDefinitionMap(currentConfig);
+        mapper.mapToGroups(currentConfig.values()).forEach(this::subscribeToGroup);
+    }
+
+    private void refresh(long tagId, NodeId address) {
+        final DataValue value = wrapper.read(address);
+        notifyPublisherOfEvent(tagId, value);
+    }
+
+    private boolean subscribeToGroup (SubscriptionGroup group, List<DataTagDefinition> definitions) {
+        UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription()
+                : wrapper.createSubscription(group.getPublishInterval());
+        group.setSubscription(subscription);
+
+        List<UaMonitoredItem> monitoredItems = wrapper.subscribeItemDefinitions(subscription, definitions, this::itemCreationCallback);
+        return completeSubscription(monitoredItems);
+    }
+
+    private boolean completeSubscription (List<UaMonitoredItem> monitoredItems) {
+        boolean allSuccessful = true;
+        for (UaMonitoredItem item : monitoredItems) {
+            final UInteger clientHandle = item.getClientHandle();
+            Long tagId = mapper.getTagId(clientHandle);
+            if (item.getStatusCode().isBad()) {
+                allSuccessful = false;
+                publisher.invalidTag(tagId);
+            }
+            else {
+                mapper.addTagToGroup(tagId);
+            }
+        }
+        return allSuccessful;
+    }
+
+    private void itemCreationCallback (UaMonitoredItem item, Integer i) {
+        Long tag = mapper.getTagId(item.getClientHandle());
+        item.setValueConsumer(value -> notifyPublisherOfEvent(tag, value));
+    }
+
+    private void notifyPublisherOfEvent(Long tagId, DataValue value) {
+        SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
+        ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
+
+        publisher.notifyTagEvent(tagId, tagQuality, valueUpdate);
     }
 }

@@ -10,6 +10,10 @@ import static org.easymock.EasyMock.replay;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public abstract class TestUtils {
+
+    public final static int TIMEOUT = 3000;
+    public final static int TIMEOUT_IT = 6000;
+
     public static IEquipmentConfiguration createMockConfig() {
         IEquipmentConfiguration config = createMock(IEquipmentConfiguration.class);
         expect(config.getAliveTagId()).andReturn(1L).anyTimes();

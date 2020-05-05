@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class EndpointSubscribeTagsTest extends EndpointTestBase{
+public class SubscribeTagsTest extends ControllerTestBase{
 
     @Test
     public void subscribeNewTagShouldSubscribeTagInMapper () {
@@ -39,7 +39,6 @@ public class EndpointSubscribeTagsTest extends EndpointTestBase{
         assertTrue(mapper.isSubscribed(tag1));
     }
 
-
     @Test
     public void subscribeTagsWithDifferentDeadbandShouldSubscribeBothTags () {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tagWithDeadband);
@@ -69,24 +68,5 @@ public class EndpointSubscribeTagsTest extends EndpointTestBase{
         mocker.mockGoodAndBadStatusCodesAndReplay(new ISourceDataTag[]{tag1}, new ISourceDataTag[]{tag2});
         subscribeTags(tag1, tag2);
         assertTrue(mapper.isSubscribed(tag1) && !mapper.isSubscribed(tag2));
-    }
-
-    @Test
-    public void removeUnsubscribedDataTagShouldThrowError() {
-        assertThrows(IllegalArgumentException.class, () -> endpoint.removeTag(tag1));
-    }
-
-    @Test
-    public void removeDataTagShouldUnsubscribeDataTag() {
-        subscribeTagsAndMockStatusCode(StatusCode.GOOD,tag1);
-        endpoint.removeTag(tag1);
-        assertFalse(mapper.isSubscribed(tag1));
-    }
-
-    @Test
-    public void removeOneOfTwoTagsShouldUnsubscribeDataTag() {
-        subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tag2);
-        endpoint.removeTag(tag1);
-        assertTrue(!mapper.isSubscribed(tag1) && mapper.isSubscribed(tag2));
     }
 }

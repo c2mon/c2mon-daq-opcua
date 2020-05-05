@@ -47,7 +47,7 @@ public interface TagSubscriptionMapper {
 
     void addTagToGroup (Long dataTag);
 
-    void removeTag(ISourceDataTag dataTag);
+    boolean removeTag(ISourceDataTag dataTag);
 
     void clear();
 

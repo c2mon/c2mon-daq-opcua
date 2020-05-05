@@ -3,12 +3,12 @@ package cern.c2mon.daq.opcua.simengine;
 import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.AliveWriter;
+import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.ControllerImpl;
-import cern.c2mon.daq.opcua.control.EndpointImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
@@ -74,15 +74,16 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
         AppConfig config = TestUtils.createDefaultConfig();
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        EndpointImpl endpoint = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), new EventPublisher());
-        Controller controller = new ControllerImpl(endpoint, new AliveWriter(endpoint));
-
+        final MiloEndpoint endpoint = new MiloEndpoint(p);
+        Controller controller = new ControllerImpl(endpoint, new TagSubscriptionMapperImpl(), new EventPublisher());
         handler.setController(controller);
+        handler.setCommandRunner(new CommandRunner(endpoint));
+        handler.setAliveWriter(new AliveWriter(controller));
     }
 
     @After
     public void cleanUp() throws Exception {
-        //must be called before the handler disconnect in GenericMessageHandlerTest's afterTest method
+        // must be called before the handler disconnect in GenericMessageHandlerTest's afterTest method
         value.setValue(0);
         for(long id : handler.getEquipmentConfiguration().getSourceCommandTags().keySet()) {
             value.setId(id);

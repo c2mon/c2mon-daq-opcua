@@ -1,9 +1,10 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.AppConfig;
-import cern.c2mon.daq.opcua.control.Endpoint;
-import cern.c2mon.daq.opcua.control.EndpointImpl;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.MiloEndpoint;
+import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.ControllerImpl;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
@@ -11,6 +12,7 @@ import cern.c2mon.daq.opcua.security.CertificateLoader;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
+import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.opcua.EventPublisher;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
@@ -32,7 +35,7 @@ public class SecurityIT {
 
     private static ConnectionResolver resolver;
     private static String uri;
-    private Endpoint endpoint;
+    private Controller controller;
 
     AppConfig config;
     SecurityModule p;
@@ -59,44 +62,43 @@ public class SecurityIT {
 
     @AfterEach
     public void cleanUp() {
-        endpoint.reset();
-        endpoint = null;
+        controller.stop();
+        controller = null;
     }
 
     @Test
-    public void connectWithoutCertificate() {
+    public void connectWithoutCertificate() throws ConfigurationException {
         initializeEndpoint();
-        assertDoesNotThrow(()-> endpoint.isConnected());
+        assertDoesNotThrow(()-> controller.isConnected());
     }
 
     @Test
-    public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException {
+    public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, ConfigurationException {
         config.setInsecureCommunicationEnabled(false);
         trustAndConnect();
-        assertDoesNotThrow(()-> endpoint.isConnected());
+        assertDoesNotThrow(()-> controller.isConnected());
     }
 
     @Test
-    public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException {
+    public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, ConfigurationException {
         setupAuthForCertificate();
         trustAndConnect();
-        assertDoesNotThrow(()-> endpoint.isConnected());
+        assertDoesNotThrow(()-> controller.isConnected());
     }
 
-    private void initializeEndpoint() {
-        endpoint = new EndpointImpl(new MiloClientWrapper(p), new TagSubscriptionMapperImpl(), new EventPublisher());
-        endpoint.initialize(uri);
-        endpoint.connect();
+    private void initializeEndpoint() throws ConfigurationException {
+        controller = new ControllerImpl(new MiloEndpoint(p), new TagSubscriptionMapperImpl(), new EventPublisher());
+        controller.initialize(uri, Arrays.asList(ServerTagFactory.DipData.createDataTag()));
     }
 
-    private void trustAndConnect() throws IOException, InterruptedException {
+    private void trustAndConnect() throws IOException, InterruptedException, ConfigurationException {
         log.info("Initial connection attempt.");
         try {
             this.initializeEndpoint();
         } catch (OPCCommunicationException e) {
             // expected behavior
         }
-        endpoint.reset();
+        controller.stop();
         resolver.trustCertificates();
 
         log.info("Reconnect.");

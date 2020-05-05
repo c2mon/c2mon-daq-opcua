@@ -1,22 +1,24 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.EndpointListener;
-import cern.c2mon.shared.common.command.ISourceCommandTag;
+import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import cern.c2mon.shared.common.process.IEquipmentConfiguration;
-import cern.c2mon.shared.daq.command.SourceCommandTagValue;
+import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
+import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+
+import java.util.Collection;
 
 public interface Controller {
-
-    void initialize(IEquipmentConfiguration config) throws ConfigurationException;
+    void initialize(String uri, Collection<ISourceDataTag> dataTags) throws ConfigurationException;
     void stop();
+    void subscribeTags (Collection<ISourceDataTag> dataTags) throws ConfigurationException;
     void refreshAllDataTags();
     void refreshDataTag(ISourceDataTag sourceDataTag);
-    String updateAliveWriter();
     void subscribe (EndpointListener listener);
-    String runCommand(ISourceCommandTag tag, SourceCommandTagValue value) throws ConfigurationException;
+    boolean isConnected();
+    void writeAlive(final OPCHardwareAddress address, final Object value);
+    void recreateSubscription(UaSubscription subscription);
 
-    // for dependency injection during testing
-    Endpoint getEndpoint();
+    void setWrapper(Endpoint wrapper);
 }

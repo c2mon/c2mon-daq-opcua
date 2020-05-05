@@ -117,25 +117,31 @@ public class TagSubscriptionMapperTest extends MappingBase {
     }
 
     @Test
-    public void removeNewTagShouldThrowError() {
-        assertThrows(IllegalArgumentException.class, () -> mapper.removeTag(tag));
+    public void removeNewTagShouldReturnFalse() {
+        assertFalse(mapper.removeTag(tag));
     }
 
     @Test
-    public void removeTagFromEmptyGroupShouldThrowError() {
+    public void removeTagFromEmptyGroupShouldReturnFalse() {
         mapper.getGroup(tag);
-        assertThrows(IllegalArgumentException.class, () -> mapper.removeTag(tag));
+        assertFalse(mapper.removeTag(tag));
     }
 
     @Test
     public void removeTagFromGroupShouldDeleteCorrespondingDefinition() {
         SubscriptionGroup group = mapper.getGroup(tag);
         mapper.addTagToGroup(tag.getId());
-
         mapper.removeTag(tag);
-
         assertFalse(group.contains(tag));
     }
+
+    @Test
+    public void removeExistingTagShouldReturnTrue() {
+        SubscriptionGroup group = mapper.getGroup(tag);
+        mapper.addTagToGroup(tag.getId());
+        assertTrue(mapper.removeTag(tag));
+    }
+
     @Test
     public void getDefinitionShouldReturnDefinitionWithCorrespondingTagReference() {
         DataTagDefinition definition = mapper.getOrCreateDefinition(tag);

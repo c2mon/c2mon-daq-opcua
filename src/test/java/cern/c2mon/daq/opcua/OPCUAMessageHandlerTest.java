@@ -1,18 +1,19 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
-import cern.c2mon.daq.opcua.connection.ClientWrapper;
-import cern.c2mon.daq.opcua.connection.MiloClientWrapper;
+import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
-import cern.c2mon.daq.opcua.testutils.MiloTestClientWrapper;
+import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
@@ -35,6 +36,10 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     OPCUAMessageHandler handler;
     CommfaultSenderCapture capture;
+    Endpoint wrapper;
+    TagSubscriptionMapper mapper;
+    Controller controller;
+    CommandRunner commandRunner;
 
     @Override
     protected void beforeTest () throws Exception {
@@ -54,11 +59,14 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
                 .onDemandCertificationEnabled(true)
                 .build();
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        ClientWrapper wrapper = new MiloClientWrapper(p);
-        EndpointImpl endpoint = new EndpointImpl(wrapper, new TagSubscriptionMapperImpl(), new EventPublisher());
-        AliveWriter aliveWriter = new AliveWriter(endpoint);
-        Controller controllerWithAliveWriter = new ControllerImpl(endpoint, aliveWriter);
-        handler.setController(controllerWithAliveWriter);
+        wrapper = new MiloEndpoint(p);
+        mapper = new TagSubscriptionMapperImpl();
+        controller = new ControllerImpl(wrapper, mapper, new EventPublisher());
+        AliveWriter aliveWriter = new AliveWriter(controller);
+        commandRunner = new CommandRunner(wrapper);
+        handler.setController(controller);
+        handler.setAliveWriter(aliveWriter);
+        handler.setCommandRunner(commandRunner);
     }
 
     @Override
@@ -126,11 +134,11 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     }
 
     private void mockSuccessfulConnectionAndReplay() {
-        MiloTestClientWrapper wrapper = new MiloTestClientWrapper();
-        Endpoint endpoint = handler.getController().getEndpoint();
-        endpoint.setWrapper(wrapper);
+        final TestEndpoint wrapper = new TestEndpoint();
+        controller.setWrapper(wrapper);
+        commandRunner.setWrapper(wrapper);
 
-        MiloMocker mocker = new MiloMocker(wrapper, endpoint.getMapper());
+        MiloMocker mocker = new MiloMocker(wrapper, mapper);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, equipmentConfiguration.getSourceDataTags().values());
         replay(messageSender, wrapper.getMonitoredItem());
     }

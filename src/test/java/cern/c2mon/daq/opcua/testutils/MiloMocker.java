@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.connection.ClientWrapper;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.easymock.Capture;
@@ -18,12 +18,12 @@ import static org.easymock.EasyMock.*;
 
 public class MiloMocker {
 
-    MiloTestClientWrapper client;
+    TestEndpoint client;
     TagSubscriptionMapper mapper;
 
-    public MiloMocker(ClientWrapper client, TagSubscriptionMapper mapper) {
-        assert client instanceof MiloTestClientWrapper;
-        this.client = (MiloTestClientWrapper) client;
+    public MiloMocker(Endpoint client, TagSubscriptionMapper mapper) {
+        assert client instanceof TestEndpoint;
+        this.client = (TestEndpoint) client;
         this.mapper = mapper;
     }
 
@@ -35,18 +35,6 @@ public class MiloMocker {
         UaMonitoredItem monitoredItem = client.getMonitoredItem();
         expect(monitoredItem.getStatusCode()).andReturn(code).anyTimes();
         mockClientHandle(monitoredItem, tags);
-    }
-
-    public void mockClientHandle(Collection<ISourceDataTag> tags) {
-        mockClientHandle(client.getMonitoredItem(), tags);
-    }
-
-    protected void mockClientHandle (UaMonitoredItem monitoredItem, Collection<ISourceDataTag> tags) {
-        if(tags.size() == 0) return;
-        for (ISourceDataTag tag : tags) {
-            UInteger clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
-            expect(monitoredItem.getClientHandle()).andReturn(clientHandle).once();
-        }
     }
 
     public void mockStatusCodeAndClientHandle(StatusCode code, ISourceDataTag... tags) {
@@ -79,5 +67,13 @@ public class MiloMocker {
             return consumer;
         });
         replay();
+    }
+
+    protected void mockClientHandle (UaMonitoredItem monitoredItem, Collection<ISourceDataTag> tags) {
+        if(tags.size() == 0) return;
+        for (ISourceDataTag tag : tags) {
+            UInteger clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
+            expect(monitoredItem.getClientHandle()).andReturn(clientHandle).once();
+        }
     }
 }

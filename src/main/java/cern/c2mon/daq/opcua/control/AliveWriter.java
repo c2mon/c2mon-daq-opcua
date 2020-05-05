@@ -45,7 +45,7 @@ public class AliveWriter extends TimerTask {
    * The endpoint to write to.
    */
   @Autowired
-  private final Endpoint endpoint;
+  private final Controller controller;
 
   /**
    * The timer used to schedule the writing.
@@ -118,7 +118,7 @@ public class AliveWriter extends TimerTask {
       log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
     }
     try {
-      endpoint.writeAlive(address, castedValue);
+      controller.writeAlive(address, castedValue);
       writeCounter.incrementAndGet();
       writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
     } catch (OPCCommunicationException exception) {

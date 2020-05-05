@@ -38,7 +38,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Slf4j
 @RequiredArgsConstructor
 @Component("wrapper")
-public class MiloClientWrapper implements ClientWrapper {
+public class MiloEndpoint implements Endpoint {
 
     @Autowired
     private final SecurityModule securityModule;

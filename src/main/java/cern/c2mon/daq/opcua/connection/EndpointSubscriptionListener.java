@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.control.Endpoint;
+import cern.c2mon.daq.opcua.control.Controller;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -13,7 +13,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 @AllArgsConstructor
 public class EndpointSubscriptionListener implements UaSubscriptionManager.SubscriptionListener {
 
-    Endpoint endpoint;
+    Controller controller;
 
     /**
      * Subscriptions have a keep-alive counter that counts the number of consecutive publishing cycles in which there
@@ -47,7 +47,7 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
     public void onStatusChanged (UaSubscription subscription, StatusCode status) {
         log.info("onStatusChanged event for {}: {}", subscription.toString(), status.toString());
         if (status.isBad()) {
-            endpoint.recreateSubscription(subscription);
+            controller.recreateSubscription(subscription);
         }
     }
 

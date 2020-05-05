@@ -122,18 +122,18 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
 
     @Override
-    public void removeTag(ISourceDataTag dataTag) {
+    public boolean removeTag(ISourceDataTag dataTag) {
         DataTagDefinition definition = tagIdDefinitionMap.get(dataTag.getId());
         if (definition == null) {
-            throw new IllegalArgumentException("The tag cannot be removed, since it has not been added to the endpoint.");
+            return false;
         }
+        tagIdDefinitionMap.remove(dataTag.getId());
         SubscriptionGroup subscriptionGroup = getGroup(dataTag);
-
         if (!subscriptionGroup.contains(dataTag)) {
-            throw new IllegalArgumentException("The tag cannot be removed, since it has not been registered in a subscription group.");
+            return false;
         }
         subscriptionGroup.remove(dataTag);
-        tagIdDefinitionMap.remove(dataTag.getId());
+        return true;
     }
 
     @Override
