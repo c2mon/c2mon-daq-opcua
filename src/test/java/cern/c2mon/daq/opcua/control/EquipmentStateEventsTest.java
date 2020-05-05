@@ -5,7 +5,6 @@ import cern.c2mon.daq.opcua.EndpointListener;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
-import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -32,7 +31,7 @@ public class EquipmentStateEventsTest extends ControllerTestBase {
     public void setUp() {
         super.setUp();
         endpoint.setReturnGoodStatusCodes(true);
-        f = ServerTestListener.subscribeAndReturnListener(publisher).getStateUpdate();
+        f = listener.getStateUpdate();
         endpoint.setConnected(true);
     }
 

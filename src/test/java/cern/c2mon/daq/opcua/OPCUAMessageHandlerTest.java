@@ -61,12 +61,14 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         wrapper = new MiloEndpoint(p);
         mapper = new TagSubscriptionMapperImpl();
-        controller = new ControllerImpl(wrapper, mapper, new EventPublisher());
+        final var listener = new EndpointListenerImpl();
+        controller = new ControllerImpl(wrapper, mapper, listener);
         AliveWriter aliveWriter = new AliveWriter(controller);
         commandRunner = new CommandRunner(wrapper);
         handler.setController(controller);
         handler.setAliveWriter(aliveWriter);
         handler.setCommandRunner(commandRunner);
+        handler.setListener(listener);
     }
 
     @Override

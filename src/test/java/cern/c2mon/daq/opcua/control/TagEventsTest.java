@@ -29,9 +29,8 @@ public class TagEventsTest extends ControllerTestBase {
         } catch (ConfigurationException e) {
             // swallow exception from empty SourceTag list. Would make mocking more complex.
         }
-        ServerTestListener.TestListener l = ServerTestListener.subscribeAndReturnListener(publisher);
-        tagUpdate = l.getTagUpdate();
-        tagInvalid = l.getTagInvalid();
+        tagUpdate = listener.getTagUpdate();
+        tagInvalid = listener.getTagInvalid();
     }
 
     @Test

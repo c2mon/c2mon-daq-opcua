@@ -4,16 +4,16 @@ import lombok.*;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * This class contains configuration options regarding the OPC UA DAQ connection and certification options and optionally
+ * specific options for the respective certification option.
+ */
 @Configuration
 @ConfigurationProperties(prefix="app")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-/**
- * Configurations regarding the application. Note that these configurations will be used when creating self-signing
- * certificates.
- */
 public class AppConfig {
     private String appName;
     private String productUri;
@@ -24,7 +24,17 @@ public class AppConfig {
     private String stateName;
     private String countryCode;
     private int requestTimeout;
+
+    /**
+     * If insecure communication is enabled, the client attempts to connect to OPC UA endpoints without security as a
+     * fallback.
+     */
     private boolean insecureCommunicationEnabled = true;
+
+    /**
+     * If on demand certification is enabled, the client creates and attempts connection with a self-signed certificate
+     * if no certificate could be loaded.
+     */
     private boolean onDemandCertificationEnabled = true;
 
     private KeystoreConfig keystore = new KeystoreConfig();

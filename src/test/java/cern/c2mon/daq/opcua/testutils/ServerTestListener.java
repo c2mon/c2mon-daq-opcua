@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.EndpointListener;
-import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
@@ -30,17 +29,11 @@ public abstract class ServerTestListener {
         return Math.abs(valueUpdateToFloat(valueUpdate) - threshold) < 0.5;
     }
 
-    public static TestListener subscribeAndReturnListener(EventPublisher publisher) {
-        final TestListener listener = new TestListener();
-        publisher.subscribe(listener);
-        return listener;
-    }
-
     @RequiredArgsConstructor
     @Getter
     @Setter
     public static class PulseTestListener extends TestListener {
-        private final long sourceID;
+        private long sourceID;
         private int threshold = 0;
         CompletableFuture<ValueUpdate> pulseTagUpdate = new CompletableFuture<>();
         CompletableFuture<ValueUpdate> tagValUpdate = new CompletableFuture<>();

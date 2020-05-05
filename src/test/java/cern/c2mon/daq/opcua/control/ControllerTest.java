@@ -24,7 +24,6 @@ public class ControllerTest extends ControllerTestBase {
     SourceCommandTag tag;
     SourceCommandTagValue value;
     OPCHardwareAddressImpl address;
-    ServerTestListener.TestListener listener;
 
 
     @BeforeEach
@@ -36,7 +35,6 @@ public class ControllerTest extends ControllerTestBase {
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.CLASSIC);
         tag.setHardwareAddress(address);
 
-        listener = ServerTestListener.subscribeAndReturnListener(publisher);
         endpoint.setReturnGoodStatusCodes(true);
     }
 

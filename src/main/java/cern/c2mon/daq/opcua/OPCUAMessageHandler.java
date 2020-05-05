@@ -77,17 +77,17 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   private EndpointListener listener = new EndpointListenerImpl();
 
   @Autowired
-  public void setController(Controller controller) {
+  public synchronized void setController(Controller controller) {
     this.controller = controller;
   }
 
   @Autowired
-  public void setCommandRunner(CommandRunner commandRunner) {
+  public synchronized void setCommandRunner(CommandRunner commandRunner) {
     this.commandRunner = commandRunner;
   }
 
   @Autowired
-  public void setAliveWriter(AliveWriter writer) {
+  public synchronized void setAliveWriter(AliveWriter writer) {
     this.aliveWriter = writer;
   }
 
@@ -105,7 +105,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
     log.debug("connect to the OPC UA data source...");
     listener.initialize(sender);
-    controller.subscribe(listener);
 
     String uaTcpType = "opc.tcp";
     EquipmentAddress address = AddressStringParser.parse(config.getAddress());

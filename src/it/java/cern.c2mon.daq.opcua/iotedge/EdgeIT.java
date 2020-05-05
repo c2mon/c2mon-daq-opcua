@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.AppConfig;
-import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.connection.SecurityModule;
@@ -36,11 +35,11 @@ import static org.junit.jupiter.api.Assertions.*;
 public class EdgeIT {
     private ServerTestListener.PulseTestListener listener;
 
-    private Controller controller;
-    private final TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
-    private final EventPublisher publisher = new EventPublisher();
-    private Endpoint wrapper;
     private static ConnectionResolver resolver;
+    private final TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
+    private final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
+    private Controller controller;
+    private Endpoint wrapper;
 
     AppConfig config;
 
@@ -62,7 +61,9 @@ public class EdgeIT {
         config.setOnDemandCertificationEnabled(false);
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         wrapper = new MiloEndpoint(p);
-        controller = new ControllerImpl(wrapper, mapper, publisher);
+        listener = new ServerTestListener.PulseTestListener();
+        listener.setSourceID(tag.getId());
+        controller = new ControllerImpl(wrapper, mapper, listener);
         controller.initialize(resolver.getURI(ConnectionResolver.Ports.IOTEDGE), Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
         log.info("Client ready");
     }
@@ -88,9 +89,6 @@ public class EdgeIT {
 
     @Test
     public void subscribingProperDataTagShouldReturnValue() throws ConfigurationException {
-        final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
-        listener = new ServerTestListener.PulseTestListener(tag.getId());
-        publisher.subscribe(listener);
         controller.subscribeTags(Collections.singletonList(tag));
 
         Object o = assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
@@ -99,16 +97,13 @@ public class EdgeIT {
 
     @Test
     public void subscribingProperTagAndReconnectingShouldKeepResubscribeTags() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
-        final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
+        listener.setThreshold(0);
         controller.subscribeTags(Collections.singletonList(tag));
 
-        final ServerTestListener.PulseTestListener pulseTestListener = new ServerTestListener.PulseTestListener(tag.getId());
-        pulseTestListener.setThreshold(0);
-        publisher.subscribe(pulseTestListener);
 
         wrapper.disconnect();
         ((IDataTagChanger) controller).onAddDataTag(ServerTagFactory.DipData.createDataTag(), new ChangeReport());
-        pulseTestListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
 
         assertTrue(mapper.isSubscribed(tag));
     }
@@ -116,29 +111,21 @@ public class EdgeIT {
     @Test
     public void subscribingImproperDataTagShouldReturnOnTagInvalid () throws ConfigurationException {
         final ISourceDataTag tag = ServerTagFactory.Invalid.createDataTag();
-        listener = new ServerTestListener.PulseTestListener(tag.getId());
-        publisher.subscribe(listener);
-
+        listener.setSourceID(tag.getId());
         controller.subscribeTags(Collections.singletonList(tag));
         assertDoesNotThrow(() -> listener.getTagInvalid().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void subscribeWithDeadband() throws ConfigurationException {
-        float valueDeadband = 10;
-        final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag(valueDeadband, (short) DeadbandType.Absolute.getValue(), 0);
-        listener = new ServerTestListener.PulseTestListener(tag.getId());
-        publisher.subscribe(listener);
-        controller.subscribeTags(Collections.singletonList(tag));
+        var tagWithDeadband = ServerTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
+        listener.setSourceID(tagWithDeadband.getId());
+        controller.subscribeTags(Collections.singletonList(tagWithDeadband));
         assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void refreshProperTag () {
-        final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
-        listener = new ServerTestListener.PulseTestListener(tag.getId());
-        publisher.subscribe(listener);
-
         controller.refreshDataTag(tag);
         assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }

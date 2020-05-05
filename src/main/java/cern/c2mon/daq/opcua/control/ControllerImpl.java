@@ -19,12 +19,12 @@ package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.EndpointListener;
-import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
@@ -65,14 +65,14 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     private final TagSubscriptionMapper mapper;
 
     @Autowired
-    private final EventPublisher publisher;
+    private final EndpointListener listener;
 
     private String uri;
 
-    public ControllerImpl(Endpoint endpoint, TagSubscriptionMapper mapper, EventPublisher publisher) {
+    public ControllerImpl(Endpoint endpoint, TagSubscriptionMapper mapper, EndpointListener listener) {
         this.endpoint = endpoint;
         this.mapper = mapper;
-        this.publisher = publisher;
+        this.listener = listener;
     }
 
     @Override
@@ -108,15 +108,10 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     }
 
     @Override
-    public void subscribe (EndpointListener listener) {
-        publisher.subscribe(listener);
-    }
-
-    @Override
     public synchronized void writeAlive(final OPCHardwareAddress address, final Object value) {
         NodeId nodeId = ItemDefinition.toNodeId(address);
         final StatusCode response = endpoint.write(nodeId, value);
-        publisher.notifyAlive(response);
+        listener.onAlive(response);
     }
 
     @Override
@@ -227,15 +222,15 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     private void connect(){
         try {
             endpoint.initialize(uri);
-            publisher.notifyEquipmentState(OK);
+            listener.onEquipmentStateUpdate(OK);
         } catch (OPCCommunicationException e) {
-            publisher.notifyEquipmentState(CONNECTION_FAILED);
+            listener.onEquipmentStateUpdate(CONNECTION_FAILED);
             throw e;
         }
     }
 
     private void reconnect() {
-        publisher.notifyEquipmentState(CONNECTION_LOST);
+        listener.onEquipmentStateUpdate(CONNECTION_LOST);
         final Map<Long, DataTagDefinition> currentConfig = new ConcurrentHashMap<>(mapper.getTagIdDefinitionMap());
         mapper.clear();
         if (endpoint.isConnected()) {
@@ -263,13 +258,13 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     private boolean completeSubscription (List<UaMonitoredItem> monitoredItems) {
         boolean allSuccessful = true;
         for (UaMonitoredItem item : monitoredItems) {
-            final UInteger clientHandle = item.getClientHandle();
-            Long tagId = mapper.getTagId(clientHandle);
-            if (item.getStatusCode().isBad()) {
+            Long tagId = mapper.getTagId(item.getClientHandle());
+            final var statusCode = item.getStatusCode();
+            if (statusCode.isBad()) {
                 allSuccessful = false;
-                publisher.invalidTag(tagId);
-            }
-            else {
+                final var qualityCode = DataQualityMapper.getDataTagQualityCode(statusCode);
+                listener.onTagInvalid(tagId, new SourceDataTagQuality(qualityCode));
+            } else {
                 mapper.addTagToGroup(tagId);
             }
         }
@@ -285,6 +280,10 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
         ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
 
-        publisher.notifyTagEvent(tagId, tagQuality, valueUpdate);
+        if (!tagQuality.equals(SourceDataTagQualityCode.OK)) {
+            listener.onTagInvalid(tagId, new SourceDataTagQuality(tagQuality));
+        } else {
+            listener.onNewTagValue(tagId, valueUpdate, new SourceDataTagQuality(tagQuality));
+        }
     }
 }

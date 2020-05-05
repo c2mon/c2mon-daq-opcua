@@ -15,7 +15,6 @@ public interface Controller {
     void subscribeTags (Collection<ISourceDataTag> dataTags) throws ConfigurationException;
     void refreshAllDataTags();
     void refreshDataTag(ISourceDataTag sourceDataTag);
-    void subscribe (EndpointListener listener);
     boolean isConnected();
     void writeAlive(final OPCHardwareAddress address, final Object value);
     void recreateSubscription(UaSubscription subscription);

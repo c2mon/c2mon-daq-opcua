@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.AppConfig;
-import cern.c2mon.daq.opcua.EventPublisher;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.connection.SecurityModule;
@@ -45,6 +44,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     OPCUAMessageHandler handler;
     SourceCommandTagValue value;
     CommfaultSenderCapture capture;
+    ServerTestListener.PulseTestListener listener;
 
     private static final long DATAID_VMON = 1L;
     private static final long DATAID_PW = 2L;
@@ -75,7 +75,9 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         AppConfig config = TestUtils.createDefaultConfig();
         SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
         final MiloEndpoint endpoint = new MiloEndpoint(p);
-        Controller controller = new ControllerImpl(endpoint, new TagSubscriptionMapperImpl(), new EventPublisher());
+        listener = new ServerTestListener.PulseTestListener();
+        handler.setListener(listener);
+        Controller controller = new ControllerImpl(endpoint, new TagSubscriptionMapperImpl(), listener);
         handler.setController(controller);
         handler.setCommandRunner(new CommandRunner(endpoint));
         handler.setAliveWriter(new AliveWriter(controller));
@@ -106,9 +108,8 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Test
     @UseConf("simengine_power.xml")
     public void write1SetsValueTo1() throws EqIOException, EqCommandTagException, InterruptedException, ExecutionException, TimeoutException {
-        final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_PW);
+        listener.setSourceID(DATAID_PW);
         listener.setThreshold(1);
-        handler.setListener(listener);
         handler.connectToDataSource();
 
         setIDTo(CMDID_PW, 1);
@@ -123,10 +124,8 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Test
     @UseConf("simengine_power.xml")
     public void testPowerOnAndSetV0ShouldNotifyVMon() throws EqIOException, EqCommandTagException {
-        final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_VMON);
+        listener.setSourceID(DATAID_VMON);
         listener.setThreshold(10);
-        handler.setListener(listener);
-
         handler.connectToDataSource();
         setIDTo(CMDID_PW, 1);
         setIDTo(CMDID_V0SET, 10);
@@ -139,9 +138,8 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Test
     @UseConf("simengine_power_pulse.xml")
     public void testPowerOnAndOff() throws EqIOException, ExecutionException, InterruptedException, EqCommandTagException, TimeoutException {
-        final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener(DATAID_PW);
+        listener.setSourceID(DATAID_PW);
         listener.setThreshold(1);
-        handler.setListener(listener);
         handler.connectToDataSource();
         setIDTo(CMDID_PW, 1);
 
