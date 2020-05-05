@@ -59,7 +59,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     @Setter
     @Autowired
-    private Endpoint wrapper;
+    private Endpoint endpoint;
 
     @Autowired
     private final TagSubscriptionMapper mapper;
@@ -69,8 +69,8 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     private String uri;
 
-    public ControllerImpl(Endpoint wrapper, TagSubscriptionMapper mapper, EventPublisher publisher) {
-        this.wrapper = wrapper;
+    public ControllerImpl(Endpoint endpoint, TagSubscriptionMapper mapper, EventPublisher publisher) {
+        this.endpoint = endpoint;
         this.mapper = mapper;
         this.publisher = publisher;
     }
@@ -94,7 +94,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     @Override
     public synchronized void stop () {
         mapper.clear();
-        wrapper.disconnect();
+        endpoint.disconnect();
     }
 
     @Override
@@ -115,18 +115,18 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     @Override
     public synchronized void writeAlive(final OPCHardwareAddress address, final Object value) {
         NodeId nodeId = ItemDefinition.toNodeId(address);
-        final StatusCode response = wrapper.write(nodeId, value);
+        final StatusCode response = endpoint.write(nodeId, value);
         publisher.notifyAlive(response);
     }
 
     @Override
     public synchronized boolean isConnected () {
-        return wrapper.isConnected();
+        return endpoint.isConnected();
     }
 
     @Override
     public void recreateSubscription (UaSubscription subscription) {
-        wrapper.deleteSubscription(subscription);
+        endpoint.deleteSubscription(subscription);
         SubscriptionGroup group = mapper.getGroup(subscription);
         final List<Long> tagIds = group.getTagIds();
         group.reset();
@@ -180,11 +180,11 @@ public class ControllerImpl implements Controller, IDataTagChanger {
             log.info("Unsubscribing tag from server.");
             UaSubscription subscription = group.getSubscription();
             UInteger clientHandle = mapper.getDefinition(dataTag.getId()).getClientHandle();
-            wrapper.deleteItemFromSubscription(clientHandle, subscription);
+            endpoint.deleteItemFromSubscription(clientHandle, subscription);
             report += "Tag " + dataTag.getName() + " with ID " + dataTag.getId() + " was unsubscribed";
             if (group.size() < 1) {
                 log.info("Subscription is empty. Deleting subscription.");
-                wrapper.deleteSubscription(subscription);
+                endpoint.deleteSubscription(subscription);
             }
         } else {
             log.info("The tag was not subscribed.");
@@ -226,7 +226,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     private void connect(){
         try {
-            wrapper.initialize(uri);
+            endpoint.initialize(uri);
             publisher.notifyEquipmentState(OK);
         } catch (OPCCommunicationException e) {
             publisher.notifyEquipmentState(CONNECTION_FAILED);
@@ -238,8 +238,8 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         publisher.notifyEquipmentState(CONNECTION_LOST);
         final Map<Long, DataTagDefinition> currentConfig = new ConcurrentHashMap<>(mapper.getTagIdDefinitionMap());
         mapper.clear();
-        if (wrapper.isConnected()) {
-            wrapper.disconnect();
+        if (endpoint.isConnected()) {
+            endpoint.disconnect();
         }
         connect();
         mapper.addToTagDefinitionMap(currentConfig);
@@ -247,16 +247,16 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     }
 
     private void refresh(long tagId, NodeId address) {
-        final DataValue value = wrapper.read(address);
+        final DataValue value = endpoint.read(address);
         notifyPublisherOfEvent(tagId, value);
     }
 
     private boolean subscribeToGroup (SubscriptionGroup group, List<DataTagDefinition> definitions) {
         UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription()
-                : wrapper.createSubscription(group.getPublishInterval());
+                : endpoint.createSubscription(group.getPublishInterval());
         group.setSubscription(subscription);
 
-        List<UaMonitoredItem> monitoredItems = wrapper.subscribeItemDefinitions(subscription, definitions, this::itemCreationCallback);
+        List<UaMonitoredItem> monitoredItems = endpoint.subscribeItemDefinitions(subscription, definitions, this::itemCreationCallback);
         return completeSubscription(monitoredItems);
     }
 

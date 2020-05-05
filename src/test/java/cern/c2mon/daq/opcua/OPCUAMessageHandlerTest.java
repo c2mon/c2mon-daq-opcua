@@ -135,8 +135,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     private void mockSuccessfulConnectionAndReplay() {
         final TestEndpoint wrapper = new TestEndpoint();
-        controller.setWrapper(wrapper);
-        commandRunner.setWrapper(wrapper);
+        controller.setEndpoint(wrapper);
+        commandRunner.setEndpoint(wrapper);
 
         MiloMocker mocker = new MiloMocker(wrapper, mapper);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, equipmentConfiguration.getSourceDataTags().values());

@@ -20,5 +20,5 @@ public interface Controller {
     void writeAlive(final OPCHardwareAddress address, final Object value);
     void recreateSubscription(UaSubscription subscription);
 
-    void setWrapper(Endpoint wrapper);
+    void setEndpoint(Endpoint endpoint);
 }

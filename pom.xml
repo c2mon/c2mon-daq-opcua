@@ -23,7 +23,7 @@
   </scm>
 
   <properties>
-    <guava.version>26.0-jre</guava.version>
+    <guava.version>29.0-jre</guava.version>
   </properties>
 
   <dependencies>
@@ -50,7 +50,7 @@
     <dependency>
       <groupId>org.eclipse.milo</groupId>
       <artifactId>sdk-client</artifactId>
-      <version>0.3.8</version>
+      <version>0.4.1</version>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -61,7 +61,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.6.0</version>
+      <version>5.7.0-M1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -78,7 +78,7 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>
-      <version>1.13.0</version>
+      <version>1.14.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -89,7 +89,7 @@
     </dependency>
   </dependencies>
 
-  <!-- Activate plugin configurations to build a tarball and a docker image -->
+
   <build>
     <testResources>
       <testResource>
@@ -97,6 +97,13 @@
       </testResource>
     </testResources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <release>11</release>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.sonarsource.scanner.maven</groupId>
         <artifactId>sonar-maven-plugin</artifactId>
@@ -112,7 +119,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
-          <source>11</source>
+          <release>11</release>
         </configuration>
       </plugin>
       <plugin>
@@ -122,6 +129,11 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>3.0.0-M4</version>
+        <configuration>
+          <argLine>
+            --illegal-access=permit
+          </argLine>
+        </configuration>
         <executions>
           <execution>
             <id>integration-test</id>
@@ -156,14 +168,6 @@
           </execution>
         </executions>
       </plugin>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-                <source>11</source>
-                <target>11</target>
-            </configuration>
-        </plugin>
     </plugins>
   </build>
 </project>

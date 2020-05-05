@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 class CertificateLoaderTest {
     AppConfig.KeystoreConfig config;
@@ -76,13 +76,14 @@ class CertificateLoaderTest {
     }
 
     @Test
-    void certifyShouldNotDoAnythingIfNotSupported() {
+    void certifyShouldNotSetEndpointIfNotSupported() {
         for (SecurityPolicy p : policies) {
             EndpointDescription e = createEndpointWithSecurityPolicy(p.getUri());
             OpcUaClientConfigBuilder actual = new OpcUaClientConfigBuilder();
             loader.certify(actual, e);
             if (!loader.canCertify(e)) {
-                CertificateGeneratorTest.assertEqualConfigFields(new OpcUaClientConfigBuilder(), actual);
+                final var message = assertThrows(NullPointerException.class, actual::build).getMessage();
+                assertTrue(message.contains("endpoint must be non-null"));
             }
         }
     }

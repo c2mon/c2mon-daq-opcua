@@ -38,7 +38,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @AfterEach
     public void cleanUp() {
-        controller.setWrapper(endpoint);
+        controller.setEndpoint(endpoint);
     }
 
     @Test
@@ -51,7 +51,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @Test
     public void invalidOnAddDataTagShouldReportFail () {
-        controller.setWrapper(new ExceptionTestEndpoint());
+        controller.setEndpoint(new ExceptionTestEndpoint());
         tagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
     }

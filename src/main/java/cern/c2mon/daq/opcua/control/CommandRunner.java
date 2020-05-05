@@ -33,7 +33,7 @@ public class CommandRunner {
 
     @Setter
     @Autowired
-    Endpoint wrapper;
+    Endpoint endpoint;
 
     public String runCommand(ISourceCommandTag tag, SourceCommandTagValue command) throws ConfigurationException {
         String result = "";
@@ -74,8 +74,8 @@ public class CommandRunner {
         log.info("executeMethod of tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
         final ItemDefinition def = ItemDefinition.of(tag);
         final Map.Entry<StatusCode, Object[]> response = def.getMethodNodeId() == null ?
-                wrapper.callMethod(wrapper.getParentObjectNodeId(def.getNodeId()), def.getNodeId(), arg):
-                wrapper.callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
+                endpoint.callMethod(endpoint.getParentObjectNodeId(def.getNodeId()), def.getNodeId(), arg):
+                endpoint.callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
         log.info("executeMethod returned status code {} and output {} .", response.getKey(), response.getValue());
         handleCommandResponseStatusCode(response.getKey(), METHOD);
         return response.getValue();
@@ -83,26 +83,26 @@ public class CommandRunner {
 
     public void executeCommand(ISourceCommandTag tag, Object arg) {
         log.info("executeCommand on tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
-        StatusCode write = wrapper.write(ItemDefinition.toNodeId(tag), arg);
+        StatusCode write = endpoint.write(ItemDefinition.toNodeId(tag), arg);
         handleCommandResponseStatusCode(write, COMMAND_WRITE);
     }
 
     public void executePulseCommand(ISourceCommandTag tag, Object arg, int pulseLength) {
         log.info("executePulseCommand on tag with ID {} and name {} with argument {} and pulse length {}.", tag.getId(), tag.getName(), arg, pulseLength);
         final NodeId nodeId = ItemDefinition.toNodeId(tag);
-        final Object original = MiloMapper.toObject(wrapper.read(nodeId).getValue());
+        final Object original = MiloMapper.toObject(endpoint.read(nodeId).getValue());
         if (original != null && original.equals(arg)) {
             log.info("{} is already set to {}. Skipping command with pulse.", nodeId, arg);
         } else {
             log.info("Setting {} to {} for {} seconds.", nodeId, arg, pulseLength);
             ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
             scheduler.schedule(() -> {
-                final StatusCode statusCode = wrapper.write(nodeId, original);
+                final StatusCode statusCode = endpoint.write(nodeId, original);
                 log.info("Resetting tag with ID {} and name {} to {} returned statusCode {}. ", tag.getId(), tag.getName(), original, statusCode);
                 handleCommandResponseStatusCode(statusCode, COMMAND_REWRITE);
             }, pulseLength, TimeUnit.SECONDS);
             scheduler.shutdown();
-            final StatusCode statusCode = wrapper.write(nodeId, arg);
+            final StatusCode statusCode = endpoint.write(nodeId, arg);
             handleCommandResponseStatusCode(statusCode, COMMAND_WRITE);
         }
     }

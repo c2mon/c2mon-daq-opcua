@@ -64,14 +64,14 @@ public class EquipmentStateEventsTest extends ControllerTestBase {
 
     @Test
     public void errorOnInitializeShouldSendFail () throws ExecutionException, InterruptedException, TimeoutException {
-        controller.setWrapper(new ExceptionTestEndpoint());
+        controller.setEndpoint(new ExceptionTestEndpoint());
         assertThrows(OPCCommunicationException.class, () -> controller.initialize("uri", sourceTags.values()));
         assertEquals(Collections.singletonList(CONNECTION_FAILED), f.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void errorOnInitializeAfterLostConnectionShouldSendBoth () throws ExecutionException, InterruptedException, TimeoutException {
-        controller.setWrapper(new ExceptionTestEndpoint());
+        controller.setEndpoint(new ExceptionTestEndpoint());
         ((IDataTagChanger) controller).onRemoveDataTag(tag1, new ChangeReport()); //triggers reconnect
         assertEquals(Arrays.asList(CONNECTION_LOST, CONNECTION_FAILED), f.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }

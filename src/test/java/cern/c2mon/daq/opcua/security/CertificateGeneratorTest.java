@@ -60,13 +60,14 @@ class CertificateGeneratorTest {
     }
 
     @Test
-    void certifyShouldNotDoAnythingIfNotSupported() {
+    void certifyShouldNotSetEndpoint() {
         for (SecurityPolicy p : policies) {
             EndpointDescription e = createEndpointWithSecurityPolicy(p.getUri());
             OpcUaClientConfigBuilder actual = new OpcUaClientConfigBuilder();
             generator.certify(actual, e);
             if (!generator.canCertify(e)) {
-                assertEqualConfigFields(new OpcUaClientConfigBuilder(), actual);
+                final var message = assertThrows(NullPointerException.class, actual::build).getMessage();
+                assertTrue(message.contains("endpoint must be non-null"));
             }
         }
     }
@@ -112,15 +113,15 @@ class CertificateGeneratorTest {
     }
 
     public static void assertEqualConfigFields(OpcUaClientConfigBuilder expectedBuilder, OpcUaClientConfigBuilder actualBuilder) {
-        final OpcUaClientConfig expected = expectedBuilder.build();
         final OpcUaClientConfig actual = actualBuilder.build();
+        final OpcUaClientConfig expected = expectedBuilder.build();
         assertEquals(expected.getEndpoint(), actual.getEndpoint());
         assertEquals(expected.getCertificate(), actual.getCertificate());
         if (expected.getKeyPair().isPresent() && actual.getKeyPair().isPresent()) {
             assertEquals(expected.getKeyPair().get().getPrivate().toString(), actual.getKeyPair().get().getPrivate().toString());
             assertEquals(expected.getKeyPair().get().getPublic().toString(), actual.getKeyPair().get().getPublic().toString());
         } else {
-            assertTrue(!expected.getKeyPair().isPresent() && !actual.getKeyPair().isPresent());
+            assertTrue(expected.getKeyPair().isEmpty() && actual.getKeyPair().isEmpty());
         }
         assertEquals(expected.getCertificateValidator().getClass(), actual.getCertificateValidator().getClass());
     }

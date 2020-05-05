@@ -60,7 +60,7 @@ public class CommandRunnerTest {
 
     @Test
     public void writeBadClientShouldThrowException() {
-        commandRunner.setWrapper(new ExceptionTestEndpoint());
+        commandRunner.setEndpoint(new ExceptionTestEndpoint());
         assertThrows(OPCCommunicationException.class,
                 () -> commandRunner.executeCommand(tag, value),
                 OPCCommunicationException.Context.WRITE.message);

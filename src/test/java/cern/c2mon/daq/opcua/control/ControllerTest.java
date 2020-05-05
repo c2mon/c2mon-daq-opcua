@@ -62,7 +62,7 @@ public class ControllerTest extends ControllerTestBase {
 
     @Test
     public void exceptionInWriteAliveShouldNotNotifyListener() {
-        controller.setWrapper(new ExceptionTestEndpoint());
+        controller.setEndpoint(new ExceptionTestEndpoint());
         try{
             controller.writeAlive(address, value);
         } catch (OPCCommunicationException e) {
