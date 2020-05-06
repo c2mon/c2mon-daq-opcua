@@ -243,15 +243,15 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     private void refresh(long tagId, NodeId address) {
         final DataValue value = endpoint.read(address);
-        notifyPublisherOfEvent(tagId, value);
+        notifyListener(tagId, value);
     }
 
     private boolean subscribeToGroup (SubscriptionGroup group, List<DataTagDefinition> definitions) {
-        UaSubscription subscription = (group.isSubscribed()) ? group.getSubscription()
-                : endpoint.createSubscription(group.getPublishInterval());
-        group.setSubscription(subscription);
-
-        List<UaMonitoredItem> monitoredItems = endpoint.subscribeItemDefinitions(subscription, definitions, this::itemCreationCallback);
+        if (!group.isSubscribed()) {
+            final var subscription = endpoint.createSubscription(group.getPublishInterval());
+            group.setSubscription(subscription);
+        }
+        final var monitoredItems = endpoint.subscribeItemDefinitions(group.getSubscription(), definitions, this::itemCreationCallback);
         return completeSubscription(monitoredItems);
     }
 
@@ -273,10 +273,10 @@ public class ControllerImpl implements Controller, IDataTagChanger {
 
     private void itemCreationCallback (UaMonitoredItem item, Integer i) {
         Long tag = mapper.getTagId(item.getClientHandle());
-        item.setValueConsumer(value -> notifyPublisherOfEvent(tag, value));
+        item.setValueConsumer(value -> notifyListener(tag, value));
     }
 
-    private void notifyPublisherOfEvent(Long tagId, DataValue value) {
+    private void notifyListener(Long tagId, DataValue value) {
         SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
         ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
 

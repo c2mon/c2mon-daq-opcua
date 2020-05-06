@@ -62,10 +62,6 @@ public class MiloEndpoint implements Endpoint {
         }
     }
 
-    public void addEndpointSubscriptionListener(EndpointSubscriptionListener listener) {
-        client.getSubscriptionManager().addSubscriptionListener(listener);
-    }
-
     public void disconnect() {
         if (client != null) {
             try {
@@ -73,6 +69,8 @@ public class MiloEndpoint implements Endpoint {
                 Stack.releaseSharedResources();
             } catch (InterruptedException | ExecutionException e) {
                 throw asOPCCommunicationException(DISCONNECT, e);
+            } finally {
+                client = null;
             }
         }
     }

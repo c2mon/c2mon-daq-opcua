@@ -6,7 +6,6 @@ import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import org.easymock.Capture;
 
 import static org.easymock.EasyMock.*;
-import static org.easymock.EasyMock.replay;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public abstract class TestUtils {
@@ -47,7 +46,6 @@ public abstract class TestUtils {
         public CommfaultSenderCapture(IProcessMessageSender sender) {
             sender.sendCommfaultTag(captureLong(id), capture(tagName), captureBoolean(val), capture(msg));
             expectLastCall().once();
-            replay(sender);
         }
 
         public void verifyCapture(Long id, String tagName, String msg) {

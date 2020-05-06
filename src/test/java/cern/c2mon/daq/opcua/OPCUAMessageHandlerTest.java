@@ -1,84 +1,86 @@
 package cern.c2mon.daq.opcua;
 
-import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MiloEndpoint;
-import cern.c2mon.daq.opcua.control.*;
+import cern.c2mon.daq.opcua.control.AliveWriter;
+import cern.c2mon.daq.opcua.control.CommandRunner;
+import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.security.CertificateGenerator;
-import cern.c2mon.daq.opcua.security.CertificateLoader;
-import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
-import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import lombok.extern.slf4j.Slf4j;
-import org.easymock.Capture;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
 
-import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ADDRESS_MISSING_PROPERTIES;
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_FAILED;
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.OK;
-import static org.easymock.EasyMock.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ADDRESS_MISSING_PROPERTIES;
+import static org.easymock.EasyMock.replay;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
 @UseHandler(OPCUAMessageHandler.class)
+@SpringBootTest
+@RunWith(SpringRunner.class)
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
-    OPCUAMessageHandler handler;
-    CommfaultSenderCapture capture;
-    Endpoint wrapper;
-    TagSubscriptionMapper mapper;
+    @Autowired
     Controller controller;
+
+    @Autowired
     CommandRunner commandRunner;
+
+    @Autowired
+    AliveWriter aliveWriter;
+
+    @Autowired
+    EndpointListener listener;
+
+    @Autowired
+    TagSubscriptionMapper mapper;
+
+    @Autowired
+    Endpoint endpoint;
+
+    OPCUAMessageHandler handler;
+    TestUtils.CommfaultSenderCapture capture;
+
 
     @Override
     protected void beforeTest () throws Exception {
+        // must be injected manually to work with test framework
         handler = (OPCUAMessageHandler) msgHandler;
-        capture = new CommfaultSenderCapture(messageSender);
-
-        AppConfig config = AppConfig.builder()
-                .appName("c2mon-opcua-daq")
-                .applicationUri("urn:localhost:UA:C2MON")
-                .productUri("urn:cern:ch:UA:C2MON")
-                .organization("CERN")
-                .organizationalUnit("C2MON team")
-                .localityName("Geneva")
-                .stateName("Geneva")
-                .countryCode("CH")
-                .insecureCommunicationEnabled(true)
-                .onDemandCertificationEnabled(true)
-                .build();
-        SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        wrapper = new MiloEndpoint(p);
-        mapper = new TagSubscriptionMapperImpl();
-        final var listener = new EndpointListenerImpl();
-        controller = new ControllerImpl(wrapper, mapper, listener);
-        AliveWriter aliveWriter = new AliveWriter(controller);
-        commandRunner = new CommandRunner(wrapper);
         handler.setController(controller);
         handler.setAliveWriter(aliveWriter);
         handler.setCommandRunner(commandRunner);
         handler.setListener(listener);
+        capture = new TestUtils.CommfaultSenderCapture(messageSender);
     }
 
     @Override
     protected void afterTest () throws Exception {
+        controller.setEndpoint(endpoint);
     }
 
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigShouldSendOKCommfault () throws EqIOException {
-        mockSuccessfulConnectionAndReplay();
+        final TestEndpoint wrapper = new TestEndpoint();
+        controller.setEndpoint(wrapper);
+        MiloMocker mocker = new MiloMocker(wrapper, mapper);
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, equipmentConfiguration.getSourceDataTags().values());
+        replay(messageSender, wrapper.getMonitoredItem());
+
         handler.connectToDataSource();
 
         capture.verifyCapture(107211L,
@@ -97,7 +99,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     @Test
     @UseConf("commfault_incorrect.xml")
-    public void improperConfigShouldSendIncorrectCommfault () throws EqIOException {
+    public void improperConfigShouldSendIncorrectCommfault () {
         replay(messageSender);
         try {
             handler.connectToDataSource();
@@ -115,33 +117,5 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     public void improperConfigShouldThrowError () {
         replay(messageSender);
         assertThrows(OPCCommunicationException.class, () -> handler.connectToDataSource());
-    }
-
-    public static class CommfaultSenderCapture {
-        Capture<Long> id = newCapture();
-        Capture<String> tagName = newCapture();
-        Capture<Boolean> val = newCapture();
-        Capture<String> msg= newCapture();
-
-        public CommfaultSenderCapture(IProcessMessageSender sender) {
-            sender.sendCommfaultTag(captureLong(id), capture(tagName), captureBoolean(val), capture(msg));
-            expectLastCall().once();
-        }
-
-        public void verifyCapture(Long id, String tagName, String msg) {
-            assertEquals(id, this.id.getValue().longValue());
-            assertEquals(tagName, this.tagName.getValue());
-            assertEquals(msg, this.msg.getValue());
-        }
-    }
-
-    private void mockSuccessfulConnectionAndReplay() {
-        final TestEndpoint wrapper = new TestEndpoint();
-        controller.setEndpoint(wrapper);
-        commandRunner.setEndpoint(wrapper);
-
-        MiloMocker mocker = new MiloMocker(wrapper, mapper);
-        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, equipmentConfiguration.getSourceDataTags().values());
-        replay(messageSender, wrapper.getMonitoredItem());
     }
 }

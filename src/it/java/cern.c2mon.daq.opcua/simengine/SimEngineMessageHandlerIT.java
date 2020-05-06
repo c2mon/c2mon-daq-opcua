@@ -33,7 +33,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static cern.c2mon.daq.opcua.OPCUAMessageHandlerTest.CommfaultSenderCapture;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -43,7 +42,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static ConnectionResolver resolver;
     OPCUAMessageHandler handler;
     SourceCommandTagValue value;
-    CommfaultSenderCapture capture;
+    TestUtils.CommfaultSenderCapture capture;
     ServerTestListener.PulseTestListener listener;
 
     private static final long DATAID_VMON = 1L;
@@ -66,7 +65,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Override
     protected void beforeTest () throws Exception {
         handler = (OPCUAMessageHandler) msgHandler;
-        capture = new CommfaultSenderCapture(messageSender);
+        capture = new TestUtils.CommfaultSenderCapture(messageSender);
 
         value = new SourceCommandTagValue();
 

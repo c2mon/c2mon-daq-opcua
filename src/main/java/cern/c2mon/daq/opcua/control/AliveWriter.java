@@ -26,8 +26,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -39,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component("aliveWriter")
 @Slf4j
 @RequiredArgsConstructor
-public class AliveWriter extends TimerTask {
+public class AliveWriter {
 
   /**
    * The endpoint to write to.
@@ -48,9 +50,14 @@ public class AliveWriter extends TimerTask {
   private final Controller controller;
 
   /**
-   * The timer used to schedule the writing.
+   * The service to schedule periodically to write to the alive tag hardware address
    */
-  private Timer timer;
+  private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+
+  /**
+   * The task of writing the alive value to the equipment.
+   */
+  private ScheduledFuture<?> writeAliveTask;
 
   /**
    * The time between two write operations.
@@ -75,7 +82,8 @@ public class AliveWriter extends TimerTask {
   /**
    * Initializes the AliveWriter considering the given equipment Configuration. If no the writer is not enabled or no
    * alive tag is specified, the aliveWriter is not started.
-   * @param config the equipment configuration
+   *
+   * @param config  the equipment configuration
    * @param enabled a flag indicating whether the AliveWriter should be started.
    */
   public void initialize(IEquipmentConfiguration config, boolean enabled) {
@@ -98,7 +106,6 @@ public class AliveWriter extends TimerTask {
    */
   public String updateAndReport() {
     if (enabled) {
-      stopWriter();
       startWriter();
       return "Alive Writer updated";
     } else {
@@ -106,12 +113,24 @@ public class AliveWriter extends TimerTask {
     }
   }
 
+  public synchronized void startWriter() {
+    stopWriter();
+    log.info("Starting OPCAliveWriter...");
+    writeAliveTask = executor.scheduleAtFixedRate(this::sendAlive, writeTime, writeTime, TimeUnit.MILLISECONDS);
+  }
+
+  public synchronized void stopWriter() {
+    if (writeAliveTask != null) {
+      log.info("Stopping OPCAliveWriter...");
+      writeAliveTask.cancel(false);
+      writeAliveTask = null;
+    }
+  }
+
   /**
-   * Implementation of the run method. Writes once to the server and increases
-   * the write value.
+   * Writes once to the server and increase the write value.
    */
-  @Override
-  public void run() {
+  private void sendAlive() {
     // We send an Integer since Long could cause problems to the OPC
     Object castedValue = writeCounter.intValue();
     if (log.isDebugEnabled()) {
@@ -125,26 +144,7 @@ public class AliveWriter extends TimerTask {
       log.error("Error while writing alive. Going to retry...", exception);
     } catch (OPCCriticalException exception) {
       log.error("Critical error while writing alive. Stopping alive...", exception);
-      synchronized (this) {
-        cancel();
-      }
-    }
-  }
-
-  private synchronized void startWriter() {
-    if (timer != null) {
-      timer.cancel();
-    }
-    timer = new Timer("OPCAliveWriter");
-    log.info("Starting OPCAliveWriter...");
-    timer.schedule(this, writeTime, writeTime);
-  }
-
-  private synchronized void stopWriter() {
-    if (timer != null) {
-      log.info("Stopping OPCAliveWriter...");
-      timer.cancel();
-      timer = null;
+      stopWriter();
     }
   }
 }

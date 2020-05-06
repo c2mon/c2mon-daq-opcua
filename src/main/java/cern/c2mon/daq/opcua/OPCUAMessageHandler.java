@@ -132,7 +132,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
       controller.stop();
     }
     if (aliveWriter != null) {
-      aliveWriter.cancel();
+      aliveWriter.stopWriter();
     }
     log.debug("disconnected");
   }

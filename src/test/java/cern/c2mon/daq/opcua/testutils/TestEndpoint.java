@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,11 +31,6 @@ public class TestEndpoint implements Endpoint {
 
     @Override
     public void initialize(String uri) {
-
-    }
-
-    @Override
-    public void addEndpointSubscriptionListener (EndpointSubscriptionListener listener) {
 
     }
 

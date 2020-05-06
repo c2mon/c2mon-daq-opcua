@@ -21,8 +21,6 @@ public interface Endpoint {
     void initialize(String uri);
     void disconnect();
     boolean isConnected();
-    void addEndpointSubscriptionListener(EndpointSubscriptionListener listener);
-
 
     UaSubscription createSubscription(int timeDeadband);
     void deleteSubscription(UaSubscription subscription);

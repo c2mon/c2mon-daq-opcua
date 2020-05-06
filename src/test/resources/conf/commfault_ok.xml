@@ -2,10 +2,8 @@
     <handler-class-name>automatically-set-by-test</handler-class-name>
     <commfault-tag-id>107211</commfault-tag-id>
     <commfault-tag-value>true</commfault-tag-value>
-
     <alive-tag-id>216215</alive-tag-id>
     <alive-interval>60000</alive-interval>
-
     <address>URI=opc.tcp://localhost:4841;serverRetryTimeout=500;serverTimeout=12;aliveWriter=false</address>
     <SubEquipmentUnits>
     </SubEquipmentUnits>
@@ -19,7 +17,7 @@
                     <opc-item-name>simSY4527.Board00.Chan000.VMon</opc-item-name>
                     <command-pulse-length>0</command-pulse-length>
                     <address-type>STRING</address-type>
-                    <command-type>CLASSIC</command-type>#
+                    <command-type>CLASSIC</command-type>
                 </HardwareAddress>
                 <time-to-live>3600000</time-to-live>
                 <guaranteed-delivery>false</guaranteed-delivery>
