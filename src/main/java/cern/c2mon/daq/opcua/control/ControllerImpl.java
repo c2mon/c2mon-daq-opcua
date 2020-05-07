@@ -262,7 +262,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
             final var statusCode = item.getStatusCode();
             if (statusCode.isBad()) {
                 allSuccessful = false;
-                final var qualityCode = DataQualityMapper.getDataTagQualityCode(statusCode);
+                final var qualityCode = MiloMapper.getDataTagQualityCode(statusCode);
                 listener.onTagInvalid(tagId, new SourceDataTagQuality(qualityCode));
             } else {
                 mapper.addTagToGroup(tagId);
@@ -277,7 +277,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     }
 
     private void notifyListener(Long tagId, DataValue value) {
-        SourceDataTagQualityCode tagQuality = DataQualityMapper.getDataTagQualityCode(value.getStatusCode());
+        SourceDataTagQualityCode tagQuality = MiloMapper.getDataTagQualityCode(value.getStatusCode());
         ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
 
         if (!tagQuality.equals(SourceDataTagQualityCode.OK)) {
