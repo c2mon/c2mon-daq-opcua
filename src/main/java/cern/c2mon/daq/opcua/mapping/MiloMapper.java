@@ -72,7 +72,7 @@ public abstract class MiloMapper {
             return null;
         }
         final String className = objectClass.getName();
-        if (TypeConverter.isConvertible(variant.getValue(), className)) {
+        if (!TypeConverter.isConvertible(variant.getValue(), className)) {
             log.error("The {} cannot convert the value object {} into class {}.", TypeConverter.class.getName(), variant.getValue(), className);
             return null;
         }
