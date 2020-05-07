@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.AppConfig;
+import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,9 @@ import org.springframework.stereotype.Component;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Set;
+
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 
 /**
  * For those endpoints with a supported security policy, the CertificateGenerator generates a new self-signed certificate
@@ -31,6 +35,7 @@ public class CertificateGenerator extends CertifierBase {
 
     private static final String RSA_SHA256 = "SHA256withRSA";
     private static final String[] SUPPORTED_SIG_ALGS = {RSA_SHA256};
+    private static final ImmutableSet<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown).build();
 
     /**
      * Generates a matching certificate and keypair if not yet present and returns whether the endpoint can
@@ -38,13 +43,41 @@ public class CertificateGenerator extends CertifierBase {
      * @param endpoint the endpoint for which certificate and keypair are generated
      * @return whether the endpoint can be certified
      */
+    @Override
     public boolean canCertify(EndpointDescription endpoint) {
         final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
-        if (!sp.isPresent()  || !supportsAlgorithm(endpoint)) {
+        if (sp.isEmpty() || !supportsAlgorithm(endpoint)) {
             return false;
         }
         generateCertificate(sp.get());
         return keyPair != null && certificate != null;
+    }
+
+    /**
+     * Checks whether an endpoint's security policy is supported by the CertificateGenerator. This method only checks
+     * whether the algorithms match. Loading or generating the ceritificate and keypair may still result in errors.
+     * @param endpoint the endpoint whose security policy to check to be supported.
+     * @return whether the endpoint's security policy is supported.
+     */
+    @Override
+    public boolean supportsAlgorithm(EndpointDescription endpoint) {
+        final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
+        if (sp.isEmpty()) {
+            return false;
+        }
+        final String sigAlg = sp.get().getAsymmetricSignatureAlgorithm().getTransformation();
+        return Arrays.stream(SUPPORTED_SIG_ALGS).anyMatch(s -> s.equalsIgnoreCase(sigAlg));
+    }
+
+    /**
+     * If a connection using a Certifier fails for severe reasons, attemping to reconnect with this certifier is
+     * fruitless also with other endpoints.
+     *
+     * @return a list of error codes which constitute a severe error.
+     */
+    @Override
+    public Set<Long> getSevereErrorCodes() {
+        return SEVERE_ERROR_CODES;
     }
 
     private void generateCertificate(SecurityPolicy securityPolicy) {
@@ -72,20 +105,5 @@ public class CertificateGenerator extends CertifierBase {
                 log.error("Could not generate certificate");
             }
         }
-    }
-
-    /**
-     * Checks whether an endpoint's security policy is supported by the CertificateGenerator. This method only checks
-     * whether the algorithms match. Loading or generating the ceritificate and keypair may still result in errors.
-     * @param endpoint the endpoint whose security policy to check to be supported.
-     * @return whether the endpoint's security policy is supported.
-     */
-    public boolean supportsAlgorithm(EndpointDescription endpoint) {
-        final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
-        if (!sp.isPresent()) {
-            return false;
-        }
-        final String sigAlg = sp.get().getAsymmetricSignatureAlgorithm().getTransformation();
-        return Arrays.stream(SUPPORTED_SIG_ALGS).anyMatch(s -> s.equalsIgnoreCase(sigAlg));
     }
 }

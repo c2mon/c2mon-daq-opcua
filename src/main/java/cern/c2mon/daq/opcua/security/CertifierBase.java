@@ -9,7 +9,7 @@ import java.security.cert.X509Certificate;
 import java.util.Optional;
 
 /**
- * The abstract base class for a @{@link Certifier}.
+ * The abstract base class for a @{@link Certifier} using a certificate and keypair.
  */
 public abstract class CertifierBase implements Certifier {
     KeyPair keyPair;
@@ -22,10 +22,20 @@ public abstract class CertifierBase implements Certifier {
      * @param endpoint the certificate and keypair are chosen to match the endpoint's security policy. The endpoint is
      *                 also appended to the builder.
      */
+    @Override
     public void certify(OpcUaClientConfigBuilder builder, EndpointDescription endpoint) {
         if (canCertify(endpoint)) {
             builder.setCertificate(certificate).setKeyPair(keyPair).setEndpoint(endpoint);
         }
+    }
+
+    /**
+     * Remove any configuration of the fields "Certificate", "KeyPair" and "Endpoint".
+     * @param builder the builder from which to remove Certifier-specific fields
+     */
+    @Override
+    public void uncertify(OpcUaClientConfigBuilder builder) {
+        builder.setCertificate(null).setKeyPair(null).setEndpoint(null);
     }
 
     protected boolean existingCertificateMatchesEndpoint(EndpointDescription e) {

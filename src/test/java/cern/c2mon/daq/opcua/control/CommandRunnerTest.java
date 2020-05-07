@@ -83,7 +83,6 @@ public class CommandRunnerTest {
 
     @Test
     public void commandWithPulseShouldNotDoAnythingIfAlreadySet() {
-        endpoint.setReturnGoodStatusCodes(false);
         assertDoesNotThrow(() -> commandRunner.executePulseCommand(tag, 0, 2));
     }
 
