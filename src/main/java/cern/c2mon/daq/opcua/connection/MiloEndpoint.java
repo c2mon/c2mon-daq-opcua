@@ -1,6 +1,8 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +18,8 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
-import org.eclipse.milo.opcua.stack.core.util.ConversionUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -30,14 +32,15 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Context.*;
+import static cern.c2mon.daq.opcua.exceptions.CommunicationException.rethrow;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 /**
  * The implementation of custom wrapper for the OPC UA milo client
  */
 @Slf4j
 @RequiredArgsConstructor
-@Component("wrapper")
+@Component(value = "miloEndpoint")
+@Primary
 public class MiloEndpoint implements Endpoint {
 
     @Autowired
@@ -45,57 +48,44 @@ public class MiloEndpoint implements Endpoint {
 
     private OpcUaClient client;
 
+
     /**
-     * Unless otherwise configured, the client attempts to connect to the most secure endpoint first, where Milo's
-     * endpoint security level is taken as a measure. The preferred means of authentication is using a predefined
-     * certificate, the details of which are given in AppConfig. If this is not configured, the client generates a
-     * self-signed certificate.
-     * Connection without security is only taken as a last resort if the above strategies fail, and can be disabled
-     * completely in the configuration. */
-    public void initialize (String uri) {
+     * Connect to a server through OPC. Discover available endpoints and select the most secure one in line with configuration options.
+     * @param uri the server address to connect to
+     * @throws CommunicationException if an execution exception occurs either during endpoint discovery, or when creating the client.
+     */
+    @Override
+    public void initialize (String uri) throws CommunicationException,  ConfigurationException {
         try {
-            List<EndpointDescription> endpoints = DiscoveryClient.getEndpoints(uri).get();
+            var endpoints = DiscoveryClient.getEndpoints(uri).get();
             endpoints = updateEndpointUrls(uri, endpoints);
             client = securityModule.createClient(endpoints);
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(CONNECT, e);
-        }
-    }
-
-    public void disconnect() {
-        if (client != null) {
-            try {
-                client = client.disconnect().get();
-                Stack.releaseSharedResources();
-            } catch (InterruptedException | ExecutionException e) {
-                throw asOPCCommunicationException(DISCONNECT, e);
-            } finally {
-                client = null;
-            }
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.CONNECT, e);
         }
     }
 
     /**
-     * Create and return a new subscription.
-     * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest supported interval.
-     * @return the newly created subscription
+     * Disconnect from the server
+     * @throws CommunicationException if an execution exception occurs on disconnecting from the client.
      */
-    public UaSubscription createSubscription(int timeDeadband) {
+    @Override
+    public void disconnect() throws CommunicationException {
+        if (client == null) {
+            return;
+        }
         try {
-            return client.getSubscriptionManager().createSubscription(timeDeadband).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(CREATE_SUBSCRIPTION, e);
+            client = client.disconnect().get();
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.DISCONNECT, e);
         }
     }
 
-    public void deleteSubscription(UaSubscription subscription) {
-        try {
-            client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(DELETE_SUBSCRIPTION, e);
-        }
-    }
-
+    /**
+     * Check whether the client is currently connected to a server.
+     * @return true if the session is active and the client is therefore connected to a server
+     */
+    @Override
     public boolean isConnected() {
         if (client == null) {
             return false;
@@ -109,76 +99,139 @@ public class MiloEndpoint implements Endpoint {
         }
     }
 
-    @Override
-    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
-        List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
-                .filter(i -> clientHandle.equals(i.getClientHandle()))
-                .collect(Collectors.toList());
+    /**
+     * Create and return a new subscription.
+     * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest supported interval.
+     * @return the newly created subscription
+     * @throws CommunicationException if an execution exception occurs on creating a subscription
+     */
+    public UaSubscription createSubscription(int timeDeadband) throws CommunicationException {
         try {
-            subscription.deleteMonitoredItems(itemsToRemove).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(DELETE_MONITORED_ITEM, e);
+            return client.getSubscriptionManager().createSubscription(timeDeadband).get();
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.CREATE_SUBSCRIPTION, e);
+            return null;
         }
     }
 
+    /**
+     * Delete an existing subscription
+     * @param subscription The subscription to delete
+     * @throws CommunicationException if an execution exception occurs on deleting a subscription
+     */
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription,
-                                                                              List<DataTagDefinition> definitions,
-                                                                              BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
+    public void deleteSubscription(UaSubscription subscription) throws CommunicationException {
+        try {
+            client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()).get();
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.DELETE_SUBSCRIPTION, e);
+        }
+    }
+
+    /**
+     * Add a list of item definitions as monitored items to a subscription
+     * @param subscription The subscription to add the monitored items to
+     * @param definitions the {@link cern.c2mon.daq.opcua.mapping.ItemDefinition}s for which to create monitored items
+     * @param itemCreationCallback the callback function to execute when each item has been created successfully
+     * @return a list of monitored items corresponding to the item definitions
+     * @throws CommunicationException if an execution exception occurs on creating the monitored items
+     */
+    @Override
+    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback)
+            throws CommunicationException {
         List<MonitoredItemCreateRequest> requests = definitions.stream()
                 .map(this::createItemSubscriptionRequest)
                 .collect(Collectors.toList());
         try {
             return subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(SUBSCRIBE_TAGS, e);
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.CREATE_MONITORED_ITEM, e);
+            return null;
         }
     }
 
-    public DataValue read(NodeId nodeIds) {
+    /**
+     * Delete a monitored item from an OPC UA subscription
+     * @param clientHandle the identifier of the monitored item to remove
+     * @param subscription the subscription to remove the monitored item from.
+     * @throws CommunicationException if an execution exception occurs on deleting an item from a subscription
+     */
+    @Override
+    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws CommunicationException {
+        List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
+                .filter(i -> clientHandle.equals(i.getClientHandle()))
+                .collect(Collectors.toList());
         try {
-            return client.readValue(0, TimestampsToReturn.Both, nodeIds).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(READ, e);
+            subscription.deleteMonitoredItems(itemsToRemove).get();
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.DELETE_MONITORED_ITEM, e);
         }
     }
 
-    public StatusCode write (NodeId nodeId, Object value) {
+    /**
+     * Read the current value from a node on the currently connected OPC UA server
+     * @param nodeId the nodeId of the node whose value to read
+     * @return the {@link DataValue} returned by the OPC UA stack upon reading the node
+     * @throws CommunicationException if an execution exception occurs on reading from the node
+     */
+    @Override
+    public DataValue read(NodeId nodeId) throws CommunicationException {
+        try {
+            return client.readValue(0, TimestampsToReturn.Both, nodeId).get();
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.READ, e);
+            return null;
+        }
+    }
+
+    /**
+     * Write a value to a node on the currently connected OPC UA server
+     * @param nodeId the nodeId of the node to write to
+     * @param value the value to write to the node
+     * @return the {@link StatusCode} of the response to the write action
+     * @throws CommunicationException if an execution exception occurs on writing to the node
+     */
+    @Override
+    public StatusCode write (NodeId nodeId, Object value) throws CommunicationException {
+        // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
         DataValue dataValue = new DataValue(new Variant(value), null, null);
         try {
-            // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
             return client.writeValue(nodeId, dataValue).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(WRITE, e);
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.WRITE, e);
+            return null;
         }
     }
 
-    /***
+    /**
      * Call the method Node with ID methodId contained in the object with ID objectId.
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
      * @param args the input arguments to pass to the methodId call.
      * @return A Map.Entry containing the StatusCode of the methodId response as key, and the methodId's output arguments (if applicable)
+     * @throws CommunicationException if an execution exception occurs on calling the method node
      */
-    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) {
+    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws CommunicationException {
         final Variant[] variants = Stream.of(args).map(Variant::new).toArray(Variant[]::new);
+        final CallMethodRequest request = new CallMethodRequest(objectId, methodId, variants);
         try {
-            final CallMethodRequest request = new CallMethodRequest(objectId, methodId, variants);
             final CallMethodResult methodResult = client.call(request).get();
             Object[] output = MiloMapper.toObject(methodResult.getOutputArguments());
             return Map.entry(methodResult.getStatusCode(), output);
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(METHOD, e);
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.METHOD, e);
+            return null;
         }
     }
 
     /**
-     * Fetches the node's first parent object node, if such a node exists. An @{@link OPCCommunicationException} is
-     * thrown if no such object node is found, or an error occurs during browsing.
+     * Fetches the node's first parent object node, if such a node exists.
      * @param nodeId the node whose parent to fetch
      * @return the parent node's NodeId
+     * @throws CommunicationException if an execution exception occurs during browsing the server namespace
+     * @throws ConfigurationException if the browse was successful, but no parent object node could be found
      */
-    public NodeId getParentObjectNodeId(NodeId nodeId) {
+    public NodeId getParentObjectNodeId(NodeId nodeId) throws ConfigurationException, CommunicationException {
         final BrowseDescription bd = new BrowseDescription(
                 nodeId,
                 BrowseDirection.Inverse,
@@ -186,19 +239,19 @@ public class MiloEndpoint implements Endpoint {
                 true,
                 uint(NodeClass.Object.getValue()),
                 uint(BrowseResultMask.All.getValue()));
-        final BrowseResult result;
         try {
-            result = client.browse(bd).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(GETOBJ, e);
-        }
-        if (result.getReferences() != null && result.getReferences().length > 0) {
-            final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(null);
-            if (result.getStatusCode().isGood() && objectNode.isPresent()) {
-                return objectNode.get();
+            final BrowseResult result = client.browse(bd).get();
+            if (result.getReferences() != null && result.getReferences().length > 0) {
+                final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(null);
+                if (result.getStatusCode().isGood() && objectNode.isPresent()) {
+                    return objectNode.get();
+                }
             }
+            throw new ConfigurationException(ConfigurationException.Cause.OBJINVALID, "No object node enclosing method node with nodeID " + nodeId + " could be found.");
+        } catch (ExecutionException | InterruptedException e) {
+            rethrow(ExceptionContext.BROWSE, e);
+            return null;
         }
-        throw new OPCCommunicationException(OBJINVALID);
     }
 
     private MonitoredItemCreateRequest createItemSubscriptionRequest(DataTagDefinition definition) {
@@ -222,37 +275,6 @@ public class MiloEndpoint implements Endpoint {
                 null,
                 QualifiedName.NULL_VALUE);
         return new MonitoredItemCreateRequest(id, MonitoringMode.Reporting, mp);
-    }
-
-    /**
-     * Not yet in use - use for subscribing to a group of nodes if deemed useful.
-     * @param indent applied as often to a node as the hierarchy is deep
-     * @param browseRoot The Node to start browsing from
-     */
-    public void browseNode(String indent, NodeId browseRoot) {
-        BrowseDescription browse = new BrowseDescription(
-                browseRoot,
-                BrowseDirection.Forward,
-                Identifiers.References,
-                true,
-                uint(NodeClass.Object.getValue() | NodeClass.Variable.getValue()),
-                uint(BrowseResultMask.All.getValue())
-        );
-
-        try {
-            BrowseResult browseResult = client.browse(browse).get();
-
-            List<ReferenceDescription> references = ConversionUtil.toList(browseResult.getReferences());
-
-            for (ReferenceDescription rd : references) {
-                log.info("{} Node={}, NodeId={}", indent, rd.getBrowseName().getName(), rd.getNodeId().toString());
-
-                // recursively browse to children
-                rd.getNodeId().local().ifPresent(nodeId -> browseNode(indent + "  ", nodeId));
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            throw asOPCCommunicationException(OPCCommunicationException.Context.BROWSE, e);
-        }
     }
 
     /**
@@ -281,16 +303,5 @@ public class MiloEndpoint implements Endpoint {
                     .collect(Collectors.toList());
         }
         return originalEndpoints;
-    }
-
-    private OPCCommunicationException asOPCCommunicationException(OPCCommunicationException.Context context, Exception e) {
-        Throwable t = e;
-        if (e instanceof InterruptedException) {
-            Thread.currentThread().interrupt();
-            t = e.getCause();
-        } else if (e instanceof ExecutionException) {
-            t = e.getCause();
-        }
-        return new OPCCommunicationException(context, t);
     }
 }

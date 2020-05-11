@@ -19,16 +19,12 @@ package cern.c2mon.daq.opcua;
 import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.control.AliveWriter;
-import cern.c2mon.daq.opcua.control.CommandRunner;
-import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.ControlDelegate;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -44,6 +40,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
 import java.util.concurrent.TimeUnit;
+
+import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN;
 
 /**
  * The OPCUAMessageHandler is the entry point of the application. It is created and called by the C2MON DAQ core and
@@ -65,10 +63,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   private static final long RESTART_DELAY = 2000L;
 
   @Getter
-  private Controller controller;
-
-  @Getter
-  private CommandRunner commandRunner;
+  ControlDelegate delegate;
 
   @Autowired
   public AliveWriter aliveWriter;
@@ -77,13 +72,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   private EndpointListener listener = new EndpointListenerImpl();
 
   @Autowired
-  public synchronized void setController(Controller controller) {
-    this.controller = controller;
-  }
-
-  @Autowired
-  public synchronized void setCommandRunner(CommandRunner commandRunner) {
-    this.commandRunner = commandRunner;
+  public synchronized void setDelegate(ControlDelegate delegate) {
+    this.delegate = delegate;
   }
 
   @Autowired
@@ -109,14 +99,14 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     String uaTcpType = "opc.tcp";
     EquipmentAddress address = AddressStringParser.parse(config.getAddress());
     if (!address.supportsProtocol(uaTcpType)) {
-      throw new ConfigurationException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN);
+      throw new ConfigurationException(ENDPOINT_TYPES_UNKNOWN);
     }
     aliveWriter.initialize(config, address.isAliveWriterEnabled());
 
-    controller.initialize(address.getServerAddressOfType(uaTcpType).getUriString(), config.getSourceDataTags().values());
+    delegate.initialize(address.getServerAddressOfType(uaTcpType).getUriString(), config.getSourceDataTags().values());
     log.debug("connected");
 
-    getEquipmentConfigurationHandler().setDataTagChanger((IDataTagChanger) controller);
+    getEquipmentConfigurationHandler().setDataTagChanger(delegate);
     getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
   }
 
@@ -126,10 +116,10 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    * server and discard all configuration.
    */
   @Override
-  public synchronized void disconnectFromDataSource() {
+  public synchronized void disconnectFromDataSource()  {
     log.debug("disconnecting from OPC data source...");
-    if (controller != null) {
-      controller.stop();
+    if (delegate != null) {
+      delegate.stop();
     }
     if (aliveWriter != null) {
       aliveWriter.stopWriter();
@@ -142,7 +132,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    */
   @Override
   public synchronized void refreshAllDataTags() {
-    controller.refreshAllDataTags();
+    delegate.refreshAllDataTags();
   }
 
   /**
@@ -154,9 +144,9 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
   public synchronized void refreshDataTag(final long dataTagId) {
     ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
     if (sourceDataTag == null) {
-      throw new OPCCriticalException("SourceDataTag with id '" + dataTagId + "' unknown.");
+      log.error("SourceDataTag with ID {} is unknown", dataTagId);
     }
-    controller.refreshDataTag(sourceDataTag);
+    delegate.refreshDataTag(sourceDataTag);
   }
 
   /**
@@ -169,23 +159,15 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    */
   @Override
   public String runCommand(SourceCommandTagValue value) throws EqCommandTagException {
-    String result;
     Long id = value.getId();
     ISourceCommandTag tag = getEquipmentConfiguration().getSourceCommandTag(id);
     if (tag == null) {
       throw new EqCommandTagException("Command tag with id '" + id + "' unknown!");
     }
-    try {
-      if (log.isDebugEnabled()) {
-        log.debug("running command {} with value {}", id, value.getValue());
-      }
-      result = commandRunner.runCommand(tag, value);
-    } catch (OPCCommunicationException e) {
-      throw new EqCommandTagException("The client could not write to the specified hardware address", e);
-    } catch (ConfigurationException e) {
-      throw new EqCommandTagException("Please check whether the configuration is correct.", e);
+    if (log.isDebugEnabled()) {
+      log.debug("running command {} with value {}", id, value.getValue());
     }
-    return result == null || result.trim().isEmpty() ? null : result;
+    return delegate.runCommand(tag, value);
   }
 
   /**

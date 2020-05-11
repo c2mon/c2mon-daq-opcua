@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -29,10 +30,10 @@ public class DataTagChangerTest extends ControllerTestBase {
         tag = ServerTagFactory.DipData.createDataTag();
         try {
             controller.initialize(uri, new ArrayList<>());
-        } catch (ConfigurationException e) {
+        } catch (ConfigurationException | CommunicationException e) {
             //expected from empty SourceTag list - initializing with tags is unnecessary and complicates mocking
         }
-        tagChanger = (IDataTagChanger) controller;
+        tagChanger = new ControlDelegate(controller, null);
         changeReport = new ChangeReport();
     }
 

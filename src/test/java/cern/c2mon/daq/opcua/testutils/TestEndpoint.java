@@ -1,6 +1,8 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,6 +13,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
+import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
@@ -21,16 +24,18 @@ import java.util.function.BiConsumer;
 
 import static org.easymock.EasyMock.createMock;
 
-@Getter @Setter
+@Getter
+@Setter
+@Component(value = "testEndpoint")
 public class TestEndpoint implements Endpoint {
 
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
-    boolean returnGoodStatusCodes = true;
-    boolean isConnected = true;
+    private boolean returnGoodStatusCodes = true;
+    private int failForNrTries = 0;
 
     @Override
-    public void initialize(String uri) {
+    public void initialize(String uri) throws CommunicationException {
 
     }
 
@@ -39,33 +44,37 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public UaSubscription createSubscription (int timeDeadband) {
+    public boolean isConnected() {
+        return failForNrTries > 0;
+    }
+
+    @Override
+    public UaSubscription createSubscription (int timeDeadband) throws CommunicationException {
         return subscription;
     }
 
     @Override
-    public void deleteSubscription (UaSubscription subscription) { }
+    public void deleteSubscription (UaSubscription subscription) throws CommunicationException { }
 
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
+    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
         final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
         return Collections.nCopies(definitions.size(), monitoredItem);
     }
 
     @Override
-    public DataValue read (NodeId nodeIds) {
+    public DataValue read (NodeId nodeId) throws CommunicationException {
+        if (failForNrTries > 0) {
+            failForNrTries--;
+            throw new CommunicationException(ExceptionContext.READ);
+        }
         StatusCode code = returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
         return new DataValue(new Variant(0), code);
     }
 
     @Override
-    public void browseNode(String indent, NodeId browseRoot) {
-
-    }
-
-    @Override
-    public StatusCode write (NodeId nodeId, Object value) {
+    public StatusCode write (NodeId nodeId, Object value) throws CommunicationException {
         return returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
     }
 
@@ -80,10 +89,5 @@ public class TestEndpoint implements Endpoint {
         return Map.entry(statusCode, args);
     }
 
-    @Override
-    public boolean isConnected () {
-        return isConnected;
-    }
-
-    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) { }
+    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws CommunicationException { }
 }

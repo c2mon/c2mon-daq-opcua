@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.control.Controller;
 import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager;
@@ -43,6 +44,7 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
      * @param subscription
      * @param status
      */
+    @SneakyThrows
     @Override
     public void onStatusChanged (UaSubscription subscription, StatusCode status) {
         log.info("onStatusChanged event for {}: {}", subscription.toString(), status.toString());

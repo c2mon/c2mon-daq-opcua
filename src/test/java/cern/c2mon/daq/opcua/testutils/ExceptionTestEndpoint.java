@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import lombok.Getter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
@@ -13,6 +13,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import java.util.List;
 import java.util.function.BiConsumer;
 
+import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
 import static org.easymock.EasyMock.createMock;
 
 @Getter
@@ -22,40 +23,40 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     UaSubscription subscription = createMock(UaSubscription.class);
 
     @Override
-    public void initialize(String uri) {
-        throw new OPCCommunicationException(OPCCommunicationException.Context.CONNECT);
+    public void initialize(String uri) throws CommunicationException {
+        throw new CommunicationException(CONNECT);
     }
 
     @Override
-    public UaSubscription createSubscription (int timeDeadband) {
-        throw new OPCCommunicationException(OPCCommunicationException.Context.CREATE_SUBSCRIPTION);
+    public UaSubscription createSubscription (int timeDeadband) throws CommunicationException {
+        throw new CommunicationException(CREATE_SUBSCRIPTION);
     }
 
     @Override
-    public void deleteSubscription (UaSubscription subscription) {
-        throw new OPCCommunicationException(OPCCommunicationException.Context.DELETE_SUBSCRIPTION);}
+    public void deleteSubscription (UaSubscription subscription) throws CommunicationException {
+        throw new CommunicationException(DELETE_SUBSCRIPTION);}
 
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
-        throw new OPCCommunicationException(OPCCommunicationException.Context.SUBSCRIBE_TAGS);
+    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
+        throw new CommunicationException(CREATE_MONITORED_ITEM);
     }
 
     @Override
-    public DataValue read (NodeId nodeIds) {
-        throw new OPCCommunicationException(OPCCommunicationException.Context.READ);
+    public DataValue read (NodeId nodeId) throws CommunicationException {
+        throw new CommunicationException(READ);
     }
 
     @Override
-    public StatusCode write (NodeId nodeId, Object value) {
-        throw new OPCCommunicationException(OPCCommunicationException.Context.WRITE);
+    public StatusCode write (NodeId nodeId, Object value) throws CommunicationException {
+        throw new CommunicationException(WRITE);
     }
 
     @Override
-    public boolean isConnected () {
+    public boolean isConnected() {
         return false;
     }
 
-    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
-        throw new OPCCommunicationException(OPCCommunicationException.Context.DELETE_MONITORED_ITEM);
+    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws CommunicationException {
+        throw new CommunicationException(DELETE_MONITORED_ITEM);
     }
 }

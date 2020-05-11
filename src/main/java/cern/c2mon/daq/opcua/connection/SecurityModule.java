@@ -1,7 +1,9 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.AppConfig;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.security.Certifier;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
@@ -26,7 +28,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import static cern.c2mon.daq.opcua.exceptions.OPCCommunicationException.Context.AUTH_ERROR;
 import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
@@ -56,7 +57,6 @@ public class SecurityModule {
 
     private static final ImmutableSet<Long> CONFIG_ERRORS = ImmutableSet.<Long>builder().add(Bad_UserSignatureInvalid, Bad_UserAccessDenied, Bad_CertificateHostNameInvalid, Bad_ApplicationSignatureInvalid, Bad_CertificateIssuerUseNotAllowed, Bad_CertificateIssuerTimeInvalid, Bad_CertificateIssuerRevoked).build();
 
-
     /**
      * Creates an {@link OpcUaClient} according to the configuration specified in {@link AppConfig} and connect to it.
      * The endpoint to connect to is chosen according to the security policy. Preference is given to endpoints to which
@@ -69,7 +69,7 @@ public class SecurityModule {
      * @return An {@link OpcUaClient} object that is connected to one of the endpoints.
      * @throws InterruptedException if interrupt was called on the thread during execution.
      */
-    public OpcUaClient createClient(List<EndpointDescription> endpoints) throws InterruptedException {
+    public OpcUaClient createClient(List<EndpointDescription> endpoints) throws InterruptedException, CommunicationException, ConfigurationException {
         builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english(config.getAppName()))
                 .setApplicationUri(config.getApplicationUri())
@@ -98,8 +98,9 @@ public class SecurityModule {
             client = connectIfPossible(endpoints, noSecurity);
         }
         if (client == null) {
-            throw new OPCCommunicationException(AUTH_ERROR);
+            throw new CommunicationException(ExceptionContext.AUTH_ERROR);
         }
+        log.info("Connected successfully! ");
         return client;
     }
 
@@ -109,7 +110,7 @@ public class SecurityModule {
                 !Strings.isNullOrEmpty(upConfig.getPwd());
     }
 
-    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier) throws InterruptedException {
+    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier) throws InterruptedException, ConfigurationException {
         final var matchingEndpoints = endpoints.stream().filter(certifier::supportsAlgorithm).collect(Collectors.toList());
         for (var e : matchingEndpoints) {
             if (!certifier.canCertify(e)) {
@@ -135,22 +136,22 @@ public class SecurityModule {
         return null;
     }
 
-    private boolean handleAndReportWhetherToContinue(Certifier certifier, ExecutionException ex) {
+    private boolean handleAndReportWhetherToContinue(Certifier certifier, ExecutionException ex) throws ConfigurationException {
         final var cause = ex.getCause();
         log.error("Authentication error: ", cause);
         if (!(cause instanceof UaException)) {
-            log.error("Unexpected error in connection, abort certifier.");
+            log.error("Unexpected error in connection, abort connecting with this certifier.");
             return false;
         }
         final var code = ((UaException) cause).getStatusCode().getValue();
         StatusCodes.lookup(code).ifPresentOrElse(
-                s -> log.error("Connection failed with error: {}", Arrays.toString(s)),
-                () -> log.error("Connection failed for unknown reasons."));
+                s -> log.error("Failure description: {}", Arrays.toString(s)),
+                () -> log.error("Reasons unknown."));
         if (CONFIG_ERRORS.contains(code)) {
             log.info("Ensure configuration correctness.");
-            return true;
+            throw new ConfigurationException(ConfigurationException.Cause.SECURITY);
         } else if (certifier.getSevereErrorCodes().contains(code)) {
-            log.error("Cannot connect to this server with certifier {}.", certifier.getClass().getName());
+            log.error("Cannot connect to this server with certifier {}. Proceed with another certifier.", certifier.getClass().getName());
             return false;
         }
         log.error("Attempting less secure endpoint: ", ex);

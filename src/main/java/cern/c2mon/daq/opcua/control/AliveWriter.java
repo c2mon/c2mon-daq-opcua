@@ -16,8 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
@@ -52,7 +51,7 @@ public class AliveWriter {
   /**
    * The service to schedule periodically to write to the alive tag hardware address
    */
-  private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+  private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
   /**
    * The task of writing the alive value to the equipment.
@@ -140,11 +139,12 @@ public class AliveWriter {
       controller.writeAlive(address, castedValue);
       writeCounter.incrementAndGet();
       writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
-    } catch (OPCCommunicationException exception) {
-      log.error("Error while writing alive. Going to retry...", exception);
-    } catch (OPCCriticalException exception) {
+    } catch (CommunicationException exception) {
+      log.error("Error while writing alive. Retrying...", exception);
+    //TODO
+      /*} catch (OPCCriticalException exception) {
       log.error("Critical error while writing alive. Stopping alive...", exception);
-      stopWriter();
+      stopWriter();*/
     }
   }
 }

@@ -15,12 +15,8 @@
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 package cern.c2mon.daq.opcua.exceptions;
-/**
- * Exception which is not solvable without a configuration change.
- * 
- * @author Andreas Lang
- *
- */
+
+
 public class OPCCriticalException extends RuntimeException {
 
     /**
@@ -62,4 +58,15 @@ public class OPCCriticalException extends RuntimeException {
     public OPCCriticalException(final String message, final Throwable cause) {
         super(message, cause);
     }
+    /**
+     * Creates a new OPCCriticalException.
+     *
+     * @param context The context the exception occurred in
+     * @param cause Throwable which is the cause of this exception.
+     */
+    public OPCCriticalException(ExceptionContext context, final Throwable cause) {
+        super(context.getMessage(), cause);
+    }
+
+
 }

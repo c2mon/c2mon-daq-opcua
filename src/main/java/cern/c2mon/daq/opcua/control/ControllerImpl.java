@@ -17,18 +17,16 @@
 
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.EndpointListener;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
 import cern.c2mon.daq.opcua.mapping.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
-import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -46,16 +44,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
-import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
-import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 
 @Component("controller")
 @Slf4j
-public class ControllerImpl implements Controller, IDataTagChanger {
+public class ControllerImpl implements Controller {
 
     @Setter
     @Autowired
@@ -65,53 +60,60 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     private final TagSubscriptionMapper mapper;
 
     @Autowired
-    private final EndpointListener listener;
+    private final EndpointListener endpointListener;
 
     private String uri;
 
-    public ControllerImpl(Endpoint endpoint, TagSubscriptionMapper mapper, EndpointListener listener) {
+    public ControllerImpl(Endpoint endpoint, TagSubscriptionMapper mapper, EndpointListener endpointListener) {
         this.endpoint = endpoint;
         this.mapper = mapper;
-        this.listener = listener;
+        this.endpointListener = endpointListener;
     }
 
     @Override
-    public synchronized void initialize(String uri, Collection<ISourceDataTag> dataTags) throws ConfigurationException {
+    public synchronized void initialize(String uri, Collection<ISourceDataTag> dataTags) throws CommunicationException, ConfigurationException {
         this.uri = uri;
         connect();
         subscribeTags(dataTags);
     }
 
-
     @Override
-    public synchronized void subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
+    public synchronized void subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws CommunicationException, ConfigurationException {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
         }
-        mapper.mapTagsToGroupsAndDefinitions(dataTags).forEach(this::subscribeToGroup);
+        for (Map.Entry<SubscriptionGroup, List<DataTagDefinition>> entry : mapper.mapTagsToGroupsAndDefinitions(dataTags).entrySet()) {
+            SubscriptionGroup key = entry.getKey();
+            List<DataTagDefinition> value = entry.getValue();
+            subscribeToGroup(key, value);
+        }
     }
 
     @Override
-    public synchronized void stop () {
+    public synchronized void stop () throws CommunicationException {
         mapper.clear();
         endpoint.disconnect();
     }
 
     @Override
-    public synchronized void refreshAllDataTags () {
-        mapper.getTagIdDefinitionMap().forEach((tagId, definition) -> refresh(tagId, definition.getNodeId()));
+    public synchronized void refreshAllDataTags () throws CommunicationException {
+        for (Map.Entry<Long, DataTagDefinition> entry : mapper.getTagIdDefinitionMap().entrySet()) {
+            Long tagId = entry.getKey();
+            DataTagDefinition definition = entry.getValue();
+            refresh(tagId, definition.getNodeId());
+        }
     }
 
     @Override
-    public synchronized void refreshDataTag (ISourceDataTag sourceDataTag) {
+    public synchronized void refreshDataTag (ISourceDataTag sourceDataTag) throws CommunicationException {
         refresh(sourceDataTag.getId(), mapper.getOrCreateDefinition(sourceDataTag).getNodeId());
     }
 
     @Override
-    public synchronized void writeAlive(final OPCHardwareAddress address, final Object value) {
+    public synchronized void writeAlive(final OPCHardwareAddress address, final Object value) throws CommunicationException {
         NodeId nodeId = ItemDefinition.toNodeId(address);
         final StatusCode response = endpoint.write(nodeId, value);
-        listener.onAlive(response);
+        endpointListener.onAlive(response);
     }
 
     @Override
@@ -120,7 +122,7 @@ public class ControllerImpl implements Controller, IDataTagChanger {
     }
 
     @Override
-    public void recreateSubscription (UaSubscription subscription) {
+    public void recreateSubscription (UaSubscription subscription) throws CommunicationException {
         endpoint.deleteSubscription(subscription);
         SubscriptionGroup group = mapper.getGroup(subscription);
         final List<Long> tagIds = group.getTagIds();
@@ -129,35 +131,82 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         subscribeToGroup(group, definitions);
     }
 
-    @Override
-    public void onAddDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        doAndReport(changeReport,
-                () -> {
-                    String s = subscribeTag(sourceDataTag);
-                    refreshDataTag(sourceDataTag);
-                    return s;
-                });
-    }
-
-    @Override
-    public void onRemoveDataTag (final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        doAndReport(changeReport, () -> removeTag(sourceDataTag));
-    }
-
-    @Override
-    public void onUpdateDataTag (final ISourceDataTag sourceDataTag, final ISourceDataTag oldSourceDataTag, final ChangeReport changeReport) {
-        if (sourceDataTag.getHardwareAddress().equals(oldSourceDataTag.getHardwareAddress())) {
-            completeSuccessFullyWithMessage(changeReport, "The new and old sourceDataTags have the same hardware address, no update was required.");
-        } else {
-            doAndReport(changeReport, () -> {
-                String s = removeTag(oldSourceDataTag) + subscribeTag(sourceDataTag);
-                refreshDataTag(sourceDataTag);
-                return s;
-            });
+    private void connect () throws CommunicationException, ConfigurationException {
+        try {
+            endpoint.initialize(uri);
+            endpointListener.onEquipmentStateUpdate(OK);
+        } catch (CommunicationException | ConfigurationException e) {
+            endpointListener.onEquipmentStateUpdate(CONNECTION_FAILED);
+            throw e;
         }
     }
 
-    private synchronized String subscribeTag (@NonNull final ISourceDataTag sourceDataTag) {
+    @Override
+    public void reconnect() throws CommunicationException, ConfigurationException {
+        endpointListener.onEquipmentStateUpdate(CONNECTION_LOST);
+        final Map<Long, DataTagDefinition> currentConfig = new ConcurrentHashMap<>(mapper.getTagIdDefinitionMap());
+        mapper.clear();
+        if (endpoint.isConnected()) {
+            endpoint.disconnect();
+        }
+        connect();
+        mapper.addToTagDefinitionMap(currentConfig);
+        for (Map.Entry<SubscriptionGroup, List<DataTagDefinition>> entry : mapper.mapToGroups(currentConfig.values()).entrySet()) {
+            SubscriptionGroup key = entry.getKey();
+            List<DataTagDefinition> value = entry.getValue();
+            subscribeToGroup(key, value);
+        }
+        refreshAllDataTags();
+    }
+
+    private void refresh(long tagId, NodeId address) throws CommunicationException {
+        final DataValue value = endpoint.read(address);
+        notifyListener(tagId, value);
+    }
+
+    private boolean subscribeToGroup (SubscriptionGroup group, List<DataTagDefinition> definitions) throws CommunicationException {
+        if (!group.isSubscribed()) {
+            final var subscription = endpoint.createSubscription(group.getPublishInterval());
+            group.setSubscription(subscription);
+        }
+        final var monitoredItems = endpoint.subscribeItemDefinitions(group.getSubscription(), definitions, this::itemCreationCallback);
+        return completeSubscription(monitoredItems);
+    }
+
+    private boolean completeSubscription (List<UaMonitoredItem> monitoredItems) {
+        boolean allSuccessful = true;
+        for (UaMonitoredItem item : monitoredItems) {
+            Long tagId = mapper.getTagId(item.getClientHandle());
+            final var statusCode = item.getStatusCode();
+            if (statusCode.isBad()) {
+                allSuccessful = false;
+                final var qualityCode = MiloMapper.getDataTagQualityCode(statusCode);
+                endpointListener.onTagInvalid(tagId, new SourceDataTagQuality(qualityCode));
+            } else {
+                mapper.addTagToGroup(tagId);
+            }
+        }
+        return allSuccessful;
+    }
+
+    private void itemCreationCallback (UaMonitoredItem item, Integer i) {
+        Long tag = mapper.getTagId(item.getClientHandle());
+        item.setValueConsumer(value -> notifyListener(tag, value));
+    }
+
+    private void notifyListener(Long tagId, DataValue value) {
+        SourceDataTagQualityCode tagQuality = MiloMapper.getDataTagQualityCode(value.getStatusCode());
+        ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
+
+        if (!tagQuality.equals(SourceDataTagQualityCode.OK)) {
+            endpointListener.onTagInvalid(tagId, new SourceDataTagQuality(tagQuality));
+        } else {
+            endpointListener.onNewTagValue(tagId, valueUpdate, new SourceDataTagQuality(tagQuality));
+        }
+    }
+
+    @Override
+    public synchronized String subscribeTag (@NonNull final ISourceDataTag sourceDataTag) throws CommunicationException {
         SubscriptionGroup group = mapper.getGroup(sourceDataTag);
         DataTagDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
 
@@ -168,7 +217,8 @@ public class ControllerImpl implements Controller, IDataTagChanger {
         }
     }
 
-    private synchronized String removeTag(final ISourceDataTag dataTag) {
+    @Override
+    public synchronized String removeTag(final ISourceDataTag dataTag) throws CommunicationException {
         String report = "";
         SubscriptionGroup group = mapper.getGroup(dataTag);
         if (group.isSubscribed() && group.contains(dataTag)) {
@@ -194,96 +244,5 @@ public class ControllerImpl implements Controller, IDataTagChanger {
             group.reset();
         }
         return report;
-    }
-
-    private void doAndReport (ChangeReport changeReport, Supplier<String> supplier) {
-        try {
-            reconnectIfRequired();
-            completeSuccessFullyWithMessage(changeReport, supplier.get());
-        } catch (Exception e) {
-            changeReport.appendError(e.getMessage());
-            changeReport.setState(FAIL);
-        }
-    }
-
-    private void reconnectIfRequired() {
-        if (!isConnected()) {
-            log.info("Connection lost. Reconnecting.");
-            reconnect();
-            refreshAllDataTags();
-        }
-    }
-
-    private void completeSuccessFullyWithMessage (ChangeReport changeReport, String message) {
-        changeReport.appendInfo(message);
-        changeReport.setState(SUCCESS);
-    }
-
-    private void connect(){
-        try {
-            endpoint.initialize(uri);
-            listener.onEquipmentStateUpdate(OK);
-        } catch (OPCCommunicationException e) {
-            listener.onEquipmentStateUpdate(CONNECTION_FAILED);
-            throw e;
-        }
-    }
-
-    private void reconnect() {
-        listener.onEquipmentStateUpdate(CONNECTION_LOST);
-        final Map<Long, DataTagDefinition> currentConfig = new ConcurrentHashMap<>(mapper.getTagIdDefinitionMap());
-        mapper.clear();
-        if (endpoint.isConnected()) {
-            endpoint.disconnect();
-        }
-        connect();
-        mapper.addToTagDefinitionMap(currentConfig);
-        mapper.mapToGroups(currentConfig.values()).forEach(this::subscribeToGroup);
-    }
-
-    private void refresh(long tagId, NodeId address) {
-        final DataValue value = endpoint.read(address);
-        notifyListener(tagId, value);
-    }
-
-    private boolean subscribeToGroup (SubscriptionGroup group, List<DataTagDefinition> definitions) {
-        if (!group.isSubscribed()) {
-            final var subscription = endpoint.createSubscription(group.getPublishInterval());
-            group.setSubscription(subscription);
-        }
-        final var monitoredItems = endpoint.subscribeItemDefinitions(group.getSubscription(), definitions, this::itemCreationCallback);
-        return completeSubscription(monitoredItems);
-    }
-
-    private boolean completeSubscription (List<UaMonitoredItem> monitoredItems) {
-        boolean allSuccessful = true;
-        for (UaMonitoredItem item : monitoredItems) {
-            Long tagId = mapper.getTagId(item.getClientHandle());
-            final var statusCode = item.getStatusCode();
-            if (statusCode.isBad()) {
-                allSuccessful = false;
-                final var qualityCode = MiloMapper.getDataTagQualityCode(statusCode);
-                listener.onTagInvalid(tagId, new SourceDataTagQuality(qualityCode));
-            } else {
-                mapper.addTagToGroup(tagId);
-            }
-        }
-        return allSuccessful;
-    }
-
-    private void itemCreationCallback (UaMonitoredItem item, Integer i) {
-        Long tag = mapper.getTagId(item.getClientHandle());
-        item.setValueConsumer(value -> notifyListener(tag, value));
-    }
-
-    private void notifyListener(Long tagId, DataValue value) {
-        SourceDataTagQualityCode tagQuality = MiloMapper.getDataTagQualityCode(value.getStatusCode());
-        ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
-
-        if (!tagQuality.equals(SourceDataTagQualityCode.OK)) {
-            listener.onTagInvalid(tagId, new SourceDataTagQuality(tagQuality));
-        } else {
-            listener.onNewTagValue(tagId, valueUpdate, new SourceDataTagQuality(tagQuality));
-        }
     }
 }

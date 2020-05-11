@@ -2,10 +2,10 @@ package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.AliveWriter;
-import cern.c2mon.daq.opcua.control.CommandRunner;
+import cern.c2mon.daq.opcua.control.ControlDelegate;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
@@ -19,7 +19,9 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_FAILED;
@@ -31,26 +33,33 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @Slf4j
 @UseHandler(OPCUAMessageHandler.class)
 @SpringBootTest
+@TestPropertySource(locations = "classpath:opcua.properties")
 @RunWith(SpringRunner.class)
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
+
+    @Autowired
+    ControlDelegate delegate;
 
     @Autowired
     Controller controller;
 
     @Autowired
-    CommandRunner commandRunner;
-
-    @Autowired
     AliveWriter aliveWriter;
 
     @Autowired
+    @Qualifier("endpointListener")
     EndpointListener listener;
 
     @Autowired
     TagSubscriptionMapper mapper;
 
     @Autowired
-    Endpoint endpoint;
+    @Qualifier("miloEndpoint")
+    Endpoint miloEndpoint;
+
+    @Autowired
+    @Qualifier("testEndpoint")
+    Endpoint testEndpoint;
 
     OPCUAMessageHandler handler;
     TestUtils.CommfaultSenderCapture capture;
@@ -60,26 +69,24 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     protected void beforeTest () throws Exception {
         // must be injected manually to work with test framework
         handler = (OPCUAMessageHandler) msgHandler;
-        handler.setController(controller);
+        handler.setDelegate(delegate);
         handler.setAliveWriter(aliveWriter);
-        handler.setCommandRunner(commandRunner);
         handler.setListener(listener);
         capture = new TestUtils.CommfaultSenderCapture(messageSender);
     }
 
     @Override
     protected void afterTest () throws Exception {
-        controller.setEndpoint(endpoint);
+        controller.setEndpoint(miloEndpoint);
     }
 
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigShouldSendOKCommfault () throws EqIOException {
-        final TestEndpoint wrapper = new TestEndpoint();
-        controller.setEndpoint(wrapper);
-        MiloMocker mocker = new MiloMocker(wrapper, mapper);
+        controller.setEndpoint(testEndpoint);
+        MiloMocker mocker = new MiloMocker(testEndpoint, mapper);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, equipmentConfiguration.getSourceDataTags().values());
-        replay(messageSender, wrapper.getMonitoredItem());
+        replay(messageSender, ((TestEndpoint) testEndpoint).getMonitoredItem());
 
         handler.connectToDataSource();
 
@@ -116,6 +123,6 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @UseConf("commfault_incorrect.xml")
     public void improperConfigShouldThrowError () {
         replay(messageSender);
-        assertThrows(OPCCommunicationException.class, () -> handler.connectToDataSource());
+        assertThrows(OPCCriticalException.class, handler::connectToDataSource);
     }
 }

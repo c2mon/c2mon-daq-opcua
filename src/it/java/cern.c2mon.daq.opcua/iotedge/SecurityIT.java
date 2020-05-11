@@ -6,7 +6,7 @@ import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.ControllerImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.security.CertificateGenerator;
 import cern.c2mon.daq.opcua.security.CertificateLoader;
@@ -61,41 +61,41 @@ public class SecurityIT {
     }
 
     @AfterEach
-    public void cleanUp() {
+    public void cleanUp() throws CommunicationException {
         controller.stop();
         controller = null;
     }
 
     @Test
-    public void connectWithoutCertificate() throws ConfigurationException {
+    public void connectWithoutCertificate() throws ConfigurationException, CommunicationException {
         initializeController();
         assertDoesNotThrow(()-> controller.isConnected());
     }
 
     @Test
-    public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, ConfigurationException {
+    public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, ConfigurationException, CommunicationException {
         config.setInsecureCommunicationEnabled(false);
         trustAndConnect();
         assertDoesNotThrow(()-> controller.isConnected());
     }
 
     @Test
-    public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, ConfigurationException {
+    public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, ConfigurationException, CommunicationException {
         setupAuthForCertificate();
         trustAndConnect();
         assertDoesNotThrow(()-> controller.isConnected());
     }
 
-    private void initializeController() throws ConfigurationException {
+    private void initializeController() throws ConfigurationException, CommunicationException {
         controller = new ControllerImpl(new MiloEndpoint(p), new TagSubscriptionMapperImpl(), new ServerTestListener.TestListener());
         controller.initialize(uri, Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
     }
 
-    private void trustAndConnect() throws IOException, InterruptedException, ConfigurationException {
+    private void trustAndConnect() throws IOException, InterruptedException, ConfigurationException, CommunicationException {
         log.info("Initial connection attempt.");
         try {
             this.initializeController();
-        } catch (OPCCommunicationException e) {
+        } catch (CommunicationException e) {
             // expected behavior
         }
         controller.stop();

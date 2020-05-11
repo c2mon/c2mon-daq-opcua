@@ -1,18 +1,10 @@
 package cern.c2mon.daq.opcua.simengine;
 
-import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.connection.MiloEndpoint;
-import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.AliveWriter;
-import cern.c2mon.daq.opcua.control.CommandRunner;
+import cern.c2mon.daq.opcua.control.ControlDelegate;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.ControllerImpl;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.security.CertificateGenerator;
-import cern.c2mon.daq.opcua.security.CertificateLoader;
-import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -28,6 +20,11 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -37,13 +34,24 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 @UseHandler(OPCUAMessageHandler.class)
+@SpringBootTest
+@RunWith(SpringRunner.class)
 public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     private static ConnectionResolver resolver;
     OPCUAMessageHandler handler;
     SourceCommandTagValue value;
     TestUtils.CommfaultSenderCapture capture;
-    ServerTestListener.PulseTestListener listener;
+    private final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener();
+
+    @Autowired
+    ControlDelegate delegate;
+
+    @Autowired
+    Controller controller;
+
+    @Autowired
+    AliveWriter aliveWriter;
 
     private static final long DATAID_VMON = 1L;
     private static final long DATAID_PW = 2L;
@@ -66,20 +74,12 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     protected void beforeTest () throws Exception {
         handler = (OPCUAMessageHandler) msgHandler;
         capture = new TestUtils.CommfaultSenderCapture(messageSender);
-
         value = new SourceCommandTagValue();
-
         value.setDataType("java.lang.Integer");
-
-        AppConfig config = TestUtils.createDefaultConfig();
-        SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        final MiloEndpoint endpoint = new MiloEndpoint(p);
-        listener = new ServerTestListener.PulseTestListener();
         handler.setListener(listener);
-        Controller controller = new ControllerImpl(endpoint, new TagSubscriptionMapperImpl(), listener);
-        handler.setController(controller);
-        handler.setCommandRunner(new CommandRunner(endpoint));
-        handler.setAliveWriter(new AliveWriter(controller));
+        handler.setDelegate(delegate);
+        handler.setAliveWriter(aliveWriter);
+        ReflectionTestUtils.setField(controller, "endpointListener", listener);
     }
 
     @After

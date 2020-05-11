@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ public abstract class ServerTestListener {
     @RequiredArgsConstructor
     @Getter
     @Setter
+    @Component(value = "pulseTestListener")
     public static class PulseTestListener extends TestListener {
         private long sourceID;
         private int threshold = 0;

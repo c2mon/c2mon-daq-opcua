@@ -24,6 +24,7 @@ public class AppConfig {
     private String stateName;
     private String countryCode;
     private int requestTimeout;
+    private boolean failFast;
 
     /**
      * If insecure communication is enabled, the client attempts to connect to OPC UA endpoints without security as a

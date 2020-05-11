@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.Test;
@@ -64,7 +65,7 @@ public class SubscribeTagsTest extends ControllerTestBase{
     }
 
     @Test
-    public void twoTagsWithOneBadStatusCodeShouldUnsubscribeOne() throws ConfigurationException {
+    public void twoTagsWithOneBadStatusCodeShouldUnsubscribeOne() throws ConfigurationException, CommunicationException {
         mocker.mockGoodAndBadStatusCodesAndReplay(new ISourceDataTag[]{tag1}, new ISourceDataTag[]{tag2});
         subscribeTags(tag1, tag2);
         assertTrue(mapper.isSubscribed(tag1) && !mapper.isSubscribed(tag2));

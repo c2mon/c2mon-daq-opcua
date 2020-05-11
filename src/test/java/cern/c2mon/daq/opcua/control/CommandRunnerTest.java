@@ -1,9 +1,11 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
+import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.SourceCommandTag;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
@@ -16,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CommandRunnerTest {
     TestEndpoint endpoint;
     CommandRunner commandRunner;
+    ControlDelegate delegate;
 
 
     SourceCommandTagValue value;
@@ -35,39 +38,42 @@ public class CommandRunnerTest {
         value.setDataType(Integer.class.getName());
         value.setValue(1);
         commandRunner = new CommandRunner(endpoint);
+        delegate = new ControlDelegate(null, commandRunner);
     }
 
     @Test
     public void runCommandWithInvalidValueShouldThrowConfigException() {
         value.setDataType("invalid");
-        assertThrows(ConfigurationException.class,
-                () ->  commandRunner.runCommand(tag, value),
+        assertThrows(EqCommandTagException.class,
+                () ->  delegate.runCommand(tag, value),
                 ConfigurationException.Cause.COMMAND_VALUE_ERROR.message);
     }
 
     @Test
-    public void runMethodShouldReturnMethodValuesAsString() throws ConfigurationException {
+    public void runMethodShouldReturnMethodValuesAsString() throws EqCommandTagException {
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
-        final String s = commandRunner.runCommand(tag, value);
+        final String s = delegate.runCommand(tag, value);
         assertEquals("1", s);
     }
 
     @Test
     public void executeCommandShouldThrowErrorOnWrongStatusCode() {
         endpoint.setReturnGoodStatusCodes(false);
-        assertThrows(OPCCommunicationException.class, () -> commandRunner.executeCommand(tag, value), OPCCommunicationException.Context.WRITE.message);
+        assertThrows(CommunicationException.class,
+                () -> commandRunner.executeCommand(tag, value),
+                ExceptionContext.WRITE.getMessage());
     }
 
     @Test
     public void writeBadClientShouldThrowException() {
         commandRunner.setEndpoint(new ExceptionTestEndpoint());
-        assertThrows(OPCCommunicationException.class,
+        assertThrows(CommunicationException.class,
                 () -> commandRunner.executeCommand(tag, value),
-                OPCCommunicationException.Context.WRITE.message);
+                ExceptionContext.WRITE.getMessage());
     }
 
     @Test
-    public void executeMethodWithMethodAddress() {
+    public void executeMethodWithMethodAddress() throws CommunicationException, ConfigurationException {
         address.setOpcRedundantItemName("method");
         final Object[] output = commandRunner.executeMethod(tag, 1);
         assertEquals(1, output.length);
@@ -75,7 +81,7 @@ public class CommandRunnerTest {
     }
 
     @Test
-    public void executeMethodWithoutMethodAddressShouldReturnValue() {
+    public void executeMethodWithoutMethodAddressShouldReturnValue() throws CommunicationException, ConfigurationException {
         final Object[] output = commandRunner.executeMethod(tag, 1);
         assertEquals(1, output.length);
         assertEquals(1, output[0]);
@@ -89,17 +95,17 @@ public class CommandRunnerTest {
     @Test
     public void commandWithPulseShouldThrowExceptionOnBadStatusCode() {
         endpoint.setReturnGoodStatusCodes(false);
-        assertThrows(OPCCommunicationException.class,
+        assertThrows(CommunicationException.class,
                 () -> commandRunner.executePulseCommand(tag, 1, 2),
-                OPCCommunicationException.Context.WRITE.message);
+                ExceptionContext.WRITE.getMessage());
     }
 
     @Test
     public void commandShouldThrowExceptionOnBadStatusCode() {
         endpoint.setReturnGoodStatusCodes(false);
-        assertThrows(OPCCommunicationException.class,
+        assertThrows(CommunicationException.class,
                 () -> commandRunner.executeCommand(tag, 1),
-                OPCCommunicationException.Context.WRITE.message);
+                ExceptionContext.WRITE.getMessage());
     }
 
 }

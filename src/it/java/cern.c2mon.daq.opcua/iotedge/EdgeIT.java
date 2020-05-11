@@ -1,28 +1,25 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MiloEndpoint;
-import cern.c2mon.daq.opcua.connection.SecurityModule;
+import cern.c2mon.daq.opcua.control.ControlDelegate;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.ControllerImpl;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCommunicationException;
+import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.security.CertificateGenerator;
-import cern.c2mon.daq.opcua.security.CertificateLoader;
-import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.ServerTestListener;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
@@ -32,15 +29,27 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
+@SpringBootTest
+@TestPropertySource(locations = "classpath:opcua.properties")
 public class EdgeIT {
-    private ServerTestListener.PulseTestListener listener;
 
     private static ConnectionResolver resolver;
-    private final TagSubscriptionMapper mapper = new TagSubscriptionMapperImpl();
     private final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
-    private Controller controller;
-    private Endpoint wrapper;
+    private final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener();
 
+    @Autowired
+    TagSubscriptionMapper mapper;
+
+    @Autowired
+    ControlDelegate delegate;
+
+    @Autowired
+    Controller controller;
+
+    @Autowired
+    Endpoint endpoint;
+
+    @Autowired
     AppConfig config;
 
     @BeforeAll
@@ -59,19 +68,15 @@ public class EdgeIT {
     public void setupEndpoint() throws ConfigurationException {
         config = TestUtils.createDefaultConfig();
         config.setOnDemandCertificationEnabled(false);
-        SecurityModule p = new SecurityModule(config, new CertificateLoader(config.getKeystore()), new CertificateGenerator(config), new NoSecurityCertifier());
-        wrapper = new MiloEndpoint(p);
-        listener = new ServerTestListener.PulseTestListener();
         listener.setSourceID(tag.getId());
-        controller = new ControllerImpl(wrapper, mapper, listener);
-        controller.initialize(resolver.getURI(ConnectionResolver.Ports.IOTEDGE), Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
+        ReflectionTestUtils.setField(controller, "endpointListener", listener);
+        delegate.initialize(resolver.getURI(ConnectionResolver.Ports.IOTEDGE), Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
         log.info("Client ready");
     }
 
     @AfterEach
     public void cleanUp() {
-        controller.stop();
-        controller = null;
+        delegate.stop();
     }
 
 
@@ -82,13 +87,12 @@ public class EdgeIT {
 
     @Test
     public void connectToBadServer() {
-        ;
-        assertThrows(OPCCommunicationException.class,
-                () -> controller.initialize("opc.tcp://somehost/somepath", Collections.singletonList(ServerTagFactory.DipData.createDataTag())));
+        assertThrows(OPCCriticalException.class,
+                () -> delegate.initialize("opc.tcp://somehost/somepath", Collections.singletonList(ServerTagFactory.DipData.createDataTag())));
     }
 
     @Test
-    public void subscribingProperDataTagShouldReturnValue() throws ConfigurationException {
+    public void subscribingProperDataTagShouldReturnValue() throws ConfigurationException, CommunicationException {
         controller.subscribeTags(Collections.singletonList(tag));
 
         Object o = assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
@@ -96,20 +100,18 @@ public class EdgeIT {
     }
 
     @Test
-    public void subscribingProperTagAndReconnectingShouldKeepResubscribeTags() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
+    public void subscribingProperTagAndReconnectingShouldKeepResubscribeTags() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException, CommunicationException {
         listener.setThreshold(0);
         controller.subscribeTags(Collections.singletonList(tag));
-
-
-        wrapper.disconnect();
-        ((IDataTagChanger) controller).onAddDataTag(ServerTagFactory.DipData.createDataTag(), new ChangeReport());
+        endpoint.disconnect();
+        delegate.refreshAllDataTags();
         listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
 
         assertTrue(mapper.isSubscribed(tag));
     }
 
     @Test
-    public void subscribingImproperDataTagShouldReturnOnTagInvalid () throws ConfigurationException {
+    public void subscribingImproperDataTagShouldReturnOnTagInvalid () throws ConfigurationException, CommunicationException {
         final ISourceDataTag tag = ServerTagFactory.Invalid.createDataTag();
         listener.setSourceID(tag.getId());
         controller.subscribeTags(Collections.singletonList(tag));
@@ -117,7 +119,7 @@ public class EdgeIT {
     }
 
     @Test
-    public void subscribeWithDeadband() throws ConfigurationException {
+    public void subscribeWithDeadband() throws ConfigurationException, CommunicationException {
         var tagWithDeadband = ServerTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
         listener.setSourceID(tagWithDeadband.getId());
         controller.subscribeTags(Collections.singletonList(tagWithDeadband));
@@ -125,7 +127,7 @@ public class EdgeIT {
     }
 
     @Test
-    public void refreshProperTag () {
+    public void refreshProperTag () throws CommunicationException {
         controller.refreshDataTag(tag);
         assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }

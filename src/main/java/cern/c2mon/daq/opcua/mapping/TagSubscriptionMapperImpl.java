@@ -108,7 +108,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
                 .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
                 .findFirst();
 
-        if(!mapEntry.isPresent()) {
+        if(mapEntry.isEmpty()) {
             throw new IllegalArgumentException("This clientHandle is not associated with mapEntry tag.");
         }
         return mapEntry.get().getKey();

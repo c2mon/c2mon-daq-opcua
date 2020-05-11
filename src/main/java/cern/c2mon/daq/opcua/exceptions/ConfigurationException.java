@@ -1,9 +1,14 @@
 package cern.c2mon.daq.opcua.exceptions;
 
-import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import lombok.AllArgsConstructor;
 
-public class ConfigurationException extends EqIOException {
+/**
+ * Exception which is not solvable without a configuration change.
+ *
+ * @author Andreas Lang
+ *
+ */
+public class ConfigurationException extends OPCUAException {
 
     @AllArgsConstructor
     public enum Cause {
@@ -16,7 +21,10 @@ public class ConfigurationException extends EqIOException {
         MISSING_TARGET_TAG("TargetTag must not be null"),
         DATATAGS_EMPTY("No data tags to subscribe"),
         COMMAND_TYPE_UNKNOWN("The provided command type is unknown"),
-        COMMAND_VALUE_ERROR("Provided command value could not be processed. Check data type and value.");
+        COMMAND_VALUE_ERROR("Provided command value could not be processed. Check data type and value."),
+        SECURITY("Ensure your app security settings are valid."),
+        OBJINVALID("Could not resolve an object node for the command tag."),
+        DATATAG_UNKNOWN("Data tag is unknown.");
 
         public final String message;
 
@@ -26,7 +34,15 @@ public class ConfigurationException extends EqIOException {
         super(type.message, e);
     }
 
+    public ConfigurationException(final Cause type, final String message) {
+        super(type.message + message);
+    }
+
     public ConfigurationException(final Cause type) {
         super(type.message);
+    }
+
+    public ConfigurationException(ExceptionContext context, final Throwable cause) {
+        super(context.getMessage(), cause);
     }
 }

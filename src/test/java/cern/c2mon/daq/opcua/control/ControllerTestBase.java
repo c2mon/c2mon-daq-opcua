@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
@@ -61,7 +62,7 @@ public abstract class ControllerTestBase {
     }
 
 
-    protected void subscribeTags (ISourceDataTag... tags) throws ConfigurationException {
+    protected void subscribeTags (ISourceDataTag... tags) throws ConfigurationException, CommunicationException {
         controller.subscribeTags(Arrays.asList(tags));
     }
 
