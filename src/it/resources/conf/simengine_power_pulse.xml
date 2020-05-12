@@ -13,7 +13,7 @@
                 <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
                     <namespace>2</namespace>
                     <opc-item-name>simSY4527.Board00.Chan000.Pw</opc-item-name>
-                    <command-pulse-length>0</command-pulse-length>
+                    <command-pulse-length>1</command-pulse-length>
                     <address-type>STRING</address-type>
                     <command-type>CLASSIC</command-type>#
                 </HardwareAddress>

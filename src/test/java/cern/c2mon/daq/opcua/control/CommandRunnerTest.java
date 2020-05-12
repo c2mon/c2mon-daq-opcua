@@ -5,6 +5,7 @@ import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.SourceCommandTag;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
@@ -24,6 +25,7 @@ public class CommandRunnerTest {
     SourceCommandTagValue value;
     SourceCommandTag tag;
     OPCHardwareAddressImpl address;
+    OPCHardwareAddressImpl pulseAddress;
 
     @BeforeEach
     public void setUp() {
@@ -34,11 +36,14 @@ public class CommandRunnerTest {
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.CLASSIC);
         tag.setHardwareAddress(address);
 
+        pulseAddress = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw", 2);
+        pulseAddress.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.CLASSIC);
+
         value = new SourceCommandTagValue();
         value.setDataType(Integer.class.getName());
         value.setValue(1);
         commandRunner = new CommandRunner(endpoint);
-        delegate = new ControlDelegate(null, commandRunner);
+        delegate = new ControlDelegate(TestUtils.createDefaultConfig(), null, commandRunner);
     }
 
     @Test
@@ -54,6 +59,22 @@ public class CommandRunnerTest {
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
         final String s = delegate.runCommand(tag, value);
         assertEquals("1", s);
+    }
+
+    @Test
+    public void commandWithPulseShouldNotDoAnythingIfAlreadySet() {
+        tag.setHardwareAddress(pulseAddress);
+        value.setValue(0);
+        assertDoesNotThrow(() -> delegate.runCommand(tag, value));
+    }
+
+    @Test
+    public void commandWithPulseShouldThrowExceptionOnBadStatusCode() {
+        tag.setHardwareAddress(pulseAddress);
+        endpoint.setReturnGoodStatusCodes(false);
+        assertThrows(EqCommandTagException.class,
+                () -> delegate.runCommand(tag, value),
+                ExceptionContext.WRITE.getMessage());
     }
 
     @Test
@@ -85,19 +106,6 @@ public class CommandRunnerTest {
         final Object[] output = commandRunner.executeMethod(tag, 1);
         assertEquals(1, output.length);
         assertEquals(1, output[0]);
-    }
-
-    @Test
-    public void commandWithPulseShouldNotDoAnythingIfAlreadySet() {
-        assertDoesNotThrow(() -> commandRunner.executePulseCommand(tag, 0, 2));
-    }
-
-    @Test
-    public void commandWithPulseShouldThrowExceptionOnBadStatusCode() {
-        endpoint.setReturnGoodStatusCodes(false);
-        assertThrows(CommunicationException.class,
-                () -> commandRunner.executePulseCommand(tag, 1, 2),
-                ExceptionContext.WRITE.getMessage());
     }
 
     @Test

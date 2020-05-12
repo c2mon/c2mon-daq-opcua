@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +13,10 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
-import org.eclipse.milo.opcua.stack.core.Stack;
 import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -34,6 +32,7 @@ import java.util.stream.Stream;
 
 import static cern.c2mon.daq.opcua.exceptions.CommunicationException.rethrow;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
+
 /**
  * The implementation of custom wrapper for the OPC UA milo client
  */
@@ -43,46 +42,50 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Primary
 public class MiloEndpoint implements Endpoint {
 
-    @Autowired
     private final SecurityModule securityModule;
 
     private OpcUaClient client;
 
-
     /**
-     * Connect to a server through OPC. Discover available endpoints and select the most secure one in line with configuration options.
+     * Connects to a server through OPC. Discover available endpoints and select the most secure one in line with
+     * configuration options. If the server with the same URI is already connected, the connection is kept as-is.
+     *
      * @param uri the server address to connect to
-     * @throws CommunicationException if an execution exception occurs either during endpoint discovery, or when creating the client.
+     * @throws CommunicationException if an execution exception occurs either during endpoint discovery, or when
+     *                                creating the client.
      */
     @Override
-    public void initialize (String uri) throws CommunicationException,  ConfigurationException {
-        try {
-            var endpoints = DiscoveryClient.getEndpoints(uri).get();
-            endpoints = updateEndpointUrls(uri, endpoints);
-            client = securityModule.createClient(endpoints);
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.CONNECT, e);
+    public void initialize(String uri) throws CommunicationException, ConfigurationException {
+        if (!isConnectedTo(uri)) {
+            try {
+                var endpoints = DiscoveryClient.getEndpoints(uri).get();
+                endpoints = updateEndpointUrls(uri, endpoints);
+                client = securityModule.createClient(endpoints);
+            } catch (ExecutionException | InterruptedException e) {
+                rethrow(ExceptionContext.CONNECT, e);
+            }
         }
     }
 
     /**
      * Disconnect from the server
+     *
      * @throws CommunicationException if an execution exception occurs on disconnecting from the client.
      */
     @Override
     public void disconnect() throws CommunicationException {
-        if (client == null) {
-            return;
-        }
-        try {
-            client = client.disconnect().get();
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.DISCONNECT, e);
+        if (isConnected()) {
+            try {
+                client = client.disconnect().get();
+            } catch (ExecutionException | InterruptedException e) {
+                rethrow(ExceptionContext.DISCONNECT, e);
+            }
         }
     }
 
     /**
      * Check whether the client is currently connected to a server.
+     *
      * @return true if the session is active and the client is therefore connected to a server
      */
     @Override
@@ -101,7 +104,9 @@ public class MiloEndpoint implements Endpoint {
 
     /**
      * Create and return a new subscription.
-     * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest supported interval.
+     *
+     * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest
+     *                     supported interval.
      * @return the newly created subscription
      * @throws CommunicationException if an execution exception occurs on creating a subscription
      */
@@ -116,6 +121,7 @@ public class MiloEndpoint implements Endpoint {
 
     /**
      * Delete an existing subscription
+     *
      * @param subscription The subscription to delete
      * @throws CommunicationException if an execution exception occurs on deleting a subscription
      */
@@ -130,14 +136,16 @@ public class MiloEndpoint implements Endpoint {
 
     /**
      * Add a list of item definitions as monitored items to a subscription
-     * @param subscription The subscription to add the monitored items to
-     * @param definitions the {@link cern.c2mon.daq.opcua.mapping.ItemDefinition}s for which to create monitored items
+     *
+     * @param subscription         The subscription to add the monitored items to
+     * @param definitions          the {@link cern.c2mon.daq.opcua.mapping.ItemDefinition}s for which to create
+     *                             monitored items
      * @param itemCreationCallback the callback function to execute when each item has been created successfully
      * @return a list of monitored items corresponding to the item definitions
      * @throws CommunicationException if an execution exception occurs on creating the monitored items
      */
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback)
+    public List<UaMonitoredItem> subscribeItemDefinitions(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback)
             throws CommunicationException {
         List<MonitoredItemCreateRequest> requests = definitions.stream()
                 .map(this::createItemSubscriptionRequest)
@@ -152,6 +160,7 @@ public class MiloEndpoint implements Endpoint {
 
     /**
      * Delete a monitored item from an OPC UA subscription
+     *
      * @param clientHandle the identifier of the monitored item to remove
      * @param subscription the subscription to remove the monitored item from.
      * @throws CommunicationException if an execution exception occurs on deleting an item from a subscription
@@ -170,6 +179,7 @@ public class MiloEndpoint implements Endpoint {
 
     /**
      * Read the current value from a node on the currently connected OPC UA server
+     *
      * @param nodeId the nodeId of the node whose value to read
      * @return the {@link DataValue} returned by the OPC UA stack upon reading the node
      * @throws CommunicationException if an execution exception occurs on reading from the node
@@ -186,13 +196,14 @@ public class MiloEndpoint implements Endpoint {
 
     /**
      * Write a value to a node on the currently connected OPC UA server
+     *
      * @param nodeId the nodeId of the node to write to
-     * @param value the value to write to the node
+     * @param value  the value to write to the node
      * @return the {@link StatusCode} of the response to the write action
      * @throws CommunicationException if an execution exception occurs on writing to the node
      */
     @Override
-    public StatusCode write (NodeId nodeId, Object value) throws CommunicationException {
+    public StatusCode write(NodeId nodeId, Object value) throws CommunicationException {
         // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
         DataValue dataValue = new DataValue(new Variant(value), null, null);
         try {
@@ -205,10 +216,12 @@ public class MiloEndpoint implements Endpoint {
 
     /**
      * Call the method Node with ID methodId contained in the object with ID objectId.
+     *
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
-     * @param args the input arguments to pass to the methodId call.
-     * @return A Map.Entry containing the StatusCode of the methodId response as key, and the methodId's output arguments (if applicable)
+     * @param args     the input arguments to pass to the methodId call.
+     * @return A Map.Entry containing the StatusCode of the methodId response as key, and the methodId's output
+     * arguments (if applicable)
      * @throws CommunicationException if an execution exception occurs on calling the method node
      */
     public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws CommunicationException {
@@ -226,6 +239,7 @@ public class MiloEndpoint implements Endpoint {
 
     /**
      * Fetches the node's first parent object node, if such a node exists.
+     *
      * @param nodeId the node whose parent to fetch
      * @return the parent node's NodeId
      * @throws CommunicationException if an execution exception occurs during browsing the server namespace
@@ -242,7 +256,7 @@ public class MiloEndpoint implements Endpoint {
         try {
             final BrowseResult result = client.browse(bd).get();
             if (result.getReferences() != null && result.getReferences().length > 0) {
-                final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(null);
+                final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(client.getNamespaceTable());
                 if (result.getStatusCode().isGood() && objectNode.isPresent()) {
                     return objectNode.get();
                 }
@@ -281,14 +295,18 @@ public class MiloEndpoint implements Endpoint {
      * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
      * be resolved by the client. Replace the hostname of each endpoint's URL by the one used to originally reach the
      * server to work around the issue.
-     * @param originalUri the (resolvable) uri used to originally reach the server.
-     * @param originalEndpoints a list of originalEndpoints returned by the DiscoveryClient potentially containing incorrect endpointUrls
-     * @return a list of endpoints with the original url as as endpointUrl, but other identical to the originalEndpoints.
+     *
+     * @param originalUri       the (resolvable) uri used to originally reach the server.
+     * @param originalEndpoints a list of originalEndpoints returned by the DiscoveryClient potentially containing
+     *                          incorrect endpointUrls
+     * @return a list of endpoints with the original url as as endpointUrl, but other identical to the
+     * originalEndpoints.
      */
     private static List<EndpointDescription> updateEndpointUrls(String originalUri, List<EndpointDescription> originalEndpoints) {
-        // Some hostnames contain characters not allowed in a URI (such as underscores in Windows machine hostnames),
-        // hence parsing manually rather than relying on URI class methods.
+        // Some hostnames contain characters not allowed in a URI, such as underscores in Windows machine hostnames.
+        // Therefore, parsing is done using a regular expression rather than relying on java URI class methods.
         final String hostRegex = "://[^/]*";
+
         final Matcher matcher = Pattern.compile(hostRegex).matcher(originalUri);
         if (matcher.find()) {
             return originalEndpoints.stream().map(e -> new EndpointDescription(
@@ -303,5 +321,13 @@ public class MiloEndpoint implements Endpoint {
                     .collect(Collectors.toList());
         }
         return originalEndpoints;
+    }
+
+    private boolean isConnectedTo(String currentUri) {
+        if (isConnected()) {
+            final var previousUri = client.getConfig().getEndpoint().getEndpointUrl();
+            return previousUri.equalsIgnoreCase(currentUri);
+        }
+        return false;
     }
 }

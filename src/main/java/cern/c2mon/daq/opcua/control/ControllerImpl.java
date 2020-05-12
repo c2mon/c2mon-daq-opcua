@@ -36,7 +36,6 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
@@ -53,13 +52,10 @@ import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
 public class ControllerImpl implements Controller {
 
     @Setter
-    @Autowired
     private Endpoint endpoint;
 
-    @Autowired
     private final TagSubscriptionMapper mapper;
 
-    @Autowired
     private final EndpointListener endpointListener;
 
     private String uri;
@@ -70,11 +66,19 @@ public class ControllerImpl implements Controller {
         this.endpointListener = endpointListener;
     }
 
+    /**
+     * Connect to an OPC UA server.
+     *
+     * @param uri the URI of the OPC UA server to connect to
+     * @throws CommunicationException if an error not related to authentication configuration occurs on connecting to
+     *                                the OPC UA server.
+     * @throws ConfigurationException if it is not possible to connect to any of the the OPC UA server's endpoints with
+     *                                the given authentication configuration settings.
+     */
     @Override
-    public synchronized void initialize(String uri, Collection<ISourceDataTag> dataTags) throws CommunicationException, ConfigurationException {
+    public synchronized void connect(String uri) throws CommunicationException, ConfigurationException {
         this.uri = uri;
         connect();
-        subscribeTags(dataTags);
     }
 
     @Override

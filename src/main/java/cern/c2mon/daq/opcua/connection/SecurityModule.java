@@ -1,9 +1,9 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.security.Certifier;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
@@ -18,7 +18,6 @@ import org.eclipse.milo.opcua.stack.core.StatusCodes;
 import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -41,16 +40,12 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @RequiredArgsConstructor
 public class SecurityModule {
 
-    @Autowired
     private final AppConfig config;
 
-    @Autowired
     private final Certifier loader;
 
-    @Autowired
     private final Certifier generator;
 
-    @Autowired
     private final Certifier noSecurity;
 
     private OpcUaClientConfigBuilder builder;

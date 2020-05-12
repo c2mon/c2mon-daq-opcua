@@ -33,7 +33,6 @@ import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
-import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,11 +61,9 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
    */
   private static final long RESTART_DELAY = 2000L;
 
-  @Getter
   ControlDelegate delegate;
 
-  @Autowired
-  public AliveWriter aliveWriter;
+  AliveWriter aliveWriter;
 
   @Setter
   private EndpointListener listener = new EndpointListenerImpl();

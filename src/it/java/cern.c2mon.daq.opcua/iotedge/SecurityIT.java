@@ -88,7 +88,8 @@ public class SecurityIT {
 
     private void initializeController() throws ConfigurationException, CommunicationException {
         controller = new ControllerImpl(new MiloEndpoint(p), new TagSubscriptionMapperImpl(), new ServerTestListener.TestListener());
-        controller.initialize(uri, Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
+        controller.connect(uri);
+        controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
     }
 
     private void trustAndConnect() throws IOException, InterruptedException, ConfigurationException, CommunicationException {

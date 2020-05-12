@@ -22,15 +22,11 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 
 import java.util.Objects;
 
+@Getter
 public class DataTagDefinition extends ItemDefinition {
 
-    @Getter
     private final int timeDeadband;
-
-    @Getter
     private final short valueDeadbandType;
-
-    @Getter
     private final float valueDeadband;
 
     protected DataTagDefinition(final ISourceDataTag tag, final NodeId address, final NodeId redundantAddress) {

@@ -33,7 +33,7 @@ public class MethodIT {
         SecurityModule p = new SecurityModule(config, new NoSecurityCertifier(), new NoSecurityCertifier(), new NoSecurityCertifier());
         final MiloEndpoint wrapper = new MiloEndpoint(p);
         wrapper.initialize("opc.tcp://milo.digitalpetri.com:62541/milo");
-        delegate = new ControlDelegate(null, new CommandRunner(wrapper));
+        delegate = new ControlDelegate(TestUtils.createDefaultConfig(), null, new CommandRunner(wrapper));
     }
 
     @Test

@@ -47,7 +47,7 @@ public abstract class ControllerTestBase {
     }
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws CommunicationException, ConfigurationException {
         uri = ADDRESS_PROTOCOL_TCP + ADDRESS_BASE + true;
         endpoint = new TestEndpoint();
         mapper = new TagSubscriptionMapperImpl();

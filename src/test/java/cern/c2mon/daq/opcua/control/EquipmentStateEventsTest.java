@@ -27,18 +27,19 @@ public class EquipmentStateEventsTest extends ControllerTestBase {
     ControlDelegate delegate;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws CommunicationException, ConfigurationException {
         super.setUp();
         endpoint.setReturnGoodStatusCodes(true);
         f = listener.getStateUpdate();
-        delegate = new ControlDelegate(controller, null);
+        delegate = new ControlDelegate(TestUtils.createDefaultConfig(), controller, null);
     }
 
     @Test
     public void goodStatusCodesShouldSendOK() throws ExecutionException, InterruptedException, ConfigurationException, TimeoutException, CommunicationException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
-        controller.initialize(uri, sourceTags.values());
+        controller.connect(uri);
+        controller.subscribeTags(sourceTags.values());
         assertEquals(Collections.singletonList(OK), f.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
@@ -47,7 +48,8 @@ public class EquipmentStateEventsTest extends ControllerTestBase {
         endpoint.setReturnGoodStatusCodes(false);
         mocker.mockStatusCodeAndClientHandle(StatusCode.BAD, sourceTags.values());
         mocker.replay();
-        controller.initialize(uri, sourceTags.values());
+        controller.connect(uri);
+        controller.subscribeTags(sourceTags.values());
         assertEquals(Collections.singletonList(OK), f.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
@@ -63,7 +65,7 @@ public class EquipmentStateEventsTest extends ControllerTestBase {
     @Test
     public void errorOnInitializeShouldSendFail() throws ExecutionException, InterruptedException, TimeoutException {
         controller.setEndpoint(new ExceptionTestEndpoint());
-        assertThrows(CommunicationException.class, () -> controller.initialize("uri", sourceTags.values()));
+        assertThrows(CommunicationException.class, () -> controller.connect("uri"));
         assertEquals(Collections.singletonList(CONNECTION_FAILED), f.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }
 

@@ -22,13 +22,9 @@ public class TagEventsTest extends ControllerTestBase {
     CompletableFuture<Long> tagInvalid;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws CommunicationException, ConfigurationException {
         super.setUp();
-        try {
-            controller.initialize(uri, Collections.emptyList());
-        } catch (ConfigurationException | CommunicationException e) {
-            // swallow exception from empty SourceTag list. Would make mocking more complex.
-        }
+        controller.connect(uri);
         tagUpdate = listener.getTagUpdate();
         tagInvalid = listener.getTagInvalid();
     }

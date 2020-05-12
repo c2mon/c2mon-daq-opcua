@@ -23,6 +23,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -36,12 +37,12 @@ import static org.junit.jupiter.api.Assertions.*;
 @UseHandler(OPCUAMessageHandler.class)
 @SpringBootTest
 @RunWith(SpringRunner.class)
+@TestPropertySource(locations = "classpath:opcua.properties")
 public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     private static ConnectionResolver resolver;
-    OPCUAMessageHandler handler;
-    SourceCommandTagValue value;
-    TestUtils.CommfaultSenderCapture capture;
+    private OPCUAMessageHandler handler;
+    private SourceCommandTagValue value;
     private final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener();
 
     @Autowired
@@ -58,6 +59,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static final long CMDID_PW = 10L;
     private static final long CMDID_V0SET = 20L;
 
+
     @BeforeClass
     public static void startServer() {
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
@@ -70,10 +72,10 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         resolver.close();
     }
 
+
     @Override
     protected void beforeTest () throws Exception {
         handler = (OPCUAMessageHandler) msgHandler;
-        capture = new TestUtils.CommfaultSenderCapture(messageSender);
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
         handler.setListener(listener);
@@ -101,7 +103,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Test
     @UseConf("empty_datatags.xml")
     public void emptyDatatagsShouldThrowError () {
-        assertThrows(ConfigurationException.class, () -> handler.connectToDataSource());
+        assertThrows(ConfigurationException.class, handler::connectToDataSource);
     }
 
     @Test
@@ -114,7 +116,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         setIDTo(CMDID_PW, 1);
 
         // Assert power is set to 1
-        final ValueUpdate valueUpdate = listener.getTagValUpdate().get(3000, TimeUnit.MILLISECONDS);
+        final ValueUpdate valueUpdate = listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
         assertEquals(1, valueUpdate.getValue());
 
     }
@@ -130,7 +132,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         setIDTo(CMDID_V0SET, 10);
 
         // Assert monitored voltage close to threshold within reasonable time
-        assertDoesNotThrow(() -> listener.getTagValUpdate().get(6000, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
 
@@ -142,17 +144,15 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         handler.connectToDataSource();
         setIDTo(CMDID_PW, 1);
 
-        final ValueUpdate pwOnUpdate = listener.getTagValUpdate().get(3000, TimeUnit.MILLISECONDS);
-        final ValueUpdate pwOffUpdate = listener.getPulseTagUpdate().get(3000, TimeUnit.MILLISECONDS);
+        final ValueUpdate pwOnUpdate = listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        final ValueUpdate pwOffUpdate = listener.getPulseTagUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
         final long timeDiff = pwOffUpdate.getSourceTimestamp() - pwOnUpdate.getSourceTimestamp();
 
         assertEquals(1, pwOnUpdate.getValue());
         assertEquals(0, pwOffUpdate.getValue());
 
         // A pulse length of 1 second, plus a margin for connection lag
-        assertTrue(timeDiff > 0 && timeDiff < 3000);
-
-
+        assertTrue(timeDiff >= 0 && timeDiff < 4000);
     }
 
     private void setIDTo(long id, float val) throws EqCommandTagException {

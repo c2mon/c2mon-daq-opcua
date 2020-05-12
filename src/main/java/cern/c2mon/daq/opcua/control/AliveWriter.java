@@ -45,7 +45,6 @@ public class AliveWriter {
   /**
    * The endpoint to write to.
    */
-  @Autowired
   private final Controller controller;
 
   /**

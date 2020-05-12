@@ -1,10 +1,11 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -12,8 +13,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
 
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
@@ -26,14 +25,10 @@ public class DataTagChangerTest extends ControllerTestBase {
     ISourceDataTag tag;
 
     @BeforeEach
-    public void castToDataTagChanger() {
+    public void castToDataTagChanger() throws CommunicationException, ConfigurationException {
         tag = ServerTagFactory.DipData.createDataTag();
-        try {
-            controller.initialize(uri, new ArrayList<>());
-        } catch (ConfigurationException | CommunicationException e) {
-            //expected from empty SourceTag list - initializing with tags is unnecessary and complicates mocking
-        }
-        tagChanger = new ControlDelegate(controller, null);
+        controller.connect(uri);
+        tagChanger = new ControlDelegate(TestUtils.createDefaultConfig(), controller, null);
         changeReport = new ChangeReport();
     }
 

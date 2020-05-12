@@ -24,16 +24,14 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class SubscriptionGroup{
 
-    @Getter
     private final List<Long> tagIds = new ArrayList<>();
 
-    @Getter
     @Setter
     private UaSubscription subscription;
 
-    @Getter
     private final int publishInterval;
 
     public SubscriptionGroup(int publishInterval) {

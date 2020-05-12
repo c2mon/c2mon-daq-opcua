@@ -29,8 +29,6 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 @Slf4j
 @RequiredArgsConstructor
 public class CertificateGenerator extends CertifierBase {
-
-    @Autowired
     final AppConfig config;
 
     private static final String RSA_SHA256 = "SHA256withRSA";

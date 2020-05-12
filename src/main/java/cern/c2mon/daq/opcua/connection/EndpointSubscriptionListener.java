@@ -14,7 +14,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 @AllArgsConstructor
 public class EndpointSubscriptionListener implements UaSubscriptionManager.SubscriptionListener {
 
-    Controller controller;
+    private final Controller controller;
 
     /**
      * Subscriptions have a keep-alive counter that counts the number of consecutive publishing cycles in which there

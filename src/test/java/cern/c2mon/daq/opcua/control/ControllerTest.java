@@ -26,7 +26,7 @@ public class ControllerTest extends ControllerTestBase {
 
 
     @BeforeEach
-    public void setUp() {
+    public void setUp () throws ConfigurationException, CommunicationException{
         super.setUp();
         tag = new SourceCommandTag(0L, "Power");
 
@@ -41,7 +41,8 @@ public class ControllerTest extends ControllerTestBase {
     public void initializeShouldSubscribeTags() throws ConfigurationException, CommunicationException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
-        controller.initialize(uri, sourceTags.values());
+        controller.connect(uri);
+        controller.subscribeTags(sourceTags.values());
         sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag).isSubscribed()));
     }
 
