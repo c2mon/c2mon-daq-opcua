@@ -1,20 +1,44 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.control.Controller;
-import lombok.AllArgsConstructor;
-import lombok.SneakyThrows;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager;
 import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DateTime;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+
+@Component("endpointSubscriptionListener")
 @Slf4j
-@AllArgsConstructor
 public class EndpointSubscriptionListener implements UaSubscriptionManager.SubscriptionListener {
 
-    private final Controller controller;
+    private Controller controller;
+
+    @Autowired
+    public void setController(Controller controller) {
+        this.controller = controller;
+    }
+
+
+    /**
+     * If a Subscription is transferred to another Session, the queued Notification Messages for this subscription are
+     * moved from the old to the new subscription.
+     * @param subscription
+     * @param statusCode
+     */
+    @Override
+    public void onSubscriptionTransferFailed (UaSubscription subscription, StatusCode statusCode) {
+        log.info("onSubscriptionTransferFailed event for {} : StatusCode {}", subscription.toString(), statusCode);
+        recreate(subscription);
+    }
 
     /**
      * Subscriptions have a keep-alive counter that counts the number of consecutive publishing cycles in which there
@@ -28,10 +52,10 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
      * @param publishTime
      */
     @Override
-    public void onKeepAlive (UaSubscription subscription, DateTime publishTime) {
-        log.info("OnKeepAlive event for {}", subscription.toString());
-    }
+    public void onKeepAlive(UaSubscription subscription, DateTime publishTime) {
+        log.info("onKeepAlive event for {}  at time {}", subscription.toString(), publishTime);
 
+    }
     /**
      * The client must send PublishRequests to the server to enable to send PublishResponses back. These are used to
      * deliver the notification to the client.
@@ -41,36 +65,49 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
      * In this case, onStatusChange is called with the status code Bad_Timeout. The subscription's monitored items are
      * deleted by the server when the subscription times out.
      * The other status changes don't need to be handled specifically (CLOSED, CREATING, NORMAL, LATE, KEEPALIVE)
-     * @param subscription
-     * @param status
+     * @param subscription the subscription which times out
+     * @param status the new status of the subscription
      */
-    @SneakyThrows
     @Override
-    public void onStatusChanged (UaSubscription subscription, StatusCode status) {
-        log.info("onStatusChanged event for {}: {}", subscription.toString(), status.toString());
+    public void onStatusChanged(UaSubscription subscription, StatusCode status) {
+        log.info("onStatusChanged event for {} : StatusCode {}", subscription.toString(), status);
         if (status.isBad()) {
-            controller.recreateSubscription(subscription);
+            recreate(subscription);
         }
     }
 
     @Override
-    public void onPublishFailure (UaException exception) {
-        log.error("onPublishFailure event", exception);
+    public void onPublishFailure(UaException exception) {
+        log.info("onPublishFailure event with exception ", exception);
+        if (OPCUAException.reconnectRequired(exception)) {
+            log.info("Exception requires a restart of the client");
+            controller.reconnect();
+        }
     }
 
     @Override
-    public void onNotificationDataLost (UaSubscription subscription) {
-        log.info("onNotificationDataLost event for {}", subscription.toString());
+    public void onNotificationDataLost(UaSubscription subscription) {
+        log.info("onNotificationDataLost event for {} ", subscription.toString());
     }
 
-    /**
-     * If a Subscription is transferred to another Session, the queued Notification Messages for this subscription are
-     * moved from the old to the new subscription.
-     * @param subscription
-     * @param statusCode
-     */
-    @Override
-    public void onSubscriptionTransferFailed (UaSubscription subscription, StatusCode statusCode) {
-        log.info("onSubscriptionTransferFailed event for {} : StatusCode {}", subscription.toString(), statusCode);
+    private void recreate(UaSubscription subscription) {
+        log.info("Recreating the subscription...");
+        controller.recreateSubscription(subscription)
+                .thenApply(CompletableFuture::completedFuture)
+                .exceptionally(t -> {
+                    log.error("Recreation failed. Trying again...", t);
+                    return retry(t, 0, subscription);
+                });
+    }
+
+    private CompletableFuture<Void> retry(Throwable first, int retry, UaSubscription subscription) {
+        return controller.recreateSubscription(subscription)
+                .thenApply(CompletableFuture::completedFuture)
+                .exceptionally(t -> {
+                    log.error("Start recreation attempt {}", retry + 1, t);
+                    first.addSuppressed(t);
+                    return CompletableFuture.runAsync(() -> retry(first, retry+1, subscription),
+                            CompletableFuture.delayedExecutor(3, TimeUnit.SECONDS));
+                }).thenCompose(Function.identity());
     }
 }

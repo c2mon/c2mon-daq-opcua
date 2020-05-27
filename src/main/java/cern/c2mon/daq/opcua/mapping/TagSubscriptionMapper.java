@@ -39,6 +39,8 @@ public interface TagSubscriptionMapper {
 
     SubscriptionGroup getGroup (UaSubscription subscription);
 
+    SubscriptionGroup getOrCreateGroup(int timeDeadband);
+
     DataTagDefinition getDefinition(Long tagId);
 
     DataTagDefinition getOrCreateDefinition(ISourceDataTag tag);

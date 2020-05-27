@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -32,7 +34,6 @@ public class TestEndpoint implements Endpoint {
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
     private boolean returnGoodStatusCodes = true;
-    private int failForNrTries = 0;
 
     @Override
     public void initialize(String uri) throws CommunicationException {
@@ -40,54 +41,61 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public void disconnect () {
+    public CompletableFuture<Void> disconnect () {
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
     public boolean isConnected() {
-        return failForNrTries > 0;
+        return true;
     }
 
     @Override
-    public UaSubscription createSubscription (int timeDeadband) throws CommunicationException {
-        return subscription;
+    public CompletableFuture<UaSubscription> createSubscription (int timeDeadband) {
+        return CompletableFuture.completedFuture(subscription);
     }
 
     @Override
-    public void deleteSubscription (UaSubscription subscription) throws CommunicationException { }
+    public CompletableFuture<UaSubscription> deleteSubscription (UaSubscription subscription) {
+        return CompletableFuture.completedFuture(null);
+    }
 
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
+    public CompletableFuture<List<UaMonitoredItem>> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
         final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
-        return Collections.nCopies(definitions.size(), monitoredItem);
+        return CompletableFuture.completedFuture(Collections.nCopies(definitions.size(), monitoredItem));
     }
 
     @Override
-    public DataValue read (NodeId nodeId) throws CommunicationException {
-        if (failForNrTries > 0) {
-            failForNrTries--;
-            throw new CommunicationException(ExceptionContext.READ);
-        }
+    public boolean containsSubscription(UaSubscription subscription) {
+        return false;
+    }
+
+    @Override
+    public CompletableFuture<DataValue> read (NodeId nodeId) {
         StatusCode code = returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
-        return new DataValue(new Variant(0), code);
+        return CompletableFuture.completedFuture(new DataValue(new Variant(0), code));
     }
 
     @Override
-    public StatusCode write (NodeId nodeId, Object value) throws CommunicationException {
-        return returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
+    public CompletableFuture<StatusCode> write (NodeId nodeId, Object value) {
+        return CompletableFuture.completedFuture(returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD);
     }
 
     @Override
-    public NodeId getParentObjectNodeId(NodeId nodeId) {
-        return nodeId;
+    public CompletableFuture<NodeId> getParentObjectNodeId(NodeId nodeId) {
+        return CompletableFuture.completedFuture(nodeId);
     }
 
     @Override
-    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) {
+    public CompletableFuture<Map.Entry<StatusCode, Object[]>> callMethod(NodeId objectId, NodeId methodId, Object... args) {
         final StatusCode statusCode = returnGoodStatusCodes ? StatusCode.GOOD : StatusCode.BAD;
-        return Map.entry(statusCode, args);
+        return CompletableFuture.completedFuture(Map.entry(statusCode, args));
     }
 
-    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws CommunicationException { }
+    @Override
+    public CompletableFuture<List<StatusCode>> deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
+        return CompletableFuture.completedFuture(null);
+    }
 }

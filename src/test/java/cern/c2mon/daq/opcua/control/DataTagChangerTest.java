@@ -3,9 +3,9 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
-import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -25,10 +25,10 @@ public class DataTagChangerTest extends ControllerTestBase {
     ISourceDataTag tag;
 
     @BeforeEach
-    public void castToDataTagChanger() throws CommunicationException, ConfigurationException {
+    public void castToDataTagChanger() throws OPCUAException {
         tag = ServerTagFactory.DipData.createDataTag();
         controller.connect(uri);
-        tagChanger = new ControlDelegate(TestUtils.createDefaultConfig(), controller, null);
+        tagChanger = new TagChanger(controller);
         changeReport = new ChangeReport();
     }
 
@@ -94,13 +94,13 @@ public class DataTagChangerTest extends ControllerTestBase {
     }
 
     @Test
-    public void validOnUpdateUnknownTagShouldReportWithTagWasUpdated () {
-        final ISourceDataTag tagToUpdate = sourceTags.get(2L);
-        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagToUpdate);
+    public void validOnUpdateUnknownTagShouldReportWhichTagWasUpdated () {
+        final ISourceDataTag newTag = sourceTags.get(2L);
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, newTag);
         mocker.replay();
-        tagChanger.onUpdateDataTag(tagToUpdate, tag, changeReport);
+        tagChanger.onUpdateDataTag(newTag, tag, changeReport);
         final String infoMessage = changeReport.getInfoMessage();
-        assertTrue(infoMessage.contains(tag.getId().toString()));
+        assertTrue(infoMessage.contains(newTag.getId().toString()));
         assertTrue(infoMessage.contains("subscribed"));
 
     }

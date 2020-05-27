@@ -1,9 +1,10 @@
 package cern.c2mon.daq.opcua;
 
+import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.connection.SecurityModule;
+import cern.c2mon.daq.opcua.connection.SessionActivityListenerImpl;
 import cern.c2mon.daq.opcua.control.CommandRunner;
-import cern.c2mon.daq.opcua.control.ControlDelegate;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
@@ -25,15 +26,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class MethodIT {
 
     static AppConfig config = TestUtils.createDefaultConfig();
-    static ControlDelegate delegate;
+    static CommandRunner delegate;
 
     @BeforeAll
     public static void setUpEndpoint() throws ConfigurationException, CommunicationException {
         // Not testing security here, so just connect without security
         SecurityModule p = new SecurityModule(config, new NoSecurityCertifier(), new NoSecurityCertifier(), new NoSecurityCertifier());
-        final MiloEndpoint wrapper = new MiloEndpoint(p);
+        final MiloEndpoint wrapper = new MiloEndpoint(p, new SessionActivityListenerImpl(), new EndpointSubscriptionListener());
         wrapper.initialize("opc.tcp://milo.digitalpetri.com:62541/milo");
-        delegate = new ControlDelegate(TestUtils.createDefaultConfig(), null, new CommandRunner(wrapper));
+        delegate = new CommandRunner(wrapper);
     }
 
     @Test

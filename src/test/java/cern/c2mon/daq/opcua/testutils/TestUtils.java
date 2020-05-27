@@ -12,6 +12,7 @@ public abstract class TestUtils {
 
     public final static int TIMEOUT = 3000;
     public final static int TIMEOUT_IT = 6000;
+    public final static int TIMEOUT_TOXI = 25;
 
     public static IEquipmentConfiguration createMockConfig() {
         IEquipmentConfiguration config = createMock(IEquipmentConfiguration.class);
@@ -35,6 +36,9 @@ public abstract class TestUtils {
                 .onDemandCertificationEnabled(true)
                 .failFast(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())
+                .maxInitialRetryAttempts(1)
+                .maxRetryAttempts(1)
+                .retryDelay(2000)
                 .build();
     }
 

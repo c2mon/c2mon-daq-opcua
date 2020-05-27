@@ -2,7 +2,9 @@ package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.command.SourceCommandTag;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
@@ -26,7 +28,7 @@ public class ControllerTest extends ControllerTestBase {
 
 
     @BeforeEach
-    public void setUp () throws ConfigurationException, CommunicationException{
+    public void setUp () throws OPCUAException {
         super.setUp();
         tag = new SourceCommandTag(0L, "Power");
 
@@ -38,16 +40,18 @@ public class ControllerTest extends ControllerTestBase {
     }
 
     @Test
-    public void initializeShouldSubscribeTags() throws ConfigurationException, CommunicationException {
+    public void initializeShouldSubscribeTags() throws OPCUAException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
+        ((ControllerImpl) controller).setConfig(TestUtils.createDefaultConfig());
         controller.connect(uri);
         controller.subscribeTags(sourceTags.values());
         sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag).isSubscribed()));
     }
 
     @Test
-    public void stopShouldResetEndpoint() throws CommunicationException {
+    public void stopShouldResetEndpoint() {
+
         controller.stop();
         Assertions.assertTrue(mapper.getTagIdDefinitionMap().isEmpty());
     }
@@ -61,11 +65,7 @@ public class ControllerTest extends ControllerTestBase {
     @Test
     public void exceptionInWriteAliveShouldNotNotifyListener() {
         controller.setEndpoint(new ExceptionTestEndpoint());
-        try{
-            controller.writeAlive(address, value);
-        } catch (CommunicationException e) {
-            // expected behavior
-        }
+        controller.writeAlive(address, value);
         assertThrows(TimeoutException.class, () -> listener.getAlive().get(3000, TimeUnit.MILLISECONDS));
     }
 

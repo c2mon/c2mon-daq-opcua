@@ -2,10 +2,9 @@ package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.AliveWriter;
-import cern.c2mon.daq.opcua.control.ControlDelegate;
+import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
@@ -38,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     @Autowired
-    ControlDelegate delegate;
+    CommandRunner commandRunner;
 
     @Autowired
     Controller controller;
@@ -69,7 +68,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     protected void beforeTest () throws Exception {
         // must be injected manually to work with test framework
         handler = (OPCUAMessageHandler) msgHandler;
-        handler.setDelegate(delegate);
+        handler.setCommandRunner(commandRunner);
+        handler.setController(controller);
         handler.setAliveWriter(aliveWriter);
         handler.setListener(listener);
         capture = new TestUtils.CommfaultSenderCapture(messageSender);
@@ -79,6 +79,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     protected void afterTest () throws Exception {
         controller.setEndpoint(miloEndpoint);
     }
+
 
     @Test
     @UseConf("commfault_ok.xml")
@@ -96,7 +97,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     }
 
     @Test
-    @UseConf("bad_address_string.xml")
+    @UseConf("address_string_missing_properties.xml")
     public void badAddressStringShouldThrowError () {
         replay(messageSender);
         assertThrows(ConfigurationException.class,
@@ -123,6 +124,6 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @UseConf("commfault_incorrect.xml")
     public void improperConfigShouldThrowError () {
         replay(messageSender);
-        assertThrows(OPCCriticalException.class, handler::connectToDataSource);
+        assertThrows(EqIOException.class, handler::connectToDataSource);
     }
 }

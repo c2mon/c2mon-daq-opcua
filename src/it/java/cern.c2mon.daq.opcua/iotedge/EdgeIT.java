@@ -1,135 +1,213 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.EndpointListener;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.control.ControlDelegate;
+import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCCriticalException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
-import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
+import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
-import cern.c2mon.daq.opcua.testutils.ServerTestListener;
+import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.ToxiproxyContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_LOST;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 @SpringBootTest
+@Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
 public class EdgeIT {
+    private static final int EDGE_PORT = 50000;
 
-    private static ConnectionResolver resolver;
     private final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
-    private final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener();
+
+    private final ISourceDataTag alreadySubscribedTag = ServerTagFactory.DipData.createDataTag();
+
+    private final TestListeners.Pulse pulseListener = new TestListeners.Pulse();
 
     @Autowired
-    TagSubscriptionMapper mapper;
+    SessionActivityListener sessionListener;
 
     @Autowired
-    ControlDelegate delegate;
+    SecurityModule securityModule;
 
     @Autowired
     Controller controller;
 
-    @Autowired
-    Endpoint endpoint;
+    public static Network network = Network.newNetwork();
 
-    @Autowired
-    AppConfig config;
+    @Container
+    public static GenericContainer container = new GenericContainer<>("mcr.microsoft.com/iotedge/opc-plc")
+            .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
+            .withCommand("--unsecuretransport")
+            .withExposedPorts(EDGE_PORT)
+            .withNetwork(network);
 
-    @BeforeAll
-    public static void startServer() {
-        resolver = ConnectionResolver.resolveIoTEdgeServer();
-        resolver.initialize();
-    }
+    @Container
+    public static ToxiproxyContainer toxiProxyContainer = new ToxiproxyContainer()
+            .withNetwork(network);
 
-    @AfterAll
-    public static void stopServer() {
-        resolver.close();
-        resolver = null;
-    }
+    public ToxiproxyContainer.ContainerProxy proxy;
 
     @BeforeEach
-    public void setupEndpoint() throws ConfigurationException {
-        config = TestUtils.createDefaultConfig();
-        config.setOnDemandCertificationEnabled(false);
-        listener.setSourceID(tag.getId());
-        ReflectionTestUtils.setField(controller, "endpointListener", listener);
-        delegate.initialize(resolver.getURI(ConnectionResolver.Ports.IOTEDGE), Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
+    public void setupEndpoint() throws OPCUAException {
+        log.info("############ SET UP ############");
+        pulseListener.setDebugEnabled(true);
+        proxy = toxiProxyContainer.getProxy(container, EDGE_PORT);
+
+        pulseListener.setSourceID(tag.getId());
+        ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
+        ReflectionTestUtils.setField(sessionListener, "endpointListener", pulseListener);
+
+        // avoid extra time on authentication
+        ReflectionTestUtils.setField(securityModule, "loader", new NoSecurityCertifier());
+
+        controller.connect("opc.tcp://" + proxy.getContainerIpAddress() + ":" + proxy.getProxyPort());
+        controller.subscribeTags(Collections.singletonList(alreadySubscribedTag));
         log.info("Client ready");
+
+        log.info("############ TEST ############");
     }
 
     @AfterEach
     public void cleanUp() {
-        delegate.stop();
+        log.info("############ CLEAN UP ############");
+        controller.stop();
+        pulseListener.reset();
+        proxy.setConnectionCut(false);
     }
 
 
     @Test
-    public void connectToRunningServer() {
+    public void connectToRunningServerShouldSendOK() throws InterruptedException, ExecutionException, TimeoutException {
+        final var stateUpdate = pulseListener.getStateUpdate();
         assertDoesNotThrow(()-> controller.isConnected());
+        assertEquals(EndpointListener.EquipmentState.OK, stateUpdate.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     @Test
-    public void connectToBadServer() {
-        assertThrows(OPCCriticalException.class,
-                () -> delegate.initialize("opc.tcp://somehost/somepath", Collections.singletonList(ServerTagFactory.DipData.createDataTag())));
+    public void connectToBadServerShouldThrowErrorAndSendFAIL() throws InterruptedException, ExecutionException, TimeoutException {
+        final var stateUpdate = pulseListener.getStateUpdate();
+        assertEquals(EndpointListener.EquipmentState.CONNECTION_FAILED, stateUpdate.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        assertThrows(OPCUAException.class, () -> controller.connect("opc.tcp://somehost/somepath"));
+    }
+
+    @Test
+    public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
+        final var connectionLost = pulseListener.getStateUpdate();
+        container.stop();
+        connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        pulseListener.reset();
+        final var connectionRegained = pulseListener.getStateUpdate();
+        pulseListener.setSourceID(alreadySubscribedTag.getId());
+        container.start();
+
+        assertEquals(EndpointListener.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void stopServerForVeryLongShouldRestartEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
+        final var connectionLost = pulseListener.getStateUpdate();
+        container.stop();
+        connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        pulseListener.reset();
+        CompletableFuture.runAsync(() -> {
+            final var connectionRegained = pulseListener.getStateUpdate();
+            pulseListener.setSourceID(alreadySubscribedTag.getId());
+            container.start();
+
+            final EndpointListener.EquipmentState reconnectState = assertDoesNotThrow(() -> connectionRegained.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+            assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+            assertEquals(EndpointListener.EquipmentState.OK, reconnectState);
+        }, CompletableFuture.delayedExecutor(2, TimeUnit.MINUTES)).join();
+
+    }
+
+    @Test
+    public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException, CommunicationException, ConfigurationException {
+        controller.subscribeTags(Collections.singletonList(tag));
+
+        // Disconnect
+        final var connectionLost = pulseListener.getStateUpdate();
+        proxy.setConnectionCut(true);
+        connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+
+        // Setup listener on subscription
+        pulseListener.reset();
+        pulseListener.setSourceID(tag.getId());
+        proxy.setConnectionCut(false);
+
+        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void interruptedServerShouldSendLOST() throws InterruptedException, ExecutionException, TimeoutException, CommunicationException, ConfigurationException {
+        // Disconnect
+        final var connectionLost = pulseListener.getStateUpdate();
+        proxy.setConnectionCut(true);
+        connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+
+        final EndpointListener.EquipmentState reconnectState = assertDoesNotThrow(() -> connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        assertEquals(CONNECTION_LOST, reconnectState);
     }
 
     @Test
     public void subscribingProperDataTagShouldReturnValue() throws ConfigurationException, CommunicationException {
         controller.subscribeTags(Collections.singletonList(tag));
-
-        Object o = assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
+        Object o = assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
         assertNotNull(o);
-    }
-
-    @Test
-    public void subscribingProperTagAndReconnectingShouldKeepResubscribeTags() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException, CommunicationException {
-        listener.setThreshold(0);
-        controller.subscribeTags(Collections.singletonList(tag));
-        endpoint.disconnect();
-        delegate.refreshAllDataTags();
-        listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
-
-        assertTrue(mapper.isSubscribed(tag));
     }
 
     @Test
     public void subscribingImproperDataTagShouldReturnOnTagInvalid () throws ConfigurationException, CommunicationException {
         final ISourceDataTag tag = ServerTagFactory.Invalid.createDataTag();
-        listener.setSourceID(tag.getId());
+        pulseListener.setSourceID(tag.getId());
+        pulseListener.setThreshold(0);
         controller.subscribeTags(Collections.singletonList(tag));
-        assertDoesNotThrow(() -> listener.getTagInvalid().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> pulseListener.getTagInvalid().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void subscribeWithDeadband() throws ConfigurationException, CommunicationException {
         var tagWithDeadband = ServerTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
-        listener.setSourceID(tagWithDeadband.getId());
+        pulseListener.setSourceID(tagWithDeadband.getId());
         controller.subscribeTags(Collections.singletonList(tagWithDeadband));
-        assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void refreshProperTag () throws CommunicationException {
+    public void refreshProperTag () throws InterruptedException {
         controller.refreshDataTag(tag);
-        assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
+        Thread.sleep(2000);
+        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
 }

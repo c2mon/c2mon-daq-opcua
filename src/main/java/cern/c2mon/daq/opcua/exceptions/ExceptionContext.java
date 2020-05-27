@@ -15,8 +15,8 @@ public enum ExceptionContext {
     READ("Could not read node values"),
     WRITE("Could not write to nodes"),
     METHOD("Could not execute method"),
-    COMMAND_REWRITE("Could not rewrite command value"),
-    COMMAND_WRITE("Could not write command value"),
+    METHOD_CODE("The method did not return a good status code."),
+    COMMAND_CLASSIC("Could not write command value"),
     BROWSE("Browsing node failed"),
     GETOBJ("Could not get a corresponding object node"),
     AUTH_ERROR("Could not authenticate to any server endpoint!");

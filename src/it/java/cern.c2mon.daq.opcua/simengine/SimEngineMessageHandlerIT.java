@@ -1,12 +1,10 @@
 package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.control.AliveWriter;
-import cern.c2mon.daq.opcua.control.ControlDelegate;
-import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
-import cern.c2mon.daq.opcua.testutils.ServerTestListener;
+import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
@@ -16,6 +14,7 @@ import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -30,6 +29,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -43,13 +44,16 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static ConnectionResolver resolver;
     private OPCUAMessageHandler handler;
     private SourceCommandTagValue value;
-    private final ServerTestListener.PulseTestListener listener = new ServerTestListener.PulseTestListener();
-
-    @Autowired
-    ControlDelegate delegate;
+    private final TestListeners.Pulse listener = new TestListeners.Pulse();
 
     @Autowired
     Controller controller;
+
+    @Autowired
+    CommandRunner commandRunner;
+
+    @Autowired
+    TagChanger tagChanger;
 
     @Autowired
     AliveWriter aliveWriter;
@@ -64,7 +68,6 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     public static void startServer() {
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
         resolver = ConnectionResolver.resolveVenusServers("sim_BASIC.short.xml");
-        resolver.initialize();
     }
 
     @AfterClass
@@ -79,20 +82,36 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
         handler.setListener(listener);
-        handler.setDelegate(delegate);
+        handler.setCommandRunner(commandRunner);
         handler.setAliveWriter(aliveWriter);
+        handler.setController(controller);
+        handler.setTagChanger(tagChanger);
         ReflectionTestUtils.setField(controller, "endpointListener", listener);
+        mapEquipmentAddress();
+    }
+
+    // Work-around for non-fixed ports in testcontainers, since GenericMessageHandlerTest required ports to be included in the configuration
+    private void mapEquipmentAddress() {
+        final String hostRegex = ":(.[^/][^;]*)";
+        final String equipmentAddress = equipmentConfiguration.getEquipmentAddress();
+
+        final Matcher matcher = Pattern.compile(hostRegex).matcher(equipmentAddress);
+        if (matcher.find()) {
+            final String port = matcher.group(1);
+            final String mappedAddress = equipmentAddress.replace(port + "", resolver.getMappedPort(Integer.parseInt(port)) + "");
+            ReflectionTestUtils.setField(equipmentConfiguration, "equipmentAddress", mappedAddress);
+        }
     }
 
     @After
     public void cleanUp() throws Exception {
         // must be called before the handler disconnect in GenericMessageHandlerTest's afterTest method
+        log.info("Cleaning up... ");
         value.setValue(0);
         for(long id : handler.getEquipmentConfiguration().getSourceCommandTags().keySet()) {
             value.setId(id);
             handler.runCommand(value);
         }
-
         super.cleanUp();
     }
 
@@ -118,6 +137,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         // Assert power is set to 1
         final ValueUpdate valueUpdate = listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
         assertEquals(1, valueUpdate.getValue());
+
 
     }
 

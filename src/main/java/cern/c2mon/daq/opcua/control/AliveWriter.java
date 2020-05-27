@@ -16,19 +16,14 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -135,15 +130,11 @@ public class AliveWriter {
       log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
     }
     try {
-      controller.writeAlive(address, castedValue);
+      controller.writeAlive(address, castedValue).join();
       writeCounter.incrementAndGet();
       writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
-    } catch (CommunicationException exception) {
-      log.error("Error while writing alive. Retrying...", exception);
-    //TODO
-      /*} catch (OPCCriticalException exception) {
-      log.error("Critical error while writing alive. Stopping alive...", exception);
-      stopWriter();*/
+    } catch (CompletionException e) {
+      log.error("Error while writing alive. Retrying...", e);
     }
   }
 }

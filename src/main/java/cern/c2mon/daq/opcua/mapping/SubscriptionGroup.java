@@ -53,13 +53,6 @@ public class SubscriptionGroup{
         this.tagIds.add(tagId);
     }
 
-    public void add(final ISourceDataTag tag) {
-        if (tag.getTimeDeadband() != publishInterval) {
-            throw new IllegalArgumentException("This item does not belong to this group.");
-        }
-        add(tag.getId());
-    }
-
     public void reset() {
         tagIds.clear();
         subscription = null;

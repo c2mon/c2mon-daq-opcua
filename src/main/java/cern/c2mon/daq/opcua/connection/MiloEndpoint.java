@@ -5,6 +5,8 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
+import com.google.common.collect.ImmutableList;
+import io.netty.util.Timeout;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
@@ -23,7 +25,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,7 +49,14 @@ public class MiloEndpoint implements Endpoint {
 
     private final SecurityModule securityModule;
 
+    private final SessionActivityListenerImpl sessionListener;
+
+    private final EndpointSubscriptionListener subscriptionListener;
+
     private OpcUaClient client;
+
+    private static final int TIMEOUT = 10000;
+
 
     /**
      * Connects to a server through OPC. Discover available endpoints and select the most secure one in line with
@@ -60,7 +72,8 @@ public class MiloEndpoint implements Endpoint {
             try {
                 var endpoints = DiscoveryClient.getEndpoints(uri).get();
                 endpoints = updateEndpointUrls(uri, endpoints);
-                client = securityModule.createClient(endpoints);
+                client = securityModule.createClientWithListener(endpoints, sessionListener);
+                client.getSubscriptionManager().addSubscriptionListener(subscriptionListener);
             } catch (ExecutionException | InterruptedException e) {
                 rethrow(ExceptionContext.CONNECT, e);
             }
@@ -68,19 +81,17 @@ public class MiloEndpoint implements Endpoint {
     }
 
     /**
-     * Disconnect from the server
-     *
-     * @throws CommunicationException if an execution exception occurs on disconnecting from the client.
+     * Triggers a disconnect from the server
+     * @return A CompletableFuture that completes when the disconnection concludes.
      */
     @Override
-    public void disconnect() throws CommunicationException {
+    public CompletableFuture<Void> disconnect() {
         if (isConnected()) {
-            try {
-                client = client.disconnect().get();
-            } catch (ExecutionException | InterruptedException e) {
-                rethrow(ExceptionContext.DISCONNECT, e);
-            }
+            return client.disconnect()
+                    .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS)
+                    .thenAccept(c -> log.info("Disconnected"));
         }
+        return CompletableFuture.completedFuture(null);
     }
 
     /**
@@ -90,33 +101,20 @@ public class MiloEndpoint implements Endpoint {
      */
     @Override
     public boolean isConnected() {
-        if (client == null) {
-            return false;
-        }
-        try {
-            client.getSession().get();
-            return true;
-        } catch (Exception e) {
-            log.info("Client not connected.");
-            return false;
-        }
+        return client != null && sessionListener.isSessionActive();
     }
 
     /**
-     * Create and return a new subscription.
+     * Create and return a new subscription within a timeout
      *
      * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest
      *                     supported interval.
-     * @return the newly created subscription
-     * @throws CommunicationException if an execution exception occurs on creating a subscription
+     * @return a completable future containing the newly created subscription
      */
-    public UaSubscription createSubscription(int timeDeadband) throws CommunicationException {
-        try {
-            return client.getSubscriptionManager().createSubscription(timeDeadband).get();
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.CREATE_SUBSCRIPTION, e);
-            return null;
-        }
+    public CompletableFuture<UaSubscription> createSubscription(int timeDeadband) {
+            return client.getSubscriptionManager()
+                    .createSubscription(timeDeadband)
+                    .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -124,14 +122,13 @@ public class MiloEndpoint implements Endpoint {
      *
      * @param subscription The subscription to delete
      * @throws CommunicationException if an execution exception occurs on deleting a subscription
+     * @return
      */
     @Override
-    public void deleteSubscription(UaSubscription subscription) throws CommunicationException {
-        try {
-            client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()).get();
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.DELETE_SUBSCRIPTION, e);
-        }
+    public CompletableFuture<UaSubscription> deleteSubscription(UaSubscription subscription) {
+        return client.getSubscriptionManager()
+                .deleteSubscription(subscription.getSubscriptionId())
+                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -145,17 +142,17 @@ public class MiloEndpoint implements Endpoint {
      * @throws CommunicationException if an execution exception occurs on creating the monitored items
      */
     @Override
-    public List<UaMonitoredItem> subscribeItemDefinitions(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback)
-            throws CommunicationException {
+    public CompletableFuture<List<UaMonitoredItem>> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
         List<MonitoredItemCreateRequest> requests = definitions.stream()
                 .map(this::createItemSubscriptionRequest)
                 .collect(Collectors.toList());
-        try {
-            return subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback).get();
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.CREATE_MONITORED_ITEM, e);
-            return null;
-        }
+        return subscription
+                .createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback)
+                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
+    }
+
+    public boolean containsSubscription(UaSubscription subscription) {
+        return client.getSubscriptionManager().getSubscriptions().contains(subscription);
     }
 
     /**
@@ -164,17 +161,16 @@ public class MiloEndpoint implements Endpoint {
      * @param clientHandle the identifier of the monitored item to remove
      * @param subscription the subscription to remove the monitored item from.
      * @throws CommunicationException if an execution exception occurs on deleting an item from a subscription
+     * @return
      */
     @Override
-    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws CommunicationException {
+    public CompletableFuture<List<StatusCode>> deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
         List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
                 .filter(i -> clientHandle.equals(i.getClientHandle()))
                 .collect(Collectors.toList());
-        try {
-            subscription.deleteMonitoredItems(itemsToRemove).get();
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.DELETE_MONITORED_ITEM, e);
-        }
+        return subscription
+                .deleteMonitoredItems(itemsToRemove)
+                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -185,13 +181,10 @@ public class MiloEndpoint implements Endpoint {
      * @throws CommunicationException if an execution exception occurs on reading from the node
      */
     @Override
-    public DataValue read(NodeId nodeId) throws CommunicationException {
-        try {
-            return client.readValue(0, TimestampsToReturn.Both, nodeId).get();
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.READ, e);
-            return null;
-        }
+    public CompletableFuture<DataValue> read(NodeId nodeId) {
+        return client
+                .readValue(0, TimestampsToReturn.Both, nodeId)
+                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -203,15 +196,12 @@ public class MiloEndpoint implements Endpoint {
      * @throws CommunicationException if an execution exception occurs on writing to the node
      */
     @Override
-    public StatusCode write(NodeId nodeId, Object value) throws CommunicationException {
+    public CompletableFuture<StatusCode> write(NodeId nodeId, Object value) {
         // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
         DataValue dataValue = new DataValue(new Variant(value), null, null);
-        try {
-            return client.writeValue(nodeId, dataValue).get();
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.WRITE, e);
-            return null;
-        }
+        return client
+                .writeValue(nodeId, dataValue)
+                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -220,21 +210,19 @@ public class MiloEndpoint implements Endpoint {
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
      * @param args     the input arguments to pass to the methodId call.
-     * @return A Map.Entry containing the StatusCode of the methodId response as key, and the methodId's output
-     * arguments (if applicable)
-     * @throws CommunicationException if an execution exception occurs on calling the method node
+     * @return A CompletableFuture containing a Map.Entry with the StatusCode of the methodId response as key, and the methodId's output arguments (if applicable)
      */
-    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws CommunicationException {
-        final Variant[] variants = Stream.of(args).map(Variant::new).toArray(Variant[]::new);
-        final CallMethodRequest request = new CallMethodRequest(objectId, methodId, variants);
-        try {
-            final CallMethodResult methodResult = client.call(request).get();
-            Object[] output = MiloMapper.toObject(methodResult.getOutputArguments());
-            return Map.entry(methodResult.getStatusCode(), output);
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.METHOD, e);
-            return null;
-        }
+    public CompletableFuture<Map.Entry<StatusCode, Object[]>> callMethod(NodeId objectId, NodeId methodId, Object... args) {
+        final Variant[] variants = Stream.of(args)
+                .map(Variant::new)
+                .toArray(Variant[]::new);
+        return client
+                .call(new CallMethodRequest(objectId, methodId, variants))
+                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS)
+                .thenApply(methodResult -> {
+                    Object[] output = MiloMapper.toObject(methodResult.getOutputArguments());
+                    return Map.entry(methodResult.getStatusCode(), output);
+                });
     }
 
     /**
@@ -242,10 +230,8 @@ public class MiloEndpoint implements Endpoint {
      *
      * @param nodeId the node whose parent to fetch
      * @return the parent node's NodeId
-     * @throws CommunicationException if an execution exception occurs during browsing the server namespace
-     * @throws ConfigurationException if the browse was successful, but no parent object node could be found
      */
-    public NodeId getParentObjectNodeId(NodeId nodeId) throws ConfigurationException, CommunicationException {
+    public CompletableFuture<NodeId> getParentObjectNodeId(NodeId nodeId) {
         final BrowseDescription bd = new BrowseDescription(
                 nodeId,
                 BrowseDirection.Inverse,
@@ -253,21 +239,18 @@ public class MiloEndpoint implements Endpoint {
                 true,
                 uint(NodeClass.Object.getValue()),
                 uint(BrowseResultMask.All.getValue()));
-        try {
-            final BrowseResult result = client.browse(bd).get();
-            if (result.getReferences() != null && result.getReferences().length > 0) {
-                final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(client.getNamespaceTable());
-                if (result.getStatusCode().isGood() && objectNode.isPresent()) {
-                    return objectNode.get();
-                }
-            }
-            throw new ConfigurationException(ConfigurationException.Cause.OBJINVALID, "No object node enclosing method node with nodeID " + nodeId + " could be found.");
-        } catch (ExecutionException | InterruptedException e) {
-            rethrow(ExceptionContext.BROWSE, e);
-            return null;
-        }
+        return client.browse(bd)
+                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS)
+                .thenApply(result -> {
+                    if (result.getReferences() != null && result.getReferences().length > 0) {
+                        final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(client.getNamespaceTable());
+                        if (result.getStatusCode().isGood() && objectNode.isPresent()) {
+                            return objectNode.get();
+                        }
+                    }
+                    throw new CompletionException(new ConfigurationException(ConfigurationException.Cause.OBJINVALID, "A Tag's HardwareAddress must specify a redundant item name to execute a method command."));
+                });
     }
-
     private MonitoredItemCreateRequest createItemSubscriptionRequest(DataTagDefinition definition) {
         // If a static time deadband is configured, only one value per publishing cycle will be kept by the DAQ core.
         // Therefore queueSize can be 0 (only the newest value is held in between publishing cycles)

@@ -37,34 +37,7 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 @Slf4j
 public class CommunicationException extends OPCUAException {
 
-    /**
-     * Status Codes representing states which impact further interaction with the server
-     */
-    private static final ImmutableSet<Long> TERMINAL = ImmutableSet.<Long>builder().add(Bad_InternalError, Bad_OutOfMemory, Bad_Shutdown, Bad_ServerHalted, Bad_NonceInvalid, Bad_TooManySessions, Bad_TcpInternalError, Bad_DeviceFailure, Bad_SensorFailure, Bad_OutOfService).build();
-
-    /**
-     * Status Codes representing states that could be solved by disconnecting and reconnecting
-     */
-    private static final ImmutableSet<Long> RECONNECT = ImmutableSet.<Long>builder().add(Bad_ServerNotConnected, Bad_SessionIdInvalid, Bad_SessionClosed, Bad_SessionNotActivated, Bad_NoCommunication, Bad_NotConnected, Bad_Disconnect).build();
-
-    /**
-     * Status Codes representing states where retrying an operation again may work
-     */
-    private static final ImmutableSet<Long> RETRY_LATER = ImmutableSet.<Long>builder().add(Bad_ResourceUnavailable, Uncertain_NoCommunicationLastUsableValue, Uncertain_SensorNotAccurate, Bad_TooManyPublishRequests).build();
-
-    /**
-     * Status Codes returned by the server hinting at misconfigurations.
-     */
-    private static final ImmutableSet<Long> CONFIG = ImmutableSet.<Long>builder().add(Bad_NodeIdUnknown, Bad_ServerUriInvalid, Bad_FilterNotAllowed, Bad_ServerNameMissing, Bad_DiscoveryUrlMissing, Bad_DeadbandFilterInvalid, Bad_ConfigurationError, Bad_TcpEndpointUrlInvalid, Bad_MethodInvalid, Bad_ArgumentsMissing, Bad_WriteNotSupported, Bad_HistoryOperationUnsupported, Bad_HistoryOperationInvalid, Bad_NoDeleteRights, Bad_TargetNodeIdInvalid, Bad_SourceNodeIdInvalid, Bad_NodeIdRejected, Bad_FilterOperandInvalid).build();
-
-
-    /**
-     * Status Codes returned by the server hinting at misconfigurations.
-     */
-    private static final ImmutableSet<Long> SECURITY_CONFIG = ImmutableSet.<Long>builder().add(Bad_UserSignatureInvalid, Bad_UserAccessDenied, Bad_CertificateHostNameInvalid, Bad_ApplicationSignatureInvalid, Bad_CertificateIssuerUseNotAllowed, Bad_CertificateIssuerTimeInvalid, Bad_CertificateIssuerRevoked).build();
-
-
-    public static void rethrow(ExceptionContext context, Exception e) throws CommunicationException {
+    public static void rethrow(ExceptionContext context, Exception e) throws CommunicationException, ConfigurationException {
         if (e instanceof InterruptedException || e instanceof ExecutionException) {
             handleThrowable(context, e, e.getCause());
             if (e instanceof InterruptedException) {
@@ -73,42 +46,19 @@ public class CommunicationException extends OPCUAException {
         }
     }
 
-    private static void handleThrowable(ExceptionContext context, Exception e, Throwable cause) throws CommunicationException {
+    private static void handleThrowable(ExceptionContext context, Exception e, Throwable cause) throws CommunicationException, ConfigurationException {
         if (cause instanceof UaException) {
             final var code = ((UaException) cause).getStatusCode().getValue();
             StatusCodes.lookup(code).ifPresentOrElse(
                     s -> log.error("Failure description: {}", Arrays.toString(s)),
                     () -> log.error("Reasons unknown."));
+            if (RECONNECT.contains(code)) {
+                throw new ConfigurationException(context, e);
+            }
         }
         throw new CommunicationException(context, e);
     }
 
-    public static boolean reconnectRequired(CommunicationException e) {
-        final var cause = e.getCause();
-        if (cause instanceof UaException) {
-            final var code = ((UaException) cause).getStatusCode().getValue();
-            return RECONNECT.contains(code);
-        }
-        return false;
-    }
-
-    public static boolean reconfigurationRequired(CommunicationException e) {
-        final var cause = e.getCause();
-        if (cause instanceof UaException) {
-            final var code = ((UaException) cause).getStatusCode().getValue();
-            return CONFIG.contains(code);
-        }
-        return false;
-    }
-
-    public static boolean isTerminal(CommunicationException e) {
-        final var cause = e.getCause();
-        if (cause instanceof UaException) {
-            final var code = ((UaException) cause).getStatusCode().getValue();
-            return TERMINAL.contains(code);
-        }
-        return false;
-    }
 
     /**
      * Wrap a {@link Throwable} as an OPCCommunicationException

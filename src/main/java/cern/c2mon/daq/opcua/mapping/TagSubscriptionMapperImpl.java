@@ -46,9 +46,11 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
                 .collect(groupingBy(ISourceDataTag::getTimeDeadband))
                 .entrySet()
                 .stream()
-                .collect(toMap(e -> getOrCreateGroup(e.getKey()), e -> e.getValue().stream()
-                        .map(this::getOrCreateDefinition)
-                        .collect(Collectors.toList())));
+                .collect(toMap(
+                        e -> getOrCreateGroup(e.getKey()),
+                        e -> e.getValue().stream()
+                                .map(this::getOrCreateDefinition)
+                                .collect(Collectors.toList())));
     }
 
     @Override
@@ -71,6 +73,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         getOrCreateDefinition(tag);
         return getOrCreateGroup(tag.getTimeDeadband());
     }
+
 
     @Override
     public SubscriptionGroup getGroup (UaSubscription subscription) {
@@ -148,7 +151,8 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         subscriptionGroups.clear();
     }
 
-    private SubscriptionGroup getOrCreateGroup(int timeDeadband) {
+    @Override
+    public SubscriptionGroup getOrCreateGroup(int timeDeadband) {
         if (groupExists(timeDeadband)) {
             return subscriptionGroups.get(timeDeadband);
         } else {

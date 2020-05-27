@@ -22,8 +22,8 @@ import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
-import cern.c2mon.daq.opcua.control.AliveWriter;
-import cern.c2mon.daq.opcua.control.ControlDelegate;
+import cern.c2mon.daq.opcua.control.*;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
@@ -40,6 +40,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
 import java.util.concurrent.TimeUnit;
 
+import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_FAILED;
 import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN;
 
 /**
@@ -56,146 +57,159 @@ import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ENDPO
 @Slf4j
 @EnableAutoConfiguration
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
-  /**
-   * Delay to restart the DAQ after an equipment change.
-   */
-  private static final long RESTART_DELAY = 2000L;
+    /**
+     * Delay to restart the DAQ after an equipment change.
+     */
+    private static final long RESTART_DELAY = 2000L;
 
-  ControlDelegate delegate;
+    Controller controller;
 
-  AliveWriter aliveWriter;
+    AliveWriter aliveWriter;
 
-  @Setter
-  private EndpointListener listener = new EndpointListenerImpl();
+    TagChanger tagChanger;
 
-  @Autowired
-  public synchronized void setDelegate(ControlDelegate delegate) {
-    this.delegate = delegate;
-  }
+    CommandRunner commandRunner;
 
-  @Autowired
-  public synchronized void setAliveWriter(AliveWriter writer) {
-    this.aliveWriter = writer;
-  }
+    @Setter
+    private EndpointListener listener = new EndpointListenerImpl();
 
-  /**
-   * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial
-   * subscriptions of the tags given in the configuration, and subscribes listeners to update C2MON about changes in
-   * equipment state and data values.
-   *
-   * @throws EqIOException Throws an {@link EqIOException} if there is an IO problem during startup.
-   */
-  @Override
-  public synchronized void connectToDataSource() throws EqIOException {
-    IEquipmentConfiguration config = getEquipmentConfiguration();
-    IEquipmentMessageSender sender = getEquipmentMessageSender();
-
-    log.debug("connect to the OPC UA data source...");
-    listener.initialize(sender);
-
-    String uaTcpType = "opc.tcp";
-    EquipmentAddress address = AddressStringParser.parse(config.getAddress());
-    if (!address.supportsProtocol(uaTcpType)) {
-      throw new ConfigurationException(ENDPOINT_TYPES_UNKNOWN);
+    @Autowired
+    public synchronized void setTagChanger(TagChanger tagChanger) {
+        this.tagChanger = tagChanger;
     }
-    aliveWriter.initialize(config, address.isAliveWriterEnabled());
 
-    delegate.initialize(address.getServerAddressOfType(uaTcpType).getUriString(), config.getSourceDataTags().values());
-    log.debug("connected");
-
-    getEquipmentConfigurationHandler().setDataTagChanger(delegate);
-    getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
-  }
-
-
-  /**
-   * Called when the core wants the OPC module to disconnect from the OPC
-   * server and discard all configuration.
-   */
-  @Override
-  public synchronized void disconnectFromDataSource()  {
-    log.debug("disconnecting from OPC data source...");
-    if (delegate != null) {
-      delegate.stop();
+    @Autowired
+    public synchronized void setCommandRunner(CommandRunner commandRunner) {
+        this.commandRunner = commandRunner;
     }
-    if (aliveWriter != null) {
-      aliveWriter.stopWriter();
-    }
-    log.debug("disconnected");
-  }
 
-  /**
-   * Triggers the refresh of all values directly from the OPC server.
-   */
-  @Override
-  public synchronized void refreshAllDataTags() {
-    delegate.refreshAllDataTags();
-  }
+    @Autowired
+    public synchronized void setController(Controller controller) {
+        this.controller = controller;
+    }
 
-  /**
-   * Triggers the refresh of a single value directly from the OPC server.
-   *
-   * @param dataTagId The id of the data tag to refresh.
-   */
-  @Override
-  public synchronized void refreshDataTag(final long dataTagId) {
-    ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
-    if (sourceDataTag == null) {
-      log.error("SourceDataTag with ID {} is unknown", dataTagId);
+    @Autowired
+    public synchronized void setAliveWriter(AliveWriter writer) {
+        this.aliveWriter = writer;
     }
-    delegate.refreshDataTag(sourceDataTag);
-  }
 
-  /**
-   * Executes a specific command.
-   *
-   * @param value defines the command to run. The id of the value must correspond to the id of a command tag in the
-   *              configuration.
-   * @return If the command is of type method and returns values, the toString representation of the output is returned. Otherwise null.
-   * @throws EqCommandTagException thrown when the command cannot be executed, or the status is erraneous or uncertain.
-   */
-  @Override
-  public String runCommand(SourceCommandTagValue value) throws EqCommandTagException {
-    Long id = value.getId();
-    ISourceCommandTag tag = getEquipmentConfiguration().getSourceCommandTag(id);
-    if (tag == null) {
-      throw new EqCommandTagException("Command tag with id '" + id + "' unknown!");
-    }
-    if (log.isDebugEnabled()) {
-      log.debug("running command {} with value {}", id, value.getValue());
-    }
-    return delegate.runCommand(tag, value);
-  }
+    /**
+     * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial
+     * subscriptions of the tags given in the configuration, and subscribes listeners to update C2MON about changes in
+     * equipment state and data values.
+     *
+     * @throws EqIOException Throws an {@link EqIOException} if there is an IO problem during startup.
+     */
+    @Override
+    public synchronized void connectToDataSource() throws EqIOException {
+        // getEquipmentConfiguration always fetches the most recent equipment configuration, even if changes have occurred to the configuration since start-up of the DAQ.
+        IEquipmentConfiguration config = getEquipmentConfiguration();
+        IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-  /**
-   * Makes sure the changes to the equipment are applied on OPC level.
-   *
-   * @param equipmentConfiguration    The new equipment configuration.
-   * @param oldEquipmentConfiguration A clone of the old equipment configuration.
-   * @param changeReport              Report object to fill.
-   */
-  @Override
-  public synchronized void onUpdateEquipmentConfiguration(
-          final IEquipmentConfiguration equipmentConfiguration,
-          final IEquipmentConfiguration oldEquipmentConfiguration,
-          final ChangeReport changeReport) {
-    if (equipmentConfiguration.getAddress().equals(oldEquipmentConfiguration.getAddress())) {
-      try {
-        disconnectFromDataSource();
-        TimeUnit.MILLISECONDS.sleep(RESTART_DELAY);
-        connectToDataSource();
-        changeReport.appendInfo("DAQ restarted.");
-      } catch (EqIOException e) {
-        changeReport.appendError("Restart of DAQ failed.");
-      } catch (InterruptedException e) {
-        changeReport.appendError("Restart delay interrupted. DAQ will not connect.");
-        Thread.currentThread().interrupt();
-      }
-    } else if ((equipmentConfiguration.getAliveTagId() != oldEquipmentConfiguration.getAliveTagId()
-            || equipmentConfiguration.getAliveTagInterval() != oldEquipmentConfiguration.getAliveTagInterval())
-            && aliveWriter != null) {
-      changeReport.appendInfo(aliveWriter.updateAndReport());
+        log.debug("connect to the OPC UA data source...");
+        listener.initialize(sender);
+
+        String uaTcpType = "opc.tcp";
+        EquipmentAddress address = AddressStringParser.parse(config.getAddress());
+        if (!address.supportsProtocol(uaTcpType)) {
+            throw new ConfigurationException(ENDPOINT_TYPES_UNKNOWN);
+        }
+        aliveWriter.initialize(config, address.isAliveWriterEnabled());
+        controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
+        controller.subscribeTags(config.getSourceDataTags().values());
+        log.debug("connected");
+
+        getEquipmentConfigurationHandler().setDataTagChanger(tagChanger);
+        getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
     }
-    changeReport.setState(CHANGE_STATE.SUCCESS);
-  }
+
+
+    /**
+     * Called when the core wants the OPC module to disconnect from the OPC
+     * server and discard all configuration.
+     */
+    @Override
+    public synchronized void disconnectFromDataSource() {
+        log.debug("disconnecting from OPC data source...");
+        controller.stop();
+        if (aliveWriter != null) {
+            aliveWriter.stopWriter();
+        }
+        log.debug("disconnected");
+    }
+
+    /**
+     * Triggers the refresh of all values directly from the OPC server.
+     */
+    @Override
+    public synchronized void refreshAllDataTags() {
+        controller.refreshAllDataTags();
+    }
+
+    /**
+     * Triggers the refresh of a single value directly from the OPC server.
+     *
+     * @param dataTagId The id of the data tag to refresh.
+     */
+    @Override
+    public synchronized void refreshDataTag(final long dataTagId) {
+        ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
+        if (sourceDataTag == null) {
+            log.error("SourceDataTag with ID {} is unknown", dataTagId);
+        }
+        controller.refreshDataTag(sourceDataTag);
+    }
+
+    /**
+     * Executes a specific command.
+     *
+     * @param value defines the command to run. The id of the value must correspond to the id of a command tag in the
+     *              configuration.
+     * @return If the command is of type method and returns values, the toString representation of the output is returned. Otherwise null.
+     * @throws EqCommandTagException thrown when the command cannot be executed, or the status is erraneous or uncertain.
+     */
+    @Override
+    public String runCommand(SourceCommandTagValue value) throws EqCommandTagException {
+        Long id = value.getId();
+        ISourceCommandTag tag = getEquipmentConfiguration().getSourceCommandTag(id);
+        if (tag == null) {
+            throw new EqCommandTagException("Command tag with id '" + id + "' unknown!");
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("running command {} with value {}", id, value.getValue());
+        }
+        return commandRunner.runCommand(tag, value);
+    }
+
+    /**
+     * Makes sure the changes to the equipment are applied on OPC level.
+     *
+     * @param equipmentConfiguration    The new equipment configuration.
+     * @param oldEquipmentConfiguration A clone of the old equipment configuration.
+     * @param changeReport              Report object to fill.
+     */
+    @Override
+    public synchronized void onUpdateEquipmentConfiguration(
+            final IEquipmentConfiguration equipmentConfiguration,
+            final IEquipmentConfiguration oldEquipmentConfiguration,
+            final ChangeReport changeReport) {
+        if (equipmentConfiguration.getAddress().equals(oldEquipmentConfiguration.getAddress())) {
+            try {
+                disconnectFromDataSource();
+                TimeUnit.MILLISECONDS.sleep(RESTART_DELAY);
+                connectToDataSource();
+                changeReport.appendInfo("DAQ restarted.");
+            } catch (EqIOException e) {
+                changeReport.appendError("Restart of DAQ failed.");
+            } catch (InterruptedException e) {
+                changeReport.appendError("Restart delay interrupted. DAQ will not connect.");
+                Thread.currentThread().interrupt();
+            }
+        } else if ((equipmentConfiguration.getAliveTagId() != oldEquipmentConfiguration.getAliveTagId()
+                || equipmentConfiguration.getAliveTagInterval() != oldEquipmentConfiguration.getAliveTagInterval())
+                && aliveWriter != null) {
+            changeReport.appendInfo(aliveWriter.updateAndReport());
+        }
+        changeReport.setState(CHANGE_STATE.SUCCESS);
+    }
 }

@@ -2,17 +2,16 @@ package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.testutils.MiloMocker;
-import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
-import cern.c2mon.daq.opcua.testutils.ServerTestListener;
-import cern.c2mon.daq.opcua.testutils.TestEndpoint;
+import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.SneakyThrows;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -34,7 +33,7 @@ public abstract class ControllerTestBase {
 
     TagSubscriptionMapper mapper;
     TestEndpoint endpoint;
-    ServerTestListener.TestListener listener;
+    TestListeners.TestListener listener;
     Controller controller;
     MiloMocker mocker;
 
@@ -47,12 +46,13 @@ public abstract class ControllerTestBase {
     }
 
     @BeforeEach
-    public void setUp() throws CommunicationException, ConfigurationException {
+    public void setUp() throws OPCUAException {
         uri = ADDRESS_PROTOCOL_TCP + ADDRESS_BASE + true;
         endpoint = new TestEndpoint();
         mapper = new TagSubscriptionMapperImpl();
-        listener = new ServerTestListener.TestListener();
+        listener = new TestListeners.TestListener();
         controller = new ControllerImpl(endpoint, mapper, listener);
+        ((ControllerImpl)controller).setConfig(TestUtils.createDefaultConfig());
         mocker = new MiloMocker(endpoint, mapper);
     }
 

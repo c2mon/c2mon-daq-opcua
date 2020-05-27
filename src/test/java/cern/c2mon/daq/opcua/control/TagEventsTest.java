@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +23,7 @@ public class TagEventsTest extends ControllerTestBase {
     CompletableFuture<Long> tagInvalid;
 
     @BeforeEach
-    public void setUp() throws CommunicationException, ConfigurationException {
+    public void setUp() throws OPCUAException {
         super.setUp();
         controller.connect(uri);
         tagUpdate = listener.getTagUpdate();

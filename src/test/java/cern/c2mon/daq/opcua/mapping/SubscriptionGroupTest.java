@@ -21,23 +21,22 @@ public class SubscriptionGroupTest extends MappingBase {
 
     @Test
     public void addTagWithBadDeadbandShouldThrowError() {
-        assertThrows(IllegalArgumentException.class, () -> group.add(tagWithDifferentDeadband));
+        group.add(tagWithDifferentDeadband.getId());
+        assertThrows(IllegalArgumentException.class, () -> group.add(tagWithDifferentDeadband.getId()));
     }
 
     @Test
     public void addDefinitionTwiceShouldThrowError() {
-        group.add(tag);
+        group.add(tag.getId());
 
-        assertThrows(IllegalArgumentException.class, () -> group.add(tag));
+        assertThrows(IllegalArgumentException.class, () -> group.add(tag.getId()));
     }
 
     @Test
     public void removeDefinitionShouldRemoveDefinitionFromGroup() {
-        group.add(tag);
+        group.add(tag.getId());
         group.remove(tag);
 
         assertFalse(group.contains(tag));
     }
-
-
 }

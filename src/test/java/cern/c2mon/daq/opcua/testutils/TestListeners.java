@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.EndpointListener;
+import cern.c2mon.daq.opcua.connection.SessionActivityListenerImpl;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_LOST;
 
 @Slf4j
-public abstract class ServerTestListener {
+public abstract class TestListeners {
 
     private static float valueUpdateToFloat(ValueUpdate valueUpdate) {
         final Object t = valueUpdate.getValue();
@@ -27,30 +29,69 @@ public abstract class ServerTestListener {
     }
 
     static boolean thresholdReached(ValueUpdate valueUpdate, int threshold) {
-        return Math.abs(valueUpdateToFloat(valueUpdate) - threshold) < 0.5;
+        return threshold == 0 || Math.abs(valueUpdateToFloat(valueUpdate) - threshold) < 0.5;
+    }
+
+    public static class Session extends SessionActivityListenerImpl {
+
+        private CompletableFuture<Boolean> future;
+
+        @Override
+        public void onSessionActive(UaSession session) {
+            completeAndReset(true);
+            super.onSessionActive(session);
+        }
+
+        @Override
+        public void onSessionInactive(UaSession session) {
+            completeAndReset(false);
+            super.onSessionInactive(session);
+        }
+
+        public CompletableFuture<Boolean> listen() {
+            future = new CompletableFuture<>();
+            return future;
+        }
+
+        private void completeAndReset(boolean value) {
+            if (future != null && !future.isDone()) {
+                future.completeAsync(() -> value);
+            }
+        }
     }
 
     @RequiredArgsConstructor
     @Getter
     @Setter
     @Component(value = "pulseTestListener")
-    public static class PulseTestListener extends TestListener {
+    public static class Pulse extends TestListener {
         private long sourceID;
         private int threshold = 0;
         CompletableFuture<ValueUpdate> pulseTagUpdate = new CompletableFuture<>();
         CompletableFuture<ValueUpdate> tagValUpdate = new CompletableFuture<>();
 
+        public void reset() {
+            super.reset();
+            pulseTagUpdate = new CompletableFuture<>();
+            tagValUpdate = new CompletableFuture<>();
+            threshold = 0;
+            sourceID = -1L;
+        }
+
         @Override
         public void onNewTagValue (Long dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
             super.onNewTagValue(dataTag, valueUpdate, quality);
-            if (dataTag.equals(sourceID) && (threshold == 0 || thresholdReached(valueUpdate, threshold))) {
+            if (dataTag.equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
                 if (tagValUpdate.isDone()) {
-                    log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
+                    if (debugEnabled) {
+                        log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
+                    }
                     pulseTagUpdate.complete(valueUpdate);
                 } else {
-                    log.info("completing tagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
+                    if (debugEnabled) {
+                        log.info("completing tagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
+                    }
                     tagValUpdate.complete(valueUpdate);
-                    threshold = 0;
                 }
             }
         }
@@ -59,29 +100,38 @@ public abstract class ServerTestListener {
     @Getter
     @NoArgsConstructor
     public static class TestListener implements EndpointListener {
-        final ArrayList<EndpointListener.EquipmentState> states = new ArrayList<>();
+        @Setter
+        boolean debugEnabled = true;
         CompletableFuture<Long> tagUpdate = new CompletableFuture<>();
         CompletableFuture<Long> tagInvalid = new CompletableFuture<>();
-        CompletableFuture<List<EquipmentState>> stateUpdate = new CompletableFuture<>();
+        CompletableFuture<EquipmentState> stateUpdate = new CompletableFuture<>();
         CompletableFuture<StatusCode> alive = new CompletableFuture<>();
+
+        public void reset() {
+            tagUpdate = new CompletableFuture<>();
+            tagInvalid = new CompletableFuture<>();
+            stateUpdate = new CompletableFuture<>();
+            alive = new CompletableFuture<>();
+        }
 
         @Override
         public void onEquipmentStateUpdate(EquipmentState state) {
-            states.add(state);
-            if (!state.equals(CONNECTION_LOST)) {
-                stateUpdate.complete(states);
-            }
+            stateUpdate.complete(state);
         }
 
         @Override
         public void onNewTagValue (Long dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
-            log.info("received data tag {}, value update {}, quality {}", dataTag, valueUpdate, quality);
+            if (debugEnabled) {
+                log.info("received data tag {}, value update {}, quality {}", dataTag, valueUpdate, quality);
+            }
             tagUpdate.complete(dataTag);
         }
 
         @Override
         public void onTagInvalid (Long dataTag, SourceDataTagQuality quality) {
-            log.info("data tag {} invalid with quality {}", dataTag, quality);
+            if (debugEnabled) {
+                log.info("data tag {} invalid with quality {}", dataTag, quality);
+            }
             tagInvalid.complete(dataTag);
         }
 
@@ -92,7 +142,6 @@ public abstract class ServerTestListener {
 
         @Override
         public void initialize (IEquipmentMessageSender sender) {
-
         }
     }
 }

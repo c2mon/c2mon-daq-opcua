@@ -3,11 +3,13 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 
 import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
 
 public interface Controller {
 
@@ -20,27 +22,27 @@ public interface Controller {
      * @throws ConfigurationException if it is not possible to connect to any of the the OPC UA server's endpoints with
      *                                the given authentication configuration settings.
      */
-    void connect(String uri) throws CommunicationException, ConfigurationException;
+    void connect(String uri) throws OPCUAException;
 
-    void reconnect() throws CommunicationException, ConfigurationException;
+    void reconnect();
 
-    void stop() throws CommunicationException;
+    void stop();
 
     void subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException, CommunicationException;
 
-    String subscribeTag(ISourceDataTag sourceDataTag) throws CommunicationException;
+    CompletableFuture<Boolean> subscribeTag(ISourceDataTag sourceDataTag);
 
-    String removeTag(ISourceDataTag dataTag) throws CommunicationException;
+    CompletableFuture<Boolean> removeTag(ISourceDataTag dataTag);
 
-    void refreshAllDataTags() throws CommunicationException;
+    void refreshAllDataTags();
 
-    void refreshDataTag(ISourceDataTag sourceDataTag) throws CommunicationException;
+    void refreshDataTag(ISourceDataTag sourceDataTag);
 
     boolean isConnected();
 
-    void writeAlive(final OPCHardwareAddress address, final Object value) throws CommunicationException;
+    CompletableFuture<Void> writeAlive(final OPCHardwareAddress address, final Object value);
 
-    void recreateSubscription(UaSubscription subscription) throws CommunicationException;
+    CompletableFuture<Void> recreateSubscription(UaSubscription subscription);
 
     void setEndpoint(Endpoint miloEndpoint);
 }

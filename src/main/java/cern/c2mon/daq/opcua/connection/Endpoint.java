@@ -12,6 +12,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 /**
@@ -27,10 +28,10 @@ public interface Endpoint {
     void initialize(String uri) throws CommunicationException, ConfigurationException;
 
     /**
-     * Disconnect from the server
-     * @throws CommunicationException if an execution exception occurs on disconnecting from the client.
+     * Triggers a disconnect from the server
+     * @return A CompletableFuture that completes when the disconnection concludes.
      */
-    void disconnect() throws CommunicationException;
+    CompletableFuture<Void> disconnect();
 
     /**
      * Check whether the client is currently connected to a server.
@@ -44,14 +45,15 @@ public interface Endpoint {
      * @return the newly created subscription
      * @throws CommunicationException if an execution exception occurs on creating a subscription
      */
-    UaSubscription createSubscription(int timeDeadband) throws CommunicationException;
+    CompletableFuture<UaSubscription> createSubscription(int timeDeadband);
 
     /**
      * Delete an existing subscription
      * @param subscription The subscription to delete
      * @throws CommunicationException if an execution exception occurs on deleting a subscription
+     * @return
      */
-    void deleteSubscription(UaSubscription subscription) throws CommunicationException;
+    CompletableFuture<UaSubscription> deleteSubscription(UaSubscription subscription);
 
     /**
      * Add a list of item definitions as monitored items to a subscription
@@ -61,17 +63,18 @@ public interface Endpoint {
      * @return a list of monitored items corresponding to the item definitions
      * @throws CommunicationException if an execution exception occurs on creating the monitored items
      */
-    List<UaMonitoredItem> subscribeItemDefinitions (UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback)
-            throws CommunicationException;
+    CompletableFuture<List<UaMonitoredItem>> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback);
 
+    boolean containsSubscription(UaSubscription subscription);
 
     /**
      * Delete a monitored item from an OPC UA subscription
      * @param clientHandle the identifier of the monitored item to remove
      * @param subscription the subscription to remove the monitored item from.
      * @throws CommunicationException if an execution exception occurs on deleting an item from a subscription
+     * @return
      */
-    void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws CommunicationException;
+    CompletableFuture<List<StatusCode>> deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription);
 
     /**
      * Read the current value from a node on the currently connected OPC UA server
@@ -79,7 +82,7 @@ public interface Endpoint {
      * @return the {@link DataValue} returned by the OPC UA stack upon reading the node
      * @throws CommunicationException if an execution exception occurs on reading from the node
      */
-    DataValue read(NodeId nodeId) throws CommunicationException;
+    CompletableFuture<DataValue> read(NodeId nodeId);
 
     /**
      * Write a value to a node on the currently connected OPC UA server
@@ -88,23 +91,21 @@ public interface Endpoint {
      * @return the {@link StatusCode} of the response to the write action
      * @throws CommunicationException if an execution exception occurs on writing to the node
      */
-    StatusCode write(NodeId nodeId, Object value) throws CommunicationException;
+    CompletableFuture<StatusCode> write(NodeId nodeId, Object value);
 
     /**
      * Fetches the node's first parent object node, if such a node exists.
      * @param nodeId the node whose parent to fetch
      * @return the parent node's NodeId
-     * @throws CommunicationException if an execution exception occurs during browsing the server namespace
      */
-    NodeId getParentObjectNodeId(NodeId nodeId) throws CommunicationException, ConfigurationException;
+    CompletableFuture<NodeId> getParentObjectNodeId(NodeId nodeId);
 
     /**
      * Call the method Node with ID methodId contained in the object with ID objectId.
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
      * @param args the input arguments to pass to the methodId call.
-     * @return A Map.Entry containing the StatusCode of the methodId response as key, and the methodId's output arguments (if applicable)
-     * @throws CommunicationException if an execution exception occurs on calling the method node
+     * @return A CompletableFuture containing a Map.Entry with the StatusCode of the methodId response as key, and the methodId's output arguments (if applicable)
      */
-    Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws CommunicationException;
+    CompletableFuture<Map.Entry<StatusCode, Object[]>> callMethod(NodeId objectId, NodeId methodId, Object... args);
 }

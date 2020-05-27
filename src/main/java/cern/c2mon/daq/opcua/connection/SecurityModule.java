@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.sdk.client.api.identity.UsernameProvider;
@@ -50,6 +51,7 @@ public class SecurityModule {
 
     private OpcUaClientConfigBuilder builder;
 
+
     private static final ImmutableSet<Long> CONFIG_ERRORS = ImmutableSet.<Long>builder().add(Bad_UserSignatureInvalid, Bad_UserAccessDenied, Bad_CertificateHostNameInvalid, Bad_ApplicationSignatureInvalid, Bad_CertificateIssuerUseNotAllowed, Bad_CertificateIssuerTimeInvalid, Bad_CertificateIssuerRevoked).build();
 
     /**
@@ -64,7 +66,7 @@ public class SecurityModule {
      * @return An {@link OpcUaClient} object that is connected to one of the endpoints.
      * @throws InterruptedException if interrupt was called on the thread during execution.
      */
-    public OpcUaClient createClient(List<EndpointDescription> endpoints) throws InterruptedException, CommunicationException, ConfigurationException {
+    public OpcUaClient createClientWithListener(List<EndpointDescription> endpoints, SessionActivityListenerImpl listener) throws InterruptedException, CommunicationException, ConfigurationException {
         builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english(config.getAppName()))
                 .setApplicationUri(config.getApplicationUri())
@@ -82,15 +84,15 @@ public class SecurityModule {
         endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
 
         //connect with existing certificate if present
-        OpcUaClient client = connectIfPossible(endpoints, loader);
+        OpcUaClient client = connectIfPossible(endpoints, loader, listener);
 
         if (client == null && config.isOnDemandCertificationEnabled()) {
             log.info("Authenticate with generated certificate. ");
-            client = connectIfPossible(endpoints, generator);
+            client = connectIfPossible(endpoints, generator, listener);
         }
         if (client == null && config.isInsecureCommunicationEnabled()) {
             log.info("Attempt insecure connection. ");
-            client = connectIfPossible(endpoints, noSecurity);
+            client = connectIfPossible(endpoints, noSecurity, listener);
         }
         if (client == null) {
             throw new CommunicationException(ExceptionContext.AUTH_ERROR);
@@ -105,7 +107,7 @@ public class SecurityModule {
                 !Strings.isNullOrEmpty(upConfig.getPwd());
     }
 
-    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier) throws InterruptedException, ConfigurationException {
+    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier, SessionActivityListenerImpl listener) throws InterruptedException, ConfigurationException {
         final var matchingEndpoints = endpoints.stream().filter(certifier::supportsAlgorithm).collect(Collectors.toList());
         for (var e : matchingEndpoints) {
             if (!certifier.canCertify(e)) {
@@ -116,15 +118,16 @@ public class SecurityModule {
             log.info("Attempt authentication with mode {} and algorithm {}. ", e.getSecurityMode(), e.getSecurityPolicyUri());
             try {
                 OpcUaClient client = OpcUaClient.create(builder.build());
+                client.addSessionActivityListener(listener);
                 return (OpcUaClient) client.connect().get();
             } catch (UaException ex) {
                 log.error("Unsupported transport in endpoint URI. Attempting less secure endpoint", ex);
                 endpoints.remove(e);
+                certifier.uncertify(builder);
             } catch (ExecutionException ex) {
                 if (!handleAndReportWhetherToContinue(certifier, ex)) {
                     break;
                 }
-            } finally {
                 certifier.uncertify(builder);
             }
         }
