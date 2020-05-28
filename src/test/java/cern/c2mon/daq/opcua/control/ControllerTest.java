@@ -1,10 +1,9 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
-import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.command.SourceCommandTag;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
@@ -13,6 +12,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -28,22 +28,19 @@ public class ControllerTest extends ControllerTestBase {
 
 
     @BeforeEach
-    public void setUp () throws OPCUAException {
+    public void setUp() throws OPCUAException, InterruptedException {
         super.setUp();
         tag = new SourceCommandTag(0L, "Power");
-
         address = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw");
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.CLASSIC);
         tag.setHardwareAddress(address);
-
         endpoint.setReturnGoodStatusCodes(true);
     }
 
     @Test
-    public void initializeShouldSubscribeTags() throws OPCUAException {
+    public void initializeShouldSubscribeTags() throws OPCUAException, InterruptedException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
-        ((ControllerImpl) controller).setConfig(TestUtils.createDefaultConfig());
         controller.connect(uri);
         controller.subscribeTags(sourceTags.values());
         sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag).isSubscribed()));
@@ -54,19 +51,6 @@ public class ControllerTest extends ControllerTestBase {
 
         controller.stop();
         Assertions.assertTrue(mapper.getTagIdDefinitionMap().isEmpty());
-    }
-
-    @Test
-    public void writeAliveShouldNotifyListenerWithGoodStatusCode() throws ExecutionException, InterruptedException, TimeoutException, CommunicationException, ConfigurationException {
-        controller.writeAlive(address, value);
-        Assertions.assertEquals(StatusCode.GOOD, listener.getAlive().get(3000, TimeUnit.MILLISECONDS));
-    }
-
-    @Test
-    public void exceptionInWriteAliveShouldNotNotifyListener() {
-        controller.setEndpoint(new ExceptionTestEndpoint());
-        controller.writeAlive(address, value);
-        assertThrows(TimeoutException.class, () -> listener.getAlive().get(3000, TimeUnit.MILLISECONDS));
     }
 
 

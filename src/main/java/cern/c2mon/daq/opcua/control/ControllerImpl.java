@@ -17,98 +17,75 @@
 
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.EndpointListener;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.mapping.*;
+import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
+import cern.c2mon.daq.opcua.mapping.MiloMapper;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
-import com.google.common.collect.ImmutableList;
 import lombok.NonNull;
-import lombok.Setter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.*;
-
 @Component("controller")
 @Slf4j
+@RequiredArgsConstructor
 public class ControllerImpl implements Controller {
 
-    @Setter
-    private Endpoint endpoint;
-
     private final TagSubscriptionMapper mapper;
-
     private final EndpointListener endpointListener;
-
-    @Autowired
-    @Setter
-    private AppConfig config;
-
-    private String uri;
-
-    AtomicBoolean triggerReconnection = new AtomicBoolean(false);
-
-    public ControllerImpl(Endpoint endpoint, TagSubscriptionMapper mapper, EndpointListener endpointListener) {
-        this.endpoint = endpoint;
-        this.mapper = mapper;
-        this.endpointListener = endpointListener;
-    }
+    private final Endpoint endpoint;
+    private final AtomicBoolean stopped = new AtomicBoolean(true);
 
     /**
      * Connect to an OPC UA server.
-     *
      * @param uri the URI of the OPC UA server to connect to
-     * @throws OPCUAException if it is not possible to connect to any of the the OPC UA server's endpoints with
-     *                                the given authentication configuration settings and within the number of retries specified.
+     * @throws ConfigurationException if it is not possible to connect to any of the the OPC UA server's endpoints with
+     *                                the given authentication configuration settings
+     * @throws CommunicationException if it is not possible to connect to the OPC UA server within the configured number
+     *                                of tries
      */
-    @Override
-    public void connect(String uri) throws OPCUAException {
-        this.uri = uri;
+    public void connect(String uri) throws OPCUAException, InterruptedException {
         try {
-            config.initialRetryTemplate().execute(retryContext -> {
-                log.info("Connection attempt {}/{}... ", retryContext.getRetryCount() + 1, config.getMaxInitialRetryAttempts());
-                connect();
-                triggerReconnection.set(true);
-                return null;
-            });
+            endpoint.initialize(uri);
+            stopped.set(false);
         } catch (OPCUAException e) {
-            endpointListener.onEquipmentStateUpdate(CONNECTION_FAILED);
+            endpointListener.onEquipmentStateUpdate(EndpointListener.EquipmentState.CONNECTION_FAILED);
             throw e;
         }
     }
-
+/*
     @Override
     public void reconnect() {
-        if (triggerReconnection.get() && endpoint.isConnected()) {
+        if (!stopped.get() && endpoint.isConnected()) {
             log.info("Triggering client restart");
 
             // store the current subscription configuration in case it changed from the initial one through the IDataTagChanger interface
             final var currentConfig = new ConcurrentHashMap<>(mapper.getTagIdDefinitionMap());
             synchronized (this) {
                 stop();
-                triggerReconnection.set(true);
+                stopped.set(false);
             }
 
             try {
@@ -126,117 +103,77 @@ public class ControllerImpl implements Controller {
                                     return null;
                                 }).join());
                 refreshAllDataTags();
-                triggerReconnection.set(false);
+                stopped.set(false);
             } catch (OPCUAException e) {
                 //TODO: what if we can't connect within max attempts?
             }
-        } else if (triggerReconnection.get()) {
+        } else if (endpoint.isConnected()) {
             log.info("Client is connected, skipping restart.");
         } else {
             log.info("Controller was intentionally shut down, don't restart.");
         }
     }
+*/
 
+    /**
+     * Disconnect from the OPC UA server and reset the controller to a neutral state.
+     */
     @Override
-    public void stop () {
-        triggerReconnection.set(false);
+    public void stop() {
+        stopped.set(true);
         mapper.clear();
-        if (isConnected()) {
-            endpoint.disconnect()
-                    .exceptionally(t -> {
-                        log.error("Error disconnecting: ", t);
-                        return null;
-                    }).join();
-        }
+        endpoint.disconnect()
+                .exceptionally(t -> {
+                    log.error("Error disconnecting: ", t);
+                    return null;
+                }).join();
     }
 
+    /**
+     * Returns whether the controller has been intentionally shut down.
+     * @return true if the controller's stop method has been called, or the initial connection was not successful.
+     */
     @Override
-    public synchronized boolean isConnected () {
-        return endpoint != null && endpoint.isConnected();
+    public boolean wasStopped() {
+        return stopped.get();
     }
 
+    /**
+     * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
+     * @param dataTags the collection of ISourceDataTags to subscribe to
+     * @throws ConfigurationException if the collection of tags was empty.
+     */
     @Override
-    public synchronized void subscribeTags (@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
+    public synchronized void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
         }
         CompletableFuture.allOf(
                 mapper.mapTagsToGroupsAndDefinitions(dataTags).entrySet()
-                .stream()
-                .map(e -> subscribeToGroup(e.getKey(), e.getValue()))
-                .toArray(CompletableFuture[]::new))
+                        .stream()
+                        .map(e -> subscribeToGroup(e.getKey(), e.getValue()))
+                        .toArray(CompletableFuture[]::new))
                 .exceptionally(t -> {
                     log.error("Could not subscribe all Tags");
                     return null;
                 }).join();
     }
 
+    /**
+     * Subscribes to the OPC UA node corresponding to one data tag on the server.
+     * @param sourceDataTag the ISourceDataTag to subscribe to
+     * @return A completable future indicating whether the Tag has been subscribed successfully.
+     */
     @Override
-    public synchronized void refreshAllDataTags () {
-        CompletableFuture.allOf(
-                mapper.getTagIdDefinitionMap().entrySet().stream()
-                        .map(e -> refresh(e.getKey(), e.getValue().getNodeId()))
-                        .toArray(CompletableFuture[]::new))
-                .exceptionally(t -> {
-                    log.error("An exception occurred when refreshing all data tags: ", t);
-                    return null;
-                }).join();
-    }
-
-    @Override
-    public synchronized void refreshDataTag (ISourceDataTag sourceDataTag) {
-        refresh(sourceDataTag.getId(), mapper.getOrCreateDefinition(sourceDataTag).getNodeId());
-    }
-
-    @Override
-    public synchronized CompletableFuture<Void> writeAlive(final OPCHardwareAddress address, final Object value) {
-        NodeId nodeId = ItemDefinition.toNodeId(address);
-        return endpoint.write(nodeId, value)
-                .thenAccept(endpointListener::onAlive);
-    }
-
-    @Override
-    public CompletableFuture<Void> recreateSubscription (UaSubscription subscription) {
-        return endpoint.deleteSubscription(subscription)
-                .exceptionally(t -> {
-                    log.error("Could not delete subscription. Proceed with recreation. ", t);
-                    return null;
-                }).thenCompose(s -> {
-                    final List<DataTagDefinition> definitions = subscription.getMonitoredItems().stream()
-                            .map(item -> {
-                                final UInteger clientHandle = item.getClientHandle();
-                                final Long tagId = mapper.getTagId(clientHandle);
-                                return mapper.getDefinition(tagId);
-                            }).collect(Collectors.toList());
-                    if (definitions.isEmpty()) {
-                        throw new CompletionException(new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION));
-                    }
-                    final SubscriptionGroup group = mapper.getOrCreateGroup(definitions.get(0).getTimeDeadband());
-                    group.reset();
-                    return subscribeToGroup(group, definitions);
-                }).thenApply(success -> {
-                    if (!success) {
-                        throw new CompletionException(new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION));
-                    }
-                    log.info("Subscription recreated.");
-                    return null;
-                });
-    }
-
-
-    private void connect() throws CommunicationException, ConfigurationException {
-        endpoint.initialize(uri);
-    }
-
-    @Override
-    public synchronized CompletableFuture<Boolean> subscribeTag (@NonNull final ISourceDataTag sourceDataTag) {
+    public synchronized CompletableFuture<Boolean> subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
         SubscriptionGroup group = mapper.getGroup(sourceDataTag);
         DataTagDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
         return subscribeToGroup(group, Collections.singletonList(definition));
     }
 
     /**
-     * Removes a Tag from the internal configuration and if already subscribed from the OPC UA subscription. It the subscription is then empty, it is deleted as well.
+     * Removes a Tag from the internal configuration and if already subscribed from the OPC UA subscription. It the
+     * subscription is then empty, it is deleted as well.
      * @param dataTag the tag to remove
      * @return true if the tag was previously known.
      */
@@ -265,6 +202,67 @@ public class ControllerImpl implements Controller {
         });
     }
 
+    /**
+     * Reads the current values from the server for all subscribed data tags.
+     */
+    @Override
+    public synchronized void refreshAllDataTags() {
+        CompletableFuture.allOf(
+                mapper.getTagIdDefinitionMap().entrySet().stream()
+                        .map(e -> refresh(e.getKey(), e.getValue().getNodeId()))
+                        .toArray(CompletableFuture[]::new))
+                .exceptionally(t -> {
+                    log.error("An exception occurred when refreshing all data tags: ", t);
+                    return null;
+                }).join();
+    }
+
+    /**
+     * Reads the sourceDataTag's current value from the server
+     * @param sourceDataTag the tag whose current value to read
+     */
+    @Override
+    public synchronized void refreshDataTag(ISourceDataTag sourceDataTag) {
+        refresh(sourceDataTag.getId(), mapper.getOrCreateDefinition(sourceDataTag).getNodeId())
+                .exceptionally(t -> {
+                    log.error("An exception ocurred refreshing data tag {}.", sourceDataTag);
+                    return null;
+                }).join();
+    }
+
+    /**
+     * Called when a subscription could not be automatically transferred in between sessions. In this case, the
+     * subscription is recreated from scratch.
+     * @param subscription the subscription of the old session which must be recreated
+     * @return a completable future which completes successfully if recreation was successful.
+     */
+    @Override
+    public CompletableFuture<Void> recreateSubscription(UaSubscription subscription) {
+        return endpoint.deleteSubscription(subscription)
+                .exceptionally(t -> {
+                    log.error("Could not delete subscription. Proceed with recreation. ", t);
+                    return null;
+                }).thenCompose(s -> {
+                    final List<DataTagDefinition> definitions = subscription.getMonitoredItems().stream()
+                            .map(item -> {
+                                final Long tagId = mapper.getTagId(item.getClientHandle());
+                                return mapper.getDefinition(tagId);
+                            }).collect(Collectors.toList());
+                    if (definitions.isEmpty()) {
+                        throw new CompletionException(new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION));
+                    }
+                    final SubscriptionGroup group = mapper.getOrCreateGroup(definitions.get(0).getTimeDeadband());
+                    group.reset();
+                    return subscribeToGroup(group, definitions);
+                }).thenApply(success -> {
+                    if (!success) {
+                        throw new CompletionException(new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION));
+                    }
+                    log.info("Subscription recreated.");
+                    return null;
+                });
+    }
+
 
     private CompletableFuture<Void> refresh(long tagId, NodeId address) {
         return endpoint.read(address)
@@ -275,19 +273,19 @@ public class ControllerImpl implements Controller {
                 });
     }
 
-    private CompletableFuture<Boolean> subscribeToGroup (SubscriptionGroup group, List<DataTagDefinition> definitions) {
+    private CompletableFuture<Boolean> subscribeToGroup(SubscriptionGroup group, List<DataTagDefinition> definitions) {
         CompletableFuture<Void> createSubscription = CompletableFuture.completedFuture(null);
-        if (!group.isSubscribed() || !endpoint.containsSubscription(group.getSubscription())) {
+        if (!group.isSubscribed() || !endpoint.isCurrent(group.getSubscription())) {
             createSubscription = endpoint
                     .createSubscription(group.getPublishInterval())
                     .thenAccept(group::setSubscription);
         }
         return createSubscription
                 .thenCompose(v -> endpoint.subscribeItem(group.getSubscription(), definitions, this::itemCreationCallback)
-                .thenApply(this::completeSubscription));
+                        .thenApply(this::completeSubscription));
     }
 
-    private boolean completeSubscription (List<UaMonitoredItem> monitoredItems) {
+    private boolean completeSubscription(List<UaMonitoredItem> monitoredItems) {
         boolean allSuccessful = true;
         for (UaMonitoredItem item : monitoredItems) {
             final Long tagId = mapper.getTagId(item.getClientHandle());
@@ -307,7 +305,7 @@ public class ControllerImpl implements Controller {
         return allSuccessful;
     }
 
-    private void itemCreationCallback (UaMonitoredItem item, Integer i) {
+    private void itemCreationCallback(UaMonitoredItem item, Integer i) {
         Long tag = mapper.getTagId(item.getClientHandle());
         item.setValueConsumer(value -> notifyListener(tag, value));
     }

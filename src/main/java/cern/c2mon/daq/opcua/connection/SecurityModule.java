@@ -66,7 +66,7 @@ public class SecurityModule {
      * @return An {@link OpcUaClient} object that is connected to one of the endpoints.
      * @throws InterruptedException if interrupt was called on the thread during execution.
      */
-    public OpcUaClient createClientWithListener(List<EndpointDescription> endpoints, SessionActivityListenerImpl listener) throws InterruptedException, CommunicationException, ConfigurationException {
+    public OpcUaClient createClientWithListener(List<EndpointDescription> endpoints, SessionActivityListener listener) throws InterruptedException, CommunicationException, ConfigurationException {
         builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english(config.getAppName()))
                 .setApplicationUri(config.getApplicationUri())
@@ -107,7 +107,7 @@ public class SecurityModule {
                 !Strings.isNullOrEmpty(upConfig.getPwd());
     }
 
-    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier, SessionActivityListenerImpl listener) throws InterruptedException, ConfigurationException {
+    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier, SessionActivityListener listener) throws InterruptedException, ConfigurationException {
         final var matchingEndpoints = endpoints.stream().filter(certifier::supportsAlgorithm).collect(Collectors.toList());
         for (var e : matchingEndpoints) {
             if (!certifier.canCertify(e)) {

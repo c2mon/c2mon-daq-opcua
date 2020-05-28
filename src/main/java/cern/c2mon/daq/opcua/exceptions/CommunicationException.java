@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.StatusCodes;
 import org.eclipse.milo.opcua.stack.core.UaException;
 
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 
@@ -49,12 +50,11 @@ public class CommunicationException extends OPCUAException {
     private static void handleThrowable(ExceptionContext context, Exception e, Throwable cause) throws CommunicationException, ConfigurationException {
         if (cause instanceof UaException) {
             final var code = ((UaException) cause).getStatusCode().getValue();
-            StatusCodes.lookup(code).ifPresentOrElse(
-                    s -> log.error("Failure description: {}", Arrays.toString(s)),
-                    () -> log.error("Reasons unknown."));
-            if (RECONNECT.contains(code)) {
+            if (CONFIG.contains(code) || RECONNECT.contains(code)) {
                 throw new ConfigurationException(context, e);
             }
+        } else if (cause instanceof UnknownHostException) {
+            throw new ConfigurationException(context, e);
         }
         throw new CommunicationException(context, e);
     }

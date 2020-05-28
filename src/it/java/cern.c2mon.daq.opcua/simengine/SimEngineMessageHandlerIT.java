@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
@@ -15,6 +16,7 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
 import org.easymock.EasyMock;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -58,6 +60,9 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Autowired
     AliveWriter aliveWriter;
 
+    @Autowired
+    Endpoint endpoint;
+
     private static final long DATAID_VMON = 1L;
     private static final long DATAID_PW = 2L;
     private static final long CMDID_PW = 10L;
@@ -78,6 +83,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     @Override
     protected void beforeTest () throws Exception {
+        log.info("############### SET UP ##############");
         handler = (OPCUAMessageHandler) msgHandler;
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
@@ -87,7 +93,9 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         handler.setController(controller);
         handler.setTagChanger(tagChanger);
         ReflectionTestUtils.setField(controller, "endpointListener", listener);
+        ReflectionTestUtils.setField(endpoint, "listener", listener);
         mapEquipmentAddress();
+        log.info("############### TEST ##############");
     }
 
     // Work-around for non-fixed ports in testcontainers, since GenericMessageHandlerTest required ports to be included in the configuration
@@ -105,6 +113,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     @After
     public void cleanUp() throws Exception {
+        log.info("############### CLEAN UP ##############");
         // must be called before the handler disconnect in GenericMessageHandlerTest's afterTest method
         log.info("Cleaning up... ");
         value.setValue(0);

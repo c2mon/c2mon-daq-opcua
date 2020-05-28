@@ -16,11 +16,15 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.EndpointListener;
+import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.*;
@@ -40,7 +44,12 @@ public class AliveWriter {
   /**
    * The endpoint to write to.
    */
-  private final Controller controller;
+  private final Endpoint endpoint;
+
+  /**
+   * The Endpoint listener which notifies the Server of a new alive.
+   */
+  private final EndpointListener listener;
 
   /**
    * The service to schedule periodically to write to the alive tag hardware address
@@ -130,7 +139,10 @@ public class AliveWriter {
       log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
     }
     try {
-      controller.writeAlive(address, castedValue).join();
+      NodeId nodeId = ItemDefinition.toNodeId(address);
+      endpoint.write(nodeId, castedValue)
+              .thenAccept(listener::onAlive)
+              .join();
       writeCounter.incrementAndGet();
       writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
     } catch (CompletionException e) {

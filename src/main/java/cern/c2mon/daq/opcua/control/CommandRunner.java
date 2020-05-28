@@ -72,10 +72,8 @@ public class CommandRunner {
                 throw (EqCommandTagException) cause;
             } else if (cause instanceof ConfigurationException) {
                 throw new EqCommandTagException("Please check whether the configuration is correct.", cause);
-            } else if (cause == null) {
-                throw new EqCommandTagException("An unexpected error occurred.", e);
             }
-            throw new EqCommandTagException("An unexpected error occurred.", cause);
+            throw new EqCommandTagException("An unexpected error occurred.", (cause == null) ? e : cause);
         }
     }
 

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
@@ -25,7 +26,7 @@ public class DataTagChangerTest extends ControllerTestBase {
     ISourceDataTag tag;
 
     @BeforeEach
-    public void castToDataTagChanger() throws OPCUAException {
+    public void castToDataTagChanger() throws OPCUAException, InterruptedException {
         tag = ServerTagFactory.DipData.createDataTag();
         controller.connect(uri);
         tagChanger = new TagChanger(controller);
@@ -34,7 +35,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @AfterEach
     public void cleanUp() {
-        controller.setEndpoint(endpoint);
+        ReflectionTestUtils.setField(controller, "endpoint", endpoint);
     }
 
     @Test
@@ -47,7 +48,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @Test
     public void invalidOnAddDataTagShouldReportFail () {
-        controller.setEndpoint(new ExceptionTestEndpoint());
+        ReflectionTestUtils.setField(controller, "endpoint", new ExceptionTestEndpoint());
         tagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
     }

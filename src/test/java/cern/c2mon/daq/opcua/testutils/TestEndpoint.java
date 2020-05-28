@@ -46,11 +46,6 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public boolean isConnected() {
-        return true;
-    }
-
-    @Override
     public CompletableFuture<UaSubscription> createSubscription (int timeDeadband) {
         return CompletableFuture.completedFuture(subscription);
     }
@@ -68,7 +63,7 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public boolean containsSubscription(UaSubscription subscription) {
+    public boolean isCurrent(UaSubscription subscription) {
         return false;
     }
 

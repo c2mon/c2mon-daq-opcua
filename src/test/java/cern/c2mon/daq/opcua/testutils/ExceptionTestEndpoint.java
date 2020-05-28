@@ -63,10 +63,6 @@ public class ExceptionTestEndpoint extends TestEndpoint {
         return f;
     }
 
-    @Override
-    public boolean isConnected() {
-        return false;
-    }
 
     public CompletableFuture<List<StatusCode>> deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
         final CompletableFuture<List<StatusCode>> f = new CompletableFuture<>();

@@ -37,7 +37,6 @@ public abstract class TestUtils {
                 .failFast(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())
                 .maxInitialRetryAttempts(1)
-                .maxRetryAttempts(1)
                 .retryDelay(2000)
                 .build();
     }

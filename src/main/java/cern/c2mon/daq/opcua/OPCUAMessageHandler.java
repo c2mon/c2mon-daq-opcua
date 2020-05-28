@@ -55,6 +55,7 @@ import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ENDPO
  */
 
 @Slf4j
+@Setter
 @EnableAutoConfiguration
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
     /**
@@ -70,28 +71,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
     CommandRunner commandRunner;
 
-    @Setter
-    private EndpointListener listener = new EndpointListenerImpl();
-
-    @Autowired
-    public synchronized void setTagChanger(TagChanger tagChanger) {
-        this.tagChanger = tagChanger;
-    }
-
-    @Autowired
-    public synchronized void setCommandRunner(CommandRunner commandRunner) {
-        this.commandRunner = commandRunner;
-    }
-
-    @Autowired
-    public synchronized void setController(Controller controller) {
-        this.controller = controller;
-    }
-
-    @Autowired
-    public synchronized void setAliveWriter(AliveWriter writer) {
-        this.aliveWriter = writer;
-    }
+    EndpointListener listener;
 
     /**
      * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial
@@ -106,7 +86,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         IEquipmentConfiguration config = getEquipmentConfiguration();
         IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-        log.debug("connect to the OPC UA data source...");
+        log.debug("Connecting to the OPC UA data source...");
         listener.initialize(sender);
 
         String uaTcpType = "opc.tcp";
@@ -114,13 +94,19 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         if (!address.supportsProtocol(uaTcpType)) {
             throw new ConfigurationException(ENDPOINT_TYPES_UNKNOWN);
         }
-        aliveWriter.initialize(config, address.isAliveWriterEnabled());
-        controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
-        controller.subscribeTags(config.getSourceDataTags().values());
-        log.debug("connected");
+        try {
+            controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
+            aliveWriter.initialize(config, address.isAliveWriterEnabled());
+            controller.subscribeTags(config.getSourceDataTags().values());
+            log.debug("connected");
 
-        getEquipmentConfigurationHandler().setDataTagChanger(tagChanger);
-        getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
+            getEquipmentConfigurationHandler().setDataTagChanger(tagChanger);
+            getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
+        } catch (InterruptedException e) {
+            log.error("Process interrupted. Stopping.... ", e);
+            disconnectFromDataSource();
+            Thread.currentThread().interrupt();
+        }
     }
 
 
@@ -132,9 +118,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     public synchronized void disconnectFromDataSource() {
         log.debug("disconnecting from OPC data source...");
         controller.stop();
-        if (aliveWriter != null) {
-            aliveWriter.stopWriter();
-        }
+        aliveWriter.stopWriter();
         log.debug("disconnected");
     }
 

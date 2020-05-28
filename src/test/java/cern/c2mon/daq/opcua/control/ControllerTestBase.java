@@ -46,13 +46,12 @@ public abstract class ControllerTestBase {
     }
 
     @BeforeEach
-    public void setUp() throws OPCUAException {
+    public void setUp() throws OPCUAException, InterruptedException {
         uri = ADDRESS_PROTOCOL_TCP + ADDRESS_BASE + true;
         endpoint = new TestEndpoint();
         mapper = new TagSubscriptionMapperImpl();
         listener = new TestListeners.TestListener();
-        controller = new ControllerImpl(endpoint, mapper, listener);
-        ((ControllerImpl)controller).setConfig(TestUtils.createDefaultConfig());
+        controller = new ControllerImpl(mapper, listener, endpoint);
         mocker = new MiloMocker(endpoint, mapper);
     }
 

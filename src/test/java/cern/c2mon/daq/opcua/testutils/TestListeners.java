@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.EndpointListener;
-import cern.c2mon.daq.opcua.connection.SessionActivityListenerImpl;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
@@ -10,15 +9,12 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
-import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_LOST;
 
 @Slf4j
 public abstract class TestListeners {
@@ -30,34 +26,6 @@ public abstract class TestListeners {
 
     static boolean thresholdReached(ValueUpdate valueUpdate, int threshold) {
         return threshold == 0 || Math.abs(valueUpdateToFloat(valueUpdate) - threshold) < 0.5;
-    }
-
-    public static class Session extends SessionActivityListenerImpl {
-
-        private CompletableFuture<Boolean> future;
-
-        @Override
-        public void onSessionActive(UaSession session) {
-            completeAndReset(true);
-            super.onSessionActive(session);
-        }
-
-        @Override
-        public void onSessionInactive(UaSession session) {
-            completeAndReset(false);
-            super.onSessionInactive(session);
-        }
-
-        public CompletableFuture<Boolean> listen() {
-            future = new CompletableFuture<>();
-            return future;
-        }
-
-        private void completeAndReset(boolean value) {
-            if (future != null && !future.isDone()) {
-                future.completeAsync(() -> value);
-            }
-        }
     }
 
     @RequiredArgsConstructor
@@ -99,7 +67,7 @@ public abstract class TestListeners {
 
     @Getter
     @NoArgsConstructor
-    public static class TestListener implements EndpointListener {
+    public static class TestListener implements EndpointListener, SessionActivityListener {
         @Setter
         boolean debugEnabled = true;
         CompletableFuture<Long> tagUpdate = new CompletableFuture<>();
@@ -143,5 +111,27 @@ public abstract class TestListeners {
         @Override
         public void initialize (IEquipmentMessageSender sender) {
         }
+
+        @Override
+        public void onSessionActive(UaSession session) {
+            completeAndReset(true);
+        }
+
+        @Override
+        public void onSessionInactive(UaSession session) {
+            completeAndReset(false);
+        }
+
+        public CompletableFuture<EquipmentState> listen() {
+            stateUpdate = new CompletableFuture<>();
+            return stateUpdate;
+        }
+
+        private void completeAndReset(boolean value) {
+            if (stateUpdate != null && !stateUpdate.isDone()) {
+                stateUpdate.completeAsync(() -> value ? EquipmentState.OK : EquipmentState.CONNECTION_LOST);
+            }
+        }
+
     }
 }

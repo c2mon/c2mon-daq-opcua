@@ -24,22 +24,34 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
 public interface EndpointListener {
 
+    /**
+     * A representation of equipment states and descriptions.
+     */
     @AllArgsConstructor
     enum EquipmentState {
         OK("Successfully connected"),
         CONNECTION_FAILED("Cannot establish connection to the server"),
         CONNECTION_LOST("Connection to server has been lost. Reconnecting...");
-
         public final String message;
-
     }
+
+    /**
+     * Initialize the EndpointListener with the IEquipmentMessageSender instance
+     * @param sender the sender to notify of events
+     */
     void initialize(IEquipmentMessageSender sender);
 
-    void onEquipmentStateUpdate(EquipmentState state);
+    /**
+     * Called a subscription delivers a new value for a node corresponding to a given tagId
+     * @param tagId the tagId for which a new value has arrived
+     * @param valueUpdate the new value wrapped in a valueUpdate
+     * @param quality the data quality of the new value
+     */
+    void onNewTagValue(final Long tagId, final ValueUpdate valueUpdate, final SourceDataTagQuality quality);
 
-    void onNewTagValue(final Long dataTag, final ValueUpdate valueUpdate, final SourceDataTagQuality quality);
-
-    void onTagInvalid(final Long dataTag, final SourceDataTagQuality quality);
+    void onTagInvalid(final Long tagId, final SourceDataTagQuality quality);
 
     void onAlive(final StatusCode statusCode);
+
+    void onEquipmentStateUpdate(EquipmentState state);
 }

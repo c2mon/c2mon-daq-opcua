@@ -23,7 +23,7 @@ public class TagEventsTest extends ControllerTestBase {
     CompletableFuture<Long> tagInvalid;
 
     @BeforeEach
-    public void setUp() throws OPCUAException {
+    public void setUp() throws OPCUAException, InterruptedException {
         super.setUp();
         controller.connect(uri);
         tagUpdate = listener.getTagUpdate();

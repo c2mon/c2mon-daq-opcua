@@ -3,11 +3,10 @@ package cern.c2mon.daq.opcua;
 import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.connection.SecurityModule;
-import cern.c2mon.daq.opcua.connection.SessionActivityListenerImpl;
 import cern.c2mon.daq.opcua.control.CommandRunner;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
+import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -26,15 +25,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class MethodIT {
 
     static AppConfig config = TestUtils.createDefaultConfig();
-    static CommandRunner delegate;
+    static CommandRunner runner;
 
     @BeforeAll
-    public static void setUpEndpoint() throws ConfigurationException, CommunicationException {
+    public static void setUpEndpoint() throws OPCUAException, InterruptedException {
         // Not testing security here, so just connect without security
         SecurityModule p = new SecurityModule(config, new NoSecurityCertifier(), new NoSecurityCertifier(), new NoSecurityCertifier());
-        final MiloEndpoint wrapper = new MiloEndpoint(p, new SessionActivityListenerImpl(), new EndpointSubscriptionListener());
+        final MiloEndpoint wrapper = new MiloEndpoint(p, new TestListeners.TestListener(), new EndpointSubscriptionListener());
         wrapper.initialize("opc.tcp://milo.digitalpetri.com:62541/milo");
-        delegate = new CommandRunner(wrapper);
+        runner = new CommandRunner(wrapper);
     }
 
     @Test
@@ -45,7 +44,7 @@ public class MethodIT {
         hwAddress.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
         final ISourceCommandTag tag = new SourceCommandTag(1L, "sqrt", 5000, 5, hwAddress);
         final SourceCommandTagValue value = new SourceCommandTagValue(tag.getId(), tag.getName(), 0L, (short) 0, 4.0, Double.class.getName());
-        final String s = delegate.runCommand(tag, value);
+        final String s = runner.runCommand(tag, value);
         assertEquals("2.0", s);
 
     }
@@ -58,7 +57,7 @@ public class MethodIT {
         hwAddress.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
         final ISourceCommandTag tag = new SourceCommandTag(1L, "sqrt", 5000, 5, hwAddress);
         final SourceCommandTagValue value = new SourceCommandTagValue(tag.getId(), tag.getName(), 0L, (short) 0, 4.0, Double.class.getName());
-        final String s = delegate.runCommand(tag, value);
+        final String s = runner.runCommand(tag, value);
         assertEquals("2.0", s);
     }
 }
