@@ -6,7 +6,6 @@ import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
@@ -14,9 +13,6 @@ import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.A;
-import org.easymock.EasyMock;
-import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
@@ -40,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_LOST;
-import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
