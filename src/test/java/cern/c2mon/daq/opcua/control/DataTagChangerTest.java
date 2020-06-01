@@ -1,8 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
@@ -80,9 +78,11 @@ public class DataTagChangerTest extends ControllerTestBase {
     }
 
     @Test
-    public void onUpdateUnknownTagShouldReportFail () {
+    public void onUpdateUnknownTagShouldReportSuccess () {
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.get(2L), tag);
+        mocker.replay();
         tagChanger.onUpdateDataTag(sourceTags.get(2L), tag, changeReport);
-        assertEquals(FAIL, changeReport.getState());
+        assertEquals(SUCCESS, changeReport.getState());
     }
 
     @Test

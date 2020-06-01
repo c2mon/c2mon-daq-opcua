@@ -29,19 +29,17 @@ public interface TagSubscriptionMapper {
 
     Map<Long, DataTagDefinition> getTagIdDefinitionMap();
 
-    void addToTagDefinitionMap(Map<Long, DataTagDefinition> newMap);
-
     Map<SubscriptionGroup, List<DataTagDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> dataTags);
 
-    Map<SubscriptionGroup, List<DataTagDefinition>> mapToGroups(Collection<DataTagDefinition> definitions);
-
-    SubscriptionGroup getGroup (ISourceDataTag dataTags);
+    SubscriptionGroup getGroup (ISourceDataTag dataTag);
 
     SubscriptionGroup getGroup (UaSubscription subscription);
 
     SubscriptionGroup getOrCreateGroup(int timeDeadband);
 
     DataTagDefinition getDefinition(Long tagId);
+
+    long getTagId(DataTagDefinition definition);
 
     DataTagDefinition getOrCreateDefinition(ISourceDataTag tag);
 

@@ -1,23 +1,16 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.AppConfig;
-import cern.c2mon.daq.opcua.EndpointListener;
-import cern.c2mon.daq.opcua.connection.*;
+import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.ControllerImpl;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.security.CertificateGenerator;
-import cern.c2mon.daq.opcua.security.CertificateLoader;
-import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,12 +21,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
@@ -70,7 +61,7 @@ public class SecurityIT {
     public void setUp() {
         ReflectionTestUtils.setField(controller, "endpointListener", listener);
         ReflectionTestUtils.setField(endpoint, "listener", listener);
-        config.setMaxInitialRetryAttempts(1);
+        config.setMaxRetryAttemps(1);
         listener.reset();
     }
 

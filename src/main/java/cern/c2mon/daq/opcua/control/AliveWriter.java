@@ -16,8 +16,9 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.EndpointListener;
+import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
@@ -27,7 +28,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -41,112 +45,108 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class AliveWriter {
 
-  /**
-   * The endpoint to write to.
-   */
-  private final Endpoint endpoint;
+    /**
+     * The endpoint to write to.
+     */
+    private final Endpoint endpoint;
 
-  /**
-   * The Endpoint listener which notifies the Server of a new alive.
-   */
-  private final EndpointListener listener;
+    /**
+     * The Endpoint listener which notifies the Server of a new alive.
+     */
+    private final EndpointListener listener;
 
-  /**
-   * The service to schedule periodically to write to the alive tag hardware address
-   */
-  private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    /**
+     * The service to schedule periodically to write to the alive tag hardware address
+     */
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    /**
+     * The value to write (used like a counter).
+     */
+    private final AtomicInteger writeCounter = new AtomicInteger(0);
+    /**
+     * The task of writing the alive value to the equipment.
+     */
+    private ScheduledFuture<?> writeAliveTask;
+    /**
+     * The time between two write operations.
+     */
+    private long writeTime;
+    /**
+     * The address to write to, represents the AliveTag.
+     */
+    private OPCHardwareAddress address;
+    /**
+     * Flag indicating whether the aliveWriter is enabled.
+     */
+    private boolean enabled = false;
 
-  /**
-   * The task of writing the alive value to the equipment.
-   */
-  private ScheduledFuture<?> writeAliveTask;
-
-  /**
-   * The time between two write operations.
-   */
-  private long writeTime;
-
-  /**
-   * The address to write to, represents the AliveTag.
-   */
-  private OPCHardwareAddress address;
-
-  /**
-   * Flag indicating whether the aliveWriter is enabled.
-   */
-  private boolean enabled = false;
-
-  /**
-   * The value to write (used like a counter).
-   */
-  private final AtomicInteger writeCounter = new AtomicInteger(0);
-
-  /**
-   * Initializes the AliveWriter considering the given equipment Configuration. If no the writer is not enabled or no
-   * alive tag is specified, the aliveWriter is not started.
-   *
-   * @param config  the equipment configuration
-   * @param enabled a flag indicating whether the AliveWriter should be started.
-   */
-  public void initialize(IEquipmentConfiguration config, boolean enabled) {
-    if (enabled) {
-      final ISourceDataTag aliveTag = config.getSourceDataTag(config.getAliveTagId());
-      if (aliveTag != null) {
-        this.enabled = true;
-        this.writeTime = config.getAliveTagInterval() / 2;
-        this.address = (OPCHardwareAddress) aliveTag.getHardwareAddress();
-        startWriter();
-      } else {
-        log.error("The target tag is not defined, cannot start the Alive Writer.");
-      }
+    /**
+     * Initializes the AliveWriter considering the given equipment Configuration. If no the writer is not enabled or no
+     * alive tag is specified, the aliveWriter is not started.
+     * @param config  the equipment configuration
+     * @param enabled a flag indicating whether the AliveWriter should be started.
+     */
+    public void initialize(IEquipmentConfiguration config, boolean enabled) {
+        if (enabled) {
+            final ISourceDataTag aliveTag = config.getSourceDataTag(config.getAliveTagId());
+            if (aliveTag != null) {
+                this.enabled = true;
+                this.writeTime = config.getAliveTagInterval() / 2;
+                this.address = (OPCHardwareAddress) aliveTag.getHardwareAddress();
+                startWriter();
+            } else {
+                log.error("The target tag is not defined, cannot start the Alive Writer.");
+            }
+        }
     }
-  }
 
-  /**
-   * Restarts the AliveWriter, if it was enabled on initialization.
-   * @return a report describing the triggered restart, or the disabled state of the aliveWriter.
-   */
-  public String updateAndReport() {
-    if (enabled) {
-      startWriter();
-      return "Alive Writer updated";
-    } else {
-      return "Alive Writer is not active and therefore was not updated.";
+    /**
+     * Restarts the AliveWriter, if it was enabled on initialization.
+     * @return a report describing the triggered restart, or the disabled state of the aliveWriter.
+     */
+    public String updateAndReport() {
+        if (enabled) {
+            startWriter();
+            return "Alive Writer updated";
+        } else {
+            return "Alive Writer is not active and therefore was not updated.";
+        }
     }
-  }
 
-  public synchronized void startWriter() {
-    stopWriter();
-    log.info("Starting OPCAliveWriter...");
-    writeAliveTask = executor.scheduleAtFixedRate(this::sendAlive, writeTime, writeTime, TimeUnit.MILLISECONDS);
-  }
+    public synchronized void startWriter() {
+        stopWriter();
+        log.info("Starting OPCAliveWriter...");
+        writeAliveTask = executor.scheduleAtFixedRate(this::sendAlive, writeTime, writeTime, TimeUnit.MILLISECONDS);
+    }
 
-  public synchronized void stopWriter() {
-    if (writeAliveTask != null) {
-      log.info("Stopping OPCAliveWriter...");
-      writeAliveTask.cancel(false);
-      writeAliveTask = null;
+    public synchronized void stopWriter() {
+        if (writeAliveTask != null) {
+            log.info("Stopping OPCAliveWriter...");
+            writeAliveTask.cancel(false);
+            writeAliveTask = null;
+        }
     }
-  }
 
-  /**
-   * Writes once to the server and increase the write value.
-   */
-  private void sendAlive() {
-    // We send an Integer since Long could cause problems to the OPC
-    Object castedValue = writeCounter.intValue();
-    if (log.isDebugEnabled()) {
-      log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
+    /**
+     * Writes once to the server and increase the write value.
+     */
+    private void sendAlive() {
+        // We send an Integer since Long could cause problems to the OPC
+        Object castedValue = writeCounter.intValue();
+        if (log.isDebugEnabled()) {
+            log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
+        }
+        try {
+            NodeId nodeId = ItemDefinition.toNodeId(address);
+            listener.onAlive(endpoint.write(nodeId, castedValue));
+            writeCounter.incrementAndGet();
+            writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
+        } catch (InterruptedException e) {
+            log.error("Thread was interrupted. ", e);
+            stopWriter();
+            Thread.currentThread().interrupt();
+        } catch (OPCUAException e) {
+            log.error("Error while writing alive. Retrying...", e);
+        }
     }
-    try {
-      NodeId nodeId = ItemDefinition.toNodeId(address);
-      endpoint.write(nodeId, castedValue)
-              .thenAccept(listener::onAlive)
-              .join();
-      writeCounter.incrementAndGet();
-      writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
-    } catch (CompletionException e) {
-      log.error("Error while writing alive. Retrying...", e);
-    }
-  }
 }

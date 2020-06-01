@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.EndpointListener;
+import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.SecurityModule;
+import cern.c2mon.daq.opcua.SecurityModule;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
@@ -35,7 +35,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.CONNECTION_LOST;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -147,7 +147,7 @@ public class EdgeIT {
     }
 
     @Test
-    public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException, CommunicationException, ConfigurationException {
+    public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
         controller.subscribeTags(Collections.singletonList(tag));
 
         // Disconnect

@@ -1,23 +1,21 @@
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_LOST;
-import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.OK;
+import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.OK;
 
 /**
- * A listener responsible to relay information from the OPC UA server to the IEquipmentMessageSender.
+ * A listener responsible to relay information regarding events on the DAQ to the IEquipmentMessageSender.
  */
 @Component(value = "endpointListener")
 @NoArgsConstructor
@@ -26,6 +24,7 @@ import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.OK;
 public class EndpointListenerImpl implements EndpointListener, SessionActivityListener {
 
     private IEquipmentMessageSender sender;
+    private RetryDelegate retryDelegate;
 
     /**
      * Initialize the EndpointListener with the IEquipmentMessageSender instance
@@ -72,11 +71,13 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
     @Override
     public void onSessionActive(UaSession session) {
         onEquipmentStateUpdate(OK);
+        retryDelegate.setConnectionState(true);
     }
 
     @Override
     public void onSessionInactive(UaSession session) {
         onEquipmentStateUpdate(CONNECTION_LOST);
+        retryDelegate.setConnectionState(false);
     }
 
     @Override

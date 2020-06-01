@@ -1,40 +1,28 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
-import cern.c2mon.daq.opcua.testutils.MiloMocker;
-import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
-import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import lombok.extern.slf4j.Slf4j;
-import org.easymock.EasyMock;
-import org.eclipse.milo.opcua.stack.core.UaException;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.CONNECTION_FAILED;
-import static cern.c2mon.daq.opcua.EndpointListener.EquipmentState.OK;
+import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.CONNECTION_FAILED;
 import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ADDRESS_MISSING_PROPERTIES;
-import static org.easymock.EasyMock.*;
-import static org.easymock.EasyMock.anyString;
 import static org.easymock.EasyMock.replay;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

@@ -1,10 +1,12 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.EndpointListener;
+import cern.c2mon.daq.opcua.SecurityModule;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,10 +29,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,10 +37,15 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static cern.c2mon.daq.opcua.exceptions.CommunicationException.rethrow;
+import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 /**
- * The implementation of custom wrapper for the OPC UA milo client
+ * The implementation of wrapper for the OPC UA milo client. Except for the initialize and getParentObjectNodeId
+ * methods, all thrown {@link OPCUAException}s can be either of type {@link CommunicationException} or {@link
+ * LongLostConnectionException}. A CommunicationException ocurrs when the method has been attempted as often and with a
+ * delay as configured without success. A LongLostConnectionException is thrown when the connection has already been
+ * lost for the time needed to execute all configured attempts. In this case, no retries are executed.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -49,10 +53,10 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Primary
 public class MiloEndpoint implements Endpoint {
 
-    private static final int TIMEOUT = 10000;
     private final SecurityModule securityModule;
     private final SessionActivityListener listener;
     private final EndpointSubscriptionListener subscriptionListener;
+    private final RetryDelegate retryDelegate;
     private OpcUaClient client;
 
     /**
@@ -87,22 +91,21 @@ public class MiloEndpoint implements Endpoint {
     }
 
     /**
-     * Connects to a server through OPC. Discover available endpoints and select the most secure one in line with
-     * configuration options. If the server with the same URI is already connected, the connection is kept as-is. In
-     * case of a communication error this method is retried a preconfigured number of times.
-     * @param uri the server address to connect to
-     * @throws ConfigurationException if it is not possible to connect to any of the the OPC UA server's endpoints with
-     *                                the given authentication configuration settings
-     * @throws CommunicationException if it is not possible to connect to the OPC UA server within the configured number
-     *                                of attempts
-     * @throws InterruptedException   if the method was interrupted during initialization.
+     * Connects to a server through the Milo OPC UA SDK. Discover available endpoints and select the most secure one in
+     * line with configuration options. In case of a communication error this method is retried a given amount of times
+     * with a given delay as specified in the application configuration.
+     * @param uri the server address to connect to.
+     * @throws OPCUAException       of type {@link CommunicationException} if it is not possible to connect to the OPC
+     *                              UA server within the configured number of attempts, and of type {@link
+     *                              ConfigurationException} if it is not possible to connect to any of the the OPC UA
+     *                              server's endpoints with the given authentication configuration settings.
+     * @throws InterruptedException if the method was interrupted during execution.
      */
     @Override
-    @Retryable(
-            value = {CommunicationException.class},
-            maxAttemptsExpression = "${app.maxInitialRetryAttempts}",
+    @Retryable(value = {CommunicationException.class},
+            maxAttemptsExpression = "${app.maxRetryAttempts}",
             backoff = @Backoff(delayExpression = "${app.retryDelay}"))
-    public void initialize(String uri) throws CommunicationException, ConfigurationException, InterruptedException {
+    public void initialize(String uri) throws OPCUAException, InterruptedException {
         try {
             var endpoints = DiscoveryClient.getEndpoints(uri).get();
             endpoints = updateEndpointUrls(uri, endpoints);
@@ -110,137 +113,148 @@ public class MiloEndpoint implements Endpoint {
             client.getSubscriptionManager().addSubscriptionListener(subscriptionListener);
             log.info("Connected");
         } catch (ExecutionException e) {
-            rethrow(ExceptionContext.CONNECT, e);
+            throw rethrow(CONNECT, e.getCause(), false);
         }
     }
 
     /**
-     * Triggers a disconnect from the server
-     * @return A CompletableFuture that completes when the disconnection concludes.
+     * Disconnect from the server with a certain number of retries in case of connection error.
+     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws InterruptedException if the method was interrupted during execution.
      */
     @Override
-    public CompletableFuture<Void> disconnect() {
+    public void disconnect() throws OPCUAException, InterruptedException {
         if (client != null) {
             client.removeSessionActivityListener(listener);
             client.getSubscriptionManager().clearSubscriptions();
-            return client.disconnect()
-                    .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS)
-                    .thenAccept(c -> log.info("Disconnected"));
+            retryDelegate.completeOrThrow(DISCONNECT,
+                    () -> client.disconnect().thenAccept(c -> log.info("Disconnected")).join());
         }
-        return CompletableFuture.completedFuture(null);
     }
 
     /**
-     * Create and return a new subscription within a timeout
+     * Create and return a new subscription with a certain number of retries in case of connection error.
      * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest
      *                     supported interval.
-     * @return a completable future containing the newly created subscription
+     * @return the newly created subscription.
+     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws InterruptedException if the method was interrupted during execution.
      */
-    public CompletableFuture<UaSubscription> createSubscription(int timeDeadband) {
-        return client.getSubscriptionManager()
-                .createSubscription(timeDeadband)
-                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
+    public UaSubscription createSubscription(int timeDeadband) throws OPCUAException, InterruptedException {
+        return retryDelegate.completeOrThrow(CREATE_SUBSCRIPTION,
+                () -> client.getSubscriptionManager().createSubscription(timeDeadband).join());
     }
 
     /**
-     * Delete an existing subscription
-     * @param subscription The subscription to delete
-     * @return a completable future containing the deleted subscription
+     * Delete an existing subscription with a certain number of retries in case of connection error.
+     * @param subscription The subscription to delete along with all contained MonitoredItems.
+     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws InterruptedException if the method was interrupted during execution.
      */
     @Override
-    public CompletableFuture<UaSubscription> deleteSubscription(UaSubscription subscription) {
-        return client.getSubscriptionManager()
-                .deleteSubscription(subscription.getSubscriptionId())
-                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
+    public void deleteSubscription(UaSubscription subscription) throws OPCUAException, InterruptedException {
+        retryDelegate.completeOrThrow(DELETE_SUBSCRIPTION,
+                () -> client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()).join());
     }
 
-     /**
-     * Add a list of item definitions as monitored items to a subscription
-     * @param subscription The subscription to add the monitored items to
-     * @param definitions the {@link cern.c2mon.daq.opcua.mapping.ItemDefinition}s for which to create monitored items
+    /**
+     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
+     * connection error.
+     * @param subscription         The subscription to add the monitored items to
+     * @param definitions          the {@link ItemDefinition}s for which to create monitored items
      * @param itemCreationCallback the callback function to execute when each item has been created successfully
-     * @return a completable future containing a list of monitored items corresponding to the item definitions which fails upon a given timeout
+     * @return a list of monitored items corresponding to the item definitions
+     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws InterruptedException if the method was interrupted during execution.
      */
     @Override
-    public CompletableFuture<List<UaMonitoredItem>> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
+    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException, InterruptedException {
         List<MonitoredItemCreateRequest> requests = definitions.stream()
                 .map(this::createItemSubscriptionRequest)
                 .collect(Collectors.toList());
-        return subscription
-                .createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback)
-                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
+        return retryDelegate.completeOrThrow(CREATE_MONITORED_ITEM,
+                () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback).join());
+
     }
 
     /**
-     * Delete a monitored item from an OPC UA subscription
-     * @param clientHandle the identifier of the monitored item to remove
+     * Delete a monitored item from an OPC UA subscription with a certain number of retries in case of connection
+     * error.
+     * @param clientHandle the identifier of the monitored item to remove.
      * @param subscription the subscription to remove the monitored item from.
-     * @return a completable future containing a list of StatusCodes for each deletion request which fails upon a given timeout
+     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws InterruptedException if the method was interrupted during initialization.
      */
     @Override
-    public CompletableFuture<List<StatusCode>> deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
+    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCUAException, InterruptedException {
         List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
                 .filter(i -> clientHandle.equals(i.getClientHandle()))
                 .collect(Collectors.toList());
-        return subscription
-                .deleteMonitoredItems(itemsToRemove)
-                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
+        retryDelegate.completeOrThrow(DELETE_MONITORED_ITEM,
+                () -> subscription.deleteMonitoredItems(itemsToRemove).join());
     }
 
     /**
-     * Read the current value from a node on the currently connected OPC UA server
-     * @param nodeId the nodeId of the node whose value to read
-     * @return a completable future containing the {@link DataValue} returned by the OPC UA stack upon reading the node which fails upon a given timeout
+     * Read the current value from a node on the currently connected OPC UA server with a certain number of retries in
+     * case connection of error.
+     * @param nodeId the nodeId of the node whose value to read.
+     * @return the {@link DataValue} containing the value read from the node.
+     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws InterruptedException if the method was interrupted during execution.
      */
     @Override
-    public CompletableFuture<DataValue> read(NodeId nodeId) {
-        return client
-                .readValue(0, TimestampsToReturn.Both, nodeId)
-                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
+    public DataValue read(NodeId nodeId) throws OPCUAException, InterruptedException {
+        return retryDelegate.completeOrThrow(READ,
+                () -> client.readValue(0, TimestampsToReturn.Both, nodeId).join());
     }
 
     /**
-     * Write a value to a node on the currently connected OPC UA server
-     * @param nodeId the nodeId of the node to write to
-     * @param value  the value to write to the node
-     * @return a completable future the {@link StatusCode} of the response to the write action which fails upon a given timeout
+     * Write a value to a node on the currently connected OPC UA server with a certain number of retries in case of
+     * connection error.
+     * @param nodeId the nodeId of the node to write a value to.
+     * @param value  the value to write to the node.
+     * @return a completable future  the {@link StatusCode} of the response to the write action
+     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws InterruptedException if the method was interrupted during execution.
      */
     @Override
-    public CompletableFuture<StatusCode> write(NodeId nodeId, Object value) {
+    public StatusCode write(NodeId nodeId, Object value) throws OPCUAException, InterruptedException {
         // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
         DataValue dataValue = new DataValue(new Variant(value), null, null);
-        return client
-                .writeValue(nodeId, dataValue)
-                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
+        return retryDelegate.completeOrThrow(WRITE,
+                () -> client.writeValue(nodeId, dataValue).join());
     }
 
     /**
-     * Call the method Node with ID methodId contained in the object with ID objectId.
+     * Call the method node with ID methodId contained in the object with ID objectId with a certain number of retries
+     * in case of connection error.
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
      * @param args     the input arguments to pass to the methodId call.
-     * @return A CompletableFuture containing a Map.Entry with the StatusCode of the methodId response as key, and the
-     * methodId's output arguments (if applicable)
+     * @return the StatusCode of the methodId response as key and the output arguments of the called method (if
+     * applicable, else null) in a Map Entry.
+     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws InterruptedException if the method was interrupted during execution.
      */
-    public CompletableFuture<Map.Entry<StatusCode, Object[]>> callMethod(NodeId objectId, NodeId methodId, Object... args) {
-        final Variant[] variants = Stream.of(args)
-                .map(Variant::new)
-                .toArray(Variant[]::new);
-        return client
-                .call(new CallMethodRequest(objectId, methodId, variants))
-                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS)
-                .thenApply(methodResult -> {
-                    Object[] output = MiloMapper.toObject(methodResult.getOutputArguments());
-                    return Map.entry(methodResult.getStatusCode(), output);
-                });
+    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException, InterruptedException {
+        final var variants = Stream.of(args).map(Variant::new).toArray(Variant[]::new);
+        final var result = retryDelegate.completeOrThrow(METHOD,
+                () -> client.call(new CallMethodRequest(objectId, methodId, variants)).join());
+        final var output = MiloMapper.toObject(result.getOutputArguments());
+        return Map.entry(result.getStatusCode(), output);
     }
 
     /**
-     * Fetches the node's first parent object node, if such a node exists.
-     * @param nodeId the node whose parent to fetch
-     * @return the parent node's NodeId
+     * Fetches the node's first parent object node, if such a node exists with a certain number of retries in case of
+     * connection error.
+     * @param nodeId the node whose parent object to fetch
+     * @return the parent node's NodeId, if it exists. Else a {@link ConfigurationException} is thrown.
+     * @throws OPCUAException       of type {@link ConfigurationException} in case the nodeId is orphaned, or of types
+     *                              {@link CommunicationException} or {@link LongLostConnectionException} as detailed in
+     *                              the implementation class's JavaDoc.
+     * @throws InterruptedException if the method was interrupted during execution.
      */
-    public CompletableFuture<NodeId> getParentObjectNodeId(NodeId nodeId) {
+    public NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException, InterruptedException {
         final BrowseDescription bd = new BrowseDescription(
                 nodeId,
                 BrowseDirection.Inverse,
@@ -248,23 +262,20 @@ public class MiloEndpoint implements Endpoint {
                 true,
                 uint(NodeClass.Object.getValue()),
                 uint(BrowseResultMask.All.getValue()));
-        return client.browse(bd)
-                .orTimeout(TIMEOUT, TimeUnit.MILLISECONDS)
-                .thenApply(result -> {
-                    if (result.getReferences() != null && result.getReferences().length > 0) {
-                        final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(client.getNamespaceTable());
-                        if (result.getStatusCode().isGood() && objectNode.isPresent()) {
-                            return objectNode.get();
-                        }
-                    }
-                    throw new CompletionException(new ConfigurationException(ConfigurationException.Cause.OBJINVALID, "A Tag's HardwareAddress must specify a redundant item name to execute a method command."));
-                });
+        final BrowseResult result = retryDelegate.completeOrThrow(BROWSE, () -> client.browse(bd).join());
+        if (result.getReferences() != null && result.getReferences().length > 0) {
+            final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(client.getNamespaceTable());
+            if (result.getStatusCode().isGood() && objectNode.isPresent()) {
+                return objectNode.get();
+            }
+        }
+        throw new ConfigurationException(ConfigurationException.Cause.OBJINVALID, "A Tag's HardwareAddress must specify a redundant item name to execute a method command.");
     }
 
     /**
-     * Return whether a subscription is part of the current session
-     * @param subscription the subscription to check
-     * @return true if the subscription is a valid in the current session
+     * Check whether a subscription is subscribed as part of the current session.
+     * @param subscription the subscription to check for currentness.
+     * @return true if the subscription is a valid in the current session.
      */
     public boolean isCurrent(UaSubscription subscription) {
         return client.getSubscriptionManager().getSubscriptions().contains(subscription);

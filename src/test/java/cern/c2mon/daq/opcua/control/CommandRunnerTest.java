@@ -1,9 +1,10 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
@@ -14,7 +15,6 @@ import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -74,7 +74,7 @@ public class CommandRunnerTest {
 
 
     @Test
-    public void commandWithPulseShouldNotDoAnythingIfAlreadySet() throws EqCommandTagException {
+    public void commandWithPulseShouldNotDoAnythingIfAlreadySet() throws EqCommandTagException, OPCUAException, InterruptedException {
         tag.setHardwareAddress(pulseAddress);
         value.setValue(0);
         final Endpoint mockEp = EasyMock.mock(Endpoint.class);
@@ -89,7 +89,7 @@ public class CommandRunnerTest {
     }
 
     @Test
-    public void commandWithPulseShouldReadSetReset() throws EqCommandTagException {
+    public void commandWithPulseShouldReadSetReset() throws EqCommandTagException, OPCUAException, InterruptedException {
         tag.setHardwareAddress(pulseAddress);
         final NodeId def = ItemDefinition.toNodeId(tag);
         final Endpoint mockEp = EasyMock.mock(Endpoint.class);

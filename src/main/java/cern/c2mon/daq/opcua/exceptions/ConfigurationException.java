@@ -24,7 +24,8 @@ public class ConfigurationException extends OPCUAException {
         COMMAND_VALUE_ERROR("Provided command value could not be processed. Check data type and value."),
         SECURITY("Ensure your app security settings are valid."),
         OBJINVALID("Could not resolve an object node for the command tag."),
-        DATATAG_UNKNOWN("Data tag is unknown.");
+        DATATAG_UNKNOWN("Data tag is unknown."),
+        EMPTY_SUBSCRIPTION("Cannot recreate a subscription without any monitored items.");
 
         public final String message;
 

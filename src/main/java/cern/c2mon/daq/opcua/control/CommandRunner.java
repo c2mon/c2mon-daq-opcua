@@ -4,6 +4,7 @@ import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
@@ -11,19 +12,20 @@ import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.type.TypeConverter;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
+import com.google.common.base.Joiner;
 import lombok.AllArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * The CommandRunner identifies appropriate actions to take upon receiving an {@link ISourceCommandTag}s and executes
@@ -56,25 +58,23 @@ public class CommandRunner {
             final var hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
             switch (hardwareAddress.getCommandType()) {
                 case METHOD:
-                    return Stream.of(executeMethod(tag, arg).join())
-                            .map(Object::toString)
-                            .collect(Collectors.joining(", "));
+                    return Joiner.on(", ").join(executeMethod(tag, arg));
                 case CLASSIC:
-                    runClassicCommand(tag, arg, hardwareAddress.getCommandPulseLength()).join();
-                    return null;
+                    runClassicCommand(tag, arg, hardwareAddress.getCommandPulseLength());
+                    break;
                 default:
-                    // impossible
-                    throw new EqCommandTagException(ConfigurationException.Cause.COMMAND_TYPE_UNKNOWN.message);
+                // impossible
+                throw new EqCommandTagException(ConfigurationException.Cause.COMMAND_TYPE_UNKNOWN.message);
             }
-        } catch (Exception e) {
-            final Throwable cause = e.getCause();
-            if (cause instanceof EqCommandTagException) {
-                throw (EqCommandTagException) cause;
-            } else if (cause instanceof ConfigurationException) {
-                throw new EqCommandTagException("Please check whether the configuration is correct.", cause);
-            }
-            throw new EqCommandTagException("An unexpected error occurred.", (cause == null) ? e : cause);
+        } catch (ConfigurationException e) {
+            throw new EqCommandTagException("Please check whether the configuration is correct.", e);
+        } catch (OPCUAException e) {
+            throw new EqCommandTagException("A communication error occurred while running the command. ", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Thread interrupted during command execution.");
         }
+        return null;
     }
 
     /**
@@ -86,50 +86,60 @@ public class CommandRunner {
      * @param arg the input arguments to pass to the method.
      * @return an array of the method's output arguments. If there are none, an empty array is returned.
      */
-    private CompletableFuture<Object[]> executeMethod(ISourceCommandTag tag, Object arg) {
+    private Object[] executeMethod(ISourceCommandTag tag, Object arg) throws OPCUAException, InterruptedException {
         log.info("executeMethod of tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
         final ItemDefinition def = ItemDefinition.of(tag);
-        final var response = (def.getMethodNodeId() == null) ?
-                endpoint.getParentObjectNodeId(def.getNodeId())
-                        .thenCompose(parentNodeId -> endpoint.callMethod(parentNodeId, def.getNodeId(), arg)) :
-                endpoint.callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
-        return response
-                .thenApply(codeResultEntry -> {
-                    log.info("executeMethod returned {}.", codeResultEntry.getValue());
-                    handleCommandResponseStatusCode(codeResultEntry.getKey(), ExceptionContext.METHOD_CODE);
-                    return codeResultEntry.getValue();
-                });
+        final Map.Entry<StatusCode, Object[]> result;
+        if (def.getMethodNodeId() == null) {
+            final NodeId parent = endpoint.getParentObjectNodeId(def.getNodeId());
+            result = endpoint.callMethod(parent, def.getMethodNodeId(), arg);
+        } else {
+            result = endpoint.callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
+        }
+        log.info("executeMethod returned {}.", result.getValue());
+        handleCommandResponseStatusCode(result.getKey(), ExceptionContext.METHOD_CODE);
+        return result.getValue();
     }
 
-    private CompletableFuture<Void> runClassicCommand(ISourceCommandTag tag, Object arg, int pulse) {
+    private void runClassicCommand(ISourceCommandTag tag, Object arg, int pulse) throws OPCUAException, InterruptedException, EqCommandTagException {
         if (pulse == 0) {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
-            return executeWriteCommand(tag, arg);
+            executeWriteCommand(tag, arg);
         } else {
-            return endpoint.read(ItemDefinition.toNodeId(tag))
-                    .thenApply(value -> {
-                        handleCommandResponseStatusCode(value.getStatusCode(), ExceptionContext.READ);
-                        return MiloMapper.toObject(value.getValue());
-                    })
-                    .thenCompose(original -> {
-                        if (original.equals(arg)) {
-                            log.info("Tag with ID {} is already set to {}. Skipping command with pulse.", tag.getId(), arg);
-                            return CompletableFuture.completedFuture(null);
-                        } else {
-                            log.info("Setting Tag with ID {} to {} for {} seconds.", tag.getId(), arg, pulse);
-                        return executeWriteCommand(tag, arg)
-                                .thenComposeAsync(v -> {
-                                    log.info("Setting Tag with ID {} back to {}.", tag.getId(), original);
-                                    return executeWriteCommand(tag, original);
-                                }, CompletableFuture.delayedExecutor(pulse, TimeUnit.SECONDS));
-                        }
-                    });
+            final DataValue value = endpoint.read(ItemDefinition.toNodeId(tag));
+            handleCommandResponseStatusCode(value.getStatusCode(), ExceptionContext.READ);
+            final Object original = MiloMapper.toObject(value.getValue());
+            if (original != null && original.equals(arg)) {
+                log.info("Tag with ID {} is already set to {}. Skipping command with pulse.", tag.getId(), arg);
+            } else {
+                final var f = CompletableFuture.runAsync(() -> {
+                    log.info("Resetting Tag with ID {} to {}.", tag.getId(), original);
+                    try {
+                        executeWriteCommand(tag, original);
+                    } catch (OPCUAException | InterruptedException e) {
+                        throw new CompletionException(e);
+                    }
+                }, CompletableFuture.delayedExecutor(pulse, TimeUnit.SECONDS));
+                log.info("Setting Tag with ID {} to {} for {} seconds.", tag.getId(), arg, pulse);
+                executeWriteCommand(tag, arg);
+                try {
+                    f.join();
+                } catch (CompletionException e) {
+                    if (e.getCause() instanceof OPCUAException) {
+                        throw (OPCUAException) e.getCause();
+                    } else if (e.getCause() instanceof InterruptedException) {
+                        throw (InterruptedException) e.getCause();
+                    } else {
+                        throw new EqCommandTagException("An unexpected error occurred when resetting the command tag.", e.getCause());
+                    }
+                }
+            }
         }
     }
 
-    private CompletableFuture<Void> executeWriteCommand(ISourceCommandTag tag, Object arg) {
-        return endpoint.write(ItemDefinition.toNodeId(tag), arg)
-                .thenAccept(s -> handleCommandResponseStatusCode(s, ExceptionContext.COMMAND_CLASSIC));
+    private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException, InterruptedException {
+        final StatusCode statusCode = endpoint.write(ItemDefinition.toNodeId(tag), arg);
+        handleCommandResponseStatusCode(statusCode, ExceptionContext.COMMAND_CLASSIC);
     }
 
     /**
@@ -142,10 +152,10 @@ public class CommandRunner {
      * @throws CompletionException a wrapper for a CommunicationException, since this method is only called from within
      *                             CompletableFutures and will be handled on join.
      */
-    private void handleCommandResponseStatusCode(@Nullable StatusCode statusCode, ExceptionContext context) {
+    private void handleCommandResponseStatusCode(@Nullable StatusCode statusCode, ExceptionContext context) throws CommunicationException {
         log.info("Action completed with Status Code: {}", statusCode);
         if (statusCode == null || !statusCode.isGood()) {
-            throw new CompletionException(new CommunicationException(context));
+            throw new CommunicationException(context);
         }
     }
 }

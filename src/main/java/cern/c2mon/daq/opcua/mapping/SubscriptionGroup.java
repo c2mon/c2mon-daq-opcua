@@ -21,13 +21,13 @@ import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Getter
 public class SubscriptionGroup{
 
-    private final List<Long> tagIds = new ArrayList<>();
+    private final Set<Long> tagIds = new HashSet<>();
 
     @Setter
     private UaSubscription subscription;
@@ -47,9 +47,6 @@ public class SubscriptionGroup{
     }
 
     public void add(final long tagId) {
-        if (this.tagIds.contains(tagId)) {
-            throw new IllegalArgumentException("The item definition has already been subscribed.");
-        }
         this.tagIds.add(tagId);
     }
 
@@ -58,8 +55,8 @@ public class SubscriptionGroup{
         subscription = null;
     }
 
-    public void remove(final ISourceDataTag tag) {
-        this.tagIds.remove(tag.getId());
+    public boolean remove(final ISourceDataTag tag) {
+        return this.tagIds.remove(tag.getId());
     }
 
     public boolean contains(ISourceDataTag tag) {

@@ -15,8 +15,6 @@ import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
-import org.easymock.EasyMock;
-import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;

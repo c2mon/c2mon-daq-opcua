@@ -3,8 +3,7 @@ package cern.c2mon.daq.opcua.mapping;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SubscriptionGroupTest extends MappingBase {
 
@@ -20,16 +19,10 @@ public class SubscriptionGroupTest extends MappingBase {
     }
 
     @Test
-    public void addTagWithBadDeadbandShouldThrowError() {
-        group.add(tagWithDifferentDeadband.getId());
-        assertThrows(IllegalArgumentException.class, () -> group.add(tagWithDifferentDeadband.getId()));
-    }
-
-    @Test
-    public void addDefinitionTwiceShouldThrowError() {
+    public void addDefinitionTwiceShouldNotAddAnything() {
         group.add(tag.getId());
-
-        assertThrows(IllegalArgumentException.class, () -> group.add(tag.getId()));
+        group.add(tag.getId());
+        assertEquals(1, group.size());
     }
 
     @Test

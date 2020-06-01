@@ -11,7 +11,6 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
@@ -29,44 +28,32 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     }
 
     @Override
-    public CompletableFuture<UaSubscription> createSubscription (int timeDeadband) {
-        final CompletableFuture<UaSubscription> f = new CompletableFuture<>();
-        f.completeExceptionally(new CommunicationException(CREATE_SUBSCRIPTION));
-        return f;
+    public UaSubscription createSubscription (int timeDeadband) throws CommunicationException {
+        throw new CommunicationException(CREATE_SUBSCRIPTION);
     }
 
     @Override
-    public CompletableFuture<UaSubscription> deleteSubscription (UaSubscription subscription) {
-        final CompletableFuture<UaSubscription> f = new CompletableFuture<>();
-        f.completeExceptionally(new CommunicationException(DELETE_SUBSCRIPTION));
-        return f;
+    public void deleteSubscription (UaSubscription subscription) throws CommunicationException {
+        throw new CommunicationException(DELETE_SUBSCRIPTION);
     }
 
     @Override
-    public CompletableFuture<List<UaMonitoredItem>> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) {
-        final CompletableFuture<List<UaMonitoredItem>> f = new CompletableFuture<>();
-        f.completeExceptionally(new CommunicationException(CREATE_MONITORED_ITEM));
-        return f;
+    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
+        throw new CommunicationException(CREATE_MONITORED_ITEM);
     }
 
     @Override
-    public CompletableFuture<DataValue> read (NodeId nodeId) {
-        final CompletableFuture<DataValue> f = new CompletableFuture<>();
-        f.completeExceptionally(new CommunicationException(READ));
-        return f;
+    public DataValue read (NodeId nodeId) throws CommunicationException {
+        throw new CommunicationException(READ);
     }
 
     @Override
-    public CompletableFuture<StatusCode> write (NodeId nodeId, Object value) {
-        final CompletableFuture<StatusCode> f = new CompletableFuture<>();
-        f.completeExceptionally(new CommunicationException(WRITE));
-        return f;
+    public StatusCode write (NodeId nodeId, Object value) throws CommunicationException {
+        throw new CommunicationException(WRITE);
     }
 
 
-    public CompletableFuture<List<StatusCode>> deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) {
-        final CompletableFuture<List<StatusCode>> f = new CompletableFuture<>();
-        f.completeExceptionally(new CommunicationException(DELETE_MONITORED_ITEM));
-        return f;
+    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws CommunicationException {
+        throw new CommunicationException(DELETE_MONITORED_ITEM);
     }
 }

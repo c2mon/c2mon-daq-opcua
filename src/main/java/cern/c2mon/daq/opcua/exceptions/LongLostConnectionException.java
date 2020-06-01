@@ -17,14 +17,14 @@
 package cern.c2mon.daq.opcua.exceptions;
 
 
-public class OPCCriticalException extends RuntimeException {
+public class LongLostConnectionException extends OPCUAException {
 
     /**
      * Creates a new OPCCriticalException.
      * 
      * @param cause Throwable which is the cause of this exception.
      */
-    public OPCCriticalException(final Throwable cause) {
-        super(cause);
+    public LongLostConnectionException(final ExceptionContext context, final Throwable cause) {
+        super(context.getMessage(), cause);
     }
 }

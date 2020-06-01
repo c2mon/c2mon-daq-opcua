@@ -36,7 +36,7 @@ public abstract class TestUtils {
                 .onDemandCertificationEnabled(true)
                 .failFast(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())
-                .maxInitialRetryAttempts(1)
+                .maxRetryAttemps(1)
                 .retryDelay(2000)
                 .build();
     }

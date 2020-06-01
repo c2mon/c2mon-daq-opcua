@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
@@ -40,46 +40,44 @@ public class TagChanger  implements IDataTagChanger  {
         if (sourceDataTag.getHardwareAddress().equals(oldSourceDataTag.getHardwareAddress())) {
             r.apply(true, "The new and old sourceDataTags have the same hardware address, no update was required.", changeReport);
         } else {
-            removeDataTagFutureAndReturnFuture(oldSourceDataTag, changeReport)
-                    .thenRun(() -> addDataTagFutureAndReturnFuture(sourceDataTag, changeReport));
+            removeDataTagFutureAndReturnFuture(oldSourceDataTag, changeReport);
+            addDataTagFutureAndReturnFuture(sourceDataTag, changeReport);
         }
     }
 
-    public CompletableFuture<Void> addDataTagFutureAndReturnFuture(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        return controller.subscribeTag(sourceDataTag)
-                .handle((s, throwable) -> {
-                    String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId();
-                    if (throwable == null) {
-                        msg += s ? " was subscribed." : " was not subscribed or configured in the previous configuration. ";
-                    } else {
-                        msg += " could not be subscribed. The following error occurred: " + throwable.getMessage();
-                    }
-                    r.apply(throwable == null && s, msg, changeReport);
-                    return null;
-                });
+    public void addDataTagFutureAndReturnFuture(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
+        boolean success = false;
+        String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId();
+        try {
+            success = controller.subscribeTag(sourceDataTag);
+            msg += success ? " was subscribed." : " could not be subscribed.";
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            msg += " could not be subscribed since the thread was interrupted.";
+        }
+        r.apply(success, msg, changeReport);
     }
 
-    private CompletableFuture<Void> removeDataTagFutureAndReturnFuture(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        return controller.removeTag(sourceDataTag)
-                .handle((s, throwable) -> {
-                    String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId();
-                    if (throwable == null) {
-                        msg += s ? " was unsubscribed." : " was not previously configured. No change required. ";
-                    } else {
-                        msg += "could not be removed. The following error occurred: " + throwable.getMessage();
-                    }
-                    r.apply(throwable == null, msg, changeReport);
-                    return null;
-                });
+    private void removeDataTagFutureAndReturnFuture(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
+        String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId();
+        try {
+            msg += controller.removeTag(sourceDataTag) ? " was unsubscribed." : " was not previously configured. No change required. ";
+            r.apply(true, msg, changeReport);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            msg += " could not be subscribed since the thread was interrupted.";
+            r.apply(false, msg, changeReport);
+        }
     }
 
     private final static TriConsumer<Boolean, String, ChangeReport> r = (success, message, report) -> {
+        final Function<String, String> prevMsg = s -> s == null ? "" : s;
         if (success) {
-            report.appendInfo(report.getInfoMessage() + message);
+            report.appendInfo(prevMsg.apply(report.getInfoMessage()) + message);
             report.setState(SUCCESS);
         } else {
             log.error(message);
-            report.appendError(report.getErrorMessage() + message);
+            report.appendError(prevMsg.apply(report.getErrorMessage()) + message);
             report.setState(FAIL);
         }
     };

@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.connection.MiloEndpoint;
-import cern.c2mon.daq.opcua.connection.SecurityModule;
+import cern.c2mon.daq.opcua.connection.RetryDelegate;
 import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
@@ -16,6 +16,7 @@ import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -31,7 +32,11 @@ public class MethodIT {
     public static void setUpEndpoint() throws OPCUAException, InterruptedException {
         // Not testing security here, so just connect without security
         SecurityModule p = new SecurityModule(config, new NoSecurityCertifier(), new NoSecurityCertifier(), new NoSecurityCertifier());
-        final MiloEndpoint wrapper = new MiloEndpoint(p, new TestListeners.TestListener(), new EndpointSubscriptionListener());
+        RetryDelegate delegate = new RetryDelegate();
+        ReflectionTestUtils.setField(delegate, "maxRetryCount", 3);
+        ReflectionTestUtils.setField(delegate, "timeout", 3000);
+        ReflectionTestUtils.setField(delegate, "retryDelay", 1000);
+        final MiloEndpoint wrapper = new MiloEndpoint(p, new TestListeners.TestListener(), new EndpointSubscriptionListener(), delegate);
         wrapper.initialize("opc.tcp://milo.digitalpetri.com:62541/milo");
         runner = new CommandRunner(wrapper);
     }

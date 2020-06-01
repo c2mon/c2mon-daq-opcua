@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;

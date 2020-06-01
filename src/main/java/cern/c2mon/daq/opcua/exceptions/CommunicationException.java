@@ -16,16 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.exceptions;
 
-import com.google.common.collect.ImmutableSet;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.stack.core.StatusCodes;
-import org.eclipse.milo.opcua.stack.core.UaException;
-
-import java.net.UnknownHostException;
-import java.util.Arrays;
-import java.util.concurrent.ExecutionException;
-
-import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 
 /**
  * Exception while communicating with the OPC server. This exception can be due
@@ -37,28 +28,6 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
  */
 @Slf4j
 public class CommunicationException extends OPCUAException {
-
-    public static void rethrow(ExceptionContext context, Exception e) throws CommunicationException, ConfigurationException {
-        if (e instanceof InterruptedException || e instanceof ExecutionException) {
-            handleThrowable(context, e, e.getCause());
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
-
-    private static void handleThrowable(ExceptionContext context, Exception e, Throwable cause) throws CommunicationException, ConfigurationException {
-        if (cause instanceof UaException) {
-            final var code = ((UaException) cause).getStatusCode().getValue();
-            if (CONFIG.contains(code) || RECONNECT.contains(code)) {
-                throw new ConfigurationException(context, e);
-            }
-        } else if (cause instanceof UnknownHostException) {
-            throw new ConfigurationException(context, e);
-        }
-        throw new CommunicationException(context, e);
-    }
-
 
     /**
      * Wrap a {@link Throwable} as an OPCCommunicationException

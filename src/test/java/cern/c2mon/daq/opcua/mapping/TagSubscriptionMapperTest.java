@@ -177,8 +177,9 @@ public class TagSubscriptionMapperTest extends MappingBase {
     public void registerDefinitionTwiceShouldThrowError() {
         mapper.getOrCreateDefinition(tag);
         mapper.addTagToGroup(tag.getId());
-
-        assertThrows(IllegalArgumentException.class, () -> mapper.addTagToGroup(tag.getId()));
+        final var size = mapper.getGroup(tag).size();
+        mapper.addTagToGroup(tag.getId());
+        assertEquals(size, mapper.getGroup(tag).size());
     }
 
     @Test

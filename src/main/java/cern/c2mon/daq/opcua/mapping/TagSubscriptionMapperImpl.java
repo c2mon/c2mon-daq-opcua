@@ -17,6 +17,8 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -37,7 +39,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
 
     @Getter
-    private final Map<Long, DataTagDefinition> tagIdDefinitionMap = new ConcurrentHashMap<>();
+    private final BiMap<Long, DataTagDefinition> tagIdDefinitionMap = HashBiMap.create();
 
     @Override
     public Map<SubscriptionGroup, List<DataTagDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> tags) {
@@ -54,24 +56,9 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public void addToTagDefinitionMap(Map<Long, DataTagDefinition> newMap) {
-        newMap.forEach(tagIdDefinitionMap::putIfAbsent);
-    }
-
-    @Override
-    public Map<SubscriptionGroup, List<DataTagDefinition>> mapToGroups(Collection<DataTagDefinition> definitions) {
-        return definitions
-                .stream()
-                .collect(groupingBy(DataTagDefinition::getTimeDeadband))
-                .entrySet()
-                .stream()
-                .collect(toMap(e -> getOrCreateGroup(e.getKey()), Map.Entry::getValue));
-    }
-
-    @Override
-    public SubscriptionGroup getGroup (ISourceDataTag tag) {
-        getOrCreateDefinition(tag);
-        return getOrCreateGroup(tag.getTimeDeadband());
+    public SubscriptionGroup getGroup (ISourceDataTag dataTag) {
+        getOrCreateDefinition(dataTag);
+        return getOrCreateGroup(dataTag.getTimeDeadband());
     }
 
 
@@ -79,10 +66,10 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     public SubscriptionGroup getGroup (UaSubscription subscription) {
         for(SubscriptionGroup group : subscriptionGroups.values()) {
             if (group.getSubscription().equals(subscription)) {
-                return  group;
+                return group;
             }
         }
-        throw new IllegalArgumentException("This subscription does not correspond to a subscription group.");
+        return null;
     }
 
     @Override
@@ -104,6 +91,12 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
             throw new IllegalArgumentException("The tag id is unknown.");
         }
     }
+
+    @Override
+    public long getTagId(DataTagDefinition definition)  {
+        return tagIdDefinitionMap.inverse().get(definition);
+    }
+
 
     @Override
     public Long getTagId(UInteger clientHandle) {
@@ -131,12 +124,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
             return false;
         }
         tagIdDefinitionMap.remove(dataTag.getId());
-        SubscriptionGroup subscriptionGroup = getGroup(dataTag);
-        if (!subscriptionGroup.contains(dataTag)) {
-            return false;
-        }
-        subscriptionGroup.remove(dataTag);
-        return true;
+        return getGroup(dataTag).remove(dataTag);
     }
 
     @Override

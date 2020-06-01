@@ -26,15 +26,22 @@ import org.springframework.retry.support.RetryTemplate;
 public class AppConfig {
 
     /**
-     * How long to wait in between attempts at initially establishing connection to the OPC UA server, and recreating
-     * subscriptions in case of connectivity issues.
+     * The time to wait before retrying a failed attempt of individual methods executed on the OPC UA SDK, or of
+     * recreating a subscription which could not be transferred automatically to a new session in milliseconds.
      */
     private int retryDelay = 50000;
 
     /**
      * How often to retry connecting to an unavailable server when connectToDataSource() is called?
      */
-    private int maxInitialRetryAttempts = 1;
+    private int maxRetryAttemps = 1;
+
+    /**
+     * The timeout inidcating for how long the client is willing to wait for a server response on a single transaction
+     * in milliseconds. The maximum value is 5000 due to a static timeout in the Eclipse Milo package.
+     */
+    private int timout;
+
 
     private String appName;
     private String productUri;
