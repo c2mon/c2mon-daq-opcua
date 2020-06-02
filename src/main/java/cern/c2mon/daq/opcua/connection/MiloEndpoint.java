@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.SecurityModule;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
@@ -36,7 +35,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static cern.c2mon.daq.opcua.exceptions.CommunicationException.rethrow;
+import static cern.c2mon.daq.opcua.exceptions.CommunicationException.of;
 import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
@@ -113,7 +112,7 @@ public class MiloEndpoint implements Endpoint {
             client.getSubscriptionManager().addSubscriptionListener(subscriptionListener);
             log.info("Connected");
         } catch (ExecutionException e) {
-            throw rethrow(CONNECT, e.getCause(), false);
+            throw of(CONNECT, e.getCause(), false);
         }
     }
 
@@ -269,7 +268,7 @@ public class MiloEndpoint implements Endpoint {
                 return objectNode.get();
             }
         }
-        throw new ConfigurationException(ConfigurationException.Cause.OBJINVALID, "A Tag's HardwareAddress must specify a redundant item name to execute a method command.");
+        throw new ConfigurationException(OBJINVALID);
     }
 
     /**

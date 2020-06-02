@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.address;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,12 +49,12 @@ public class EquipmentAddressTest {
     public void emptyServerAddressListShouldThrowException() {
         assertThrows(ConfigurationException.class,
                 () -> new EquipmentAddress(Collections.emptyList(), 1, 2, true),
-                ConfigurationException.Cause.MISSING_URI.message);
+                ExceptionContext.MISSING_URI.getMessage());
     }
 
     @Test
     public void getServerAddressWithUnknownProtocolShouldThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> equipmentAddress.getServerAddressOfType("http"));
+        assertThrows(ConfigurationException.class, () -> equipmentAddress.getServerAddressOfType("http"));
     }
 
     @Test

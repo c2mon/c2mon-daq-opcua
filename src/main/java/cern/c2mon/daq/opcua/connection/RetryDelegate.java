@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import static cern.c2mon.daq.opcua.exceptions.OPCUAException.rethrow;
+import static cern.c2mon.daq.opcua.exceptions.OPCUAException.of;
 
 /**
  * The RetryDelegate executes a given method a number of times in case of failure until the method completes
@@ -70,7 +70,7 @@ public class RetryDelegate {
             return CompletableFuture.supplyAsync(supplier).get(timeout, TimeUnit.MILLISECONDS);
         } catch (ExecutionException | TimeoutException e) {
             final Throwable t = (e instanceof ExecutionException) ? e.getCause() : e;
-            throw rethrow(context, t, isDisconnectionPeriodTooLong());
+            throw of(context, t, isDisconnectionPeriodTooLong());
         }
     }
 

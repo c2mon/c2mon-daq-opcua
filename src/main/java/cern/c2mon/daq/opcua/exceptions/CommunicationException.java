@@ -1,49 +1,26 @@
-/******************************************************************************
- * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- * 
- * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
- * C2MON is free software: you can redistribute it and/or modify it under the
- * terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation, either version 3 of the license.
- * 
- * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
- * more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package cern.c2mon.daq.opcua.exceptions;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Exception while communicating with the OPC server. This exception can be due
- * to a temporary reason (network down). It might work to retry after this
- * exception.
- * 
- * @author Andreas Lang
- *
+ * This exception is thrown when communicating with the OPC UA server fails for reasons that are not mapped to
+ * misconfiguration. This exception can be due to a temporary reason (network down). It may be fruitful to retry an
+ * action after this exception.
  */
-@Slf4j
 public class CommunicationException extends OPCUAException {
 
     /**
-     * Wrap a {@link Throwable} as an OPCCommunicationException
-     * @param ctx The context the exception occurred in
-     * @param e the throwable to wrap as an OPCCommunicationException
+     * Creates a new CommunicationException wrapping the throwable which caued an action to fail.
+     * @param context The context the exception occurred in.
+     * @param cause   the throwable to wrap as an OPCCommunicationException.
      */
-    public CommunicationException(final ExceptionContext ctx, final Throwable e) {
-        super(ctx.getMessage(), e);
+    public CommunicationException(final ExceptionContext context, final Throwable cause) {
+        super(context, cause);
     }
 
     /**
-     * Create an new {@link CommunicationException}
-     * @param ctx The context the exception occurred in
+     * Create an new CommunicationException.
+     * @param context gives more details about cause and context of the exception.
      */
-    public CommunicationException(final ExceptionContext ctx) {
-        super(ctx.getMessage());
+    public CommunicationException(final ExceptionContext context) {
+        super(context);
     }
 }
-

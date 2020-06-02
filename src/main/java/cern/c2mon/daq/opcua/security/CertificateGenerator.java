@@ -9,7 +9,6 @@ import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateBuilder;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateGenerator;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.security.NoSuchAlgorithmException;
@@ -20,24 +19,23 @@ import java.util.Set;
 import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 
 /**
- * For those endpoints with a supported security policy, the CertificateGenerator generates a new self-signed certificate
- * and keypair with a matching signature algorithm.
- * Currently, only @RsaSha256 (http://www.w3.org/2001/04/xmldsig-more#rsa-sha256) is supported.
+ * For those endpoints with a supported security policy, the CertificateGenerator generates a new self-signed
+ * certificate and keypair with a matching signature algorithm. Currently, only @RsaSha256
+ * (http://www.w3.org/2001/04/xmldsig-more#rsa-sha256) is supported.
  */
 @Component("generator")
 @Getter
 @Slf4j
 @RequiredArgsConstructor
 public class CertificateGenerator extends CertifierBase {
-    final AppConfig config;
-
     private static final String RSA_SHA256 = "SHA256withRSA";
     private static final String[] SUPPORTED_SIG_ALGS = {RSA_SHA256};
     private static final ImmutableSet<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown).build();
+    final AppConfig config;
 
     /**
-     * Generates a matching certificate and keypair if not yet present and returns whether the endpoint can
-     * therewith be certified.
+     * Generates a matching certificate and keypair if not yet present and returns whether the endpoint can therewith be
+     * certified.
      * @param endpoint the endpoint for which certificate and keypair are generated
      * @return whether the endpoint can be certified
      */
@@ -70,7 +68,6 @@ public class CertificateGenerator extends CertifierBase {
     /**
      * If a connection using a Certifier fails for severe reasons, attemping to reconnect with this certifier is
      * fruitless also with other endpoints.
-     *
      * @return a list of error codes which constitute a severe error.
      */
     @Override

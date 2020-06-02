@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
@@ -60,7 +61,7 @@ public class ItemDefinition {
 
     protected static OPCHardwareAddress extractOpcAddress(HardwareAddress address) throws ConfigurationException {
         if (!(address instanceof OPCHardwareAddress)) {
-            throw new ConfigurationException(ConfigurationException.Cause.HARDWARE_ADDRESS_UNKNOWN);
+            throw new ConfigurationException(ExceptionContext.HARDWARE_ADDRESS_UNKNOWN);
         }
         return (OPCHardwareAddress) address;
     }

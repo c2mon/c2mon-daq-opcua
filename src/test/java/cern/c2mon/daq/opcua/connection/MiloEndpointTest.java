@@ -13,6 +13,7 @@ import java.net.UnknownHostException;
 import java.util.concurrent.CompletableFuture;
 
 import static org.easymock.EasyMock.*;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NodeIdUnknown;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class MiloEndpointTest {
@@ -42,7 +43,7 @@ public class MiloEndpointTest {
 
     @Test
     public void uaExceptionOrTypeConfigShouldThrowConfigurationException() {
-        final UaException configUaException = new UaException(OPCUAException.CONFIG.iterator().next());
+        final UaException configUaException = new UaException(Bad_NodeIdUnknown);
         final CompletableFuture<UaSubscription> expected = CompletableFuture.failedFuture(configUaException);
         setUpDeleteSubscriptionMocks(expected);
         assertThrows(ConfigurationException.class, () -> endpoint.deleteSubscription(subscriptionMock));

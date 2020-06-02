@@ -109,7 +109,7 @@ public class ControllerImpl implements Controller {
     @Override
     public synchronized void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
         if (dataTags.isEmpty()) {
-            throw new ConfigurationException(ConfigurationException.Cause.DATATAGS_EMPTY);
+            throw new ConfigurationException(ExceptionContext.DATATAGS_EMPTY);
         }
         try {
             final ArrayList<Long> ids = new ArrayList<>();
@@ -207,7 +207,7 @@ public class ControllerImpl implements Controller {
         } else {
             final var group = mapper.getGroup(subscription);
             if (group == null || group.size() == 0) {
-                throw new ConfigurationException(ConfigurationException.Cause.EMPTY_SUBSCRIPTION);
+                throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
             }
             try {
                 endpoint.deleteSubscription(subscription);

@@ -19,6 +19,7 @@ package cern.c2mon.daq.opcua.address;
 
 import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import lombok.Getter;
 import lombok.NonNull;
 
@@ -34,10 +35,10 @@ public class EquipmentAddress {
 
     @Getter
     public static class ServerAddress {
-        private URI uri;
-        private String user;
-        private String domain;
-        private String password;
+        private final URI uri;
+        private final String user;
+        private final String domain;
+        private final String password;
 
         ServerAddress (@NonNull URI uri) {
             this.uri = uri;
@@ -98,20 +99,20 @@ public class EquipmentAddress {
 
     public EquipmentAddress(List<ServerAddress> addresses, int serverTimeout, int serverRetryTimeout, boolean aliveWriterEnabled) throws ConfigurationException {
         if (addresses.isEmpty())
-            throw new ConfigurationException(ConfigurationException.Cause.MISSING_URI);
+            throw new ConfigurationException(ExceptionContext.MISSING_URI);
         this.addresses = addresses;
         this.serverTimeout = serverTimeout;
         this.serverRetryTimeout = serverRetryTimeout;
         this.aliveWriterEnabled = aliveWriterEnabled;
     }
 
-    public ServerAddress getServerAddressOfType(String protocol) {
+    public ServerAddress getServerAddressOfType(String protocol) throws ConfigurationException {
         for(ServerAddress address : addresses) {
             if (address.getProtocol().equals(protocol)) {
                 return address;
             }
         }
-        throw new IllegalArgumentException(ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN.message);
+        throw new ConfigurationException(ExceptionContext.ENDPOINT_TYPES_UNKNOWN);
     }
 
     public boolean supportsProtocol (String uri) {

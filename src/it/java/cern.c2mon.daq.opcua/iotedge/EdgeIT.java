@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.SecurityModule;
+import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;

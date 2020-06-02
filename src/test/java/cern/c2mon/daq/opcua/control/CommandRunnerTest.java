@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
@@ -54,7 +53,7 @@ public class CommandRunnerTest {
         value.setDataType("invalid");
         final EqCommandTagException e = assertThrows(EqCommandTagException.class,
                 () -> commandRunner.runCommand(tag, value),
-                ConfigurationException.Cause.COMMAND_VALUE_ERROR.message);
+                ExceptionContext.COMMAND_VALUE_ERROR.getMessage());
     }
 
     @Test

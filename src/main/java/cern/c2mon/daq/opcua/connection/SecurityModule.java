@@ -1,12 +1,12 @@
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.security.Certifier;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 /**
@@ -50,9 +49,6 @@ public class SecurityModule {
     private final Certifier noSecurity;
 
     private OpcUaClientConfigBuilder builder;
-
-
-    private static final ImmutableSet<Long> CONFIG_ERRORS = ImmutableSet.<Long>builder().add(Bad_UserSignatureInvalid, Bad_UserAccessDenied, Bad_CertificateHostNameInvalid, Bad_ApplicationSignatureInvalid, Bad_CertificateIssuerUseNotAllowed, Bad_CertificateIssuerTimeInvalid, Bad_CertificateIssuerRevoked).build();
 
     /**
      * Creates an {@link OpcUaClient} according to the configuration specified in {@link AppConfig} and connect to it.
@@ -138,16 +134,16 @@ public class SecurityModule {
         final var cause = ex.getCause();
         log.error("Authentication error: ", cause);
         if (!(cause instanceof UaException)) {
-            log.error("Unexpected error in connection, abort connecting with this certifier.");
+            log.error("Unexpected error in connection, abort connecting through certifier {}.", certifier.getClass().getName());
             return false;
         }
         final var code = ((UaException) cause).getStatusCode().getValue();
         StatusCodes.lookup(code).ifPresentOrElse(
                 s -> log.error("Failure description: {}", Arrays.toString(s)),
                 () -> log.error("Reasons unknown."));
-        if (CONFIG_ERRORS.contains(code)) {
+        if (OPCUAException.isSecurityIssue((UaException) cause)) {
             log.info("Ensure configuration correctness.");
-            throw new ConfigurationException(ConfigurationException.Cause.SECURITY);
+            throw new ConfigurationException(ExceptionContext.SECURITY);
         } else if (certifier.getSevereErrorCodes().contains(code)) {
             log.error("Cannot connect to this server with certifier {}. Proceed with another certifier.", certifier.getClass().getName());
             return false;

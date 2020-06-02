@@ -1,30 +1,17 @@
-/******************************************************************************
- * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- * 
- * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
- * C2MON is free software: you can redistribute it and/or modify it under the
- * terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation, either version 3 of the license.
- * 
- * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
- * more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package cern.c2mon.daq.opcua.exceptions;
 
-
+/**
+ * This exception is thrown when the client has been disconnected for so long that any retries of an action on the
+ * server are unlikely to succeed.
+ */
 public class LongLostConnectionException extends OPCUAException {
 
     /**
-     * Creates a new OPCCriticalException.
-     * 
-     * @param cause Throwable which is the cause of this exception.
+     * Creates a new LongLostConnectionException wrapping the throwable which caused an action to fail.
+     * @param context describes the context of the action which triggered the throwable cause.
+     * @param cause   the throwable causing the action to fail.
      */
     public LongLostConnectionException(final ExceptionContext context, final Throwable cause) {
-        super(context.getMessage(), cause);
+        super(context, cause);
     }
 }

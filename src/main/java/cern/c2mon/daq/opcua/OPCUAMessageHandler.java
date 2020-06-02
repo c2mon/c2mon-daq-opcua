@@ -23,8 +23,12 @@ import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.address.AddressStringParser;
 import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
-import cern.c2mon.daq.opcua.control.*;
+import cern.c2mon.daq.opcua.control.AliveWriter;
+import cern.c2mon.daq.opcua.control.CommandRunner;
+import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.TagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -33,27 +37,21 @@ import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
 import java.util.concurrent.TimeUnit;
 
-import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ENDPOINT_TYPES_UNKNOWN;
-
 /**
  * The OPCUAMessageHandler is the entry point of the application. It is created and called by the C2MON DAQ core and
  * connects to exactly one OPC UA server. The handler can access pre-defined configurations from the C2MON server which
  * are provided by the core, subscribe to tags as defined in the configuration, handle equipment configuration updates,
- * and execute commands received by C2MON. NOTE that currently, the module supports only write commands, not yet
- * server methods.
- * The handler can also register listeners for optional events in this class.
- *
+ * and execute commands received by C2MON. NOTE that currently, the module supports only write commands, not yet server
+ * methods. The handler can also register listeners for optional events in this class.
  * @author Andreas Lang, Nacho Vilches
  */
 
 @Slf4j
-@Setter
 @EnableAutoConfiguration
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
     /**
@@ -61,94 +59,24 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     private static final long RESTART_DELAY = 2000L;
 
-    Controller controller;
+    private Controller controller;
 
-    AliveWriter aliveWriter;
+    private AliveWriter aliveWriter;
 
-    TagChanger tagChanger;
+    private TagChanger tagChanger;
 
-    CommandRunner commandRunner;
+    private CommandRunner commandRunner;
 
-    EndpointListener listener;
-
-    /**
-     * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial
-     * subscriptions of the tags given in the configuration, and subscribes listeners to update C2MON about changes in
-     * equipment state and data values.
-     *
-     * @throws EqIOException Throws an {@link EqIOException} if there is an IO problem during startup.
-     */
-    @Override
-    public synchronized void connectToDataSource() throws EqIOException {
-        // getEquipmentConfiguration always fetches the most recent equipment configuration, even if changes have occurred to the configuration since start-up of the DAQ.
-        IEquipmentConfiguration config = getEquipmentConfiguration();
-        IEquipmentMessageSender sender = getEquipmentMessageSender();
-
-        log.debug("Connecting to the OPC UA data source...");
-        listener.initialize(sender);
-
-        String uaTcpType = "opc.tcp";
-        EquipmentAddress address = AddressStringParser.parse(config.getAddress());
-        if (!address.supportsProtocol(uaTcpType)) {
-            throw new ConfigurationException(ENDPOINT_TYPES_UNKNOWN);
-        }
-        try {
-            controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
-            aliveWriter.initialize(config, address.isAliveWriterEnabled());
-            controller.subscribeTags(config.getSourceDataTags().values());
-            log.debug("connected");
-
-            getEquipmentConfigurationHandler().setDataTagChanger(tagChanger);
-            getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
-        } catch (InterruptedException e) {
-            log.error("Process interrupted. Stopping.... ", e);
-            disconnectFromDataSource();
-            Thread.currentThread().interrupt();
-        }
-    }
-
-
-    /**
-     * Called when the core wants the OPC module to disconnect from the OPC
-     * server and discard all configuration.
-     */
-    @Override
-    public synchronized void disconnectFromDataSource() {
-        log.debug("disconnecting from OPC data source...");
-        controller.stop();
-        aliveWriter.stopWriter();
-        log.debug("disconnected");
-    }
-
-    /**
-     * Triggers the refresh of all values directly from the OPC server.
-     */
-    @Override
-    public synchronized void refreshAllDataTags() {
-        controller.refreshAllDataTags();
-    }
-
-    /**
-     * Triggers the refresh of a single value directly from the OPC server.
-     *
-     * @param dataTagId The id of the data tag to refresh.
-     */
-    @Override
-    public synchronized void refreshDataTag(final long dataTagId) {
-        ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
-        if (sourceDataTag == null) {
-            log.error("SourceDataTag with ID {} is unknown", dataTagId);
-        }
-        controller.refreshDataTag(sourceDataTag);
-    }
+    private EndpointListener listener;
 
     /**
      * Executes a specific command.
-     *
      * @param value defines the command to run. The id of the value must correspond to the id of a command tag in the
      *              configuration.
-     * @return If the command is of type method and returns values, the toString representation of the output is returned. Otherwise null.
-     * @throws EqCommandTagException thrown when the command cannot be executed, or the status is erraneous or uncertain.
+     * @return If the command is of type method and returns values, the toString representation of the output is
+     * returned. Otherwise null.
+     * @throws EqCommandTagException thrown when the command cannot be executed, or the status is erraneous or
+     *                               uncertain.
      */
     @Override
     public String runCommand(SourceCommandTagValue value) throws EqCommandTagException {
@@ -165,7 +93,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
     /**
      * Makes sure the changes to the equipment are applied on OPC level.
-     *
      * @param equipmentConfiguration    The new equipment configuration.
      * @param oldEquipmentConfiguration A clone of the old equipment configuration.
      * @param changeReport              Report object to fill.
@@ -193,5 +120,70 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             changeReport.appendInfo(aliveWriter.updateAndReport());
         }
         changeReport.setState(CHANGE_STATE.SUCCESS);
+    }
+
+    /**
+     * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial
+     * subscriptions of the tags given in the configuration, and subscribes listeners to update C2MON about changes in
+     * equipment state and data values.
+     * @throws EqIOException Throws an {@link EqIOException} if there is an IO problem during startup.
+     */
+    @Override
+    public synchronized void connectToDataSource() throws EqIOException {
+        // getEquipmentConfiguration always fetches the most recent equipment configuration, even if changes have occurred to the configuration since start-up of the DAQ.
+        IEquipmentConfiguration config = getEquipmentConfiguration();
+        IEquipmentMessageSender sender = getEquipmentMessageSender();
+
+        log.debug("Connecting to the OPC UA data source...");
+        listener.initialize(sender);
+
+        String uaTcpType = "opc.tcp";
+        EquipmentAddress address = AddressStringParser.parse(config.getAddress());
+        if (!address.supportsProtocol(uaTcpType)) {
+            throw new ConfigurationException(ExceptionContext.ENDPOINT_TYPES_UNKNOWN);
+        }
+        try {
+            controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
+            aliveWriter.initialize(config, address.isAliveWriterEnabled());
+            controller.subscribeTags(config.getSourceDataTags().values());
+            log.debug("connected");
+
+            getEquipmentConfigurationHandler().setDataTagChanger(tagChanger);
+            getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
+        } catch (InterruptedException e) {
+            log.error("Process interrupted. Stopping.... ", e);
+            disconnectFromDataSource();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Called when the core wants the OPC module to disconnect from the OPC server and discard all configuration.
+     */
+    @Override
+    public synchronized void disconnectFromDataSource() {
+        log.debug("disconnecting from OPC data source...");
+        controller.stop();
+        aliveWriter.stopWriter();
+        log.debug("disconnected");
+    }
+
+    /** Triggers the refresh of all values directly from the OPC server. */
+    @Override
+    public synchronized void refreshAllDataTags() {
+        controller.refreshAllDataTags();
+    }
+
+    /**
+     * Triggers the refresh of a single value directly from the OPC server.
+     * @param dataTagId The id of the data tag to refresh.
+     */
+    @Override
+    public synchronized void refreshDataTag(final long dataTagId) {
+        ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
+        if (sourceDataTag == null) {
+            log.error("SourceDataTag with ID {} is unknown", dataTagId);
+        }
+        controller.refreshDataTag(sourceDataTag);
     }
 }

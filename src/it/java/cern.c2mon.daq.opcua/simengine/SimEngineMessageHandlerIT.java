@@ -85,11 +85,11 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         handler = (OPCUAMessageHandler) msgHandler;
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
-        handler.setListener(listener);
-        handler.setCommandRunner(commandRunner);
-        handler.setAliveWriter(aliveWriter);
-        handler.setController(controller);
-        handler.setTagChanger(tagChanger);
+        ReflectionTestUtils.setField(handler, "controller", controller);
+        ReflectionTestUtils.setField(handler, "aliveWriter", aliveWriter);
+        ReflectionTestUtils.setField(handler, "tagChanger", tagChanger);
+        ReflectionTestUtils.setField(handler, "commandRunner", commandRunner);
+        ReflectionTestUtils.setField(handler, "listener", listener);
         ReflectionTestUtils.setField(controller, "endpointListener", listener);
         ReflectionTestUtils.setField(endpoint, "listener", listener);
         mapEquipmentAddress();

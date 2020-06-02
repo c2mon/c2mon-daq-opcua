@@ -52,7 +52,7 @@ public class CommandRunner {
     public String runCommand(ISourceCommandTag tag, SourceCommandTagValue command) throws EqCommandTagException {
         Object arg = TypeConverter.cast(command.getValue(), command.getDataType());
         if (arg == null) {
-            throw new EqCommandTagException(ConfigurationException.Cause.COMMAND_VALUE_ERROR.message);
+            throw new EqCommandTagException(ExceptionContext.COMMAND_VALUE_ERROR.getMessage());
         }
         try {
             final var hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
@@ -64,7 +64,7 @@ public class CommandRunner {
                     break;
                 default:
                 // impossible
-                throw new EqCommandTagException(ConfigurationException.Cause.COMMAND_TYPE_UNKNOWN.message);
+                throw new EqCommandTagException(ExceptionContext.COMMAND_TYPE_UNKNOWN.getMessage());
             }
         } catch (ConfigurationException e) {
             throw new EqCommandTagException("Please check whether the configuration is correct.", e);

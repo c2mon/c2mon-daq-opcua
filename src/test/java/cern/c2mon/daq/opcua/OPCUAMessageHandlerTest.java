@@ -5,8 +5,10 @@ import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.TagChanger;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
@@ -22,7 +24,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.CONNECTION_FAILED;
-import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.ADDRESS_MISSING_PROPERTIES;
 import static org.easymock.EasyMock.replay;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -56,10 +57,11 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     protected void beforeTest() throws Exception {
         // must be injected manually to work with test framework
         handler = (OPCUAMessageHandler) msgHandler;
-        handler.setCommandRunner(commandRunner);
-        handler.setController(controller);
-        handler.setAliveWriter(aliveWriter);
-        handler.setListener(listener);
+        ReflectionTestUtils.setField(handler, "controller", controller);
+        ReflectionTestUtils.setField(handler, "aliveWriter", aliveWriter);
+        ReflectionTestUtils.setField(handler, "tagChanger", new TagChanger(controller));
+        ReflectionTestUtils.setField(handler, "commandRunner", commandRunner);
+        ReflectionTestUtils.setField(handler, "listener", listener);
         capture = new TestUtils.CommfaultSenderCapture(messageSender);
     }
 
@@ -98,7 +100,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         replay(messageSender);
         assertThrows(ConfigurationException.class,
                 () -> handler.connectToDataSource(),
-                ADDRESS_MISSING_PROPERTIES.message);
+                ExceptionContext.ADDRESS_MISSING_PROPERTIES.getMessage());
     }
 
     @Test

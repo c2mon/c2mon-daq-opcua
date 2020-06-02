@@ -19,6 +19,7 @@ package cern.c2mon.daq.opcua.address;
 
 import cern.c2mon.daq.opcua.address.EquipmentAddress.ServerAddress;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -27,8 +28,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static cern.c2mon.daq.opcua.exceptions.ConfigurationException.Cause.*;
 
 /**
  * An abstract class providing exclusively static methods to parse an address String for an EquipmentUnit defined
@@ -56,7 +55,7 @@ public abstract class AddressStringParser {
             Properties properties = parsePropertiesFromString(address);
             return EquipmentPropertyParser.of(properties).parse();
         } catch (URISyntaxException e) {
-            throw new ConfigurationException(ADDRESS_URI, e);
+            throw new ConfigurationException(ExceptionContext.ADDRESS_URI, e);
         }
     }
 
@@ -123,14 +122,14 @@ public abstract class AddressStringParser {
                     .map(key -> key.propertyName)
                     .collect(Collectors.toSet());
             if (!properties.containsAll(requiredPropertyNames)) {
-                throw new ConfigurationException(ADDRESS_MISSING_PROPERTIES);
+                throw new ConfigurationException(ExceptionContext.ADDRESS_MISSING_PROPERTIES);
             }
         }
 
         private static void checkForInvalidKeys(Set<String> properties, List<Keys> keys) throws ConfigurationException {
             properties.removeAll(keys.stream().map(key -> key.propertyName).collect(Collectors.toSet()));
             if (!properties.isEmpty()) {
-                throw new ConfigurationException(ADDRESS_INVALID_PROPERTIES);
+                throw new ConfigurationException(ExceptionContext.ADDRESS_INVALID_PROPERTIES);
             }
         }
 

@@ -3,6 +3,7 @@ package cern.c2mon.daq.opcua;
 import cern.c2mon.daq.opcua.connection.EndpointSubscriptionListener;
 import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.connection.RetryDelegate;
+import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
