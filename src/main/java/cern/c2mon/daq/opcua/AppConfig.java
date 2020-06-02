@@ -5,12 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.annotation.EnableRetry;
-import org.springframework.retry.backoff.FixedBackOffPolicy;
-import org.springframework.retry.policy.AlwaysRetryPolicy;
-import org.springframework.retry.support.RetryTemplate;
 
 /**
  * This class contains configuration options regarding the OPC UA DAQ connection and certification options and
@@ -26,10 +22,15 @@ import org.springframework.retry.support.RetryTemplate;
 public class AppConfig {
 
     /**
+     * The delay before restarting the DAQ after an equipment change.
+     */
+    private long restartDelay = 2000L;
+
+    /**
      * The time to wait before retrying a failed attempt of individual methods executed on the OPC UA SDK, or of
      * recreating a subscription which could not be transferred automatically to a new session in milliseconds.
      */
-    private int retryDelay = 50000;
+    private long retryDelay = 50000L;
 
     /**
      * How often to retry connecting to an unavailable server when connectToDataSource() is called?
@@ -52,7 +53,6 @@ public class AppConfig {
     private String stateName;
     private String countryCode;
     private int requestTimeout;
-    private boolean failFast;
 
     /**
      * If insecure communication is enabled, the client attempts to connect to OPC UA endpoints without security as a
@@ -68,16 +68,6 @@ public class AppConfig {
 
     private KeystoreConfig keystore = new KeystoreConfig();
     private UsrPwdConfig usrPwd = new UsrPwdConfig();
-
-    @Bean
-    public RetryTemplate subscriptionRetryTemplate() {
-        final var retryTemplate = new RetryTemplate();
-        final var fixedBackOffPolicy = new FixedBackOffPolicy();
-        fixedBackOffPolicy.setBackOffPeriod(getRetryDelay());
-        retryTemplate.setBackOffPolicy(fixedBackOffPolicy);
-        retryTemplate.setRetryPolicy(new AlwaysRetryPolicy());
-        return retryTemplate;
-    }
 
     /**
      * Settings required to load an existing certificate

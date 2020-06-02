@@ -91,7 +91,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         ReflectionTestUtils.setField(handler, "commandRunner", commandRunner);
         ReflectionTestUtils.setField(handler, "listener", listener);
         ReflectionTestUtils.setField(controller, "endpointListener", listener);
-        ReflectionTestUtils.setField(endpoint, "listener", listener);
+        ReflectionTestUtils.setField(endpoint, "endpointListener", listener);
         mapEquipmentAddress();
         log.info("############### TEST ##############");
     }

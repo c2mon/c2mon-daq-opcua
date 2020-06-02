@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
@@ -62,7 +63,7 @@ public class SecurityModule {
      * @return An {@link OpcUaClient} object that is connected to one of the endpoints.
      * @throws InterruptedException if interrupt was called on the thread during execution.
      */
-    public OpcUaClient createClientWithListener(List<EndpointDescription> endpoints, SessionActivityListener listener) throws InterruptedException, CommunicationException, ConfigurationException {
+    public OpcUaClient createClientWithListener(List<EndpointDescription> endpoints, SessionActivityListener... listeners) throws InterruptedException, CommunicationException, ConfigurationException {
         builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english(config.getAppName()))
                 .setApplicationUri(config.getApplicationUri())
@@ -80,15 +81,15 @@ public class SecurityModule {
         endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
 
         //connect with existing certificate if present
-        OpcUaClient client = connectIfPossible(endpoints, loader, listener);
+        OpcUaClient client = connectIfPossible(endpoints, loader, listeners);
 
         if (client == null && config.isOnDemandCertificationEnabled()) {
             log.info("Authenticate with generated certificate. ");
-            client = connectIfPossible(endpoints, generator, listener);
+            client = connectIfPossible(endpoints, generator, listeners);
         }
         if (client == null && config.isInsecureCommunicationEnabled()) {
             log.info("Attempt insecure connection. ");
-            client = connectIfPossible(endpoints, noSecurity, listener);
+            client = connectIfPossible(endpoints, noSecurity, listeners);
         }
         if (client == null) {
             throw new CommunicationException(ExceptionContext.AUTH_ERROR);
@@ -103,7 +104,7 @@ public class SecurityModule {
                 !Strings.isNullOrEmpty(upConfig.getPwd());
     }
 
-    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier, SessionActivityListener listener) throws InterruptedException, ConfigurationException {
+    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier, SessionActivityListener[] listeners) throws InterruptedException, ConfigurationException {
         final var matchingEndpoints = endpoints.stream().filter(certifier::supportsAlgorithm).collect(Collectors.toList());
         for (var e : matchingEndpoints) {
             if (!certifier.canCertify(e)) {
@@ -114,7 +115,7 @@ public class SecurityModule {
             log.info("Attempt authentication with mode {} and algorithm {}. ", e.getSecurityMode(), e.getSecurityPolicyUri());
             try {
                 OpcUaClient client = OpcUaClient.create(builder.build());
-                client.addSessionActivityListener(listener);
+                Stream.of(listeners).forEach(client::addSessionActivityListener);
                 return (OpcUaClient) client.connect().get();
             } catch (UaException ex) {
                 log.error("Unsupported transport in endpoint URI. Attempting less secure endpoint", ex);

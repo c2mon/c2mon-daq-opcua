@@ -45,7 +45,7 @@ public class TagChanger  implements IDataTagChanger  {
         }
     }
 
-    public void addDataTagFutureAndReturnFuture(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
+    private void addDataTagFutureAndReturnFuture(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
         boolean success = false;
         String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId();
         try {

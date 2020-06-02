@@ -24,7 +24,6 @@ import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.OK
 public class EndpointListenerImpl implements EndpointListener, SessionActivityListener {
 
     private IEquipmentMessageSender sender;
-    private RetryDelegate retryDelegate;
 
     /**
      * Initialize the EndpointListener with the IEquipmentMessageSender instance
@@ -71,13 +70,11 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
     @Override
     public void onSessionActive(UaSession session) {
         onEquipmentStateUpdate(OK);
-        retryDelegate.setConnectionState(true);
     }
 
     @Override
     public void onSessionInactive(UaSession session) {
         onEquipmentStateUpdate(CONNECTION_LOST);
-        retryDelegate.setConnectionState(false);
     }
 
     @Override

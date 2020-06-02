@@ -14,11 +14,11 @@ public class ItemDefinitionTest extends MappingBase {
     }
 
     @Test
-    public void hardwareAddressOfDifferentTypeShouldThrowError() {
+    public void hardwareAddressOfDifferentTypeShouldReturnNull() {
         dataTagAddress.setHardwareAddress(new DBHardwareAddressImpl("Primary"));
         tag = makeSourceDataTag(1L, dataTagAddress);
 
-        assertThrows(ConfigurationException.class, () -> DataTagDefinition.of(tag));
+        assertNull(DataTagDefinition.of(tag));
     }
 
     @Test

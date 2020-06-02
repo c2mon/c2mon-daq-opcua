@@ -34,7 +34,6 @@ public abstract class TestUtils {
                 .requestTimeout(5000)
                 .insecureCommunicationEnabled(true)
                 .onDemandCertificationEnabled(true)
-                .failFast(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())
                 .maxRetryAttemps(1)
                 .retryDelay(2000)

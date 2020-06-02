@@ -81,7 +81,7 @@ public class EdgeIT {
 
         pulseListener.setSourceID(tag.getId());
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
-        ReflectionTestUtils.setField(endpoint, "listener", pulseListener);
+        ReflectionTestUtils.setField(endpoint, "endpointListener", pulseListener);
 
         // avoid extra time on authentication
         ReflectionTestUtils.setField(securityModule, "loader", new NoSecurityCertifier());

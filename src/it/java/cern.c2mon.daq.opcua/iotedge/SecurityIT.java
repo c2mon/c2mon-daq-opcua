@@ -60,7 +60,7 @@ public class SecurityIT {
     @BeforeEach
     public void setUp() {
         ReflectionTestUtils.setField(controller, "endpointListener", listener);
-        ReflectionTestUtils.setField(endpoint, "listener", listener);
+        ReflectionTestUtils.setField(endpoint, "endpointListener", listener);
         config.setMaxRetryAttemps(1);
         listener.reset();
     }

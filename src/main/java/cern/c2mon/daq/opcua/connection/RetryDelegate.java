@@ -1,6 +1,8 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.exceptions.*;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
+import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -12,8 +14,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import static cern.c2mon.daq.opcua.exceptions.OPCUAException.of;
-
 /**
  * The RetryDelegate executes a given method a number of times in case of failure until the method completes
  * successfully with a delay as given in the application configuration. It simultaneously keeps track of how long the
@@ -21,7 +21,7 @@ import static cern.c2mon.daq.opcua.exceptions.OPCUAException.of;
  * complete all retries, a method is only executed once before it fails.
  */
 @Component(value = "retryDelegate")
-public class RetryDelegate {
+public class RetryDelegate implements SessionActivityListener {
 
     @Value("${app.serverTimeout}")
     private int timeout;
@@ -30,16 +30,26 @@ public class RetryDelegate {
     private int maxRetryCount;
 
     @Value("${app.retryDelay}")
-    private int retryDelay;
+    private long retryDelay;
 
     private long disconnectionInstant = 0L;
 
     /**
-     * Called by the {@link EndpointListener} upon changes in the state of the session.
-     * @param connected a flag indicating the state of the session as active or inactive
+     * Called when the client is connected to the server and the session activates.
+     * @param session the current session
      */
-    public void setConnectionState(boolean connected) {
-        this.disconnectionInstant = connected ? 0L : System.currentTimeMillis();
+    @Override
+    public void onSessionActive(UaSession session) {
+        this.disconnectionInstant = 0L;
+    }
+
+    /**
+     * Called when the client is disconnected from the server and the session deactivates.
+     * @param session the current session
+     */
+    @Override
+    public void onSessionInactive(UaSession session) {
+        this.disconnectionInstant = System.currentTimeMillis();
     }
 
     /**
@@ -58,7 +68,7 @@ public class RetryDelegate {
      *                              indicating a configuration issue, or type {@link LongLostConnectionException} is the
      *                              time of disconnection from the server is greater than the time needed to attempt all
      *                              retries, and of type {@link CommunicationException} is all retries attempts have
-     *                              been exhaused without a success.
+     *                              been exhausted without a success.
      * @throws InterruptedException if the thread was interrupted before the supplier could be executed successfully. No
      *                              retries are attempted after this exception.
      */
@@ -70,7 +80,7 @@ public class RetryDelegate {
             return CompletableFuture.supplyAsync(supplier).get(timeout, TimeUnit.MILLISECONDS);
         } catch (ExecutionException | TimeoutException e) {
             final Throwable t = (e instanceof ExecutionException) ? e.getCause() : e;
-            throw of(context, t, isDisconnectionPeriodTooLong());
+            throw OPCUAException.of(context, t, isDisconnectionPeriodTooLong());
         }
     }
 

@@ -7,13 +7,14 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import lombok.Getter;
-import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
+@Slf4j
 public class ItemDefinition {
 
     private final NodeId nodeId;
@@ -24,36 +25,41 @@ public class ItemDefinition {
     private final UInteger clientHandle;
     private static final AtomicInteger clientHandles = new AtomicInteger();
 
-    @SneakyThrows
     public static DataTagDefinition of(final ISourceDataTag tag) {
-        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
-        return new DataTagDefinition(tag, toNodeId(opcAddress), toRedundantNodeId(opcAddress));
+        try {
+            OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+            return new DataTagDefinition(tag, toNodeId(opcAddress), toRedundantNodeId(opcAddress));
+        } catch (ConfigurationException e) {
+            log.error("Configuration error, should be unreachable!", e);
+            return null;
+        }
     }
 
-    @SneakyThrows
     public static ItemDefinition of(final ISourceCommandTag tag) {
-        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
-        return new ItemDefinition(toNodeId(opcAddress), toRedundantNodeId(opcAddress));
+        try {
+            OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+            return new ItemDefinition(toNodeId(opcAddress), toRedundantNodeId(opcAddress));
+        } catch (ConfigurationException e) {
+            log.error("Configuration error, should be unreachable!", e);
+            return null;
+        }
     }
 
-    @SneakyThrows
     public static NodeId toNodeId(final ISourceCommandTag tag) {
-        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
-        return toNodeId(opcAddress);
-    }
-
-    @SneakyThrows
-    public static NodeId[] toNodeIds(final ISourceCommandTag tag) {
-        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
-        final NodeId redundantId = toRedundantNodeId(opcAddress);
-        return redundantId == null ? new NodeId[]{toNodeId(opcAddress)} :  new NodeId[]{toNodeId(opcAddress), redundantId};
+        try {
+            OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+            return toNodeId(opcAddress);
+        } catch (ConfigurationException e) {
+            log.error("Configuration error, should be unreachable!", e);
+            return null;
+        }
     }
 
     public static NodeId toNodeId(OPCHardwareAddress opcAddress) {
         return new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName());
     }
 
-    public static NodeId toRedundantNodeId(OPCHardwareAddress opcAddress) {
+    private static NodeId toRedundantNodeId(OPCHardwareAddress opcAddress) {
         String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
         if (redundantOPCItemName == null || redundantOPCItemName.trim().equals("")) return null;
         else return new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);

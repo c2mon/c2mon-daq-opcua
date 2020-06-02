@@ -53,7 +53,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 public class MiloEndpoint implements Endpoint {
 
     private final SecurityModule securityModule;
-    private final SessionActivityListener listener;
+    private final SessionActivityListener endpointListener;
     private final EndpointSubscriptionListener subscriptionListener;
     private final RetryDelegate retryDelegate;
     private OpcUaClient client;
@@ -108,7 +108,7 @@ public class MiloEndpoint implements Endpoint {
         try {
             var endpoints = DiscoveryClient.getEndpoints(uri).get();
             endpoints = updateEndpointUrls(uri, endpoints);
-            client = securityModule.createClientWithListener(endpoints, listener);
+            client = securityModule.createClientWithListener(endpoints, endpointListener, retryDelegate);
             client.getSubscriptionManager().addSubscriptionListener(subscriptionListener);
             log.info("Connected");
         } catch (ExecutionException e) {
@@ -124,7 +124,8 @@ public class MiloEndpoint implements Endpoint {
     @Override
     public void disconnect() throws OPCUAException, InterruptedException {
         if (client != null) {
-            client.removeSessionActivityListener(listener);
+            client.removeSessionActivityListener(endpointListener);
+            client.removeSessionActivityListener(retryDelegate);
             client.getSubscriptionManager().clearSubscriptions();
             retryDelegate.completeOrThrow(DISCONNECT,
                     () -> client.disconnect().thenAccept(c -> log.info("Disconnected")).join());

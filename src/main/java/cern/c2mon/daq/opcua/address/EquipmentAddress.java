@@ -28,74 +28,21 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * An Equipment Address
+ *  POJO holding convenient access to relevant information of the equipment address.
  */
 @Getter
 public class EquipmentAddress {
 
-    @Getter
-    public static class ServerAddress {
-        private final URI uri;
-        private final String user;
-        private final String domain;
-        private final String password;
-
-        ServerAddress (@NonNull URI uri) {
-            this.uri = uri;
-            this.user = null;
-            this.domain = null;
-            this.password = null;
-        }
-
-        ServerAddress (@NonNull URI uri, String user, String domain, String password) {
-            this.uri = uri;
-            this.user = cleanArg(user);
-            this.domain = cleanArg(domain);
-            this.password = cleanArg(password);
-        }
-
-        private String cleanArg (String arg) {
-            return arg == null || arg.trim().isEmpty() ? null: arg;
-        }
-
-        public String getProtocol() {
-            return uri.getScheme();
-        }
-
-        public String getUriString () {
-            return uri.toString();
-        }
-
-        @Override
-        public boolean equals (Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            ServerAddress that = (ServerAddress) o;
-            return Objects.equals(getUriString(), that.getUriString()) &&
-                    Objects.equals(user, that.user) &&
-                    Objects.equals(domain, that.domain) &&
-                    Objects.equals(password, that.password);
-        }
-
-        @Override
-        public int hashCode () {
-            return Objects.hash(getUriString(), user, domain, password);
-        }
-    }
-
     private final List<ServerAddress> addresses;
     private final int serverTimeout;
     private final int serverRetryTimeout;
-
     /**
-     * If, set to false, then the Alive WriterTask is not started.
-     * The OPC has then to update itself the equipment alive tag,
-     * otherwise the C2MON server will invalidate all tags from this
-     * process because of an alive timer expiration.<p>
-     * The default value is <code>true</code>.
+     * If, set to false, then the Alive WriterTask is not started. The OPC has then to update itself the equipment alive
+     * tag, otherwise the C2MON server will invalidate all tags from this process because of an alive timer
+     * expiration.<p> The default value is <code>true</code>.
      * @see AliveWriter
      */
-    private boolean aliveWriterEnabled;
+    private final boolean aliveWriterEnabled;
 
     public EquipmentAddress(List<ServerAddress> addresses, int serverTimeout, int serverRetryTimeout, boolean aliveWriterEnabled) throws ConfigurationException {
         if (addresses.isEmpty())
@@ -107,7 +54,7 @@ public class EquipmentAddress {
     }
 
     public ServerAddress getServerAddressOfType(String protocol) throws ConfigurationException {
-        for(ServerAddress address : addresses) {
+        for (ServerAddress address : addresses) {
             if (address.getProtocol().equals(protocol)) {
                 return address;
             }
@@ -115,8 +62,8 @@ public class EquipmentAddress {
         throw new ConfigurationException(ExceptionContext.ENDPOINT_TYPES_UNKNOWN);
     }
 
-    public boolean supportsProtocol (String uri) {
-        for(ServerAddress address : addresses) {
+    public boolean supportsProtocol(String uri) {
+        for (ServerAddress address : addresses) {
             if (address.getProtocol().equals(uri)) {
                 return true;
             }
@@ -125,7 +72,12 @@ public class EquipmentAddress {
     }
 
     @Override
-    public boolean equals (Object o) {
+    public int hashCode() {
+        return Objects.hash(getAddresses(), getServerTimeout(), getServerRetryTimeout(), isAliveWriterEnabled());
+    }
+
+    @Override
+    public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof EquipmentAddress)) return false;
         EquipmentAddress that = (EquipmentAddress) o;
@@ -135,8 +87,53 @@ public class EquipmentAddress {
                 getAddresses().equals(that.getAddresses());
     }
 
-    @Override
-    public int hashCode () {
-        return Objects.hash(getAddresses(), getServerTimeout(), getServerRetryTimeout(), isAliveWriterEnabled());
+    @Getter
+    public static class ServerAddress {
+        private final URI uri;
+        private final String user;
+        private final String domain;
+        private final String password;
+
+        ServerAddress(@NonNull URI uri) {
+            this.uri = uri;
+            this.user = null;
+            this.domain = null;
+            this.password = null;
+        }
+
+        ServerAddress(@NonNull URI uri, String user, String domain, String password) {
+            this.uri = uri;
+            this.user = cleanArg(user);
+            this.domain = cleanArg(domain);
+            this.password = cleanArg(password);
+        }
+
+        private String cleanArg(String arg) {
+            return arg == null || arg.trim().isEmpty() ? null : arg;
+        }
+
+        public String getProtocol() {
+            return uri.getScheme();
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(getUriString(), user, domain, password);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ServerAddress that = (ServerAddress) o;
+            return Objects.equals(getUriString(), that.getUriString()) &&
+                    Objects.equals(user, that.user) &&
+                    Objects.equals(domain, that.domain) &&
+                    Objects.equals(password, that.password);
+        }
+
+        public String getUriString() {
+            return uri.toString();
+        }
     }
 }
