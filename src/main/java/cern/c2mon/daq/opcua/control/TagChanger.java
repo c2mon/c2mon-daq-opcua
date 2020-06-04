@@ -15,8 +15,19 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 @Component("tagChanger")
 @RequiredArgsConstructor
 @Slf4j
-public class TagChanger  implements IDataTagChanger  {
+public class TagChanger implements IDataTagChanger {
 
+    private final static TriConsumer<Boolean, String, ChangeReport> r = (success, message, report) -> {
+        final Function<String, String> prevMsg = s -> s == null ? "" : s;
+        if (success) {
+            report.appendInfo(prevMsg.apply(report.getInfoMessage()) + message);
+            report.setState(SUCCESS);
+        } else {
+            log.error(message);
+            report.appendError(prevMsg.apply(report.getErrorMessage()) + message);
+            report.setState(FAIL);
+        }
+    };
     private final Controller controller;
 
     @Override
@@ -30,10 +41,12 @@ public class TagChanger  implements IDataTagChanger  {
     }
 
     /**
-     * Removes the old SourceDataTag subscription and replaced it with the new one. If the old tag cannot be removed e.g. because it is missing, but the new tag can still be added, the changeReport will still report a successful operation.
-     * @param sourceDataTag the Tag to add
+     * Removes the old SourceDataTag subscription and replaced it with the new one. If the old tag cannot be removed
+     * e.g. because it is missing, but the new tag can still be added, the changeReport will still report a successful
+     * operation.
+     * @param sourceDataTag    the Tag to add
      * @param oldSourceDataTag the Tag to remove
-     * @param changeReport a report of the taken actions and the outpome of the operation.
+     * @param changeReport     a report of the taken actions and the outpome of the operation.
      */
     @Override
     public void onUpdateDataTag(final ISourceDataTag sourceDataTag, final ISourceDataTag oldSourceDataTag, final ChangeReport changeReport) {
@@ -46,41 +59,17 @@ public class TagChanger  implements IDataTagChanger  {
     }
 
     private void addDataTagFutureAndReturnFuture(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        boolean success = false;
-        String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId();
-        try {
-            success = controller.subscribeTag(sourceDataTag);
-            msg += success ? " was subscribed." : " could not be subscribed.";
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            msg += " could not be subscribed since the thread was interrupted.";
-        }
+        final boolean success = controller.subscribeTag(sourceDataTag);
+        String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId()
+                + (success ? " was subscribed." : " could not be subscribed.");
         r.apply(success, msg, changeReport);
     }
 
     private void removeDataTagFutureAndReturnFuture(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId();
-        try {
-            msg += controller.removeTag(sourceDataTag) ? " was unsubscribed." : " was not previously configured. No change required. ";
-            r.apply(true, msg, changeReport);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            msg += " could not be subscribed since the thread was interrupted.";
-            r.apply(false, msg, changeReport);
-        }
+        String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId()
+                + (controller.removeTag(sourceDataTag) ? " was unsubscribed." : " was not previously configured. No change required. ");
+        r.apply(true, msg, changeReport);
     }
-
-    private final static TriConsumer<Boolean, String, ChangeReport> r = (success, message, report) -> {
-        final Function<String, String> prevMsg = s -> s == null ? "" : s;
-        if (success) {
-            report.appendInfo(prevMsg.apply(report.getInfoMessage()) + message);
-            report.setState(SUCCESS);
-        } else {
-            log.error(message);
-            report.appendError(prevMsg.apply(report.getErrorMessage()) + message);
-            report.setState(FAIL);
-        }
-    };
 
     @FunctionalInterface
     private interface TriConsumer<A, B, C> {

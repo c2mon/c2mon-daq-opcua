@@ -141,10 +141,6 @@ public class AliveWriter {
             listener.onAlive(endpoint.write(nodeId, castedValue));
             writeCounter.incrementAndGet();
             writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
-        } catch (InterruptedException e) {
-            log.error("Thread was interrupted. ", e);
-            stopWriter();
-            Thread.currentThread().interrupt();
         } catch (OPCUAException e) {
             log.error("Error while writing alive. Retrying...", e);
         }

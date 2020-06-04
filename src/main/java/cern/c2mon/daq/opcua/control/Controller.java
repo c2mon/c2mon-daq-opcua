@@ -44,18 +44,16 @@ public interface Controller {
      * Subscribes to the OPC UA node corresponding to one data tag on the server.
      * @param sourceDataTag the ISourceDataTag to subscribe to.
      * @return true if the Tag could be subscribed successfully.
-     * @throws InterruptedException if the thread was interrupted before the tag could be subscribed.
      */
-    boolean subscribeTag(ISourceDataTag sourceDataTag) throws InterruptedException;
+    boolean subscribeTag(ISourceDataTag sourceDataTag);
 
     /**
      * Removes a Tag from the internal configuration and if already subscribed from the OPC UA subscription. It the
      * subscription is then empty, it is deleted along with the monitored item.
      * @param dataTag the tag to remove.
      * @return true if the tag was previously known.
-     * @throws InterruptedException if the thread was interrupted before the tag could be removed.
      */
-    boolean removeTag(ISourceDataTag dataTag) throws InterruptedException;
+    boolean removeTag(ISourceDataTag dataTag);
 
     /**
      * Reads the current values from the server for all subscribed data tags.
@@ -72,10 +70,9 @@ public interface Controller {
      * Called when a subscription could not be automatically transferred in between sessions. In this case, the     *
      * subscription is recreated from scratch.
      * @param subscription the subscription of the old session which must be recreated.
-     * @throws InterruptedException   if the thread was interrupted before the subscription could be recreated.
-     * @throws CommunicationException if the subscription could not be recreated due to communication difficulty.
-     * @throws ConfigurationException if the subscription can not be mapped to current DataTags, and therefore cannot be
-     *                                recreated.
+     * @throws OPCUAException of type {@link CommunicationException} if the subscription could not be recreated due to
+     *                        communication difficulty, and of type {@link ConfigurationException} if the subscription
+     *                        can not be mapped to current DataTags, and therefore cannot be recreated.
      */
-    void recreateSubscription(UaSubscription subscription) throws InterruptedException, CommunicationException, ConfigurationException;
+    void recreateSubscription(UaSubscription subscription) throws OPCUAException;
 }

@@ -118,17 +118,15 @@ public class MiloEndpoint implements Endpoint {
 
     /**
      * Disconnect from the server with a certain number of retries in case of connection error.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public void disconnect() throws OPCUAException, InterruptedException {
+    public void disconnect() throws OPCUAException {
         if (client != null) {
             client.removeSessionActivityListener(endpointListener);
             client.removeSessionActivityListener(retryDelegate);
             client.getSubscriptionManager().clearSubscriptions();
-            retryDelegate.completeOrThrow(DISCONNECT,
-                    () -> client.disconnect().thenAccept(c -> log.info("Disconnected")).join());
+            retryDelegate.completeOrThrow(DISCONNECT, client::disconnect);
         }
     }
 
@@ -137,24 +135,20 @@ public class MiloEndpoint implements Endpoint {
      * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest
      *                     supported interval.
      * @return the newly created subscription.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    public UaSubscription createSubscription(int timeDeadband) throws OPCUAException, InterruptedException {
-        return retryDelegate.completeOrThrow(CREATE_SUBSCRIPTION,
-                () -> client.getSubscriptionManager().createSubscription(timeDeadband).join());
+    public UaSubscription createSubscription(int timeDeadband) throws OPCUAException {
+        return retryDelegate.completeOrThrow(CREATE_SUBSCRIPTION, () -> client.getSubscriptionManager().createSubscription(timeDeadband));
     }
 
     /**
      * Delete an existing subscription with a certain number of retries in case of connection error.
      * @param subscription The subscription to delete along with all contained MonitoredItems.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public void deleteSubscription(UaSubscription subscription) throws OPCUAException, InterruptedException {
-        retryDelegate.completeOrThrow(DELETE_SUBSCRIPTION,
-                () -> client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()).join());
+    public void deleteSubscription(UaSubscription subscription) throws OPCUAException {
+        retryDelegate.completeOrThrow(DELETE_SUBSCRIPTION, () -> client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()));
     }
 
     /**
@@ -164,16 +158,14 @@ public class MiloEndpoint implements Endpoint {
      * @param definitions          the {@link ItemDefinition}s for which to create monitored items
      * @param itemCreationCallback the callback function to execute when each item has been created successfully
      * @return a list of monitored items corresponding to the item definitions
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException, InterruptedException {
+    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
         List<MonitoredItemCreateRequest> requests = definitions.stream()
                 .map(this::createItemSubscriptionRequest)
                 .collect(Collectors.toList());
-        return retryDelegate.completeOrThrow(CREATE_MONITORED_ITEM,
-                () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback).join());
+        return retryDelegate.completeOrThrow(CREATE_MONITORED_ITEM, () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback));
 
     }
 
@@ -182,16 +174,14 @@ public class MiloEndpoint implements Endpoint {
      * error.
      * @param clientHandle the identifier of the monitored item to remove.
      * @param subscription the subscription to remove the monitored item from.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during initialization.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCUAException, InterruptedException {
+    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCUAException {
         List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
                 .filter(i -> clientHandle.equals(i.getClientHandle()))
                 .collect(Collectors.toList());
-        retryDelegate.completeOrThrow(DELETE_MONITORED_ITEM,
-                () -> subscription.deleteMonitoredItems(itemsToRemove).join());
+        retryDelegate.completeOrThrow(DELETE_MONITORED_ITEM, () -> subscription.deleteMonitoredItems(itemsToRemove));
     }
 
     /**
@@ -199,13 +189,11 @@ public class MiloEndpoint implements Endpoint {
      * case connection of error.
      * @param nodeId the nodeId of the node whose value to read.
      * @return the {@link DataValue} containing the value read from the node.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public DataValue read(NodeId nodeId) throws OPCUAException, InterruptedException {
-        return retryDelegate.completeOrThrow(READ,
-                () -> client.readValue(0, TimestampsToReturn.Both, nodeId).join());
+    public DataValue read(NodeId nodeId) throws OPCUAException {
+        return retryDelegate.completeOrThrow(READ, () -> client.readValue(0, TimestampsToReturn.Both, nodeId));
     }
 
     /**
@@ -214,15 +202,13 @@ public class MiloEndpoint implements Endpoint {
      * @param nodeId the nodeId of the node to write a value to.
      * @param value  the value to write to the node.
      * @return a completable future  the {@link StatusCode} of the response to the write action
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public StatusCode write(NodeId nodeId, Object value) throws OPCUAException, InterruptedException {
+    public StatusCode write(NodeId nodeId, Object value) throws OPCUAException {
         // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
         DataValue dataValue = new DataValue(new Variant(value), null, null);
-        return retryDelegate.completeOrThrow(WRITE,
-                () -> client.writeValue(nodeId, dataValue).join());
+        return retryDelegate.completeOrThrow(WRITE, () -> client.writeValue(nodeId, dataValue));
     }
 
     /**
@@ -233,13 +219,11 @@ public class MiloEndpoint implements Endpoint {
      * @param args     the input arguments to pass to the methodId call.
      * @return the StatusCode of the methodId response as key and the output arguments of the called method (if
      * applicable, else null) in a Map Entry.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException, InterruptedException {
+    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException {
         final var variants = Stream.of(args).map(Variant::new).toArray(Variant[]::new);
-        final var result = retryDelegate.completeOrThrow(METHOD,
-                () -> client.call(new CallMethodRequest(objectId, methodId, variants)).join());
+        final var result = retryDelegate.completeOrThrow(METHOD, () -> client.call(new CallMethodRequest(objectId, methodId, variants)));
         final var output = MiloMapper.toObject(result.getOutputArguments());
         return Map.entry(result.getStatusCode(), output);
     }
@@ -249,12 +233,11 @@ public class MiloEndpoint implements Endpoint {
      * connection error.
      * @param nodeId the node whose parent object to fetch
      * @return the parent node's NodeId, if it exists. Else a {@link ConfigurationException} is thrown.
-     * @throws OPCUAException       of type {@link ConfigurationException} in case the nodeId is orphaned, or of types
-     *                              {@link CommunicationException} or {@link LongLostConnectionException} as detailed in
-     *                              the implementation class's JavaDoc.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link ConfigurationException} in case the nodeId is orphaned, or of types {@link
+     *                        CommunicationException} or {@link LongLostConnectionException} as detailed in the
+     *                        implementation class's JavaDoc.
      */
-    public NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException, InterruptedException {
+    public NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException {
         final BrowseDescription bd = new BrowseDescription(
                 nodeId,
                 BrowseDirection.Inverse,
@@ -262,7 +245,7 @@ public class MiloEndpoint implements Endpoint {
                 true,
                 uint(NodeClass.Object.getValue()),
                 uint(BrowseResultMask.All.getValue()));
-        final BrowseResult result = retryDelegate.completeOrThrow(BROWSE, () -> client.browse(bd).join());
+        final BrowseResult result = retryDelegate.completeOrThrow(BROWSE, () -> client.browse(bd));
         if (result.getReferences() != null && result.getReferences().length > 0) {
             final Optional<NodeId> objectNode = result.getReferences()[0].getNodeId().local(client.getNamespaceTable());
             if (result.getStatusCode().isGood() && objectNode.isPresent()) {

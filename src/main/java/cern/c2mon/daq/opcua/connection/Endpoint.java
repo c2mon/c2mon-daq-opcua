@@ -32,28 +32,25 @@ public interface Endpoint {
 
     /**
      * Disconnect from the server.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    void disconnect() throws OPCUAException, InterruptedException;
+    void disconnect() throws OPCUAException;
 
     /**
      * Create and return a new subscription.
      * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest
      *                     supported interval.
      * @return the newly created subscription.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    UaSubscription createSubscription(int timeDeadband) throws OPCUAException, InterruptedException;
+    UaSubscription createSubscription(int timeDeadband) throws OPCUAException;
 
     /**
      * Delete an existing subscription.
      * @param subscription The subscription to delete along with all contained MonitoredItems.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    void deleteSubscription(UaSubscription subscription) throws OPCUAException, InterruptedException;
+    void deleteSubscription(UaSubscription subscription) throws OPCUAException;
 
     /**
      * Add a list of item definitions as monitored items to a subscription.
@@ -62,38 +59,34 @@ public interface Endpoint {
      *                             monitored items
      * @param itemCreationCallback the callback function to execute when each item has been created successfully
      * @return a list of monitored items corresponding to the item definitions
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException, InterruptedException;
+    List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
 
     /**
      * Delete a monitored item from an OPC UA subscription.
      * @param clientHandle the identifier of the monitored item to remove.
      * @param subscription the subscription to remove the monitored item from.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCUAException, InterruptedException;
+    void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCUAException;
 
     /**
      * Read the current value from a node on the currently connected OPC UA server
      * @param nodeId the nodeId of the node whose value to read.
      * @return the {@link DataValue} containing the value read from the node.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    DataValue read(NodeId nodeId) throws OPCUAException, InterruptedException;
+    DataValue read(NodeId nodeId) throws OPCUAException;
 
     /**
      * Write a value to a node on the currently connected OPC UA server.
      * @param nodeId the nodeId of the node to write a value to.
      * @param value  the value to write to the node.
      * @return a completable future  the {@link StatusCode} of the response to the write action
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    StatusCode write(NodeId nodeId, Object value) throws OPCUAException, InterruptedException;
+    StatusCode write(NodeId nodeId, Object value) throws OPCUAException;
 
     /**
      * Call the method node with ID methodId contained in the object with ID objectId.
@@ -102,21 +95,19 @@ public interface Endpoint {
      * @param args     the input arguments to pass to the methodId call.
      * @return the StatusCode of the methodId response as key and the output arguments of the called method (if
      * applicable, else null) in a Map Entry.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException, InterruptedException;
+    Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException;
 
     /**
      * Fetches the node's first parent object node, if such a node exists.
      * @param nodeId the node whose parent to fetch
      * @return the parent node's NodeId
-     * @throws OPCUAException       of type {@link ConfigurationException} in case the nodeId is orphaned, or of types
-     *                              {@link CommunicationException} or {@link LongLostConnectionException} as detailed in
-     *                              the implementation class's JavaDoc.
-     * @throws InterruptedException if the method was interrupted during execution.
+     * @throws OPCUAException of type {@link ConfigurationException} in case the nodeId is orphaned, or of types {@link
+     *                        CommunicationException} or {@link LongLostConnectionException} as detailed in the
+     *                        implementation class's JavaDoc.
      */
-    NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException, InterruptedException;
+    NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException;
 
     /**
      * Check whether a subscription is subscribed as part of the current session.

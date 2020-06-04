@@ -38,6 +38,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -86,9 +88,6 @@ public class ControllerImpl implements Controller {
             endpoint.disconnect();
         } catch (OPCUAException e) {
             log.error("Error disconnecting: ", e);
-        } catch (InterruptedException e) {
-            log.error("Already stopping...", e);
-            Thread.currentThread().interrupt();
         }
     }
 
@@ -111,19 +110,17 @@ public class ControllerImpl implements Controller {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ExceptionContext.DATATAGS_EMPTY);
         }
-        try {
-            final ArrayList<Long> ids = new ArrayList<>();
-            for (var e : mapper.mapTagsToGroupsAndDefinitions(dataTags).entrySet()) {
-                if (!subscribeToGroup(e.getKey(), e.getValue())) {
-                    ids.addAll(e.getValue().stream().map(mapper::getTagId).collect(Collectors.toList()));
-                }
+        final ArrayList<Long> ids = new ArrayList<>();
+        for (var e : mapper.mapTagsToGroupsAndDefinitions(dataTags).entrySet()) {
+            if (Thread.currentThread().isInterrupted()) {
+                log.info("The thread was interrupted before all tags could be subscribed.");
+                return;
+            } else if (!subscribeToGroup(e.getKey(), e.getValue())) {
+                ids.addAll(e.getValue().stream().map(mapper::getTagId).collect(Collectors.toList()));
             }
-            if (!ids.isEmpty()) {
-                log.error("Could not subscribe DataTags with IDs {}.", Joiner.on(", ").join(ids));
-            }
-        } catch (InterruptedException e) {
-            log.info("The thread was interrupted before all tags could be subscribed.");
-            Thread.currentThread().interrupt();
+        }
+        if (!ids.isEmpty()) {
+            log.error("Could not subscribe DataTags with IDs {}.", Joiner.on(", ").join(ids));
         }
     }
 
@@ -131,10 +128,9 @@ public class ControllerImpl implements Controller {
      * Subscribes to the OPC UA node corresponding to one data tag on the server.
      * @param sourceDataTag the ISourceDataTag to subscribe to.
      * @return true if the Tag could be subscribed successfully.
-     * @throws InterruptedException if the thread was interrupted before the tag could be subscribed.
      */
     @Override
-    public synchronized boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) throws InterruptedException {
+    public synchronized boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
         SubscriptionGroup group = mapper.getGroup(sourceDataTag);
         DataTagDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
         return subscribeToGroup(group, Collections.singletonList(definition));
@@ -145,10 +141,9 @@ public class ControllerImpl implements Controller {
      * subscription is then empty, it is deleted along with the monitored item.
      * @param dataTag the tag to remove.
      * @return true if the tag was previously known.
-     * @throws InterruptedException if the thread was interrupted before the tag could be removed.
      */
     @Override
-    public synchronized boolean removeTag(final ISourceDataTag dataTag) throws InterruptedException {
+    public synchronized boolean removeTag(final ISourceDataTag dataTag) {
         SubscriptionGroup group = mapper.getGroup(dataTag);
         boolean wasKnown = group != null && group.isSubscribed() && group.contains(dataTag);
         if (wasKnown) {
@@ -194,15 +189,17 @@ public class ControllerImpl implements Controller {
      * subscription is recreated from scratch. If the controller received the command to stop, recreation is not
      * recreated and the method exists silently.
      * @param subscription the subscription of the old session which must be recreated.
-     * @throws InterruptedException   if the thread was interrupted before the subscription could be recreated.
-     * @throws CommunicationException if the subscription could not be recreated due to communication difficulty.
-     * @throws ConfigurationException if the subscription can not be mapped to current DataTags, and therefore cannot be
-     *                                recreated.
+     * @throws OPCUAException of type {@link CommunicationException} if the subscription could not be recreated due to
+     *                        communication difficulty, and of type {@link ConfigurationException} if the subscription
+     *                        can not be mapped to current DataTags, and therefore cannot be recreated.
      */
     @Override
-    public void recreateSubscription(UaSubscription subscription) throws InterruptedException, CommunicationException, ConfigurationException {
+    @Retryable(value = CommunicationException.class,
+            maxAttempts = Integer.MAX_VALUE,
+            backoff = @Backoff(delayExpression = "${app.retryDelay}"))
+    public synchronized void recreateSubscription(UaSubscription subscription) throws OPCUAException {
         log.info("entered");
-        if (wasStopped()) {
+        if (wasStopped() || Thread.currentThread().isInterrupted()) {
             log.info("Controller was stopped, cease subscription recreation attempts.");
         } else {
             final var group = mapper.getGroup(subscription);
@@ -227,24 +224,23 @@ public class ControllerImpl implements Controller {
 
     private synchronized void refresh(Map<Long, DataTagDefinition> entries) {
         final var notRefreshable = new ArrayList<Long>();
-        try {
-            for (var entry : entries.entrySet()) {
-                try {
-                    notifyListener(entry.getKey(), endpoint.read(entry.getValue().getNodeId()));
-                } catch (OPCUAException e) {
-                    notRefreshable.add(entry.getKey());
-                }
+        for (var entry : entries.entrySet()) {
+            if (Thread.currentThread().isInterrupted()) {
+                log.info("The thread was interrupted before all tags could be refreshed.");
+                return;
             }
-            if (!notRefreshable.isEmpty()) {
-                log.error("An exception occurred when refreshing ISourceDataTags with IDs {}. ", notRefreshable);
+            try {
+                notifyListener(entry.getKey(), endpoint.read(entry.getValue().getNodeId()));
+            } catch (OPCUAException e) {
+                notRefreshable.add(entry.getKey());
             }
-        } catch (InterruptedException e) {
-            log.info("The thread was interrupted before all tags could be refreshed.");
-            Thread.currentThread().interrupt();
+        }
+        if (!notRefreshable.isEmpty()) {
+            log.error("An exception occurred when refreshing ISourceDataTags with IDs {}. ", notRefreshable);
         }
     }
 
-    private boolean subscribeToGroup(SubscriptionGroup group, List<DataTagDefinition> definitions) throws InterruptedException {
+    private boolean subscribeToGroup(SubscriptionGroup group, List<DataTagDefinition> definitions) {
         try {
             if (!group.isSubscribed() || !endpoint.isCurrent(group.getSubscription())) {
                 group.setSubscription(endpoint.createSubscription(group.getPublishInterval()));

@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -10,11 +10,7 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager
 import org.eclipse.milo.opcua.stack.core.StatusCodes;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 /**
  * This listener class is informed by the SDK regarding events on the server that require specific action on part of the
@@ -27,9 +23,6 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
     @Autowired
     @Setter
     private Controller controller;
-
-    @Value("${app.retryDelay}")
-    private int delay;
 
     /**
      * If a Subscription is transferred to another Session, the queued Notification Messages for this subscription are
@@ -70,19 +63,15 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
      * @param subscription the subscription to recreate on the client.
      */
     private void recreate(UaSubscription subscription) {
-        log.info("Initiate subscription recreation attempts until canceled.");
         try {
             controller.recreateSubscription(subscription);
             log.info("Subscription successfully recreated!");
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.info("Thread was interrupted, subscription recreation discontinued.");
-        } catch (ConfigurationException e) {
-            log.error("Subscription recreations discontinued: ", e);
         } catch (CommunicationException e) {
-            // retry until we can establish a connection
-            CompletableFuture.runAsync(() -> recreate(subscription),
-                    CompletableFuture.delayedExecutor(delay, TimeUnit.MILLISECONDS)).join();
+            // only after Integer.MAX_VALUE retries have failed, should happen very rarely
+            recreate(subscription);
+        } catch (OPCUAException e) {
+            log.error("Subscription recreation discontinued: ", e);
         }
+
     }
 }
