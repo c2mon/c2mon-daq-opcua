@@ -68,6 +68,7 @@ public class AppConfig {
 
     private KeystoreConfig keystore = new KeystoreConfig();
     private UsrPwdConfig usrPwd = new UsrPwdConfig();
+    private PKIConfig pkiConfig = new PKIConfig();
 
     /**
      * Settings required to load an existing certificate
@@ -83,6 +84,20 @@ public class AppConfig {
         private String path;
         private String pwd = "";
         private String alias;
+    }
+
+    /**
+     * Settings required to load an existing certificate
+     */
+    @Configuration
+    @ConfigurationProperties(prefix = "app.pki")
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class PKIConfig {
+        private String pkPath;
+        private String crtPath;
     }
 
     /**

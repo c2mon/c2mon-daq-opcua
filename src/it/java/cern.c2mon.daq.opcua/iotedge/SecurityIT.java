@@ -21,6 +21,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -40,6 +41,9 @@ public class SecurityIT {
 
     @Autowired
     AppConfig config;
+
+    @Autowired
+    AppConfig.PKIConfig pkiConfig;
 
     @Autowired
     Endpoint endpoint;
@@ -81,17 +85,24 @@ public class SecurityIT {
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
         config.setInsecureCommunicationEnabled(false);
-        final var f = listener.getStateUpdate();
-        trustAndConnect();
+        final String crtPath = pkiConfig.getCrtPath();
+        pkiConfig.setCrtPath("");
+
+        final var f = trustAndConnect();
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+
+        config.setInsecureCommunicationEnabled(true);
+        pkiConfig.setCrtPath(crtPath);
     }
 
     @Test
     public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
-        final var f = listener.getStateUpdate();
-        setupAuthForCertificate();
-        trustAndConnect();
+        config.setInsecureCommunicationEnabled(false);
+        config.setOnDemandCertificationEnabled(false);
+        final var f = trustAndConnect();
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        config.setInsecureCommunicationEnabled(true);
+        config.setOnDemandCertificationEnabled(true);
     }
 
     private void initializeController() throws OPCUAException, InterruptedException {
@@ -99,7 +110,7 @@ public class SecurityIT {
         controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
     }
 
-    private void trustAndConnect() throws IOException, InterruptedException, OPCUAException {
+    private CompletableFuture<EndpointListener.EquipmentState> trustAndConnect() throws IOException, InterruptedException, OPCUAException {
         log.info("Initial connection attempt.");
         try {
             this.initializeController();
@@ -108,20 +119,11 @@ public class SecurityIT {
         }
         controller.stop();
         resolver.trustCertificates();
-
+        final var state = listener.listen();
         log.info("Reconnect.");
         this.initializeController();
         resolver.cleanUpCertificates();
-    }
-
-    private void setupAuthForCertificate(){
-        config.setInsecureCommunicationEnabled(false);
-        config.setOnDemandCertificationEnabled(false);
-        String path = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
-        config.getKeystore().setType("PKCS12");
-        config.getKeystore().setPath(path);
-        config.getKeystore().setAlias("1");
-        config.getKeystore().setPwd("password");
+        return state;
     }
 
     private void setupAuthForPassword(){

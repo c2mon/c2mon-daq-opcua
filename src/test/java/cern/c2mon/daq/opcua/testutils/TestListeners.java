@@ -83,11 +83,6 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onEquipmentStateUpdate(EquipmentState state) {
-            stateUpdate.complete(state);
-        }
-
-        @Override
         public void onNewTagValue (Long dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
             if (debugEnabled) {
                 log.info("received data tag {}, value update {}, quality {}", dataTag, valueUpdate, quality);
@@ -108,6 +103,7 @@ public abstract class TestListeners {
             alive.complete(statusCode);
         }
 
+
         @Override
         public void initialize (IEquipmentMessageSender sender) {
         }
@@ -120,6 +116,11 @@ public abstract class TestListeners {
         @Override
         public void onSessionInactive(UaSession session) {
             completeAndReset(false);
+        }
+
+        @Override
+        public void onEquipmentStateUpdate(EquipmentState state) {
+            stateUpdate.complete(state);
         }
 
         public CompletableFuture<EquipmentState> listen() {

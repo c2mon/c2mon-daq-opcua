@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.iotedge.SecurityIT;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
@@ -8,21 +9,19 @@ import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.*;
-import java.security.cert.CertificateException;
+import java.security.KeyPair;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class CertificateLoaderTest {
-    AppConfig.KeystoreConfig config;
+    AppConfig.KeystoreConfig ksConfig;
+    AppConfig.PKIConfig pkiConfig;
     CertificateLoader loader;
 
     List<SecurityPolicy> policies;
@@ -30,13 +29,17 @@ class CertificateLoaderTest {
     @BeforeEach
     public void setUp() {
         String path = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
-        config = AppConfig.KeystoreConfig.builder()
+        ksConfig = AppConfig.KeystoreConfig.builder()
                 .type("PKCS12")
                 .path(path)
                 .pwd("password")
                 .alias("1")
                 .build();
-        loader = new CertificateLoader(config);
+        pkiConfig = AppConfig.PKIConfig.builder()
+                .crtPath(SecurityIT.class.getClassLoader().getResource("server.crt").getPath())
+                .pkPath(SecurityIT.class.getClassLoader().getResource("pkcs8server.key").getPath())
+                .build();
+        loader = new CertificateLoader(ksConfig, pkiConfig);
 
         policies = new ArrayList<>(Arrays.asList(SecurityPolicy.Basic256Sha256, SecurityPolicy.Basic128Rsa15, SecurityPolicy.Basic256, SecurityPolicy.None));
 
@@ -58,18 +61,35 @@ class CertificateLoaderTest {
     }
 
     @Test
-    public void shouldLoadCertificateFromConfig() throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, UnrecoverableKeyException {
-        KeyStore ks = loadFromKeyStore();
-        PrivateKey expectedPrivate = (PrivateKey) ks.getKey(config.getAlias(), config.getPwd().toCharArray());
-        final X509Certificate expectedCert = (X509Certificate) ks.getCertificate(config.getAlias());
+    public void shouldLoadFromPfxIfExists() throws ConfigurationException {
+        final Map.Entry<X509Certificate, KeyPair> entry = PkiUtil.loadFromPfx(ksConfig);
+
         EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
         OpcUaClientConfigBuilder actual = new OpcUaClientConfigBuilder();
 
         loader.certify(actual, e);
 
         final OpcUaClientConfigBuilder expected = new OpcUaClientConfigBuilder()
-                .setCertificate(expectedCert)
-                .setKeyPair(new KeyPair(expectedCert.getPublicKey(), expectedPrivate))
+                .setCertificate(entry.getKey())
+                .setKeyPair(entry.getValue())
+                .setEndpoint(e);
+
+        CertificateGeneratorTest.assertEqualConfigFields(expected, actual);
+    }
+
+    @Test
+    public void shouldLoadFromPkiIfNoPfxConfigured() throws ConfigurationException {
+        final X509Certificate certificate = PkiUtil.loadCertificate(pkiConfig.getCrtPath());
+        final PrivateKey privateKey = PkiUtil.loadPrivateKey(pkiConfig.getPkPath());
+
+        final CertificateLoader pkiLoader = new CertificateLoader(null, pkiConfig);
+        EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
+        OpcUaClientConfigBuilder actual = new OpcUaClientConfigBuilder();
+        pkiLoader.certify(actual, e);
+
+        final OpcUaClientConfigBuilder expected = new OpcUaClientConfigBuilder()
+                .setCertificate(certificate)
+                .setKeyPair(new KeyPair(certificate.getPublicKey(), privateKey))
                 .setEndpoint(e);
 
         CertificateGeneratorTest.assertEqualConfigFields(expected, actual);
@@ -89,15 +109,9 @@ class CertificateLoaderTest {
     }
 
     @Test
-    void canCertifyWithBadConfigShouldReturnFalse() {
-        loader.getConfig().setPwd("false");
-        final EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
-        assertFalse(loader.canCertify(e));
-    }
-
-    @Test
-    void canCertifyWithBadCertificateFileReturnFalse() {
-        loader.getConfig().setPath("bad");
+    void canCertifyWithBadFilesReturnsFalse() {
+        loader.getKeystoreConfig().setPath("bad");
+        loader.getPkiConfig().setCrtPath("bad");
         final EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
         assertFalse(loader.canCertify(e));
     }
@@ -107,22 +121,8 @@ class CertificateLoaderTest {
         assertFalse(loader.canCertify(createEndpointWithSecurityPolicy("badUri")));
     }
 
-    private KeyStore loadFromKeyStore() throws CertificateException, NoSuchAlgorithmException, IOException, KeyStoreException {
-        KeyStore keyStore = KeyStore.getInstance(config.getType());
-        InputStream in = Files.newInputStream(Paths.get(config.getPath()));
-        keyStore.load(in, config.getPwd().toCharArray());
-        return keyStore;
-    }
-
     private EndpointDescription createEndpointWithSecurityPolicy(String securityPolicyUri) {
-        return new EndpointDescription("test",
-                null,
-                null,
-                null,
-                securityPolicyUri,
-                null,
-                null,
-                null);
+        return new EndpointDescription("test", null, null, null, securityPolicyUri, null, null, null);
     }
 
 }

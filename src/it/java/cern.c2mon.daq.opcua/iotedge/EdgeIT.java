@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
@@ -15,9 +15,7 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.junit.Ignore;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
@@ -26,7 +24,6 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Collections;
@@ -43,8 +40,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
 public class EdgeIT {
+    private static GenericContainer container;
+    private static ToxiproxyContainer toxiProxyContainer;
+    private static ToxiproxyContainer.ContainerProxy proxy;
     private static final int EDGE_PORT = 50000;
-
     private final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
     private final ISourceDataTag alreadySubscribedTag = ServerTagFactory.DipData.createDataTag();
     private final TestListeners.Pulse pulseListener = new TestListeners.Pulse();
@@ -58,26 +57,33 @@ public class EdgeIT {
     @Autowired
     Endpoint endpoint;
 
-    public static Network network = Network.newNetwork();
 
-    @Container
-    public static GenericContainer container = new GenericContainer<>("mcr.microsoft.com/iotedge/opc-plc")
-            .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
-            .withCommand("--unsecuretransport")
-            .withExposedPorts(EDGE_PORT)
-            .withNetwork(network);
+    @BeforeAll
+    public static void setupContainers() {
+        Network network = Network.newNetwork();
+        // manage lifecycles manually since we're shutting the containers down during testing
+        container = new GenericContainer<>("mcr.microsoft.com/iotedge/opc-plc")
+                .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
+                .withCommand("--unsecuretransport")
+                .withNetwork(network)
+                .withExposedPorts(EDGE_PORT);
+        container.start();
+        toxiProxyContainer = new ToxiproxyContainer()
+                .withNetwork(network);
+        toxiProxyContainer.start();
+        proxy = toxiProxyContainer.getProxy(container, EDGE_PORT);
+    }
 
-    @Container
-    public static ToxiproxyContainer toxiProxyContainer = new ToxiproxyContainer()
-            .withNetwork(network);
-
-    public ToxiproxyContainer.ContainerProxy proxy;
+    @AfterAll
+    public static void tearDownContainers() {
+        container.stop();
+        toxiProxyContainer.stop();
+    }
 
     @BeforeEach
     public void setupEndpoint() throws OPCUAException, InterruptedException {
         log.info("############ SET UP ############");
         pulseListener.setDebugEnabled(true);
-        proxy = toxiProxyContainer.getProxy(container, EDGE_PORT);
 
         pulseListener.setSourceID(tag.getId());
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
