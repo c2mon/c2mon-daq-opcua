@@ -7,8 +7,8 @@ import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.security.Certifier;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import io.netty.util.internal.StringUtil;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
@@ -18,19 +18,19 @@ import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.sdk.client.api.identity.UsernameProvider;
 import org.eclipse.milo.opcua.stack.client.security.ClientCertificateValidator;
 import org.eclipse.milo.opcua.stack.client.security.DefaultClientCertificateValidator;
-import org.eclipse.milo.opcua.stack.core.StatusCodes;
 import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.security.DefaultTrustListManager;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -44,16 +44,20 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Component("securityModule")
 @Setter
 @Slf4j
-@RequiredArgsConstructor
 public class SecurityModule {
 
     private final AppConfig config;
+    private final Map<String, Certifier> key2Certifier;
 
-    private final Certifier loader;
-
-    private final Certifier generator;
-
-    private final Certifier noSecurity;
+    @Autowired
+    public SecurityModule(AppConfig config, Certifier loader, Certifier generator, Certifier noSecurity ){
+        this.config = config;
+        key2Certifier = ImmutableMap.<String, Certifier>builder()
+                .put("none", noSecurity)
+                .put("generate", generator)
+                .put("load", loader)
+                .build();
+    }
 
     private OpcUaClientConfigBuilder builder;
 
@@ -82,27 +86,22 @@ public class SecurityModule {
         }
 
         // assure that endpoints is a mutable list
-        endpoints = new ArrayList<>(endpoints);
+        List<EndpointDescription> mutableEndpoints = new ArrayList<>(endpoints);
 
         // prefer more secure endpoints
-        endpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
+        mutableEndpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
 
-        //connect with existing certificate if present
-        OpcUaClient client = connectIfPossible(endpoints, loader, listeners);
-
-        if (client == null && config.isOnDemandCertificationEnabled()) {
-            log.info("Authenticate with generated certificate. ");
-            client = connectIfPossible(endpoints, generator, listeners);
+        List<Map.Entry<String, Integer>> toSort = new ArrayList<>(config.getCertificationPriority().entrySet());
+        toSort.sort(Map.Entry.comparingByValue());
+        for (Map.Entry<String, Integer> e : toSort) {
+            final Certifier certifier = key2Certifier.get(e.getKey());
+            OpcUaClient client = connectIfPossible(mutableEndpoints, certifier, listeners);
+            if (client != null) {
+                log.info("Connected successfully with certifier '{}'! ", e.getKey());
+                return client;
+            }
         }
-        if (client == null && config.isInsecureCommunicationEnabled()) {
-            log.info("Attempt insecure connection. ");
-            client = connectIfPossible(endpoints, noSecurity, listeners);
-        }
-        if (client == null) {
-            throw new CommunicationException(ExceptionContext.AUTH_ERROR);
-        }
-        log.info("Connected successfully! ");
-        return client;
+        throw new CommunicationException(ExceptionContext.AUTH_ERROR);
     }
 
     private ClientCertificateValidator getValidator() throws ConfigurationException {
@@ -160,12 +159,8 @@ public class SecurityModule {
             return false;
         }
         final var code = ((UaException) cause).getStatusCode().getValue();
-        StatusCodes.lookup(code).ifPresentOrElse(
-                s -> log.error("Failure description: {}", Arrays.toString(s)),
-                () -> log.error("Reasons unknown."));
         if (OPCUAException.isSecurityIssue((UaException) cause)) {
-            log.info("Ensure configuration correctness.");
-            throw new ConfigurationException(ExceptionContext.SECURITY);
+            throw new ConfigurationException(ExceptionContext.SECURITY, cause);
         } else if (certifier.getSevereErrorCodes().contains(code)) {
             log.error("Cannot connect to this server with certifier {}. Proceed with another certifier.", certifier.getClass().getName());
             return false;

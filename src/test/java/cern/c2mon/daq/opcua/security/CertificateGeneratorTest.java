@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
@@ -18,25 +19,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class CertificateGeneratorTest {
     AppConfig config;
     CertificateGenerator generator;
-
     List<MessageSecurityMode> modes;
     List<SecurityPolicy> policies;
 
     @BeforeEach
     public void setUp() {
-        config = AppConfig.builder()
-                .appName("c2mon-opcua-daq")
-                .applicationUri("urn:localhost:UA:C2MON")
-                .productUri("urn:cern:ch:UA:C2MON")
-                .organization("CERN")
-                .organizationalUnit("C2MON team")
-                .localityName("Geneva")
-                .stateName("Geneva")
-                .countryCode("CH")
-                .insecureCommunicationEnabled(false)
-                .onDemandCertificationEnabled(true)
-                .keystore(AppConfig.KeystoreConfig.builder().build())
-                .build();
+        config = TestUtils.createDefaultConfig();
         generator = new CertificateGenerator(config);
 
         modes = new ArrayList<>(Arrays.asList(MessageSecurityMode.SignAndEncrypt, MessageSecurityMode.Sign, MessageSecurityMode.None));

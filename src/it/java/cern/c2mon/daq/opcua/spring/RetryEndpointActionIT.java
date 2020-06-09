@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.easymock.EasyMock.*;
 
 @SpringBootTest
-@TestPropertySource(locations = "classpath:opcua.properties")
+@TestPropertySource(locations = "classpath:retry.properties")
 @ExtendWith(SpringExtension.class)
 public class RetryEndpointActionIT {
 

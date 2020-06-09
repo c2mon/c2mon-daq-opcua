@@ -8,6 +8,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.annotation.EnableRetry;
 
+import java.util.Map;
+
 /**
  * This class contains configuration options regarding the OPC UA DAQ connection and certification options and
  * optionally specific options for the respective certification option.
@@ -43,29 +45,6 @@ public class AppConfig {
      */
     private int timeout;
 
-
-    private String appName;
-    private String productUri;
-    private String applicationUri;
-    private String organization;
-    private String organizationalUnit;
-    private String localityName;
-    private String stateName;
-    private String countryCode;
-    private int requestTimeout;
-
-    /**
-     * If insecure communication is enabled, the client attempts to connect to OPC UA endpoints without security as a
-     * fallback.
-     */
-    private boolean insecureCommunicationEnabled = true;
-
-    /**
-     * If on demand certification is enabled, the client creates and attempts connection with a self-signed certificate
-     * if no certificate could be loaded.
-     */
-    private boolean onDemandCertificationEnabled = true;
-
     /**
      * If enabled, the client will make no attempt to validate server certificates, but trust servers. If disabled,
      * incoming server certificates are verified against the certificates listed in pkiBaseDir.
@@ -79,12 +58,33 @@ public class AppConfig {
      */
     private String pkiBaseDir;
 
+    /**
+     * Connection with a {@link cern.c2mon.daq.opcua.security.Certifier} associated with the element will be attempted
+     * in order or magnitude of the value, starting with the highest value. If the value is not given then that
+     * Certifier will not be used. The entries map the the Certifies as follows:
+     * "none" : {@link cern.c2mon.daq.opcua.security.NoSecurityCertifier}
+     * "generate" : {@link cern.c2mon.daq.opcua.security.CertificateGenerator}
+     * "load" : {@link cern.c2mon.daq.opcua.security.CertificateLoader}
+     */
+    private Map<String, Integer> certificationPriority;
+
+    // Settings to create a certificate, and to request connection to the server
+    private String appName;
+    private String productUri;
+    private String applicationUri;
+    private String organization;
+    private String organizationalUnit;
+    private String localityName;
+    private String stateName;
+    private String countryCode;
+    private int requestTimeout;
+
     private KeystoreConfig keystore = new KeystoreConfig();
     private UsrPwdConfig usrPwd = new UsrPwdConfig();
     private PKIConfig pkiConfig = new PKIConfig();
 
     /**
-     * Settings required to load an existing certificate
+     * Settings required to load an existing certificate from a keystore file
      */
     @Configuration
     @ConfigurationProperties(prefix = "app.keystore")
@@ -100,7 +100,7 @@ public class AppConfig {
     }
 
     /**
-     * Settings required to load an existing certificate
+     * Settings required to load an existing certificate from a PEM-encoded private key and certificate files
      */
     @Configuration
     @ConfigurationProperties(prefix = "app.pki")

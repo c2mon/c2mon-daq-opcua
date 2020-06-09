@@ -31,7 +31,7 @@ import static cern.c2mon.daq.opcua.testutils.ServerTagFactory.RandomUnsignedInt3
 import static org.easymock.EasyMock.*;
 
 @SpringBootTest
-@TestPropertySource(locations = "classpath:opcua.properties")
+@TestPropertySource(locations = "classpath:retry.properties")
 @ExtendWith(SpringExtension.class)
 public class RetrySubscriptionRecreationIT {
 

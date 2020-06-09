@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.AppConfig;
+import com.google.common.collect.ImmutableMap;
 import org.easymock.Capture;
 
 import static org.easymock.EasyMock.*;
@@ -14,6 +15,11 @@ public abstract class TestUtils {
     public final static int TIMEOUT_TOXI = 25;
 
     public static AppConfig createDefaultConfig() {
+        final var certificationPriority = ImmutableMap.<String, Integer>builder()
+                .put("none", 3)
+                .put("generate", 2)
+                .put("load", 1)
+                .build();
         return AppConfig.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
@@ -24,8 +30,7 @@ public abstract class TestUtils {
                 .stateName("Geneva")
                 .countryCode("CH")
                 .requestTimeout(5000)
-                .insecureCommunicationEnabled(true)
-                .onDemandCertificationEnabled(true)
+                .certificationPriority(certificationPriority)
                 .trustAllServers(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())
                 .maxRetryAttempts(1)

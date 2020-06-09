@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
 @SpringBootTest
-@TestPropertySource(locations = "classpath:opcua.properties")
+@TestPropertySource(locations = "classpath:securityIT.properties")
 @ExtendWith(SpringExtension.class)
 public class SecurityIT {
 
@@ -63,15 +63,15 @@ public class SecurityIT {
     public void setUp() {
         ReflectionTestUtils.setField(controller, "endpointListener", listener);
         ReflectionTestUtils.setField(endpoint, "endpointListener", listener);
-        config.setMaxRetryAttempts(1);
         listener.reset();
-        config.setTrustAllServers(true);
-        config.setInsecureCommunicationEnabled(true);
-        config.setOnDemandCertificationEnabled(true);
     }
 
     @AfterEach
     public void cleanUp() throws IOException, InterruptedException {
+        config.setTrustAllServers(true);
+        config.getCertificationPriority().put("none", 1);
+        config.getCertificationPriority().put("generate", 2);
+        config.getCertificationPriority().put("load", 3);
         resolver.cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
         final var f = listener.listen();
@@ -85,7 +85,7 @@ public class SecurityIT {
     }
 
     @Test
-    public void connectWithoutCertificate() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
+    public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
         final var f = listener.getStateUpdate();
         controller.connect(resolver.getUri());
         controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
@@ -94,23 +94,16 @@ public class SecurityIT {
 
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
-        config.setInsecureCommunicationEnabled(false);
-        final String crtPath = config.getPkiConfig().getCrtPath();
-        final String ksPath = config.getKeystore().getPath();
-        config.getPkiConfig().setCrtPath("");
-        config.getKeystore().setPath("");
-
+        config.getCertificationPriority().remove("none");
+        config.getCertificationPriority().remove("load");
         final var f = trustCertificatesOnServerAndConnect();
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
-
-        config.getKeystore().setPath(ksPath);
-        config.getPkiConfig().setCrtPath(crtPath);
     }
 
     @Test
     public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
-        config.setInsecureCommunicationEnabled(false);
-        config.setOnDemandCertificationEnabled(false);
+        config.getCertificationPriority().remove("none");
+        config.getCertificationPriority().remove("generate");
         final var f = trustCertificatesOnServerAndConnect();
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
@@ -118,16 +111,16 @@ public class SecurityIT {
     @Test
     public void activeKeyChainValidatorShouldFail() {
         config.setTrustAllServers(false);
-        config.setOnDemandCertificationEnabled(false);
-        config.setInsecureCommunicationEnabled(false);
+        config.getCertificationPriority().remove("none");
+        config.getCertificationPriority().remove("generate");
         assertThrows(CommunicationException.class, this::trustCertificatesOnServerAndConnect);
     }
 
     @Test
     public void serverCertificateInPkiFolderShouldSucceed() throws InterruptedException, OPCUAException, IOException, TimeoutException, ExecutionException {
         config.setTrustAllServers(false);
-        config.setOnDemandCertificationEnabled(false);
-        config.setInsecureCommunicationEnabled(false);
+        config.getCertificationPriority().remove("none");
+        config.getCertificationPriority().remove("generate");
 
         try {
             trustCertificatesOnServerAndConnect();
