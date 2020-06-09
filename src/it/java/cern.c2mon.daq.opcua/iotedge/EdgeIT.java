@@ -2,12 +2,10 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
-import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -27,10 +25,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.CONNECTION_LOST;
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,14 +44,10 @@ public class EdgeIT {
     private final TestListeners.Pulse pulseListener = new TestListeners.Pulse();
 
     @Autowired
-    SecurityModule securityModule;
-
-    @Autowired
     Controller controller;
 
     @Autowired
     Endpoint endpoint;
-
 
     @BeforeAll
     public static void setupContainers() {
@@ -68,8 +59,7 @@ public class EdgeIT {
                 .withNetwork(network)
                 .withExposedPorts(EDGE_PORT);
         container.start();
-        toxiProxyContainer = new ToxiproxyContainer()
-                .withNetwork(network);
+        toxiProxyContainer = new ToxiproxyContainer().withNetwork(network);
         toxiProxyContainer.start();
         proxy = toxiProxyContainer.getProxy(container, EDGE_PORT);
     }
@@ -89,9 +79,6 @@ public class EdgeIT {
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
         ReflectionTestUtils.setField(endpoint, "endpointListener", pulseListener);
 
-        // avoid extra time on authentication
-        ReflectionTestUtils.setField(securityModule, "loader", new NoSecurityCertifier());
-
         controller.connect("opc.tcp://" + proxy.getContainerIpAddress() + ":" + proxy.getProxyPort());
         controller.subscribeTags(Collections.singletonList(alreadySubscribedTag));
         log.info("Client ready");
@@ -100,9 +87,16 @@ public class EdgeIT {
     }
 
     @AfterEach
-    public void cleanUp() {
+    public void cleanUp() throws InterruptedException {
         log.info("############ CLEAN UP ############");
+        final var f = pulseListener.listen();
         controller.stop();
+        try {
+            f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException | CompletionException | ExecutionException e) {
+            // assure that server has time to disconnect, fails for test on failed connections
+        }
+        controller = null;
         proxy.setConnectionCut(false);
     }
 

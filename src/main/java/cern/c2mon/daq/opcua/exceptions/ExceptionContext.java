@@ -19,6 +19,7 @@ public enum ExceptionContext {
     COMMAND_CLASSIC("Could not write command value."),
     BROWSE("Browsing node failed."),
     AUTH_ERROR("Could not authenticate to any server endpoint!"),
+    PKI_ERROR("Could not process the PKI base directory"),
     ADDRESS_URI("Cannot parse equipment address: Syntax of OPC URI is incorrect."),
     ADDRESS_MISSING_PROPERTIES("The address does not contain all required properties."),
     ADDRESS_INVALID_PROPERTIES("The address does contains invalid properties."),

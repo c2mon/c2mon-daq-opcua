@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.AppConfig;
-import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import org.easymock.Capture;
 
 import static org.easymock.EasyMock.*;
@@ -13,13 +12,6 @@ public abstract class TestUtils {
     public final static int TIMEOUT = 3000;
     public final static int TIMEOUT_IT = 6000;
     public final static int TIMEOUT_TOXI = 25;
-
-    public static IEquipmentConfiguration createMockConfig() {
-        IEquipmentConfiguration config = createMock(IEquipmentConfiguration.class);
-        expect(config.getAliveTagId()).andReturn(1L).anyTimes();
-        expect(config.getAliveTagInterval()).andReturn(13L).anyTimes();
-        return config;
-    }
 
     public static AppConfig createDefaultConfig() {
         return AppConfig.builder()
@@ -34,17 +26,18 @@ public abstract class TestUtils {
                 .requestTimeout(5000)
                 .insecureCommunicationEnabled(true)
                 .onDemandCertificationEnabled(true)
+                .trustAllServers(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())
-                .maxRetryAttemps(1)
+                .maxRetryAttempts(1)
                 .retryDelay(2000)
                 .build();
     }
 
     public static class CommfaultSenderCapture {
-        Capture<Long> id = newCapture();
-        Capture<String> tagName = newCapture();
-        Capture<Boolean> val = newCapture();
-        Capture<String> msg= newCapture();
+        final Capture<Long> id = newCapture();
+        final Capture<String> tagName = newCapture();
+        final Capture<Boolean> val = newCapture();
+        final Capture<String> msg= newCapture();
 
         public CommfaultSenderCapture(IProcessMessageSender sender) {
             sender.sendCommfaultTag(captureLong(id), capture(tagName), captureBoolean(val), capture(msg));

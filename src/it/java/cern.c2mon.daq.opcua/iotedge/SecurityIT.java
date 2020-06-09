@@ -10,6 +10,7 @@ import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
+import com.google.common.io.Files;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,15 +19,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.testcontainers.shaded.org.apache.commons.io.FileUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
 @SpringBootTest
@@ -41,9 +42,6 @@ public class SecurityIT {
 
     @Autowired
     AppConfig config;
-
-    @Autowired
-    AppConfig.PKIConfig pkiConfig;
 
     @Autowired
     Endpoint endpoint;
@@ -65,74 +63,108 @@ public class SecurityIT {
     public void setUp() {
         ReflectionTestUtils.setField(controller, "endpointListener", listener);
         ReflectionTestUtils.setField(endpoint, "endpointListener", listener);
-        config.setMaxRetryAttemps(1);
+        config.setMaxRetryAttempts(1);
         listener.reset();
+        config.setTrustAllServers(true);
+        config.setInsecureCommunicationEnabled(true);
+        config.setOnDemandCertificationEnabled(true);
     }
 
     @AfterEach
-    public void cleanUp() {
+    public void cleanUp() throws IOException, InterruptedException {
+        resolver.cleanUpCertificates();
+        FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
+        final var f = listener.listen();
         controller.stop();
+        try {
+            f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException | CompletionException | ExecutionException e) {
+            // assure that server has time to disconnect, fails for test on failed connections
+        }
         controller = null;
     }
 
     @Test
     public void connectWithoutCertificate() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
         final var f = listener.getStateUpdate();
-        initializeController();
+        controller.connect(resolver.getUri());
+        controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
         config.setInsecureCommunicationEnabled(false);
-        final String crtPath = pkiConfig.getCrtPath();
-        pkiConfig.setCrtPath("");
+        final String crtPath = config.getPkiConfig().getCrtPath();
+        final String ksPath = config.getKeystore().getPath();
+        config.getPkiConfig().setCrtPath("");
+        config.getKeystore().setPath("");
 
-        final var f = trustAndConnect();
+        final var f = trustCertificatesOnServerAndConnect();
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
 
-        config.setInsecureCommunicationEnabled(true);
-        pkiConfig.setCrtPath(crtPath);
+        config.getKeystore().setPath(ksPath);
+        config.getPkiConfig().setCrtPath(crtPath);
     }
 
     @Test
     public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
         config.setInsecureCommunicationEnabled(false);
         config.setOnDemandCertificationEnabled(false);
-        final var f = trustAndConnect();
+        final var f = trustCertificatesOnServerAndConnect();
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
-        config.setInsecureCommunicationEnabled(true);
-        config.setOnDemandCertificationEnabled(true);
     }
 
-    private void initializeController() throws OPCUAException, InterruptedException {
-        controller.connect(resolver.getUri());
-        controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
+    @Test
+    public void activeKeyChainValidatorShouldFail() {
+        config.setTrustAllServers(false);
+        config.setOnDemandCertificationEnabled(false);
+        config.setInsecureCommunicationEnabled(false);
+        assertThrows(CommunicationException.class, this::trustCertificatesOnServerAndConnect);
     }
 
-    private CompletableFuture<EndpointListener.EquipmentState> trustAndConnect() throws IOException, InterruptedException, OPCUAException {
-        log.info("Initial connection attempt.");
+    @Test
+    public void serverCertificateInPkiFolderShouldSucceed() throws InterruptedException, OPCUAException, IOException, TimeoutException, ExecutionException {
+        config.setTrustAllServers(false);
+        config.setOnDemandCertificationEnabled(false);
+        config.setInsecureCommunicationEnabled(false);
+
         try {
-            this.initializeController();
+            trustCertificatesOnServerAndConnect();
         } catch (CommunicationException e) {
-            // expected behavior
+            // expected behavior: rejected by the client
+        }
+
+        trustCertificatesOnClient();
+
+        final var state = listener.listen();
+        controller.connect(resolver.getUri());
+        assertEquals(EndpointListener.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+    }
+
+    private void trustCertificatesOnClient() throws IOException {
+        final File[] files = new File(config.getPkiBaseDir() + "/rejected").listFiles();
+        for (File file : files) {
+            log.info("Trusting Certificate {}. ", file.getName());
+            Files.move(file, new File(config.getPkiBaseDir() + "/trusted/certs/" + file.getName()));
+        }
+    }
+
+    private CompletableFuture<EndpointListener.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
+        log.info("Initial connection attempt...");
+        try {
+            controller.connect(resolver.getUri());
+        } catch (CommunicationException e) {
+            // expected behavior: rejected by the server
         }
         controller.stop();
+
+        log.info("Trust certificates server-side and reconnect...");
         resolver.trustCertificates();
         final var state = listener.listen();
-        log.info("Reconnect.");
-        this.initializeController();
-        resolver.cleanUpCertificates();
-        return state;
-    }
 
-    private void setupAuthForPassword(){
-        config.setInsecureCommunicationEnabled(true);
-        config.setOnDemandCertificationEnabled(false);
-        AppConfig.UsrPwdConfig usrPwdConfig = AppConfig.UsrPwdConfig.builder()
-                .usr("user1")
-                .pwd("password")
-                .build();
-        config.setUsrPwd(usrPwdConfig);
+        controller.connect(resolver.getUri());
+        controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
+        return state;
     }
 }

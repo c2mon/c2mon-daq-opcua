@@ -47,7 +47,7 @@ public class CertificateLoader extends CertifierBase {
     }
 
     /**
-     * Checks whether the certifier supports an endpoint's security policy and the corresponding signature algorithm.
+     * Checks whether the Certifier supports an endpoint's security policy and the corresponding signature algorithm.
      * The certificate is loaded if not yet present, as this is required to read it's signature algorithm.
      * @param endpoint the endpoint whose security policy to check to be supported.
      * @return whether the endpoint's security policy is supported.
@@ -58,7 +58,7 @@ public class CertificateLoader extends CertifierBase {
     }
 
     /**
-     * If a connection using a Certifier fails for severe reasons, attemping to reconnect with this certifier is
+     * If a connection using a Certifier fails for severe reasons, attempting to reconnect with this Certifier is
      * fruitless also with other endpoints.
      * @return a list of error codes which constitute a severe error.
      */
@@ -92,7 +92,7 @@ public class CertificateLoader extends CertifierBase {
 
     private boolean isKeystoreConfigured() {
         return keystoreConfig != null &&
-                Stream.of(keystoreConfig.getType(), keystoreConfig.getPath(), keystoreConfig.getAlias()).noneMatch(s -> s == null || StringUtil.isNullOrEmpty(s)) &&
+                Stream.of(keystoreConfig.getType(), keystoreConfig.getPath(), keystoreConfig.getAlias()).noneMatch(StringUtil::isNullOrEmpty) &&
                 Files.exists(Paths.get(keystoreConfig.getPath()));
     }
 

@@ -35,13 +35,13 @@ public class AppConfig {
     /**
      * How often to retry connecting to an unavailable server when connectToDataSource() is called?
      */
-    private int maxRetryAttemps = 1;
+    private int maxRetryAttempts = 1;
 
     /**
-     * The timeout inidcating for how long the client is willing to wait for a server response on a single transaction
+     * The timeout indicating for how long the client is willing to wait for a server response on a single transaction
      * in milliseconds. The maximum value is 5000 due to a static timeout in the Eclipse Milo package.
      */
-    private int timout;
+    private int timeout;
 
 
     private String appName;
@@ -65,6 +65,19 @@ public class AppConfig {
      * if no certificate could be loaded.
      */
     private boolean onDemandCertificationEnabled = true;
+
+    /**
+     * If enabled, the client will make no attempt to validate server certificates, but trust servers. If disabled,
+     * incoming server certificates are verified against the certificates listed in pkiBaseDir.
+     */
+    private boolean trustAllServers;
+
+    /**
+     * Specifies the path to the PKI directory of the client.  If the "trusted" subdirectory in pkiBaseDir contains
+     * either a copy of either the incoming certificate or a copy of a certificate higher up the Certificate Chain, then
+     * the certificate is deemed trustworthy.
+     */
+    private String pkiBaseDir;
 
     private KeystoreConfig keystore = new KeystoreConfig();
     private UsrPwdConfig usrPwd = new UsrPwdConfig();
