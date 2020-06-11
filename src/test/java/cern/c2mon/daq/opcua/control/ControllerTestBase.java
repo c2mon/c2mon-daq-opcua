@@ -4,10 +4,7 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
-import cern.c2mon.daq.opcua.testutils.MiloMocker;
-import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
-import cern.c2mon.daq.opcua.testutils.TestEndpoint;
-import cern.c2mon.daq.opcua.testutils.TestListeners;
+import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.SneakyThrows;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -52,7 +49,7 @@ public abstract class ControllerTestBase {
         endpoint = new TestEndpoint();
         mapper = new TagSubscriptionMapperImpl();
         listener = new TestListeners.TestListener();
-        controller = new ControllerImpl(mapper, listener, endpoint);
+        controller = new ControllerImpl(mapper, listener, TestUtils.getFailoverProxy(endpoint));
         mocker = new MiloMocker(endpoint, mapper);
     }
 

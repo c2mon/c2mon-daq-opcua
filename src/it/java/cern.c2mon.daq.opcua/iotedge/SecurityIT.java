@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -44,6 +45,8 @@ public class SecurityIT {
     AppConfig config;
 
     @Autowired
+    FailoverProxy failoverProxy;
+
     Endpoint endpoint;
 
     private final TestListeners.TestListener listener = new TestListeners.TestListener();
@@ -61,6 +64,7 @@ public class SecurityIT {
 
     @BeforeEach
     public void setUp() {
+        endpoint = (Endpoint) ReflectionTestUtils.getField(failoverProxy, "endpoint");
         ReflectionTestUtils.setField(controller, "endpointListener", listener);
         ReflectionTestUtils.setField(endpoint, "endpointListener", listener);
         listener.reset();

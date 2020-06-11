@@ -2,6 +2,10 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.NoFailover;
 import com.google.common.collect.ImmutableMap;
 import org.easymock.Capture;
 
@@ -54,5 +58,13 @@ public abstract class TestUtils {
             assertEquals(tagName, this.tagName.getValue());
             assertEquals(msg, this.msg.getValue());
         }
+    }
+
+    public static FailoverProxy getFailoverProxy(Endpoint endpoint) {
+        final FailoverProxy proxy = new TestFailoverProxy(new NoFailover(), endpoint);
+        try {
+            proxy.initialize("bla");
+        } catch (OPCUAException | InterruptedException ignored) { }
+        return proxy;
     }
 }

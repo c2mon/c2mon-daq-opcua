@@ -62,18 +62,19 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         ReflectionTestUtils.setField(handler, "tagChanger", new TagChanger(controller));
         ReflectionTestUtils.setField(handler, "commandRunner", commandRunner);
         ReflectionTestUtils.setField(handler, "listener", listener);
+        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(miloEndpoint));
         capture = new TestUtils.CommfaultSenderCapture(messageSender);
     }
 
     @Override
     protected void afterTest() throws Exception {
-        ReflectionTestUtils.setField(controller, "endpoint", miloEndpoint);
+
     }
 
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigButBadEndpointShouldThrowCommunicationError() {
-        ReflectionTestUtils.setField(controller, "endpoint", new ExceptionTestEndpoint());
+        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
         replay(messageSender);
         assertThrows(CommunicationException.class, () -> handler.connectToDataSource());
     }
@@ -81,7 +82,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigButBadEndpointShouldSendFAIL() {
-        ReflectionTestUtils.setField(controller, "endpoint", new ExceptionTestEndpoint());
+        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
         replay(messageSender);
         try {
             handler.connectToDataSource();

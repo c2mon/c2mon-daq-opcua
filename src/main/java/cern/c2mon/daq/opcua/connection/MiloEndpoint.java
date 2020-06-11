@@ -13,6 +13,7 @@ import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
@@ -21,6 +22,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Scope;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -50,6 +52,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @RequiredArgsConstructor
 @Component(value = "miloEndpoint")
 @Primary
+@Scope(value = "prototype")
 public class MiloEndpoint implements Endpoint {
 
     private final SecurityModule securityModule;
@@ -253,6 +256,16 @@ public class MiloEndpoint implements Endpoint {
             }
         }
         throw new ConfigurationException(OBJINVALID);
+    }
+
+    /**
+     * Return the node containing the server's redundancy information. See OPC UA Part 5, 6.3.7
+     * @return the server's {@link ServerRedundancyTypeNode}
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     */
+    public ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException {
+        return retryDelegate.completeOrThrow(SERVER_NODE,
+                () -> client.getAddressSpace().getObjectNode(Identifiers.Server_ServerRedundancy, ServerRedundancyTypeNode.class));
     }
 
     /**

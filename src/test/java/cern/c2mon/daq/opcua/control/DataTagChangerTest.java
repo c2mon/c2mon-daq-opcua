@@ -4,6 +4,7 @@ import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -33,7 +34,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @AfterEach
     public void cleanUp() {
-        ReflectionTestUtils.setField(controller, "endpoint", endpoint);
+        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(endpoint));
     }
 
     @Test
@@ -46,7 +47,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @Test
     public void invalidOnAddDataTagShouldReportFail () {
-        ReflectionTestUtils.setField(controller, "endpoint", new ExceptionTestEndpoint());
+        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
         tagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
     }

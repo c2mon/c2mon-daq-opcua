@@ -17,8 +17,8 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.connection.EndpointListener;
-import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
@@ -46,9 +46,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class AliveWriter {
 
     /**
-     * The endpoint to write to.
+     * The failover proxy for the endpoint to write to.
      */
-    private final Endpoint endpoint;
+    private final FailoverProxy failover;
 
     /**
      * The Endpoint listener which notifies the Server of a new alive.
@@ -138,7 +138,7 @@ public class AliveWriter {
         }
         try {
             NodeId nodeId = ItemDefinition.toNodeId(address);
-            listener.onAlive(endpoint.write(nodeId, castedValue));
+            listener.onAlive(failover.getEndpoint().write(nodeId, castedValue));
             writeCounter.incrementAndGet();
             writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
         } catch (OPCUAException e) {

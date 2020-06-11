@@ -5,6 +5,7 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
@@ -36,8 +37,11 @@ import java.util.concurrent.TimeUnit;
 @AllArgsConstructor
 public class CommandRunner {
 
+    /**
+     * The failover proxy to the current endpoint
+     */
     @Setter
-    private Endpoint endpoint;
+    private FailoverProxy failover;
 
     /**
      * Execute the action corresponding to a command tag, either by writing to a nodeId or by calling a method node on
@@ -91,10 +95,10 @@ public class CommandRunner {
         final ItemDefinition def = ItemDefinition.of(tag);
         final Map.Entry<StatusCode, Object[]> result;
         if (def.getMethodNodeId() == null) {
-            final NodeId parent = endpoint.getParentObjectNodeId(def.getNodeId());
-            result = endpoint.callMethod(parent, def.getMethodNodeId(), arg);
+            final NodeId parent = failover.getEndpoint().getParentObjectNodeId(def.getNodeId());
+            result = failover.getEndpoint().callMethod(parent, def.getMethodNodeId(), arg);
         } else {
-            result = endpoint.callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
+            result = failover.getEndpoint().callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
         }
         log.info("executeMethod returned {}.", result.getValue());
         handleCommandResponseStatusCode(result.getKey(), ExceptionContext.METHOD_CODE);
@@ -106,7 +110,7 @@ public class CommandRunner {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
             executeWriteCommand(tag, arg);
         } else {
-            final DataValue value = endpoint.read(ItemDefinition.toNodeId(tag));
+            final DataValue value = failover.getEndpoint().read(ItemDefinition.toNodeId(tag));
             handleCommandResponseStatusCode(value.getStatusCode(), ExceptionContext.READ);
             final Object original = MiloMapper.toObject(value.getValue());
             if (original != null && original.equals(arg)) {
@@ -116,7 +120,7 @@ public class CommandRunner {
                     log.info("Resetting Tag with ID {} to {}.", tag.getId(), original);
                     try {
                         executeWriteCommand(tag, original);
-                    } catch (OPCUAException | InterruptedException e) {
+                    } catch (OPCUAException e) {
                         throw new CompletionException(e);
                     }
                 }, CompletableFuture.delayedExecutor(pulse, TimeUnit.SECONDS));
@@ -137,8 +141,8 @@ public class CommandRunner {
         }
     }
 
-    private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException, InterruptedException {
-        final StatusCode statusCode = endpoint.write(ItemDefinition.toNodeId(tag), arg);
+    private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException {
+        final StatusCode statusCode = failover.getEndpoint().write(ItemDefinition.toNodeId(tag), arg);
         handleCommandResponseStatusCode(statusCode, ExceptionContext.COMMAND_CLASSIC);
     }
 

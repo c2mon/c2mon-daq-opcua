@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -47,6 +48,8 @@ public class EdgeIT {
     Controller controller;
 
     @Autowired
+    FailoverProxy failoverProxy;
+
     Endpoint endpoint;
 
     @BeforeAll
@@ -76,6 +79,7 @@ public class EdgeIT {
         pulseListener.setDebugEnabled(true);
 
         pulseListener.setSourceID(tag.getId());
+        endpoint = (Endpoint) ReflectionTestUtils.getField(failoverProxy, "endpoint");
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
         ReflectionTestUtils.setField(endpoint, "endpointListener", pulseListener);
 

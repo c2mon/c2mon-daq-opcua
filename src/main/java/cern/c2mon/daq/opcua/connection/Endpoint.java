@@ -7,6 +7,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -108,6 +109,13 @@ public interface Endpoint {
      *                        implementation class's JavaDoc.
      */
     NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException;
+
+    /**
+     * Return the node containing the server's redundancy information. See OPC UA Part 5, 6.3.7
+     * @return the server's {@link ServerRedundancyTypeNode}
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     */
+    ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException;
 
     /**
      * Check whether a subscription is subscribed as part of the current session.

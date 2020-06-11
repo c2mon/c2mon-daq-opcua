@@ -8,6 +8,11 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 
 import java.util.Collection;
 
+/**
+ * The Controller acts as an interface in between The {@link cern.c2mon.daq.opcua.OPCUAMessageHandler}'s mapping of data
+ * points as SourceDataTags, and the {@link cern.c2mon.daq.opcua.connection.Endpoint}'s mapping of points in the address space
+ * using uint clientHandles.
+ */
 public interface Controller {
 
     /**

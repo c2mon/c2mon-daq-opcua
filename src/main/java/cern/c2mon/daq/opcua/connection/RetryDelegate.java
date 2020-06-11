@@ -4,6 +4,7 @@ import cern.c2mon.daq.opcua.exceptions.*;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Scope;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,10 @@ import java.util.function.Supplier;
  * successfully with a delay as given in the application configuration. It simultaneously keeps track of how long the
  * client has been disconnected from the server. If that period is longer than the total period likely needed to
  * complete all retries, a method is only executed once before it fails.
+ * One RetryDelegate is created for each {@link Endpoint}.
  */
 @Component(value = "retryDelegate")
+@Scope(value = "prototype")
 public class RetryDelegate implements SessionActivityListener {
 
     @Value("${app.serverTimeout}")

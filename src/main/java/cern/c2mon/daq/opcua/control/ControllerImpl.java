@@ -23,6 +23,7 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
@@ -46,6 +47,11 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+/**
+ * The Controller acts as an interface in between The {@link cern.c2mon.daq.opcua.OPCUAMessageHandler}'s mapping of data
+ * points as SourceDataTags, and the {@link cern.c2mon.daq.opcua.connection.Endpoint}'s mapping of points in the address space
+ * using uint clientHandles.
+ */
 @Component("controller")
 @Slf4j
 @RequiredArgsConstructor
@@ -53,7 +59,7 @@ public class ControllerImpl implements Controller {
 
     private final TagSubscriptionMapper mapper;
     private final EndpointListener endpointListener;
-    private final Endpoint endpoint;
+    private final FailoverProxy failover;
     private final AtomicBoolean stopped = new AtomicBoolean(true);
 
     /**
@@ -69,7 +75,7 @@ public class ControllerImpl implements Controller {
      */
     public void connect(String uri) throws OPCUAException, InterruptedException {
         try {
-            endpoint.initialize(uri);
+            failover.initialize(uri);
             stopped.set(false);
         } catch (OPCUAException e) {
             endpointListener.onEquipmentStateUpdate(EndpointListener.EquipmentState.CONNECTION_FAILED);
@@ -84,10 +90,13 @@ public class ControllerImpl implements Controller {
     public void stop() {
         stopped.set(true);
         mapper.clear();
-        try {
-            endpoint.disconnect();
-        } catch (OPCUAException e) {
-            log.error("Error disconnecting: ", e);
+        final Endpoint endpoint = failover.getEndpoint();
+        if (endpoint != null) {
+            try {
+                endpoint.disconnect();
+            } catch (OPCUAException e) {
+                log.error("Error disconnecting: ", e);
+            }
         }
     }
 
@@ -151,9 +160,9 @@ public class ControllerImpl implements Controller {
             UaSubscription subscription = group.getSubscription();
             try {
                 if (group.size() <= 1) {
-                    endpoint.deleteSubscription(subscription);
+                    failover.getEndpoint().deleteSubscription(subscription);
                 } else {
-                    endpoint.deleteItemFromSubscription(mapper.getDefinition(dataTag.getId()).getClientHandle(), subscription);
+                    failover.getEndpoint().deleteItemFromSubscription(mapper.getDefinition(dataTag.getId()).getClientHandle(), subscription);
                 }
             } catch (OPCUAException e) {
                 log.error("Deleting empty subscription could not be completed successfully.");
@@ -207,7 +216,7 @@ public class ControllerImpl implements Controller {
                 throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
             }
             try {
-                endpoint.deleteSubscription(subscription);
+                failover.getEndpoint().deleteSubscription(subscription);
             } catch (OPCUAException e) {
                 log.error("Could not delete subscription. Proceed with recreation. ", e);
             }
@@ -230,7 +239,7 @@ public class ControllerImpl implements Controller {
                 return;
             }
             try {
-                notifyListener(entry.getKey(), endpoint.read(entry.getValue().getNodeId()));
+                notifyListener(entry.getKey(), failover.getEndpoint().read(entry.getValue().getNodeId()));
             } catch (OPCUAException e) {
                 notRefreshable.add(entry.getKey());
             }
@@ -242,10 +251,10 @@ public class ControllerImpl implements Controller {
 
     private boolean subscribeToGroup(SubscriptionGroup group, List<DataTagDefinition> definitions) {
         try {
-            if (!group.isSubscribed() || !endpoint.isCurrent(group.getSubscription())) {
-                group.setSubscription(endpoint.createSubscription(group.getPublishInterval()));
+            if (!group.isSubscribed() || !failover.getEndpoint().isCurrent(group.getSubscription())) {
+                group.setSubscription(failover.getEndpoint().createSubscription(group.getPublishInterval()));
             }
-            final var monitoredItems = endpoint.subscribeItem(group.getSubscription(), definitions, this::itemCreationCallback);
+            final var monitoredItems = failover.getEndpoint().subscribeItem(group.getSubscription(), definitions, this::itemCreationCallback);
             return monitoredItems.stream().allMatch(this::subscriptionCompleted);
         } catch (OPCUAException e) {
             final String ids = Joiner.on(", ").join(definitions.stream().map(mapper::getTagId).toArray());

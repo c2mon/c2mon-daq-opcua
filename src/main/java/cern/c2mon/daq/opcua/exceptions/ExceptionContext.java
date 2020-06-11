@@ -31,7 +31,8 @@ public enum ExceptionContext {
     COMMAND_VALUE_ERROR("Provided command value could not be processed. Check data type and value."),
     SECURITY("Ensure your app security settings are valid."),
     OBJINVALID("Could not resolve an object node for the command tag. Please specify the a redundant item name in the Tag's HardwareAddress to execute a method command."),
-    EMPTY_SUBSCRIPTION("Cannot recreate a subscription without any monitored items.");
+    EMPTY_SUBSCRIPTION("Cannot recreate a subscription without any monitored items."),
+    SERVER_NODE("Could not get the server node.");
 
     @Getter
     private final String message;

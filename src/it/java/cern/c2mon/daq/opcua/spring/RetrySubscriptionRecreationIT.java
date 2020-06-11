@@ -8,7 +8,9 @@ import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.AfterEach;
@@ -50,16 +52,20 @@ public class RetrySubscriptionRecreationIT {
     int delay;
 
     @BeforeEach
-    public void setUp() {
-        ReflectionTestUtils.setField(controller, "endpoint", endpointMock);
+    public void setUp() throws OPCUAException, InterruptedException {
+        endpointMock.initialize(anyString());
+        EasyMock.expectLastCall().anyTimes();
+        EasyMock.replay(endpointMock);
+        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(endpointMock));
         ReflectionTestUtils.setField(controller, "stopped", new AtomicBoolean(false));
+        EasyMock.reset(endpointMock);
 
     }
 
     @AfterEach
     public void tearDown() {
         ReflectionTestUtils.setField(controller, "stopped", new AtomicBoolean(true));
-        ReflectionTestUtils.setField(controller, "endpoint", endpoint);
+        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(endpoint));
     }
 
 

@@ -1,10 +1,9 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.Assertions;
@@ -20,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AliveWriterTest {
     TestListeners.TestListener listener = new TestListeners.TestListener();
-    AliveWriter aliveWriter = new AliveWriter(new TestEndpoint(), listener);
+    AliveWriter aliveWriter = new AliveWriter(TestUtils.getFailoverProxy(new TestEndpoint()), listener);
 
     @BeforeEach
     public void setUp() {
@@ -30,14 +29,14 @@ public class AliveWriterTest {
     }
 
     @Test
-    public void writeAliveShouldNotifyListenerWithGoodStatusCode() throws ExecutionException, InterruptedException, TimeoutException, CommunicationException, ConfigurationException {
+    public void writeAliveShouldNotifyListenerWithGoodStatusCode() throws ExecutionException, InterruptedException, TimeoutException {
         aliveWriter.startWriter();
         Assertions.assertEquals(StatusCode.GOOD, listener.getAlive().get(3000, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void exceptionInWriteAliveShouldNotNotifyListener() {
-        ReflectionTestUtils.setField(aliveWriter, "endpoint", new ExceptionTestEndpoint());
+        ReflectionTestUtils.setField(aliveWriter, "failover", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
         aliveWriter.startWriter();
         assertThrows(TimeoutException.class, () -> listener.getAlive().get(3000, TimeUnit.MILLISECONDS));
     }

@@ -28,9 +28,6 @@ public class RetryEndpointActionIT {
     @Autowired
     Endpoint endpoint;
 
-    @Autowired
-    RetryDelegate delegate;
-
     OpcUaClient client = createMock(OpcUaClient.class);
 
     @Value("${app.maxRetryAttempts}")
@@ -38,7 +35,6 @@ public class RetryEndpointActionIT {
 
     @BeforeEach
     public void setUp() {
-        ReflectionTestUtils.setField(delegate, "disconnectionInstant", 0L);
         ReflectionTestUtils.setField(endpoint, "client", client);
     }
 
@@ -58,8 +54,11 @@ public class RetryEndpointActionIT {
     @Test
     public void longLostConnectionExceptionShouldNotBeRepeated() {
         //results in longLostConnectionException
+        // scope prototype on delegate -> fetch proper instance
+        RetryDelegate delegate = (RetryDelegate) ReflectionTestUtils.getField(endpoint, "retryDelegate");
         ReflectionTestUtils.setField(delegate, "disconnectionInstant", 2L);
         verifyExceptionOnRead(new Exception(), 1);
+        ReflectionTestUtils.setField(delegate, "disconnectionInstant", 0L);
     }
 
     private void verifyExceptionOnRead(Exception e, int numTimes) {
