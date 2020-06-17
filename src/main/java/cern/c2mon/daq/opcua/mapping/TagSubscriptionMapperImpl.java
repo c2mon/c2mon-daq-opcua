@@ -34,11 +34,11 @@ import static java.util.stream.Collectors.toMap;
 
 @NoArgsConstructor
 @Component("mapper")
+@Getter
 public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
 
-    @Getter
     private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
 
     @Override
@@ -113,7 +113,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     @Override
     public void addTagToGroup(Long tagId) {
         final SubscriptionGroup group = getOrCreateGroup(tagIdDefinitionMap.get(tagId).getTimeDeadband());
-        group.add(tagId);
+        group.add(tagId, tagIdDefinitionMap.get(tagId));
     }
 
 

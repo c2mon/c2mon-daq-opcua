@@ -3,6 +3,7 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.Getter;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -10,6 +11,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiConsumer;
 
@@ -23,7 +25,7 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     UaSubscription subscription = createMock(UaSubscription.class);
 
     @Override
-    public void initialize(String uri) throws CommunicationException {
+    public void initialize(String uri, Collection<SessionActivityListener> listeners) throws CommunicationException {
         throw new CommunicationException(CONNECT);
     }
 
@@ -38,7 +40,7 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     }
 
     @Override
-    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
+    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
         throw new CommunicationException(CREATE_MONITORED_ITEM);
     }
 

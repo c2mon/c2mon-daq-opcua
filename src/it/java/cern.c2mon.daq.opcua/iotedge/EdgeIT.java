@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.iotedge;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
@@ -81,7 +80,7 @@ public class EdgeIT {
         pulseListener.setSourceID(tag.getId());
         endpoint = (Endpoint) ReflectionTestUtils.getField(failoverProxy, "endpoint");
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
-        ReflectionTestUtils.setField(endpoint, "endpointListener", pulseListener);
+        ReflectionTestUtils.setField(failoverProxy, "endpointListener", pulseListener);
 
         controller.connect("opc.tcp://" + proxy.getContainerIpAddress() + ":" + proxy.getProxyPort());
         controller.subscribeTags(Collections.singletonList(alreadySubscribedTag));
@@ -103,7 +102,6 @@ public class EdgeIT {
         controller = null;
         proxy.setConnectionCut(false);
     }
-
 
     @Test
     public void connectToRunningServerShouldSendOK() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
@@ -175,7 +173,7 @@ public class EdgeIT {
     }
 
     @Test
-    public void subscribingProperDataTagShouldReturnValue() throws ConfigurationException, CommunicationException {
+    public void subscribingProperDataTagShouldReturnValue() throws ConfigurationException {
         controller.subscribeTags(Collections.singletonList(tag));
         pulseListener.setSourceID(tag.getId());
         Object o = assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
@@ -183,7 +181,7 @@ public class EdgeIT {
     }
 
     @Test
-    public void subscribingImproperDataTagShouldReturnOnTagInvalid () throws ConfigurationException, CommunicationException {
+    public void subscribingImproperDataTagShouldReturnOnTagInvalid () throws ConfigurationException {
         final ISourceDataTag tag = ServerTagFactory.Invalid.createDataTag();
         pulseListener.setSourceID(tag.getId());
         pulseListener.setThreshold(0);
@@ -192,7 +190,7 @@ public class EdgeIT {
     }
 
     @Test
-    public void subscribeWithDeadband() throws ConfigurationException, CommunicationException {
+    public void subscribeWithDeadband() throws ConfigurationException {
         var tagWithDeadband = ServerTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
         pulseListener.setSourceID(tagWithDeadband.getId());
         controller.subscribeTags(Collections.singletonList(tagWithDeadband));

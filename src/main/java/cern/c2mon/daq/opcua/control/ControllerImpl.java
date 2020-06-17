@@ -17,7 +17,6 @@
 
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
@@ -43,7 +42,10 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -70,10 +72,8 @@ public class ControllerImpl implements Controller {
      *                              configuration occurs on connecting to the OPC UA server, and of type {@link
      *                              ConfigurationException} if it is not possible to connect to any of the the OPC UA
      *                              server's endpoints with the given authentication configuration settings.
-     * @throws InterruptedException if the thread was interrupted on execution before the connection could be
-     *                              established.
      */
-    public void connect(String uri) throws OPCUAException, InterruptedException {
+    public void connect(String uri) throws OPCUAException {
         try {
             failover.initialize(uri);
             stopped.set(false);
@@ -90,13 +90,10 @@ public class ControllerImpl implements Controller {
     public void stop() {
         stopped.set(true);
         mapper.clear();
-        final Endpoint endpoint = failover.getEndpoint();
-        if (endpoint != null) {
-            try {
-                endpoint.disconnect();
-            } catch (OPCUAException e) {
-                log.error("Error disconnecting: ", e);
-            }
+        try {
+            failover.disconnect();
+        } catch (OPCUAException e) {
+            log.error("Error disconnecting: ", e);
         }
     }
 
@@ -195,7 +192,7 @@ public class ControllerImpl implements Controller {
 
     /**
      * Called when a subscription could not be automatically transferred in between sessions. In this case, the
-     * subscription is recreated from scratch. If the controller received the command to stop, recreation is not
+     * subscription is recreated from scratch. If the controller received the command to stop, the subscription is not
      * recreated and the method exists silently.
      * @param subscription the subscription of the old session which must be recreated.
      * @throws OPCUAException of type {@link CommunicationException} if the subscription could not be recreated due to
@@ -220,14 +217,9 @@ public class ControllerImpl implements Controller {
             } catch (OPCUAException e) {
                 log.error("Could not delete subscription. Proceed with recreation. ", e);
             }
-            final var definitions = group.getTagIds()
-                    .stream()
-                    .map(id -> mapper.getTagIdDefinitionMap().get(id))
-                    .collect(Collectors.toList());
-            if (!subscribeToGroup(group, definitions)) {
+            if (!subscribeToGroup(group, group.getTagIds().values())) {
                 throw new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION);
             }
-            group.reset();
         }
     }
 
@@ -249,7 +241,8 @@ public class ControllerImpl implements Controller {
         }
     }
 
-    private boolean subscribeToGroup(SubscriptionGroup group, List<ItemDefinition> definitions) {
+    @Override
+    public boolean subscribeToGroup(SubscriptionGroup group, Collection<ItemDefinition> definitions) {
         try {
             if (!group.isSubscribed() || !failover.getEndpoint().isCurrent(group.getSubscription())) {
                 group.setSubscription(failover.getEndpoint().createSubscription(group.getPublishInterval()));
@@ -276,7 +269,7 @@ public class ControllerImpl implements Controller {
         }
     }
 
-    private void itemCreationCallback(UaMonitoredItem item, Integer i) {
+    public void itemCreationCallback(UaMonitoredItem item, Integer i) {
         Long tag = mapper.getTagId(item.getClientHandle());
         item.setValueConsumer(value -> notifyListener(tag, value));
     }

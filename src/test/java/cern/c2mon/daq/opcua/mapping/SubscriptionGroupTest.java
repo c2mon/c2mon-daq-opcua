@@ -20,14 +20,14 @@ public class SubscriptionGroupTest extends MappingBase {
 
     @Test
     public void addDefinitionTwiceShouldNotAddAnything() {
-        group.add(tag.getId());
-        group.add(tag.getId());
+        group.add(tag.getId(), ItemDefinition.of(tag));
+        group.add(tag.getId(), ItemDefinition.of(tag));
         assertEquals(1, group.size());
     }
 
     @Test
     public void removeDefinitionShouldRemoveDefinitionFromGroup() {
-        group.add(tag.getId());
+        group.add(tag.getId(), ItemDefinition.of(tag));
         group.remove(tag);
 
         assertFalse(group.contains(tag));

@@ -53,7 +53,7 @@ public class RetrySubscriptionRecreationIT {
 
     @BeforeEach
     public void setUp() throws OPCUAException, InterruptedException {
-        endpointMock.initialize(anyString());
+        endpointMock.initialize(anyString(), anyObject());
         EasyMock.expectLastCall().anyTimes();
         EasyMock.replay(endpointMock);
         ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(endpointMock));

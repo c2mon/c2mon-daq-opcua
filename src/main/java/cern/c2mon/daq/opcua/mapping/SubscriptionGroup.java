@@ -21,13 +21,13 @@ import lombok.Getter;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
 public class SubscriptionGroup{
 
-    private final Set<Long> tagIds = new HashSet<>();
+    private final Map<Long, ItemDefinition> tagIds = new ConcurrentHashMap<>();
 
     @Setter
     private UaSubscription subscription;
@@ -46,8 +46,8 @@ public class SubscriptionGroup{
         return this.subscription != null;
     }
 
-    public void add(final long tagId) {
-        this.tagIds.add(tagId);
+    public void add(final long tagId, final ItemDefinition itemDefinition) {
+        this.tagIds.put(tagId, itemDefinition);
     }
 
     public void reset() {
@@ -56,10 +56,10 @@ public class SubscriptionGroup{
     }
 
     public boolean remove(final ISourceDataTag tag) {
-        return this.tagIds.remove(tag.getId());
+        return this.tagIds.remove(tag.getId()) != null;
     }
 
     public boolean contains(ISourceDataTag tag) {
-        return tagIds.contains(tag.getId());
+        return tagIds.containsKey(tag.getId());
     }
 }

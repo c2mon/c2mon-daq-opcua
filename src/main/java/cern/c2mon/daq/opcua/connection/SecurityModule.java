@@ -27,11 +27,8 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
+import java.util.*;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -70,9 +67,8 @@ public class SecurityModule {
      * possible either and the option is allowed in the configuration.
      * @param endpoints A list of endpoints of which to connect to one.
      * @return An {@link OpcUaClient} object that is connected to one of the endpoints.
-     * @throws InterruptedException if interrupt was called on the thread during execution.
      */
-    public OpcUaClient createClientWithListener(List<EndpointDescription> endpoints, SessionActivityListener... listeners) throws InterruptedException, CommunicationException, ConfigurationException {
+    public OpcUaClient createClientWithListeners(List<EndpointDescription> endpoints, Collection<SessionActivityListener> listeners) throws CommunicationException, ConfigurationException {
         builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english(config.getAppName()))
                 .setApplicationUri(config.getApplicationUri())
@@ -124,7 +120,7 @@ public class SecurityModule {
         return upConfig != null && !Strings.isNullOrEmpty(upConfig.getUsr()) && !Strings.isNullOrEmpty(upConfig.getPwd());
     }
 
-    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier, SessionActivityListener[] listeners) throws InterruptedException, ConfigurationException {
+    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier, Collection<SessionActivityListener> listeners) throws ConfigurationException {
         final var matchingEndpoints = endpoints.stream().filter(certifier::supportsAlgorithm).collect(Collectors.toList());
         for (var e : matchingEndpoints) {
             if (!certifier.canCertify(e)) {
@@ -135,13 +131,13 @@ public class SecurityModule {
             log.info("Attempt authentication with mode {} and algorithm {}. ", e.getSecurityMode(), e.getSecurityPolicyUri());
             try {
                 OpcUaClient client = OpcUaClient.create(builder.build());
-                Stream.of(listeners).forEach(client::addSessionActivityListener);
-                return (OpcUaClient) client.connect().get();
+                listeners.forEach(client::addSessionActivityListener);
+                return (OpcUaClient) client.connect().join();
             } catch (UaException ex) {
                 log.error("Unsupported transport in endpoint URI. Attempting less secure endpoint", ex);
                 endpoints.remove(e);
                 certifier.uncertify(builder);
-            } catch (ExecutionException ex) {
+            } catch (CompletionException ex) {
                 if (!handleAndReportWhetherToContinue(certifier, ex)) {
                     break;
                 }
@@ -151,7 +147,7 @@ public class SecurityModule {
         return null;
     }
 
-    private boolean handleAndReportWhetherToContinue(Certifier certifier, ExecutionException ex) throws ConfigurationException {
+    private boolean handleAndReportWhetherToContinue(Certifier certifier, CompletionException ex) throws ConfigurationException {
         final var cause = ex.getCause();
         log.error("Authentication error: ", cause);
         if (!(cause instanceof UaException)) {

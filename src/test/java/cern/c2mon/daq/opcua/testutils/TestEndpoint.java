@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.Getter;
 import lombok.Setter;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
@@ -16,6 +17,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +37,7 @@ public class TestEndpoint implements Endpoint {
     private boolean returnGoodStatusCodes = true;
 
     @Override
-    public void initialize(String uri) throws CommunicationException {
+    public void initialize(String uri, Collection<SessionActivityListener> listeners) throws CommunicationException {
 
     }
 
@@ -52,7 +54,7 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
+    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
         final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
         return Collections.nCopies(definitions.size(), monitoredItem);

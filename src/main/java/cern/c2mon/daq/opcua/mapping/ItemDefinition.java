@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
@@ -20,15 +19,18 @@ public class ItemDefinition {
 
     private final NodeId nodeId;
     private final NodeId methodNodeId;
-
     private final int timeDeadband;
-    private final short valueDeadbandType;
     private final float valueDeadband;
+    private final short valueDeadbandType;
     /**
      * equal to the client Handle of a monitoredItem returned by a Milo subscription
      */
     private final UInteger clientHandle;
     private static final AtomicInteger clientHandles = new AtomicInteger();
+
+    public static ItemDefinition of(NodeId nodeId) {
+        return new ItemDefinition(nodeId, null);
+    }
 
     public static ItemDefinition of(final ISourceDataTag tag) {
         try {
@@ -78,38 +80,19 @@ public class ItemDefinition {
     }
 
     protected ItemDefinition(NodeId nodeId, NodeId methodNodeId) {
+        this(nodeId, methodNodeId, 0, 0, (short) 0);
+    }
+
+    protected ItemDefinition(final ISourceDataTag tag, final NodeId nodeId, final NodeId methodNodeId) {
+        this(nodeId, methodNodeId, tag.getTimeDeadband(), tag.getValueDeadband(), tag.getValueDeadbandType());
+    }
+
+    private ItemDefinition(NodeId nodeId, NodeId methodNodeId, int timeDeadband, float valueDeadband, short valueDeadbandType) {
         this.nodeId = nodeId;
         this.methodNodeId = methodNodeId;
         this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());
-        this.timeDeadband = 0;
-        this.valueDeadbandType = 0;
-        this.valueDeadband = 0;
-    }
-
-    protected ItemDefinition(final ISourceDataTag tag, final NodeId address, final NodeId redundantAddress) {
-        this.nodeId = address;
-        this.methodNodeId = redundantAddress;
-        this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());
-        this.timeDeadband = tag.getTimeDeadband();
-        this.valueDeadbandType = tag.getValueDeadbandType();
-        this.valueDeadband = tag.getValueDeadband();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ItemDefinition that = (ItemDefinition) o;
-        return timeDeadband == that.timeDeadband &&
-                valueDeadbandType == that.valueDeadbandType &&
-                Float.compare(that.valueDeadband, valueDeadband) == 0 &&
-                nodeId.equals(that.nodeId) &&
-                Objects.equals(methodNodeId, that.methodNodeId) &&
-                clientHandle.equals(that.clientHandle);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(nodeId, methodNodeId, timeDeadband, valueDeadbandType, valueDeadband, clientHandle);
+        this.timeDeadband = timeDeadband;
+        this.valueDeadband = valueDeadband;
+        this.valueDeadbandType = valueDeadbandType;
     }
 }

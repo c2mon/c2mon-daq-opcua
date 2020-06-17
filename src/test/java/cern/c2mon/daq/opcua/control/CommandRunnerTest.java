@@ -33,7 +33,7 @@ public class CommandRunnerTest {
     OPCHardwareAddressImpl pulseAddress;
 
     @BeforeEach
-    public void setUp() throws OPCUAException, InterruptedException {
+    public void setUp() {
         this.endpoint = new TestEndpoint();
         tag = new SourceCommandTag(0L, "Power");
 
@@ -54,7 +54,7 @@ public class CommandRunnerTest {
     @Test
     public void runCommandWithInvalidValueShouldThrowConfigInEqException() {
         value.setDataType("invalid");
-        final EqCommandTagException e = assertThrows(EqCommandTagException.class,
+        assertThrows(EqCommandTagException.class,
                 () -> commandRunner.runCommand(tag, value),
                 ExceptionContext.COMMAND_VALUE_ERROR.getMessage());
     }
@@ -83,7 +83,7 @@ public class CommandRunnerTest {
         expect(mockEp.read(anyObject()))
                 .andReturn(endpoint.read(ItemDefinition.toNodeId(tag)))
                 .anyTimes();
-        mockEp.initialize(anyString());
+        mockEp.initialize(anyString(), anyObject());
         EasyMock.expectLastCall().anyTimes();
         //no call to write
         replay(mockEp);
@@ -97,7 +97,7 @@ public class CommandRunnerTest {
         tag.setHardwareAddress(pulseAddress);
         final NodeId def = ItemDefinition.toNodeId(tag);
         final Endpoint mockEp = EasyMock.mock(Endpoint.class);
-        mockEp.initialize(anyString());
+        mockEp.initialize(anyString(), anyObject());
         EasyMock.expectLastCall().anyTimes();
         expect(mockEp.read(anyObject())).andReturn(endpoint.read(def)).anyTimes();
         expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();

@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.io.IOException;
@@ -62,11 +63,11 @@ public class ConnectionResolver {
     }
 
     private final GenericContainer image;
+    Network network = Network.newNetwork();
 
-
-    protected ConnectionResolver(GenericContainer image) {
-        this.image = image;
-        image.start();
+    protected ConnectionResolver(GenericContainer image) {;
+        this.image = image.withNetwork(network);
+        this.image.start();
     }
 
     public void trustCertificates () throws IOException, InterruptedException {

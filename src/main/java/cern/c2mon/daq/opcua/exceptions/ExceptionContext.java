@@ -32,7 +32,8 @@ public enum ExceptionContext {
     SECURITY("Ensure your app security settings are valid."),
     OBJINVALID("Could not resolve an object node for the command tag. Please specify the a redundant item name in the Tag's HardwareAddress to execute a method command."),
     EMPTY_SUBSCRIPTION("Cannot recreate a subscription without any monitored items."),
-    SERVER_NODE("Could not get the server node.");
+    SERVER_NODE("Could not get the server node."),
+    NO_REDUNDANT_SERVER("No redundant server is available.");
 
     @Getter
     private final String message;

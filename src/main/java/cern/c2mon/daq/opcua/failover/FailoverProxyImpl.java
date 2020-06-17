@@ -4,27 +4,35 @@ import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
+import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.sdk.client.model.types.objects.NonTransparentRedundancyType;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 
 @Slf4j
 @RequiredArgsConstructor
-@Component("failoverProxy")
-public class FailoverProxyImpl implements FailoverProxy {
+@Primary
+@Component(value = "failoverProxy")
+public class FailoverProxyImpl implements FailoverProxy, SessionActivityListener {
 
-    private final FailoverMode noFailover;
-    private final FailoverMode coldFailover;
+    private final SessionActivityListener endpointListener;
+    @Lazy private final FailoverMode noFailover;
+    @Lazy private final FailoverMode coldFailover;
     private final Endpoint endpoint;
 
     private FailoverMode currentFailover;
 
-    public void initialize(String uri) throws OPCUAException, InterruptedException {
+    @Override
+    public void initialize(String uri) throws OPCUAException {
         currentFailover = noFailover;
-        endpoint.initialize(uri);
+        endpoint.initialize(uri, Arrays.asList(endpointListener, this));
         final Map.Entry<RedundancySupport, String[]> redundancyInfo = redundancySupport();
         switch (redundancyInfo.getKey()) {
             case HotAndMirrored:
@@ -34,7 +42,13 @@ public class FailoverProxyImpl implements FailoverProxy {
                 currentFailover = coldFailover;
                 break;
         }
-        currentFailover.initialize(endpoint, redundancyInfo.getValue());
+        currentFailover.initialize(Map.entry(uri, endpoint), redundancyInfo.getValue(), Arrays.asList(endpointListener, this));
+    }
+
+    @Override
+    public void disconnect() throws OPCUAException {
+        log.info("Disconnecting... ");
+        currentFailover.disconnect();
     }
 
     public Endpoint getEndpoint() {
@@ -58,5 +72,10 @@ public class FailoverProxyImpl implements FailoverProxy {
             log.error("An exception occurred when reading the server's redundancy information. Proceeding without setting up redundancy.", e);
         }
         return Map.entry(mode, redundantUriArray);
+    }
+
+    @Override
+    public void onSessionInactive(UaSession session) {
+        currentFailover.switchServers();
     }
 }

@@ -27,6 +27,8 @@ import java.util.Map;
 
 public interface TagSubscriptionMapper {
 
+    Map<Integer, SubscriptionGroup> getSubscriptionGroups();
+
     Map<Long, ItemDefinition> getTagIdDefinitionMap();
 
     Map<SubscriptionGroup, List<ItemDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> dataTags);

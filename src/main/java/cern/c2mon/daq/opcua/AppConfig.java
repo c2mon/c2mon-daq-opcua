@@ -24,6 +24,10 @@ import java.util.Map;
 public class AppConfig {
 
     /**
+     * The publishing rate of the subscription for connection monitoring for redundant server sets in seconds.
+     */
+    private int connectionMonitoringRate = 3;
+    /**
      * The delay before restarting the DAQ after an equipment change.
      */
     private long restartDelay = 2000L;

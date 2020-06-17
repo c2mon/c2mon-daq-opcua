@@ -3,6 +3,8 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 
@@ -22,10 +24,8 @@ public interface Controller {
      *                              configuration occurs on connecting to the OPC UA server, and of type {@link
      *                              ConfigurationException} if it is not possible to connect to any of the the OPC UA
      *                              server's endpoints with the given authentication configuration settings.
-     * @throws InterruptedException if the thread was interrupted on execution before the connection could be
-     *                              established.
      */
-    void connect(String uri) throws OPCUAException, InterruptedException;
+    void connect(String uri) throws OPCUAException;
 
     /**
      * Disconnect from the OPC UA server and reset the controller to a neutral state.
@@ -80,4 +80,6 @@ public interface Controller {
      *                        can not be mapped to current DataTags, and therefore cannot be recreated.
      */
     void recreateSubscription(UaSubscription subscription) throws OPCUAException;
+
+    boolean subscribeToGroup(SubscriptionGroup group, Collection<ItemDefinition> definitions);
 }

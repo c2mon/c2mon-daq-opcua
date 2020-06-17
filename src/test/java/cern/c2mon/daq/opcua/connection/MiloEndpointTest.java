@@ -1,6 +1,9 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.exceptions.*;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.subscriptions.OpcUaSubscriptionManager;
@@ -20,7 +23,7 @@ public class MiloEndpointTest {
 
     RetryDelegate delegate = new RetryDelegate();
     EndpointSubscriptionListener listener = new EndpointSubscriptionListener();
-    Endpoint endpoint = new MiloEndpoint(null, null, listener, delegate);
+    Endpoint endpoint = new MiloEndpoint(null, listener, delegate);
 
     OpcUaClient mockClient = createMock(OpcUaClient.class);
     OpcUaSubscriptionManager managerMock = createMock(OpcUaSubscriptionManager.class);

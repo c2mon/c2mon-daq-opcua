@@ -34,15 +34,15 @@ public class MethodIT {
     static CommandRunner runner;
 
     @BeforeAll
-    public static void setUpEndpoint() throws OPCUAException, InterruptedException {
+    public static void setUpEndpoint() throws OPCUAException {
         // Not testing security here, so just connect without security
         SecurityModule p = new SecurityModule(config, new NoSecurityCertifier(), new NoSecurityCertifier(), new NoSecurityCertifier());
         RetryDelegate delegate = new RetryDelegate();
         ReflectionTestUtils.setField(delegate, "maxRetryCount", 3);
         ReflectionTestUtils.setField(delegate, "timeout", 3000);
         ReflectionTestUtils.setField(delegate, "retryDelay", 1000);
-        final MiloEndpoint wrapper = new MiloEndpoint(p, new TestListeners.TestListener(), new EndpointSubscriptionListener(), delegate);
-        FailoverProxy failover = new FailoverProxyImpl(new NoFailover(), new ColdFailover(), wrapper);
+        final MiloEndpoint wrapper = new MiloEndpoint(p, new EndpointSubscriptionListener(), delegate);
+        FailoverProxy failover = new FailoverProxyImpl(new TestListeners.TestListener(), new NoFailover(), new ColdFailover(), wrapper);
         failover.initialize("opc.tcp://milo.digitalpetri.com:62541/milo");
         runner = new CommandRunner(failover);
     }

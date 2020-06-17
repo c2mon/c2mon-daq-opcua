@@ -26,10 +26,8 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ExecutionException;
+import java.util.*;
+import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -55,10 +53,10 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 public class MiloEndpoint implements Endpoint {
 
     private final SecurityModule securityModule;
-    private final SessionActivityListener endpointListener;
     private final EndpointSubscriptionListener subscriptionListener;
     private final RetryDelegate retryDelegate;
     private OpcUaClient client;
+    private Collection<SessionActivityListener> sessionActivityListeners;
 
     /**
      * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
@@ -100,22 +98,24 @@ public class MiloEndpoint implements Endpoint {
      *                              UA server within the configured number of attempts, and of type {@link
      *                              ConfigurationException} if it is not possible to connect to any of the the OPC UA
      *                              server's endpoints with the given authentication configuration settings.
-     * @throws InterruptedException if the method was interrupted during execution.
      */
     @Override
     @Retryable(value = {CommunicationException.class},
             maxAttemptsExpression = "${app.maxRetryAttempts}",
             backoff = @Backoff(delayExpression = "${app.retryDelay}"))
-    public void initialize(String uri) throws OPCUAException, InterruptedException {
+    public void initialize(String uri, Collection<SessionActivityListener> sessionActivityListeners) throws OPCUAException {
+        this.sessionActivityListeners = new ArrayList<>(sessionActivityListeners);
+        this.sessionActivityListeners.add(retryDelegate);
         try {
-            var endpoints = DiscoveryClient.getEndpoints(uri).get();
+            var endpoints = DiscoveryClient.getEndpoints(uri).join();
             endpoints = updateEndpointUrls(uri, endpoints);
-            client = securityModule.createClientWithListener(endpoints, endpointListener, retryDelegate);
+            client = securityModule.createClientWithListeners(endpoints, this.sessionActivityListeners);
             client.getSubscriptionManager().addSubscriptionListener(subscriptionListener);
             log.info("Connected");
-        } catch (ExecutionException e) {
+        } catch (CompletionException e) {
             throw of(CONNECT, e.getCause(), false);
         }
+
     }
 
     /**
@@ -125,8 +125,7 @@ public class MiloEndpoint implements Endpoint {
     @Override
     public void disconnect() throws OPCUAException {
         if (client != null) {
-            client.removeSessionActivityListener(endpointListener);
-            client.removeSessionActivityListener(retryDelegate);
+            sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
             client.getSubscriptionManager().clearSubscriptions();
             retryDelegate.completeOrThrow(DISCONNECT, client::disconnect);
         }
@@ -163,7 +162,7 @@ public class MiloEndpoint implements Endpoint {
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
+    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
         List<MonitoredItemCreateRequest> requests = definitions.stream()
                 .map(this::createItemSubscriptionRequest)
                 .collect(Collectors.toList());

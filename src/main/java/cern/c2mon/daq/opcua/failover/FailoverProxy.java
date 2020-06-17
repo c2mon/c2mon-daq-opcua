@@ -5,6 +5,9 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 
 public interface FailoverProxy {
 
-    void initialize(String uri) throws OPCUAException, InterruptedException;
+    void initialize(String uri) throws OPCUAException;
+
+    void disconnect() throws OPCUAException;
+
     Endpoint getEndpoint();
 }

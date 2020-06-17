@@ -88,19 +88,13 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         if (!address.supportsProtocol(uaTcpType)) {
             throw new ConfigurationException(ExceptionContext.ENDPOINT_TYPES_UNKNOWN);
         }
-        try {
-            controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
-            aliveWriter.initialize(config, address.isAliveWriterEnabled());
-            controller.subscribeTags(config.getSourceDataTags().values());
-            log.debug("connected");
+        controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
+        aliveWriter.initialize(config, address.isAliveWriterEnabled());
+        controller.subscribeTags(config.getSourceDataTags().values());
+        log.debug("connected");
 
-            getEquipmentConfigurationHandler().setDataTagChanger(tagChanger);
-            getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
-        } catch (InterruptedException e) {
-            log.error("Process interrupted. Stopping.... ", e);
-            disconnectFromDataSource();
-            Thread.currentThread().interrupt();
-        }
+        getEquipmentConfigurationHandler().setDataTagChanger(tagChanger);
+        getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
     }
 
     /**

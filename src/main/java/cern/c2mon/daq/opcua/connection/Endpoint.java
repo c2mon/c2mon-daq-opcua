@@ -5,6 +5,7 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
@@ -13,6 +14,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -27,9 +29,8 @@ public interface Endpoint {
      * Connects to a server through OPC UA.
      * @param uri the server address to connect to.
      * @throws OPCUAException       of type {@link CommunicationException} or {@link ConfigurationException}.
-     * @throws InterruptedException if the method was interrupted during execution.
      */
-    void initialize(String uri) throws OPCUAException, InterruptedException;
+    void initialize(String uri, Collection<SessionActivityListener> listeners) throws OPCUAException;
 
     /**
      * Disconnect from the server.
@@ -62,7 +63,7 @@ public interface Endpoint {
      * @return a list of monitored items corresponding to the item definitions
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
+    List<UaMonitoredItem> subscribeItem(UaSubscription subscription, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
 
     /**
      * Delete a monitored item from an OPC UA subscription.

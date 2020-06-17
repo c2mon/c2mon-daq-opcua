@@ -129,6 +129,9 @@ public abstract class TestListeners {
         }
 
         private void completeAndReset(boolean value) {
+            if (debugEnabled) {
+                log.info("State update: {}", value ? "connected." : "disconnected");
+            }
             if (stateUpdate != null && !stateUpdate.isDone()) {
                 stateUpdate.completeAsync(() -> value ? EquipmentState.OK : EquipmentState.CONNECTION_LOST);
             }

@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
  * This listener class is informed by the SDK regarding events on the server that require specific action on part of the
  * Endpoint.
  */
-@Component("endpointSubscriptionListener")
+@Component(value = "endpointSubscriptionListener")
 @Slf4j
 public class EndpointSubscriptionListener implements UaSubscriptionManager.SubscriptionListener {
 
