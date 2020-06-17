@@ -5,11 +5,13 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
+import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.io.IOException;
 
 @Slf4j
+@Getter
 public class ConnectionResolver {
 
     public static class Venus extends ConnectionResolver {
@@ -19,11 +21,19 @@ public class ConnectionResolver {
         @Getter
         public String simEngineUri;
 
-        protected Venus(GenericContainer image) {
-            super(image);
+        public Venus(String environment) {
+            image = new GenericContainer("gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3")
+                    .waitingFor(Wait.forLogMessage(".*Server opened endpoints for following URLs:.*", 2))
+                    .withEnv("SIMCONFIG", environment)
+                    .withExposedPorts(Ports.PILOT.port, Ports.SIMENGINE.port);
+            image.start();
             pilotUri = "opc.tcp://" + image.getContainerIpAddress() + ":" + image.getMappedPort(Ports.PILOT.port);
             simEngineUri = "opc.tcp://" + image.getContainerIpAddress() + ":" + image.getMappedPort(Ports.SIMENGINE.port);
             log.info("Venus servers ready. PILOT at: {}, SIMENGINE at {}. ", pilotUri, simEngineUri);
+        }
+
+        public Integer getMappedPort(int port) {
+            return image.getMappedPort(port);
         }
     }
 
@@ -31,10 +41,27 @@ public class ConnectionResolver {
         @Getter
         public String uri;
 
-        protected Edge(GenericContainer image) {
-            super(image);
-            uri = "opc.tcp://" + image.getContainerIpAddress() + ":" + image.getMappedPort(Ports.IOTEDGE.port);
+        private final ToxiproxyContainer toxiProxyContainer;
+
+        @Getter
+        private final ToxiproxyContainer.ContainerProxy proxy;
+
+
+        public Edge() {
+            Network network = Network.newNetwork();
+            image = new GenericContainer<>("mcr.microsoft.com/iotedge/opc-plc")
+                    .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
+                    .withCommand("--unsecuretransport")
+                    .withExposedPorts(Ports.IOTEDGE.port)
+                    .withNetwork(network);
+            image.start();
+            toxiProxyContainer = new ToxiproxyContainer().withNetwork(network);
+            toxiProxyContainer.start();
+            proxy = toxiProxyContainer.getProxy(image, Ports.IOTEDGE.port);
+            uri = "opc.tcp://" + proxy.getContainerIpAddress() + ":" + proxy.getProxyPort();
             log.info("Edge server ready at {}. ", uri);
+
+
         }
     }
 
@@ -46,29 +73,7 @@ public class ConnectionResolver {
         int port;
     }
 
-    public static ConnectionResolver.Venus resolveVenusServers(String environment) {
-        GenericContainer image = new GenericContainer("gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3")
-                .waitingFor(Wait.forLogMessage(".*Server opened endpoints for following URLs:.*", 2))
-                .withEnv("SIMCONFIG", environment)
-                .withExposedPorts(Ports.PILOT.port, Ports.SIMENGINE.port);
-        return new ConnectionResolver.Venus(image);
-    }
-
-    public static ConnectionResolver.Edge resolveIoTEdgeServer() {
-        GenericContainer image = new GenericContainer<>("mcr.microsoft.com/iotedge/opc-plc")
-                .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
-                .withCommand("--unsecuretransport")
-                .withExposedPorts(Ports.IOTEDGE.port);
-        return new ConnectionResolver.Edge(image);
-    }
-
-    private final GenericContainer image;
-    Network network = Network.newNetwork();
-
-    protected ConnectionResolver(GenericContainer image) {;
-        this.image = image.withNetwork(network);
-        this.image.start();
-    }
+    protected GenericContainer image;
 
     public void trustCertificates () throws IOException, InterruptedException {
         log.info("Trust certificate.");
@@ -81,19 +86,8 @@ public class ConnectionResolver {
         image.execInContainer("rm", "-r", "pki/trusted");
     }
 
-    public void initialize() {
-        log.info("Server starting... ");
+    public void restart() {
         image.start();
-        log.info("Server ready");
-    }
-
-    public Integer getMappedPort(int port) {
-        return image.getMappedPort(port);
-    }
-
-    public String getURI(int port) {
-        String hostName = image.getContainerIpAddress();
-        return "opc.tcp://" + hostName + ":" + port;
     }
 
     public void close() {

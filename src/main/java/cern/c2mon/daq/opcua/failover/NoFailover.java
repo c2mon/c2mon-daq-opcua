@@ -37,8 +37,7 @@ public class NoFailover implements FailoverMode {
     }
 
     @Override
-    public void switchServers() {
+    public void triggerServerSwitch() {
         log.info("No server to fall back to.");
-        // No action to take - subscriptions will be recreated when the connection is regained.
     }
 }

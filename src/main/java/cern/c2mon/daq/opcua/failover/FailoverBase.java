@@ -1,11 +1,11 @@
 package cern.c2mon.daq.opcua.failover;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.RetryDelegate;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
@@ -13,20 +13,20 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
-@Setter
 public abstract class FailoverBase implements FailoverMode {
+
+    @Autowired @Lazy protected TagSubscriptionMapper mapper;
+    @Autowired @Lazy protected Controller controller;
+    @Autowired protected RetryDelegate retryDelegate;
 
     protected static List<ItemDefinition> connectionMonitoringNodes = List.of(
             ItemDefinition.of(Identifiers.Server_ServiceLevel),
             ItemDefinition.of(Identifiers.ServerState));
-
-    protected TagSubscriptionMapper mapper;
-    protected Controller controller;
 
     enum ServiceLevels {
         Maintenance(0,0), NoData(1,1), Degraded(2,199), Healthy(200,255);
@@ -45,16 +45,12 @@ public abstract class FailoverBase implements FailoverMode {
         return applicationContext.getBean(Endpoint.class);
     }
 
-    /**
-     * See UA Part 4, 6.6.2.4.2, Table 10.
-     * @param serverEntry A Map.Entry containing the server's URI as key and the corresponding endpoint whose serviceLevel to read
-     * @return the endpoint's service level, or a service level of 0 if unavailable.
-     */
-    protected UByte readServiceLevel(Map.Entry<String, Endpoint> serverEntry) {
+    @Override
+    public void triggerServerSwitch() {
         try {
-            return (UByte) serverEntry.getValue().read(Identifiers.Server_ServiceLevel).getValue().getValue();
+            retryDelegate.triggerServerSwitchRetry(this);
         } catch (OPCUAException e) {
-            return UByte.valueOf(0);
+            triggerServerSwitch();
         }
     }
 
@@ -65,7 +61,7 @@ public abstract class FailoverBase implements FailoverMode {
                 final var serviceLevel = (UByte) value.getValue().getValue();
                 if (serviceLevel.compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
                     log.info("Service level is outside of the healthy range. Switching server...");
-                    switchServers();
+                    triggerServerSwitch();
                 }
             });
         } else if (nodeId.equals(Identifiers.ServerState)) {
@@ -73,9 +69,12 @@ public abstract class FailoverBase implements FailoverMode {
                 final var state = (ServerState) value.getValue().getValue();
                 if (!state.equals(ServerState.Running) && !state.equals(ServerState.Unknown)) {
                     log.info("Server entered state {}. Switching server...", state);
-                    switchServers();
+                    triggerServerSwitch();
                 }
             });
         }
     }
+
+    public abstract void switchServers() throws OPCUAException;
+
 }

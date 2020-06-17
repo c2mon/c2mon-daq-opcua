@@ -4,7 +4,6 @@ import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.ColdFailover;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.failover.NoFailover;
 import com.google.common.collect.ImmutableMap;
@@ -62,7 +61,7 @@ public abstract class TestUtils {
     }
 
     public static FailoverProxy getFailoverProxy(Endpoint endpoint) {
-        final FailoverProxy proxy = new TestFailoverProxy(null, new NoFailover(), new ColdFailover(), endpoint);
+        final FailoverProxy proxy = new TestFailoverProxy(null, new NoFailover(), new NoFailover(), endpoint);
         try {
             proxy.initialize("bla");
         } catch (OPCUAException ignored) { }

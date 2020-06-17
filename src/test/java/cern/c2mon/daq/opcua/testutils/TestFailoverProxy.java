@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverMode;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
@@ -11,7 +10,6 @@ import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,15 +17,16 @@ import java.util.Map;
 
 @RequiredArgsConstructor
 public class TestFailoverProxy implements FailoverProxy, SessionActivityListener {
-    private final EndpointListener endpointListener;
+
+    @Lazy private final SessionActivityListener endpointListener;
     @Lazy private final FailoverMode noFailover;
     @Lazy private final FailoverMode coldFailover;
-
     private final Endpoint endpoint;
+
     private FailoverMode currentFailover;
 
     @Setter
-    private String[] redundantUris;
+    private String[] redundantUris = new String[0];
 
     public void setCurrentFailover(RedundancySupport mode) {
         switch (mode) {
@@ -44,7 +43,7 @@ public class TestFailoverProxy implements FailoverProxy, SessionActivityListener
 
     public void initialize(String uri) throws OPCUAException {
         currentFailover.initialize(Map.entry(uri, endpoint), redundantUris, Collections.emptyList());
-        endpoint.initialize(uri, Arrays.asList((SessionActivityListener) endpointListener, this));
+        endpoint.initialize(uri, Arrays.asList(endpointListener, this));
     }
 
     @Override
@@ -54,7 +53,7 @@ public class TestFailoverProxy implements FailoverProxy, SessionActivityListener
 
     @Override
     public void onSessionInactive(UaSession session) {
-        currentFailover.switchServers();
+        currentFailover.triggerServerSwitch();
     }
 
     public Endpoint getEndpoint() {

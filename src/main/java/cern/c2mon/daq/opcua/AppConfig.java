@@ -39,6 +39,13 @@ public class AppConfig {
     private long retryDelay = 50000L;
 
     /**
+     * If the redundant server is not yet available when the active server goes down, a retry is started after the
+     * retryDelay period. The time in between retries is duplicated on every new failure, until reaching the maximum
+     * time of maxFailoverDelay.
+     */
+    private long maxFailoverDelay = 10000L;
+
+    /**
      * How often to retry connecting to an unavailable server when connectToDataSource() is called?
      */
     private int maxRetryAttempts = 1;
@@ -65,9 +72,8 @@ public class AppConfig {
     /**
      * Connection with a {@link cern.c2mon.daq.opcua.security.Certifier} associated with the element will be attempted
      * in order or magnitude of the value, starting with the highest value. If the value is not given then that
-     * Certifier will not be used. The entries map the the Certifies as follows:
-     * "none" : {@link cern.c2mon.daq.opcua.security.NoSecurityCertifier}
-     * "generate" : {@link cern.c2mon.daq.opcua.security.CertificateGenerator}
+     * Certifier will not be used. The entries map the the Certifies as follows: "none" : {@link
+     * cern.c2mon.daq.opcua.security.NoSecurityCertifier} "generate" : {@link cern.c2mon.daq.opcua.security.CertificateGenerator}
      * "load" : {@link cern.c2mon.daq.opcua.security.CertificateLoader}
      */
     private Map<String, Integer> certificationPriority;

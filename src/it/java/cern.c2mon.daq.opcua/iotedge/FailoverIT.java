@@ -1,78 +1,70 @@
 package cern.c2mon.daq.opcua.iotedge;
 
+import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
-import cern.c2mon.daq.opcua.testutils.TestFailoverProxy;
-import cern.c2mon.daq.opcua.testutils.TestListeners;
-import cern.c2mon.daq.opcua.testutils.TestUtils;
+import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.extern.slf4j.Slf4j;
+import org.easymock.EasyMock;
+import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.ToxiproxyContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.Collections;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.mock;
 
 @Slf4j
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
 public class FailoverIT {
-    private static GenericContainer container;
-    private static ToxiproxyContainer toxiProxyContainer;
-    private static ToxiproxyContainer.ContainerProxy proxy;
-    private static final int EDGE_PORT = 50000;
+    private static ConnectionResolver.Edge active;
+    private static ConnectionResolver.Edge fallback;
+
     private final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
-    private final ISourceDataTag alreadySubscribedTag = ServerTagFactory.DipData.createDataTag();
     private final TestListeners.Pulse pulseListener = new TestListeners.Pulse();
+    final NonTransparentRedundancyTypeNode redundancyMock = mock(NonTransparentRedundancyTypeNode.class);
 
     @Autowired Controller controller;
-
-    @Autowired TestFailoverProxy testFailoverProxy;
+    @Autowired FailoverProxy failoverProxy;
+    @Autowired FailoverTestEndpoint testEndpoint;
 
     @BeforeAll
     public static void setupContainers() {
-        Network network = Network.newNetwork();
-        // manage lifecycles manually since we're shutting the containers down during testing
-        container = new GenericContainer<>("mcr.microsoft.com/iotedge/opc-plc")
-                .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
-                .withCommand("--unsecuretransport")
-                .withNetwork(network)
-                .withExposedPorts(EDGE_PORT);
-        container.start();
-        toxiProxyContainer = new ToxiproxyContainer().withNetwork(network);
-        toxiProxyContainer.start();
-        proxy = toxiProxyContainer.getProxy(container, EDGE_PORT);
+        active = new ConnectionResolver.Edge();
+        fallback = new ConnectionResolver.Edge();
+
     }
 
     @AfterAll
     public static void tearDownContainers() {
-        container.stop();
-        toxiProxyContainer.stop();
+        active.close();
+        fallback.close();
     }
 
     @BeforeEach
     public void setupEndpoint() {
+        active.getProxy().setConnectionCut(false);
+        fallback.getProxy().setConnectionCut(true);
+
         log.info("############ SET UP ############");
         pulseListener.setDebugEnabled(true);
-
         pulseListener.setSourceID(tag.getId());
+
+        testEndpoint.setRedundancyMock(redundancyMock);
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
-        ReflectionTestUtils.setField(controller, "failover", testFailoverProxy);
-        ReflectionTestUtils.setField(testFailoverProxy, "endpointListener", pulseListener);
+        ReflectionTestUtils.setField(failoverProxy, "endpointListener", pulseListener);
+        ReflectionTestUtils.setField(failoverProxy, "endpoint", testEndpoint);
+        log.info("############ TEST ############");
     }
 
     @AfterEach
@@ -86,18 +78,46 @@ public class FailoverIT {
             // assure that server has time to disconnect, fails for test on failed connections
         }
         controller = null;
-        proxy.setConnectionCut(false);
     }
 
     @Test
-    public void mockColdFailover() throws OPCUAException {
-        testFailoverProxy.setCurrentFailover(RedundancySupport.Cold);
+    public void coldFailoverShouldReconnectClient() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+        mockColdFailover();
+        connectAndDisconnect();
 
-        controller.connect("opc.tcp://" + proxy.getContainerIpAddress() + ":" + proxy.getProxyPort());
-        controller.subscribeTags(Collections.singletonList(alreadySubscribedTag));
-        log.info("Client ready");
-        log.info("############ TEST ############");
+        final var reconnect = pulseListener.listen();
+        fallback.getProxy().setConnectionCut(false);
+        Assertions.assertEquals(EndpointListener.EquipmentState.OK, reconnect.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void coldFailoverShouldResumeSubscriptions() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+        mockColdFailover();
+        connectAndDisconnect();
+
         pulseListener.reset();
+        pulseListener.setSourceID(tag.getId());
+        fallback.getProxy().setConnectionCut(false);
+        Assertions.assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+    }
 
+    private void connectAndDisconnect() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+        controller.connect(active.getUri());
+        controller.subscribeTag(tag);
+        pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+
+        final var disconnected = pulseListener.listen();
+        active.getProxy().setConnectionCut(true);
+        disconnected.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+    }
+
+    private void mockColdFailover() {
+        expect(redundancyMock.getRedundancySupport())
+                .andReturn(CompletableFuture.completedFuture(RedundancySupport.Cold))
+                .anyTimes();
+        expect(redundancyMock.getServerUriArray())
+                .andReturn(CompletableFuture.completedFuture(new String[]{fallback.getUri()}))
+                .anyTimes();
+        EasyMock.replay(redundancyMock);
     }
 }

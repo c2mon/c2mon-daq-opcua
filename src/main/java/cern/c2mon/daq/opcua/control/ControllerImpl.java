@@ -61,7 +61,7 @@ public class ControllerImpl implements Controller {
 
     private final TagSubscriptionMapper mapper;
     private final EndpointListener endpointListener;
-    private final FailoverProxy failover;
+    private final FailoverProxy failoverProxy;
     private final AtomicBoolean stopped = new AtomicBoolean(true);
 
     /**
@@ -75,7 +75,7 @@ public class ControllerImpl implements Controller {
      */
     public void connect(String uri) throws OPCUAException {
         try {
-            failover.initialize(uri);
+            failoverProxy.initialize(uri);
             stopped.set(false);
         } catch (OPCUAException e) {
             endpointListener.onEquipmentStateUpdate(EndpointListener.EquipmentState.CONNECTION_FAILED);
@@ -91,7 +91,7 @@ public class ControllerImpl implements Controller {
         stopped.set(true);
         mapper.clear();
         try {
-            failover.disconnect();
+            failoverProxy.disconnect();
         } catch (OPCUAException e) {
             log.error("Error disconnecting: ", e);
         }
@@ -157,9 +157,9 @@ public class ControllerImpl implements Controller {
             UaSubscription subscription = group.getSubscription();
             try {
                 if (group.size() <= 1) {
-                    failover.getEndpoint().deleteSubscription(subscription);
+                    failoverProxy.getEndpoint().deleteSubscription(subscription);
                 } else {
-                    failover.getEndpoint().deleteItemFromSubscription(mapper.getDefinition(dataTag.getId()).getClientHandle(), subscription);
+                    failoverProxy.getEndpoint().deleteItemFromSubscription(mapper.getDefinition(dataTag.getId()).getClientHandle(), subscription);
                 }
             } catch (OPCUAException e) {
                 log.error("Deleting empty subscription could not be completed successfully.");
@@ -213,7 +213,7 @@ public class ControllerImpl implements Controller {
                 throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
             }
             try {
-                failover.getEndpoint().deleteSubscription(subscription);
+                failoverProxy.getEndpoint().deleteSubscription(subscription);
             } catch (OPCUAException e) {
                 log.error("Could not delete subscription. Proceed with recreation. ", e);
             }
@@ -231,7 +231,7 @@ public class ControllerImpl implements Controller {
                 return;
             }
             try {
-                notifyListener(entry.getKey(), failover.getEndpoint().read(entry.getValue().getNodeId()));
+                notifyListener(entry.getKey(), failoverProxy.getEndpoint().read(entry.getValue().getNodeId()));
             } catch (OPCUAException e) {
                 notRefreshable.add(entry.getKey());
             }
@@ -244,10 +244,10 @@ public class ControllerImpl implements Controller {
     @Override
     public boolean subscribeToGroup(SubscriptionGroup group, Collection<ItemDefinition> definitions) {
         try {
-            if (!group.isSubscribed() || !failover.getEndpoint().isCurrent(group.getSubscription())) {
-                group.setSubscription(failover.getEndpoint().createSubscription(group.getPublishInterval()));
+            if (!group.isSubscribed() || !failoverProxy.getEndpoint().isCurrent(group.getSubscription())) {
+                group.setSubscription(failoverProxy.getEndpoint().createSubscription(group.getPublishInterval()));
             }
-            final var monitoredItems = failover.getEndpoint().subscribeItem(group.getSubscription(), definitions, this::itemCreationCallback);
+            final var monitoredItems = failoverProxy.getEndpoint().subscribeItem(group.getSubscription(), definitions, this::itemCreationCallback);
             return monitoredItems.stream().allMatch(this::subscriptionCompleted);
         } catch (OPCUAException e) {
             final String ids = Joiner.on(", ").join(definitions.stream().map(mapper::getTagId).toArray());

@@ -4,22 +4,16 @@ import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
+import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.Deque;
-import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * In Cold Failover mode a client can only connect to one server at a time. When the client loses connectivity with the
@@ -29,115 +23,118 @@ import java.util.stream.Stream;
 @Slf4j
 @Lazy
 @Component("coldFailover")
-@NoArgsConstructor
 public class ColdFailover extends FailoverBase {
 
-    /** The endpoint at the head of the deque is one currently active. */
-    protected final Deque<Map.Entry<String, Endpoint>> servers = new ConcurrentLinkedDeque<>();
-
+    private static final AtomicBoolean listening = new AtomicBoolean(false);
+    List<String> redundantAddresses;
+    String currentUri;
+    Endpoint endpoint;
     private Collection<SessionActivityListener> listeners;
-
     @Value("${app.connectionMonitoringRate}")
     private int monitoringRate;
 
-    private static final AtomicBoolean listening = new AtomicBoolean(false);
-
+    /**
+     * Connect to the healthy endpoint of the set which. Since in Cold Failover only one endpoint can be active and
+     * healthy at a time, the first endpoint with a healthy service level that is encountered is deemed active.
+     * @param server             A Map.Entry containing the currently connected server URI and the corresponding
+     *                           endpoint.
+     * @param redundantAddresses an array containing the URIs of the servers within the redundant server set
+     * @param listeners          The SessionActivityListeners to subscribe to the client when created.
+     * @throws OPCUAException in case there is no healthy server to connect to in the redundant server set.
+     */
     @Override
-    public void initialize(Map.Entry<String, Endpoint> server, String[] redundantAddresses, Collection<SessionActivityListener> listeners) throws CommunicationException {
+    public void initialize(Map.Entry<String, Endpoint> server, String[] redundantAddresses, Collection<SessionActivityListener> listeners) throws OPCUAException {
+
         // Clients are expected to connect to the server with the highest service level.
+        this.redundantAddresses = new ArrayList<>();
+        Collections.addAll(this.redundantAddresses, redundantAddresses);
         this.listeners = listeners;
-        servers.addFirst(server);
-        disconnectAndProceed(server);
-        Stream.of(redundantAddresses).forEach(s -> servers.addLast(Map.entry(s, nextEndpoint())));
-        connectToHealthiestServer();
+        this.endpoint = server.getValue();
+        this.currentUri = server.getKey();
+        // only one server can be healthy at a time in cold redundancy
+        if (readServiceLevel(endpoint).compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
+            disconnectAndProceed();
+            connectToHealthiestServer();
+            this.redundantAddresses.add(currentUri);
+        } else {
+            log.info("Connected to healthy server in cold redundancy mode.");
+        }
         monitorConnection();
     }
 
     @Override
     public synchronized void disconnect() {
         listening.set(false);
-        disconnectAndProceed(servers.getFirst());
+        disconnectAndProceed();
     }
 
     @Override
     public Endpoint currentEndpoint() {
-        return servers.getFirst() != null ? servers.peek().getValue() : null;
+        return endpoint;
     }
 
     /**
-     * When the client loses connectivity with the active Server, it will attempt a connection to the redundant
-     * Server(s). If those are not available, the client should wait for the redundant servers to become available.
+     * Attempt to create a connection to one of the redundant Server(s). If no healthy redundant server is not
+     * available, the client waits for the redundant servers to become available. Called when the client loses
+     * connectivity with the active Server.
      */
     @Override
-    public void switchServers() {
+    public void switchServers() throws OPCUAException {
         if (listening.getAndSet(false)) {
-            final var oldServer = servers.removeFirst();
-            disconnectAndProceed(oldServer);
+            log.info("Attempt to switch to next healthy server.");
+            disconnectAndProceed();
+            redundantAddresses.add(currentUri);
             try {
                 connectToHealthiestServer();
-            } catch (CommunicationException e) {
-                log.error("Wait for redundant servers to become available... ", e);
-                try {
-                    TimeUnit.MILLISECONDS.sleep(5000L);
-                } catch (InterruptedException interruptedException) {
-                    interruptedException.printStackTrace();
-                }
-                switchServers();
+            } catch (OPCUAException e) {
+                disconnectAndProceed();
+                log.info("Server not yet available.");
+                redundantAddresses.remove(currentUri);
+                listening.set(true);
+                throw e;
             }
-            servers.addLast(oldServer);
 
-            final boolean subscriptionError = mapper.getSubscriptionGroups().values().stream()
+            final boolean subscriptionError = mapper.getSubscriptionGroups().values()
+                    .stream()
                     .noneMatch(e -> controller.subscribeToGroup(e, e.getTagIds().values()));
             if (subscriptionError) {
                 log.error("Could not recreate any subscriptions. Connect to next server... ");
-                switchServers();
-            } else {
-                log.info("Recreated subscriptions on server {}.", servers.getFirst().getKey());
-                monitorConnection();
+                throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
             }
+            log.info("Recreated subscriptions on server {}.", currentUri);
+            monitorConnection();
+        } else {
+            log.info("Server was manually shut down.");
         }
     }
 
-    private void connectToHealthiestServer() throws CommunicationException {
-        final var orderedByServiceLevel = servers.stream()
-                .map(entry -> Map.entry(readServiceLevel(entry).intValue(), entry))
-                .filter(e -> e.getKey() != 0)
-                .sorted((e1, e2) -> e2.getKey().compareTo(e1.getKey()))
-                .collect(Collectors.toList());
-        for (var server : orderedByServiceLevel) {
+    private void connectToHealthiestServer() throws OPCUAException {
+        UByte maxServiceLevel = UByte.valueOf(0);
+        String maxServiceUri = null;
+        for (var iterator = redundantAddresses.iterator(); iterator.hasNext(); ) {
+            final String nextUri = iterator.next();
             try {
-                synchronized (this) {
-                    server.getValue().getValue().initialize(server.getValue().getKey(), listeners);
-                    servers.remove(server.getValue());
-                    servers.addFirst(server.getValue());
-                    log.info("Connected to server with URI {}.", server.getValue().getKey());
-                    listening.set(true);
+                endpoint.initialize(nextUri, listeners);
+                final UByte nextServiceLevel = readServiceLevel(endpoint);
+                if (nextServiceLevel.compareTo(maxServiceLevel) > 0) {
+                    maxServiceLevel = nextServiceLevel;
+                    maxServiceUri = nextUri;
+                    //don't disconnect from last server, if it is the active one
+                    if (!iterator.hasNext() || nextServiceLevel.compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
+                        currentUri = nextUri;
+                        return;
+                    }
                 }
-                return;
-            } catch (OPCUAException e) {
-                log.error("Could not connect to server with URI {} and service level {}. Proceed with next server.", server.getValue().getKey(), server.getKey(), e);
+                endpoint.disconnect();
+            } catch (OPCUAException ignored) {
+                log.info("Could not connect to server at {}. Proceed with next server.", nextUri);
             }
+        }
+        if (maxServiceUri != null) {
+            currentUri = maxServiceUri;
+            endpoint.initialize(currentUri, listeners);
         }
         throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
-    }
-
-    /**
-     * In cold failover a client can only connect to one server as a time.
-     * @param serverEntry A Map.Entry containing the server's URI as key and the corresponding endpoint whose
-     *                    serviceLevel to read
-     * @return the server's current service level, or 0 if unavailable
-     */
-    @Override
-    protected UByte readServiceLevel(Map.Entry<String, Endpoint> serverEntry) {
-        UByte serviceLevel = UByte.valueOf(0);
-        try {
-            serverEntry.getValue().initialize(serverEntry.getKey(), listeners);
-            serviceLevel = super.readServiceLevel(serverEntry);
-            serverEntry.getValue().disconnect();
-        } catch (OPCUAException e) {
-            log.error("An error occurred upon reading the service level from a server. Consider server in maintenance", e);
-        }
-        return serviceLevel;
     }
 
     private void monitorConnection() {
@@ -150,13 +147,26 @@ public class ColdFailover extends FailoverBase {
         }
     }
 
-    private void disconnectAndProceed(Map.Entry<String, Endpoint> serverEntry) {
+    private void disconnectAndProceed() {
         try {
-            if (currentEndpoint() != null) {
-                currentEndpoint().disconnect();
+            if (this.endpoint != null) {
+                this.endpoint.disconnect();
             }
+        } catch (OPCUAException ignored) {
+            log.info("An expected error occurred disconnecting from the server at URI {}.", currentUri);
+        }
+    }
+
+    /**
+     * See UA Part 4, 6.6.2.4.2, Table 10.
+     * @param endpoint The endpoint whose serviceLevel to read
+     * @return the endpoint's service level, or a service level of 0 if unavailable.
+     */
+    private UByte readServiceLevel(Endpoint endpoint) {
+        try {
+            return (UByte) endpoint.read(Identifiers.Server_ServiceLevel).getValue().getValue();
         } catch (OPCUAException e) {
-            log.error("An error occurred disconnecting from the server at URI {}.", serverEntry.getKey(), e);
+            return UByte.valueOf(0);
         }
     }
 }

@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -44,13 +45,14 @@ public class SecurityIT {
     AppConfig config;
 
     @Autowired
+    @Qualifier("failoverProxy")
     FailoverProxy failoverProxy;
 
     private final TestListeners.TestListener listener = new TestListeners.TestListener();
 
     @BeforeAll
     public static void startServers() {
-        resolver = ConnectionResolver.resolveIoTEdgeServer();
+        resolver = new ConnectionResolver.Edge();
     }
 
     @AfterAll

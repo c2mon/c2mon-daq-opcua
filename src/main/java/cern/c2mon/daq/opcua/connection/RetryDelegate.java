@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.exceptions.*;
+import cern.c2mon.daq.opcua.failover.FailoverBase;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,7 +11,6 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -18,12 +18,14 @@ import java.util.function.Supplier;
  * The RetryDelegate executes a given method a number of times in case of failure until the method completes
  * successfully with a delay as given in the application configuration. It simultaneously keeps track of how long the
  * client has been disconnected from the server. If that period is longer than the total period likely needed to
- * complete all retries, a method is only executed once before it fails.
- * One RetryDelegate is created for each {@link Endpoint}.
+ * complete all retries, a method is only executed once before it fails. One RetryDelegate is created for each {@link
+ * Endpoint}. Retry logic is implemented using Spring Retry, which is AOP-based. Therefore, a method annotated with
+ * @{@link Retryable} cannot be called from within the same class. The RetryDelegate acts as intermediary.
  */
 @Component(value = "retryDelegate")
 @Scope(value = "prototype")
 public class RetryDelegate implements SessionActivityListener {
+
 
     @Value("${app.serverTimeout}")
     private int timeout;
@@ -33,6 +35,9 @@ public class RetryDelegate implements SessionActivityListener {
 
     @Value("${app.retryDelay}")
     private long retryDelay;
+
+    @Value("${app.maxFailoverDelay}")
+    private long maxFailoverDelay;
 
     private long disconnectionInstant = 0L;
 
@@ -81,10 +86,20 @@ public class RetryDelegate implements SessionActivityListener {
             // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
             // but not the underlying action on the OpcUaClient
             return futureSupplier.get().orTimeout(timeout, TimeUnit.MILLISECONDS).join();
-        } catch (CompletionException e) {
+        } catch (Exception e) {
             boolean longDisconnection = (disconnectionInstant > 0)
                     && maxRetryCount * (retryDelay + timeout) < System.currentTimeMillis() - disconnectionInstant;
             throw OPCUAException.of(context, e.getCause(), longDisconnection);
         }
+    }
+
+    @Retryable(value = {OPCUAException.class},
+            maxAttempts = Integer.MAX_VALUE,
+            backoff = @Backoff(
+                    delayExpression = "${app.retryDelay}",
+                    maxDelayExpression = "${app.maxFailoverDelay}",
+                    multiplier = 3))
+    public void triggerServerSwitchRetry(FailoverBase failover) throws OPCUAException {
+        failover.switchServers();
     }
 }

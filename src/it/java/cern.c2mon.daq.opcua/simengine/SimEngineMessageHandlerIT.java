@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestPropertySource(locations = "classpath:opcua.properties")
 public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
-    private static ConnectionResolver resolver;
+    private static ConnectionResolver.Venus resolver;
     private OPCUAMessageHandler handler;
     private SourceCommandTagValue value;
     private final TestListeners.Pulse listener = new TestListeners.Pulse();
@@ -73,7 +73,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @BeforeClass
     public static void startServer() {
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
-        resolver = ConnectionResolver.resolveVenusServers("sim_BASIC.short.xml");
+        resolver = new ConnectionResolver.Venus("sim_BASIC.short.xml");
     }
 
     @AfterClass

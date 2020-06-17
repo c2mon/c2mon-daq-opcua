@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.*;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;

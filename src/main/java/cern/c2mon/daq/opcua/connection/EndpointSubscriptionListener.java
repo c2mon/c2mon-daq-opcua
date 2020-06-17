@@ -9,7 +9,6 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager;
 import org.eclipse.milo.opcua.stack.core.StatusCodes;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class EndpointSubscriptionListener implements UaSubscriptionManager.SubscriptionListener {
 
-    @Autowired
     @Setter
     private Controller controller;
 
@@ -67,7 +65,7 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
             controller.recreateSubscription(subscription);
             log.info("Subscription successfully recreated!");
         } catch (CommunicationException e) {
-            // only after Integer.MAX_VALUE retries have failed, should happen very rarely
+            // only after Integer.MAX_VALUE retries have failed, should not happen
             recreate(subscription);
         } catch (OPCUAException e) {
             log.error("Subscription recreation discontinued: ", e);

@@ -6,7 +6,6 @@ import cern.c2mon.daq.opcua.connection.RetryDelegate;
 import cern.c2mon.daq.opcua.connection.SecurityModule;
 import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.ColdFailover;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.failover.FailoverProxyImpl;
 import cern.c2mon.daq.opcua.failover.NoFailover;
@@ -42,7 +41,7 @@ public class MethodIT {
         ReflectionTestUtils.setField(delegate, "timeout", 3000);
         ReflectionTestUtils.setField(delegate, "retryDelay", 1000);
         final MiloEndpoint wrapper = new MiloEndpoint(p, new EndpointSubscriptionListener(), delegate);
-        FailoverProxy failover = new FailoverProxyImpl(new TestListeners.TestListener(), new NoFailover(), new ColdFailover(), wrapper);
+        FailoverProxy failover = new FailoverProxyImpl(new TestListeners.TestListener(), new NoFailover(), new NoFailover(), wrapper);
         failover.initialize("opc.tcp://milo.digitalpetri.com:62541/milo");
         runner = new CommandRunner(failover);
     }
