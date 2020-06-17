@@ -49,16 +49,16 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void secondExecutionOfTagToDefinitionShouldReturnPriorDefinition() {
-        DataTagDefinition definition1 = mapper.getOrCreateDefinition(tag);
-        DataTagDefinition definition2 = mapper.getOrCreateDefinition(tag);
+        ItemDefinition definition1 = mapper.getOrCreateDefinition(tag);
+        ItemDefinition definition2 = mapper.getOrCreateDefinition(tag);
 
         assertEquals(definition1, definition2);
     }
 
     @Test
     public void getOrCreateDefinitionShouldCreateProperDefinition() {
-        DataTagDefinition expected = DataTagDefinition.of(tag);
-        DataTagDefinition actual = mapper.getOrCreateDefinition(tag);
+        ItemDefinition expected = ItemDefinition.of(tag);
+        ItemDefinition actual = mapper.getOrCreateDefinition(tag);
 
         assertEquals(expected.getNodeId(), actual.getNodeId());
         assertEquals(expected.getMethodNodeId(), actual.getMethodNodeId());
@@ -85,23 +85,23 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void tagsToGroupsShouldReturnAsManyGroupsAsDistinctDeadbands() {
-        Map<SubscriptionGroup, List<DataTagDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithSameDeadband));
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithSameDeadband));
 
         assertEquals(2, pairs.size());
     }
 
     @Test
     public void tagsToGroupsShouldCombineTagsWithSameDeadbands() {
-        final List<DataTagDefinition> expected = Arrays.asList(mapper.getOrCreateDefinition(tag), mapper.getOrCreateDefinition(tagWithSameDeadband));
-        Map<SubscriptionGroup, List<DataTagDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Arrays.asList(tag, tagWithSameDeadband));
+        final List<ItemDefinition> expected = Arrays.asList(mapper.getOrCreateDefinition(tag), mapper.getOrCreateDefinition(tagWithSameDeadband));
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Arrays.asList(tag, tagWithSameDeadband));
         SubscriptionGroup groupWithTwoTags = mapper.getGroup(tag);
-        final List<DataTagDefinition> actual = pairs.get(groupWithTwoTags);
+        final List<ItemDefinition> actual = pairs.get(groupWithTwoTags);
         assertEquals(expected, actual);
     }
 
     @Test
     public void tagsToGroupsShouldSeparateTagsWithDifferentDeadbands() {
-        Map<SubscriptionGroup, List<DataTagDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Arrays.asList(tag, tagWithDifferentDeadband));
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Arrays.asList(tag, tagWithDifferentDeadband));
 
         SubscriptionGroup group1 = mapper.getGroup(tag);
         SubscriptionGroup group2 = mapper.getGroup(tagWithDifferentDeadband);
@@ -112,7 +112,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void tagsToGroupsShouldNotAddTagsToGroups() {
-        Map<SubscriptionGroup, List<DataTagDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Collections.singletonList(tag));
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Collections.singletonList(tag));
         assertFalse(pairs.keySet().stream().anyMatch(group -> group.contains(tag)));
     }
 
@@ -144,7 +144,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void getDefinitionShouldReturnDefinitionWithCorrespondingTagReference() {
-        DataTagDefinition definition = mapper.getOrCreateDefinition(tag);
+        ItemDefinition definition = mapper.getOrCreateDefinition(tag);
 
         assertEquals(tag.getTimeDeadband(), definition.getTimeDeadband());
         assertEquals(tag.getValueDeadband(), definition.getValueDeadband());
@@ -153,8 +153,8 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void getDefinitionWithSameTagShouldReturnSameDefinitionTwice() {
-        DataTagDefinition definition = mapper.getOrCreateDefinition(tag);
-        final DataTagDefinition definition2 = mapper.getOrCreateDefinition(tag);
+        ItemDefinition definition = mapper.getOrCreateDefinition(tag);
+        final ItemDefinition definition2 = mapper.getOrCreateDefinition(tag);
 
         assertEquals(definition.getTimeDeadband(), definition2.getTimeDeadband());
         assertEquals(definition.getValueDeadband(), definition2.getValueDeadband());
@@ -202,7 +202,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void getTagByClientHandleShouldReturnProperTagId() {
-        DataTagDefinition definition = mapper.getOrCreateDefinition(tag);
+        ItemDefinition definition = mapper.getOrCreateDefinition(tag);
 
         Long actual = mapper.getTagId(definition.getClientHandle());
 

@@ -10,7 +10,7 @@ public class ItemDefinitionTest extends MappingBase {
 
     @Test
     public void hardwareAddressOfTypeOPCDoesNotThrowError() {
-        assertDoesNotThrow(() -> DataTagDefinition.of(tag));
+        assertDoesNotThrow(() -> ItemDefinition.of(tag));
     }
 
     @Test
@@ -18,12 +18,12 @@ public class ItemDefinitionTest extends MappingBase {
         dataTagAddress.setHardwareAddress(new DBHardwareAddressImpl("Primary"));
         tag = makeSourceDataTag(1L, dataTagAddress);
 
-        assertNull(DataTagDefinition.of(tag));
+        assertNull(ItemDefinition.of(tag));
     }
 
     @Test
     public void hardwareAddressCreatesSameItemDefinitionSpecs() throws ConfigurationException {
-        DataTagDefinition dataTagDefinition = DataTagDefinition.of(tag);
+        ItemDefinition dataTagDefinition = ItemDefinition.of(tag);
 
         assertEquals(opcHardwareAddress.getOPCItemName(), dataTagDefinition.getNodeId().getIdentifier());
         assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getNodeId().getNamespaceIndex().intValue());
@@ -38,7 +38,7 @@ public class ItemDefinitionTest extends MappingBase {
         dataTagAddress.setHardwareAddress(opcHardwareAddress);
         tag = makeSourceDataTag(1L, dataTagAddress);
 
-        DataTagDefinition dataTagDefinition = DataTagDefinition.of(tag);
+        ItemDefinition dataTagDefinition = ItemDefinition.of(tag);
 
         assertEquals(opcHardwareAddress.getOpcRedundantItemName(), dataTagDefinition.getMethodNodeId().getIdentifier());
         assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getMethodNodeId().getNamespaceIndex().intValue());

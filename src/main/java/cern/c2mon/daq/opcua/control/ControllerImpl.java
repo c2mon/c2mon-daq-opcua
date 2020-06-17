@@ -24,7 +24,7 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
-import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
@@ -141,7 +141,7 @@ public class ControllerImpl implements Controller {
     @Override
     public synchronized boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
         SubscriptionGroup group = mapper.getGroup(sourceDataTag);
-        DataTagDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
+        ItemDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
         return subscribeToGroup(group, Collections.singletonList(definition));
     }
 
@@ -231,7 +231,7 @@ public class ControllerImpl implements Controller {
         }
     }
 
-    private synchronized void refresh(Map<Long, DataTagDefinition> entries) {
+    private synchronized void refresh(Map<Long, ItemDefinition> entries) {
         final var notRefreshable = new ArrayList<Long>();
         for (var entry : entries.entrySet()) {
             if (Thread.currentThread().isInterrupted()) {
@@ -249,7 +249,7 @@ public class ControllerImpl implements Controller {
         }
     }
 
-    private boolean subscribeToGroup(SubscriptionGroup group, List<DataTagDefinition> definitions) {
+    private boolean subscribeToGroup(SubscriptionGroup group, List<ItemDefinition> definitions) {
         try {
             if (!group.isSubscribed() || !failover.getEndpoint().isCurrent(group.getSubscription())) {
                 group.setSubscription(failover.getEndpoint().createSubscription(group.getPublishInterval()));

@@ -4,7 +4,6 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import lombok.RequiredArgsConstructor;
@@ -164,7 +163,7 @@ public class MiloEndpoint implements Endpoint {
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
+    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
         List<MonitoredItemCreateRequest> requests = definitions.stream()
                 .map(this::createItemSubscriptionRequest)
                 .collect(Collectors.toList());
@@ -277,7 +276,7 @@ public class MiloEndpoint implements Endpoint {
         return client.getSubscriptionManager().getSubscriptions().contains(subscription);
     }
 
-    private MonitoredItemCreateRequest createItemSubscriptionRequest(DataTagDefinition definition) {
+    private MonitoredItemCreateRequest createItemSubscriptionRequest(ItemDefinition definition) {
         // If a static time deadband is configured, only one value per publishing cycle will be kept by the DAQ core.
         // Therefore queueSize can be 0 (only the newest value is held in between publishing cycles)
         UInteger queueSize = uint(0);

@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.mapping.DataTagDefinition;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.Getter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -38,7 +38,7 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     }
 
     @Override
-    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<DataTagDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
+    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, List<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
         throw new CommunicationException(CREATE_MONITORED_ITEM);
     }
 

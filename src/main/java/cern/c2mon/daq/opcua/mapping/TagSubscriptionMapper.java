@@ -27,9 +27,9 @@ import java.util.Map;
 
 public interface TagSubscriptionMapper {
 
-    Map<Long, DataTagDefinition> getTagIdDefinitionMap();
+    Map<Long, ItemDefinition> getTagIdDefinitionMap();
 
-    Map<SubscriptionGroup, List<DataTagDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> dataTags);
+    Map<SubscriptionGroup, List<ItemDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> dataTags);
 
     SubscriptionGroup getGroup (ISourceDataTag dataTag);
 
@@ -37,11 +37,11 @@ public interface TagSubscriptionMapper {
 
     SubscriptionGroup getOrCreateGroup(int timeDeadband);
 
-    DataTagDefinition getDefinition(Long tagId);
+    ItemDefinition getDefinition(Long tagId);
 
-    long getTagId(DataTagDefinition definition);
+    long getTagId(ItemDefinition definition);
 
-    DataTagDefinition getOrCreateDefinition(ISourceDataTag tag);
+    ItemDefinition getOrCreateDefinition(ISourceDataTag tag);
 
     Long getTagId(UInteger clientHandle);
 

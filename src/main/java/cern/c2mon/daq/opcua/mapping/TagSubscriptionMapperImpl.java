@@ -39,10 +39,10 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
 
     @Getter
-    private final BiMap<Long, DataTagDefinition> tagIdDefinitionMap = HashBiMap.create();
+    private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
 
     @Override
-    public Map<SubscriptionGroup, List<DataTagDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> tags) {
+    public Map<SubscriptionGroup, List<ItemDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> tags) {
         return tags
                 .stream()
                 .collect(groupingBy(ISourceDataTag::getTimeDeadband))
@@ -73,18 +73,18 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public DataTagDefinition getOrCreateDefinition(ISourceDataTag tag) {
+    public ItemDefinition getOrCreateDefinition(ISourceDataTag tag) {
         if (tagIdDefinitionMap.containsKey(tag.getId())) {
             return tagIdDefinitionMap.get(tag.getId());
         } else {
-            final DataTagDefinition definition = ItemDefinition.of(tag);
+            final ItemDefinition definition = ItemDefinition.of(tag);
             tagIdDefinitionMap.put(tag.getId(), definition);
             return definition;
         }
     }
 
     @Override
-    public DataTagDefinition getDefinition(Long tagId) {
+    public ItemDefinition getDefinition(Long tagId) {
         if (tagIdDefinitionMap.containsKey(tagId)) {
             return tagIdDefinitionMap.get(tagId);
         } else {
@@ -93,14 +93,14 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public long getTagId(DataTagDefinition definition)  {
+    public long getTagId(ItemDefinition definition)  {
         return tagIdDefinitionMap.inverse().get(definition);
     }
 
 
     @Override
     public Long getTagId(UInteger clientHandle) {
-        final Optional<Map.Entry<Long, DataTagDefinition>> mapEntry = tagIdDefinitionMap.entrySet().stream()
+        final Optional<Map.Entry<Long, ItemDefinition>> mapEntry = tagIdDefinitionMap.entrySet().stream()
                 .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
                 .findFirst();
 
@@ -119,7 +119,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public boolean removeTag(ISourceDataTag dataTag) {
-        DataTagDefinition definition = tagIdDefinitionMap.get(dataTag.getId());
+        ItemDefinition definition = tagIdDefinitionMap.get(dataTag.getId());
         if (definition == null) {
             return false;
         }
