@@ -21,11 +21,13 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -63,13 +65,8 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
 
     @Override
-    public SubscriptionGroup getGroup (UaSubscription subscription) {
-        for(SubscriptionGroup group : subscriptionGroups.values()) {
-            if (group.getSubscription().equals(subscription)) {
-                return group;
-            }
-        }
-        return null;
+    public SubscriptionGroup getGroup (int timeDeadband) {
+        return subscriptionGroups.get(timeDeadband);
     }
 
     @Override
@@ -119,18 +116,16 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public boolean removeTag(ISourceDataTag dataTag) {
-        ItemDefinition definition = tagIdDefinitionMap.get(dataTag.getId());
+        ItemDefinition definition = tagIdDefinitionMap.remove(dataTag.getId());
         if (definition == null) {
             return false;
         }
-        tagIdDefinitionMap.remove(dataTag.getId());
-        return getGroup(dataTag).remove(dataTag);
-    }
-
-    @Override
-    public boolean isSubscribed(ISourceDataTag tag) {
-        SubscriptionGroup group = subscriptionGroups.get(tag.getTimeDeadband());
-        return group != null && group.isSubscribed() && group.contains(tag);
+        final SubscriptionGroup group = subscriptionGroups.get(dataTag.getTimeDeadband());
+        final boolean wasSubscribed = group != null && group.remove(dataTag);
+        if (group != null && group.size() < 1) {
+            group.reset();
+        }
+        return wasSubscribed;
     }
 
     @Override
@@ -140,7 +135,12 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public SubscriptionGroup getOrCreateGroup(int timeDeadband) {
+    public boolean wasSubscribed(ISourceDataTag tag) {
+        final SubscriptionGroup group = getGroup(tag.getTimeDeadband());
+        return group != null && group.contains(tag);
+    }
+
+    private SubscriptionGroup getOrCreateGroup(int timeDeadband) {
         if (groupExists(timeDeadband)) {
             return subscriptionGroups.get(timeDeadband);
         } else {

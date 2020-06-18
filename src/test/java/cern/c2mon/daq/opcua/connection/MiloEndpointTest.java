@@ -27,7 +27,6 @@ public class MiloEndpointTest {
 
     OpcUaClient mockClient = createMock(OpcUaClient.class);
     OpcUaSubscriptionManager managerMock = createMock(OpcUaSubscriptionManager.class);
-    UaSubscription subscriptionMock = createNiceMock(UaSubscription.class);
 
     @BeforeEach
     public void setUp() {
@@ -39,9 +38,8 @@ public class MiloEndpointTest {
 
     private void setUpDeleteSubscriptionMocks(CompletableFuture<UaSubscription> expected) {
         expect(mockClient.getSubscriptionManager()).andReturn(managerMock).anyTimes();
-        expect(subscriptionMock.getSubscriptionId()).andReturn(null).anyTimes();
         expect(managerMock.deleteSubscription(anyObject())).andReturn(expected).anyTimes();
-        replay(mockClient, managerMock, subscriptionMock);
+        replay(mockClient, managerMock);
     }
 
     @Test
@@ -49,21 +47,21 @@ public class MiloEndpointTest {
         final UaException configUaException = new UaException(Bad_NodeIdUnknown);
         final CompletableFuture<UaSubscription> expected = CompletableFuture.failedFuture(configUaException);
         setUpDeleteSubscriptionMocks(expected);
-        assertThrows(ConfigurationException.class, () -> endpoint.deleteSubscription(subscriptionMock));
+        assertThrows(ConfigurationException.class, () -> endpoint.deleteSubscription(1));
     }
 
     @Test
     public void unknownHostShouldThrowConfigurationException() {
         final CompletableFuture<UaSubscription> expected = CompletableFuture.failedFuture(new UnknownHostException());
         setUpDeleteSubscriptionMocks(expected);
-        assertThrows(ConfigurationException.class, () -> endpoint.deleteSubscription(subscriptionMock));
+        assertThrows(ConfigurationException.class, () -> endpoint.deleteSubscription(1));
     }
 
     @Test
     public void anyOtherExceptionShouldThrowCommunicationException() {
         final CompletableFuture<UaSubscription> expected = CompletableFuture.failedFuture(new IllegalArgumentException());
         setUpDeleteSubscriptionMocks(expected);
-        assertThrows(CommunicationException.class, () -> endpoint.deleteSubscription(subscriptionMock));
+        assertThrows(CommunicationException.class, () -> endpoint.deleteSubscription(1));
     }
 
     @Test
@@ -72,6 +70,6 @@ public class MiloEndpointTest {
         final var expectedException = new LongLostConnectionException(ExceptionContext.DELETE_SUBSCRIPTION, new IllegalArgumentException());
         final CompletableFuture<UaSubscription> expected = CompletableFuture.failedFuture(expectedException);
         setUpDeleteSubscriptionMocks(expected);
-        assertThrows(LongLostConnectionException.class, () -> endpoint.deleteSubscription(subscriptionMock));
+        assertThrows(LongLostConnectionException.class, () -> endpoint.deleteSubscription(1));
     }
 }

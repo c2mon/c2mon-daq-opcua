@@ -139,8 +139,7 @@ public class ColdFailover extends FailoverBase {
 
     private void monitorConnection() {
         try {
-            final var subscription = currentEndpoint().createSubscription(monitoringRate);
-            currentEndpoint().subscribeItem(subscription, connectionMonitoringNodes, this::monitoringCallback);
+            endpoint.subscribeWithCreationCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
             listening.set(true);
         } catch (OPCUAException e) {
             log.info("An error occurred when setting up connection monitoring.");
@@ -164,7 +163,7 @@ public class ColdFailover extends FailoverBase {
      */
     private UByte readServiceLevel(Endpoint endpoint) {
         try {
-            return (UByte) endpoint.read(Identifiers.Server_ServiceLevel).getValue().getValue();
+            return (UByte) endpoint.read(Identifiers.Server_ServiceLevel).getKey().getValue();
         } catch (OPCUAException e) {
             return UByte.valueOf(0);
         }

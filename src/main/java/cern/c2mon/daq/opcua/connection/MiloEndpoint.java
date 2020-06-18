@@ -1,17 +1,21 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.TriConsumer;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
@@ -28,14 +32,16 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static cern.c2mon.daq.opcua.exceptions.CommunicationException.of;
 import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 /**
@@ -50,13 +56,16 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Component(value = "miloEndpoint")
 @Primary
 @Scope(value = "prototype")
-public class MiloEndpoint implements Endpoint {
+public class MiloEndpoint implements Endpoint, UaSubscriptionManager.SubscriptionListener {
 
     private final SecurityModule securityModule;
     private final EndpointSubscriptionListener subscriptionListener;
     private final RetryDelegate retryDelegate;
+
     private OpcUaClient client;
     private Collection<SessionActivityListener> sessionActivityListeners;
+
+    private final Map<Integer, UaSubscription> subscriptionMap = new ConcurrentHashMap<>();
 
     /**
      * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
@@ -84,7 +93,7 @@ public class MiloEndpoint implements Endpoint {
                     e.getUserIdentityTokens(),
                     e.getTransportProfileUri(),
                     e.getSecurityLevel()))
-                    .collect(Collectors.toList());
+                    .collect(toList());
         }
         return originalEndpoints;
     }
@@ -94,10 +103,10 @@ public class MiloEndpoint implements Endpoint {
      * line with configuration options. In case of a communication error this method is retried a given amount of times
      * with a given delay as specified in the application configuration.
      * @param uri the server address to connect to.
-     * @throws OPCUAException       of type {@link CommunicationException} if it is not possible to connect to the OPC
-     *                              UA server within the configured number of attempts, and of type {@link
-     *                              ConfigurationException} if it is not possible to connect to any of the the OPC UA
-     *                              server's endpoints with the given authentication configuration settings.
+     * @throws OPCUAException of type {@link CommunicationException} if it is not possible to connect to the OPC UA
+     *                        server within the configured number of attempts, and of type {@link
+     *                        ConfigurationException} if it is not possible to connect to any of the the OPC UA server's
+     *                        endpoints with the given authentication configuration settings.
      */
     @Override
     @Retryable(value = {CommunicationException.class},
@@ -110,6 +119,7 @@ public class MiloEndpoint implements Endpoint {
             var endpoints = DiscoveryClient.getEndpoints(uri).join();
             endpoints = updateEndpointUrls(uri, endpoints);
             client = securityModule.createClientWithListeners(endpoints, this.sessionActivityListeners);
+            subscriptionListener.initialize(this);
             client.getSubscriptionManager().addSubscriptionListener(subscriptionListener);
             log.info("Connected");
         } catch (CompletionException e) {
@@ -127,62 +137,77 @@ public class MiloEndpoint implements Endpoint {
         if (client != null) {
             sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
             client.getSubscriptionManager().clearSubscriptions();
+            subscriptionMap.clear();
             retryDelegate.completeOrThrow(DISCONNECT, client::disconnect);
         }
     }
 
     /**
-     * Create and return a new subscription with a certain number of retries in case of connection error.
-     * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest
-     *                     supported interval.
-     * @return the newly created subscription.
+     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
+     * connection error.
+     * @param publishingInterval   The publishing interval to request for the item definitions
+     * @param definitions          the {@link ItemDefinition}s for which to create monitored items
+     * @param onValueUpdate the callback function to execute when new value updates are received
+     * @return a map of the client handles corresponding to the item definitions along with the associated quality codes
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    public UaSubscription createSubscription(int timeDeadband) throws OPCUAException {
-        return retryDelegate.completeOrThrow(CREATE_SUBSCRIPTION, () -> client.getSubscriptionManager().createSubscription(timeDeadband));
+    @Override
+    public Map<UInteger, SourceDataTagQualityCode> subscribeWithValueUpdateCallback(int publishingInterval,
+                                                                                    Collection<ItemDefinition> definitions,
+                                                                                    TriConsumer<UInteger, SourceDataTagQualityCode, ValueUpdate> onValueUpdate) throws OPCUAException {
+        BiConsumer<UaMonitoredItem, Integer> itemCreationCallback = (item, integer) -> item.setValueConsumer(value -> {
+            SourceDataTagQualityCode tagQuality = MiloMapper.getDataTagQualityCode(value.getStatusCode());
+            ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
+            onValueUpdate.apply(item.getClientHandle(), tagQuality, valueUpdate);
+        });
+        return subscribeWithCreationCallback(publishingInterval, definitions, itemCreationCallback);
+    }
+
+    public Map<UInteger, SourceDataTagQualityCode> subscribeWithCreationCallback(int publishingInterval,
+                                                                                 Collection<ItemDefinition> definitions,
+                                                                                 BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
+        var subscription = getOrCreateSubscription(publishingInterval);
+        List<MonitoredItemCreateRequest> requests = definitions.stream()
+                .map(this::createItemSubscriptionRequest)
+                .collect(toList());
+        return retryDelegate
+                .completeOrThrow(CREATE_MONITORED_ITEM, () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback))
+                .stream().collect(toMap(
+                        UaMonitoredItem::getClientHandle,
+                        item -> MiloMapper.getDataTagQualityCode(item.getStatusCode())));
     }
 
     /**
      * Delete an existing subscription with a certain number of retries in case of connection error.
-     * @param subscription The subscription to delete along with all contained MonitoredItems.
+     * @param timeDeadband The timeDeadband of the subscription to delete along with all contained MonitoredItems.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public void deleteSubscription(UaSubscription subscription) throws OPCUAException {
-        retryDelegate.completeOrThrow(DELETE_SUBSCRIPTION, () -> client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()));
+    public void deleteSubscription(int timeDeadband) throws OPCUAException {
+        final UaSubscription subscription = subscriptionMap.remove(timeDeadband);
+        if (subscription != null) {
+            retryDelegate.completeOrThrow(DELETE_SUBSCRIPTION, () -> client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()));
+        }
     }
 
     /**
-     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
-     * connection error.
-     * @param subscription         The subscription to add the monitored items to
-     * @param definitions          the {@link ItemDefinition}s for which to create monitored items
-     * @param itemCreationCallback the callback function to execute when each item has been created successfully
-     * @return a list of monitored items corresponding to the item definitions
+     * Delete an item from an OPC UA subscription with a certain number of retries in case of connection. If the
+     * subscription contains only the one item, the whole subscription is deleted. error.
+     * @param clientHandle    the identifier of the monitored item to remove.
+     * @param publishInterval the publishing interval subscription to remove the monitored item from.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
-        List<MonitoredItemCreateRequest> requests = definitions.stream()
-                .map(this::createItemSubscriptionRequest)
-                .collect(Collectors.toList());
-        return retryDelegate.completeOrThrow(CREATE_MONITORED_ITEM, () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback));
-
-    }
-
-    /**
-     * Delete a monitored item from an OPC UA subscription with a certain number of retries in case of connection
-     * error.
-     * @param clientHandle the identifier of the monitored item to remove.
-     * @param subscription the subscription to remove the monitored item from.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     */
-    @Override
-    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCUAException {
-        List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
-                .filter(i -> clientHandle.equals(i.getClientHandle()))
-                .collect(Collectors.toList());
-        retryDelegate.completeOrThrow(DELETE_MONITORED_ITEM, () -> subscription.deleteMonitoredItems(itemsToRemove));
+    public void deleteItemFromSubscription(UInteger clientHandle, int publishInterval) throws OPCUAException {
+        final UaSubscription subscription = subscriptionMap.get(publishInterval);
+        if (subscription != null && subscription.getMonitoredItems().size() <= 1) {
+            deleteSubscription(publishInterval);
+        } else if (subscription != null) {
+            List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
+                    .filter(i -> clientHandle.equals(i.getClientHandle()))
+                    .collect(toList());
+            retryDelegate.completeOrThrow(DELETE_MONITORED_ITEM, () -> subscription.deleteMonitoredItems(itemsToRemove));
+        }
     }
 
     /**
@@ -193,8 +218,11 @@ public class MiloEndpoint implements Endpoint {
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public DataValue read(NodeId nodeId) throws OPCUAException {
-        return retryDelegate.completeOrThrow(READ, () -> client.readValue(0, TimestampsToReturn.Both, nodeId));
+    public Map.Entry<ValueUpdate, SourceDataTagQualityCode> read(NodeId nodeId) throws OPCUAException {
+        final DataValue value = retryDelegate.completeOrThrow(READ, () -> client.readValue(0, TimestampsToReturn.Both, nodeId));
+        return Map.entry(
+                new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime()),
+                MiloMapper.getDataTagQualityCode(value.getStatusCode()));
     }
 
     /**
@@ -202,14 +230,18 @@ public class MiloEndpoint implements Endpoint {
      * connection error.
      * @param nodeId the nodeId of the node to write a value to.
      * @param value  the value to write to the node.
-     * @return a completable future  the {@link StatusCode} of the response to the write action
+     * @return whether the write action finished successfully
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public StatusCode write(NodeId nodeId, Object value) throws OPCUAException {
+    public boolean write(NodeId nodeId, Object value) throws OPCUAException {
         // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
         DataValue dataValue = new DataValue(new Variant(value), null, null);
-        return retryDelegate.completeOrThrow(WRITE, () -> client.writeValue(nodeId, dataValue));
+        return retryDelegate.completeOrThrow(WRITE, () -> client.writeValue(nodeId, dataValue)
+                .thenApply(c -> {
+                    log.info("Writing value {} to node {} returned status code {}.", value, nodeId, c);
+                    return c.isGood();
+                }));
     }
 
     /**
@@ -222,11 +254,12 @@ public class MiloEndpoint implements Endpoint {
      * applicable, else null) in a Map Entry.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    public Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException {
+    public Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException {
         final var variants = Stream.of(args).map(Variant::new).toArray(Variant[]::new);
-        final var result = retryDelegate.completeOrThrow(METHOD, () -> client.call(new CallMethodRequest(objectId, methodId, variants)));
-        final var output = MiloMapper.toObject(result.getOutputArguments());
-        return Map.entry(result.getStatusCode(), output);
+        final CallMethodResult result = retryDelegate.completeOrThrow(METHOD, () -> client.call(new CallMethodRequest(objectId, methodId, variants)));
+        final StatusCode statusCode = result.getStatusCode();
+        log.info("Calling method {} on object {} returned status code {}.", methodId, objectId, statusCode);
+        return Map.entry(statusCode.isGood(), MiloMapper.toObject(result.getOutputArguments()));
     }
 
     /**
@@ -273,6 +306,24 @@ public class MiloEndpoint implements Endpoint {
      */
     public boolean isCurrent(UaSubscription subscription) {
         return client.getSubscriptionManager().getSubscriptions().contains(subscription);
+    }
+
+    /**
+     * Create and return a new subscription with a certain number of retries in case of connection error.
+     * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest
+     *                     supported interval.
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     */
+    private UaSubscription getOrCreateSubscription(int timeDeadband) throws OPCUAException {
+        var subscription = subscriptionMap.get(timeDeadband);
+        if (subscription != null && !isCurrent(subscription)) {
+            subscription = null;
+        }
+        if (subscription == null) {
+            subscription = retryDelegate.completeOrThrow(CREATE_SUBSCRIPTION, () -> client.getSubscriptionManager().createSubscription(timeDeadband));
+            subscriptionMap.put(timeDeadband, subscription);
+        }
+        return subscription;
     }
 
     private MonitoredItemCreateRequest createItemSubscriptionRequest(ItemDefinition definition) {

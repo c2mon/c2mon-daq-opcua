@@ -1,9 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.shared.common.command.SourceCommandTag;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
@@ -12,13 +9,6 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ControllerTest extends ControllerTestBase {
 
@@ -38,12 +28,12 @@ public class ControllerTest extends ControllerTestBase {
     }
 
     @Test
-    public void initializeShouldSubscribeTags() throws OPCUAException, InterruptedException {
+    public void initializeShouldSubscribeTags() throws OPCUAException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
         controller.connect(uri);
         controller.subscribeTags(sourceTags.values());
-        sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag).isSubscribed()));
+        sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag).contains(dataTag)));
     }
 
     @Test

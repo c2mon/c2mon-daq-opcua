@@ -24,6 +24,12 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
     @Setter
     private Controller controller;
 
+    private Endpoint endpoint;
+
+    public void initialize(Endpoint endpoint) {
+        this.endpoint = endpoint;
+    }
+
     /**
      * If a Subscription is transferred to another Session, the queued Notification Messages for this subscription are
      * moved from the old to the new subscription. If this process fails, the subscription must be recreated from
@@ -64,7 +70,7 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
      */
     private void recreate(UaSubscription subscription) {
         try {
-            controller.recreateSubscription(subscription);
+            controller.recreateSubscription(endpoint, (int) Math.round(subscription.getRequestedPublishingInterval()));
             log.info("Subscription successfully recreated!");
         } catch (CommunicationException e) {
             // only after Integer.MAX_VALUE retries have failed, should not happen
@@ -72,6 +78,5 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
         } catch (OPCUAException e) {
             log.error("Subscription recreation discontinued: ", e);
         }
-
     }
 }

@@ -1,12 +1,12 @@
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 
 import java.util.Collection;
 
@@ -32,11 +32,6 @@ public interface Controller {
      */
     void stop();
 
-    /**
-     * Returns whether the controller has been intentionally shut down.
-     * @return true if the controller's stop method has been called, or the initial connection was not successful.
-     */
-    boolean wasStopped();
 
     /**
      * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
@@ -74,12 +69,12 @@ public interface Controller {
     /**
      * Called when a subscription could not be automatically transferred in between sessions. In this case, the     *
      * subscription is recreated from scratch.
-     * @param subscription the subscription of the old session which must be recreated.
+     * @param publishInterval the publishInterval of the subscription of the old session which must be recreated.
      * @throws OPCUAException of type {@link CommunicationException} if the subscription could not be recreated due to
      *                        communication difficulty, and of type {@link ConfigurationException} if the subscription
      *                        can not be mapped to current DataTags, and therefore cannot be recreated.
      */
-    void recreateSubscription(UaSubscription subscription) throws OPCUAException;
+    void recreateSubscription(Endpoint endpoint, int publishInterval) throws OPCUAException;
 
     boolean subscribeToGroup(SubscriptionGroup group, Collection<ItemDefinition> definitions);
 }

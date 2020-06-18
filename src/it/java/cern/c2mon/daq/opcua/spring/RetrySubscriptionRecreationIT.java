@@ -25,7 +25,9 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static cern.c2mon.daq.opcua.testutils.ServerTagFactory.AlternatingBoolean;
@@ -46,62 +48,42 @@ public class RetrySubscriptionRecreationIT {
     TagSubscriptionMapper mapper;
     @Autowired
     EndpointSubscriptionListener listener;
-    @Autowired
-    Endpoint endpoint;
     @Value("${app.retryDelay}")
     int delay;
 
     @BeforeEach
-    public void setUp() throws OPCUAException, InterruptedException {
-        endpointMock.initialize(anyString(), anyObject());
-        EasyMock.expectLastCall().anyTimes();
-        EasyMock.replay(endpointMock);
-        ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(endpointMock));
+    public void setUp() {
         ReflectionTestUtils.setField(controller, "stopped", new AtomicBoolean(false));
-        EasyMock.reset(endpointMock);
+        listener.initialize(endpointMock);
+        mapper.clear();
+        EasyMock.reset(endpointMock, subscriptionMock);
 
     }
 
     @AfterEach
     public void tearDown() {
         ReflectionTestUtils.setField(controller, "stopped", new AtomicBoolean(true));
-        ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(endpoint));
     }
 
-
     @Test
-    public void callOnceEveryDelayOnCommunicationException() throws OPCUAException {
-        expect(endpointMock.createSubscription(anyInt()))
-                .andThrow(new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION))
-                .times(numAttempts);
-        replay(endpointMock);
-        setUpMapper();
-        try {
-            listener.onSubscriptionTransferFailed(subscriptionMock, StatusCode.GOOD);
-        } catch (Exception e) {
-            //expected
-        }
-
+    public void callOnceEveryDelayOnCommunicationException() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+        mockNAttempts(numAttempts);
+        CompletableFuture.runAsync(() -> listener.onSubscriptionTransferFailed(subscriptionMock, StatusCode.GOOD));
         //add a buffer to make sure that the nth execution finishes
         CompletableFuture.runAsync(() -> verify(endpointMock),
-                CompletableFuture.delayedExecutor(Math.round(delay * numAttempts), TimeUnit.MILLISECONDS))
-                .join();
+                CompletableFuture.delayedExecutor(Math.round(delay * numAttempts), TimeUnit.MILLISECONDS)).join();
 
     }
 
     @Test
-    public void stopCallingOnInterruptedThread() throws OPCUAException {
-        expect(endpointMock.createSubscription(anyInt()))
-                .andThrow(new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION))
-                .times(numAttempts);
-        replay(endpointMock);
-        setUpMapper();
+    public void stopCallingOnInterruptedThread() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+        mockNAttempts(numAttempts);
         final Thread thread = new Thread(() -> listener.onSubscriptionTransferFailed(subscriptionMock, StatusCode.GOOD));
         thread.start();
         CompletableFuture.runAsync(thread::interrupt, CompletableFuture.delayedExecutor(Math.round(delay * numAttempts), TimeUnit.MILLISECONDS))
-                .thenRun(() -> verify(endpointMock)).join();
+                .thenRun(() -> verify(endpointMock))
+                .get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
     }
-
 
     @Test
     public void callOnceOnConfigurationException() {
@@ -110,7 +92,6 @@ public class RetrySubscriptionRecreationIT {
         listener.onSubscriptionTransferFailed(subscriptionMock, StatusCode.GOOD);
         verify(endpointMock);
     }
-
 
     @Test
     public void statusChangedShouldNotRetryIfStatusCodeIsBadButNotTimeout() {
@@ -121,13 +102,23 @@ public class RetrySubscriptionRecreationIT {
         verify(endpointMock);
     }
 
+    private void mockNAttempts(int numAttempts) throws OPCUAException {
+        endpointMock.deleteSubscription(anyInt());
+        EasyMock.expectLastCall()
+                .andThrow(new CommunicationException(ExceptionContext.DELETE_SUBSCRIPTION))
+                .times(numAttempts);
+        EasyMock.expect(endpointMock.subscribeWithValueUpdateCallback(anyInt(), anyObject(), anyObject()))
+                .andThrow(new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION))
+                .anyTimes();
+        replay(endpointMock);
+        setUpMapper();
+    }
 
     private void setUpMapper() {
         for (ServerTagFactory tagConfig : new ServerTagFactory[]{AlternatingBoolean, RandomUnsignedInt32}) {
             final ISourceDataTag tag = tagConfig.createDataTag();
             mapper.getOrCreateDefinition(tag);
             mapper.addTagToGroup(tag.getId());
-            mapper.getGroup(tag).setSubscription(subscriptionMock);
         }
     }
 }

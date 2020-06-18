@@ -18,8 +18,6 @@ package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.Getter;
-import lombok.Setter;
-import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,9 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SubscriptionGroup{
 
     private final Map<Long, ItemDefinition> tagIds = new ConcurrentHashMap<>();
-
-    @Setter
-    private UaSubscription subscription;
 
     private final int publishInterval;
 
@@ -42,17 +37,12 @@ public class SubscriptionGroup{
         return this.tagIds.size();
     }
 
-    public boolean isSubscribed() {
-        return this.subscription != null;
-    }
-
     public void add(final long tagId, final ItemDefinition itemDefinition) {
-        this.tagIds.put(tagId, itemDefinition);
+        this.tagIds.putIfAbsent(tagId, itemDefinition);
     }
 
     public void reset() {
         tagIds.clear();
-        subscription = null;
     }
 
     public boolean remove(final ISourceDataTag tag) {

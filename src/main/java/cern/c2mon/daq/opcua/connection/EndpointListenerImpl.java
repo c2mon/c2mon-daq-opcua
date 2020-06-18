@@ -1,13 +1,15 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -18,11 +20,12 @@ import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.OK
  * A listener responsible to relay information regarding events on the DAQ to the IEquipmentMessageSender.
  */
 @Component(value = "endpointListener")
-@NoArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 @Primary
 public class EndpointListenerImpl implements EndpointListener, SessionActivityListener {
 
+    private final TagSubscriptionMapper mapper;
     private IEquipmentMessageSender sender;
 
     /**
@@ -34,22 +37,9 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
         this.sender = sender;
     }
 
-    /**
-     * Called a subscription delivers a new value for a node corresponding to a given tagId
-     * @param tagId the tagId for which a new value has arrived
-     * @param valueUpdate the new value wrapped in a valueUpdate
-     * @param quality the data quality of the new value
-     */
     @Override
-    public void onNewTagValue(final Long tagId, final ValueUpdate valueUpdate, final SourceDataTagQuality quality) {
-        this.sender.update(tagId, valueUpdate, quality);
-        if (log.isDebugEnabled()) {
-            log.debug("onNewTagValue - Tag value " + valueUpdate + " sent for Tag #" + tagId);
-        }
-    }
-
-    @Override
-    public void onTagInvalid (Long tagId, final SourceDataTagQuality quality) {
+    public void onTagInvalid(UInteger clientHandle, final SourceDataTagQuality quality) {
+        final Long tagId = mapper.getTagId(clientHandle);
         this.sender.update(tagId, quality);
         if (log.isDebugEnabled()) {
             log.debug("onTagInvalid - sent for Tag #" + tagId);
@@ -58,13 +48,21 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
     }
 
     @Override
-    public void onAlive(StatusCode statusCode) {
-        if (statusCode.isGood()) {
-            sender.sendSupervisionAlive();
+    public void onValueUpdate(UInteger clientHandle, SourceDataTagQualityCode quality, ValueUpdate valueUpdate) {
+        if (!quality.equals(SourceDataTagQualityCode.OK)) {
+            onTagInvalid(clientHandle, new SourceDataTagQuality(quality));
+        } else {
+            final Long tagId = mapper.getTagId(clientHandle);
+            this.sender.update(tagId, valueUpdate, new SourceDataTagQuality(quality));
+            if (log.isDebugEnabled()) {
+                log.debug("onNewTagValue - Tag value " + valueUpdate + " sent for Tag #" + tagId);
+            }
         }
-        if (log.isDebugEnabled()) {
-            log.debug("IsAlive returned status code {}", statusCode);
-        }
+    }
+
+    @Override
+    public void onAlive() {
+        sender.sendSupervisionAlive();
     }
 
     @Override

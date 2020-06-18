@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -45,10 +44,9 @@ public class SecurityIT {
     AppConfig config;
 
     @Autowired
-    @Qualifier("failoverProxy")
     FailoverProxy failoverProxy;
 
-    private final TestListeners.TestListener listener = new TestListeners.TestListener();
+    @Autowired TestListeners.TestListener testListener;
 
     @BeforeAll
     public static void startServers() {
@@ -63,9 +61,9 @@ public class SecurityIT {
 
     @BeforeEach
     public void setUp() {
-        ReflectionTestUtils.setField(controller, "endpointListener", listener);
-        ReflectionTestUtils.setField(failoverProxy, "endpointListener", listener);
-        listener.reset();
+        ReflectionTestUtils.setField(controller, "endpointListener", testListener);
+        ReflectionTestUtils.setField(failoverProxy, "endpointListener", testListener);
+        testListener.reset();
     }
 
     @AfterEach
@@ -76,7 +74,7 @@ public class SecurityIT {
         config.getCertificationPriority().put("load", 3);
         resolver.cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
-        final var f = listener.listen();
+        final var f = testListener.listen();
         controller.stop();
         try {
             f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
@@ -88,7 +86,7 @@ public class SecurityIT {
 
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
-        final var f = listener.getStateUpdate();
+        final var f = testListener.getStateUpdate();
         controller.connect(resolver.getUri());
         controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
@@ -132,7 +130,7 @@ public class SecurityIT {
 
         trustCertificatesOnClient();
 
-        final var state = listener.listen();
+        final var state = testListener.listen();
         controller.connect(resolver.getUri());
         assertEquals(EndpointListener.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
@@ -156,7 +154,7 @@ public class SecurityIT {
 
         log.info("Trust certificates server-side and reconnect...");
         resolver.trustCertificates();
-        final var state = listener.listen();
+        final var state = testListener.listen();
 
         controller.connect(resolver.getUri());
         controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));

@@ -17,7 +17,6 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
@@ -35,9 +34,7 @@ public interface TagSubscriptionMapper {
 
     SubscriptionGroup getGroup (ISourceDataTag dataTag);
 
-    SubscriptionGroup getGroup (UaSubscription subscription);
-
-    SubscriptionGroup getOrCreateGroup(int timeDeadband);
+    SubscriptionGroup getGroup (int timeDeadband);
 
     ItemDefinition getDefinition(Long tagId);
 
@@ -53,6 +50,6 @@ public interface TagSubscriptionMapper {
 
     void clear();
 
-    boolean isSubscribed(ISourceDataTag tag);
+    boolean wasSubscribed(ISourceDataTag dataTag);
 }
 

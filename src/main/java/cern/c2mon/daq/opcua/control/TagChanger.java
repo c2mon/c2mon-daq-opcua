@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
+import cern.c2mon.daq.opcua.TriConsumer;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.RequiredArgsConstructor;
@@ -69,10 +70,5 @@ public class TagChanger implements IDataTagChanger {
         String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId()
                 + (controller.removeTag(sourceDataTag) ? " was unsubscribed." : " was not previously configured. No change required. ");
         r.apply(true, msg, changeReport);
-    }
-
-    @FunctionalInterface
-    private interface TriConsumer<A, B, C> {
-        void apply(A a, B b, C c);
     }
 }

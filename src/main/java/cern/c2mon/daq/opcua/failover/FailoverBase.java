@@ -9,6 +9,7 @@ import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,21 +58,25 @@ public abstract class FailoverBase implements FailoverMode {
     protected void monitoringCallback(UaMonitoredItem item, Integer integer) {
         final var nodeId = item.getReadValueId().getNodeId();
         if (nodeId.equals(Identifiers.Server_ServiceLevel)) {
-            item.setValueConsumer(value -> {
-                final var serviceLevel = (UByte) value.getValue().getValue();
-                if (serviceLevel.compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
-                    log.info("Service level is outside of the healthy range. Switching server...");
-                    triggerServerSwitch();
-                }
-            });
+            item.setValueConsumer(this::serviceLevelConsumer);
         } else if (nodeId.equals(Identifiers.ServerState)) {
-            item.setValueConsumer(value -> {
-                final var state = (ServerState) value.getValue().getValue();
-                if (!state.equals(ServerState.Running) && !state.equals(ServerState.Unknown)) {
-                    log.info("Server entered state {}. Switching server...", state);
-                    triggerServerSwitch();
-                }
-            });
+            item.setValueConsumer(this::serverStateConsumer);
+        }
+    }
+
+    protected void serviceLevelConsumer (DataValue value) {
+        final var serviceLevel = (UByte) value.getValue().getValue();
+        if (serviceLevel.compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
+            log.info("Service level is outside of the healthy range. Switching server...");
+            triggerServerSwitch();
+        }
+    }
+
+    protected void serverStateConsumer (DataValue value) {
+        final var state = (ServerState) value.getValue().getValue();
+        if (!state.equals(ServerState.Running) && !state.equals(ServerState.Unknown)) {
+            log.info("Server entered state {}. Switching server...", state);
+            triggerServerSwitch();
         }
     }
 

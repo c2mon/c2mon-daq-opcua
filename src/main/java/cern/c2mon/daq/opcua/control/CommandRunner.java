@@ -7,9 +7,10 @@ import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.type.TypeConverter;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
@@ -17,9 +18,7 @@ import com.google.common.base.Joiner;
 import lombok.AllArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Nullable;
@@ -93,7 +92,7 @@ public class CommandRunner {
     private Object[] executeMethod(ISourceCommandTag tag, Object arg) throws OPCUAException, InterruptedException {
         log.info("executeMethod of tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
         final ItemDefinition def = ItemDefinition.of(tag);
-        final Map.Entry<StatusCode, Object[]> result;
+        final Map.Entry<Boolean, Object[]> result;
         if (def.getMethodNodeId() == null) {
             final NodeId parent = failover.getEndpoint().getParentObjectNodeId(def.getNodeId());
             result = failover.getEndpoint().callMethod(parent, def.getMethodNodeId(), arg);
@@ -101,7 +100,9 @@ public class CommandRunner {
             result = failover.getEndpoint().callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
         }
         log.info("executeMethod returned {}.", result.getValue());
-        handleCommandResponseStatusCode(result.getKey(), ExceptionContext.METHOD_CODE);
+        if (!result.getKey()) {
+            throw new CommunicationException(ExceptionContext.METHOD_CODE);
+        }
         return result.getValue();
     }
 
@@ -110,9 +111,9 @@ public class CommandRunner {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
             executeWriteCommand(tag, arg);
         } else {
-            final DataValue value = failover.getEndpoint().read(ItemDefinition.toNodeId(tag));
-            handleCommandResponseStatusCode(value.getStatusCode(), ExceptionContext.READ);
-            final Object original = MiloMapper.toObject(value.getValue());
+            final Map.Entry<ValueUpdate, SourceDataTagQualityCode> read = failover.getEndpoint().read(ItemDefinition.toNodeId(tag));
+            handleCommandResponseStatusCode(read.getValue(), ExceptionContext.READ);
+            final Object original = read.getKey().getValue();
             if (original != null && original.equals(arg)) {
                 log.info("Tag with ID {} is already set to {}. Skipping command with pulse.", tag.getId(), arg);
             } else {
@@ -142,8 +143,9 @@ public class CommandRunner {
     }
 
     private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException {
-        final StatusCode statusCode = failover.getEndpoint().write(ItemDefinition.toNodeId(tag), arg);
-        handleCommandResponseStatusCode(statusCode, ExceptionContext.COMMAND_CLASSIC);
+        if (!failover.getEndpoint().write(ItemDefinition.toNodeId(tag), arg)) {
+            throw new CommunicationException(ExceptionContext.COMMAND_CLASSIC);
+        }
     }
 
     /**
@@ -151,14 +153,14 @@ public class CommandRunner {
      * an error to be successful. To ensure a reliable result, repeat the execution by throwing an error upon status
      * codes that are not "good".
      *
-     * @param statusCode the status code returned by upon the taken action
+     * @param quality the quality returned by upon the taken action
      * @param context    The context of the action taken which resulted in the action code
      * @throws CompletionException a wrapper for a CommunicationException, since this method is only called from within
      *                             CompletableFutures and will be handled on join.
      */
-    private void handleCommandResponseStatusCode(@Nullable StatusCode statusCode, ExceptionContext context) throws CommunicationException {
-        log.info("Action completed with Status Code: {}", statusCode);
-        if (statusCode == null || !statusCode.isGood()) {
+    private void handleCommandResponseStatusCode(@Nullable SourceDataTagQualityCode quality, ExceptionContext context) throws CommunicationException {
+        log.info("Action completed with Status Code: {}", quality);
+        if (quality != SourceDataTagQualityCode.OK) {
             throw new CommunicationException(context);
         }
     }

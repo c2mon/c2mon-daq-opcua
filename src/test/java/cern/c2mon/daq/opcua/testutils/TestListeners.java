@@ -2,7 +2,9 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,7 +13,8 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
@@ -47,9 +50,9 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onNewTagValue (Long dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
-            super.onNewTagValue(dataTag, valueUpdate, quality);
-            if (dataTag.equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
+        public void onValueUpdate(UInteger clientHandle, SourceDataTagQualityCode quality, ValueUpdate valueUpdate) {
+            super.onValueUpdate(clientHandle, quality, valueUpdate);
+            if (mapper.getTagId(clientHandle).equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
                 if (tagValUpdate.isDone()) {
                     if (debugEnabled) {
                         log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
@@ -67,13 +70,17 @@ public abstract class TestListeners {
 
     @Getter
     @NoArgsConstructor
+    @Component(value = "testListener")
     public static class TestListener implements EndpointListener, SessionActivityListener {
         @Setter
         boolean debugEnabled = true;
         CompletableFuture<Long> tagUpdate = new CompletableFuture<>();
         CompletableFuture<Long> tagInvalid = new CompletableFuture<>();
         CompletableFuture<EquipmentState> stateUpdate = new CompletableFuture<>();
-        CompletableFuture<StatusCode> alive = new CompletableFuture<>();
+        CompletableFuture<Void> alive = new CompletableFuture<>();
+
+        @Autowired
+        TagSubscriptionMapper mapper;
 
         public void reset() {
             tagUpdate = new CompletableFuture<>();
@@ -83,29 +90,21 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onNewTagValue (Long dataTag, ValueUpdate valueUpdate, SourceDataTagQuality quality) {
-            if (debugEnabled) {
-                log.info("received data tag {}, value update {}, quality {}", dataTag, valueUpdate, quality);
-            }
-            tagUpdate.complete(dataTag);
-        }
-
-        @Override
-        public void onTagInvalid (Long dataTag, SourceDataTagQuality quality) {
-            if (debugEnabled) {
-                log.info("data tag {} invalid with quality {}", dataTag, quality);
-            }
-            tagInvalid.complete(dataTag);
-        }
-
-        @Override
-        public void onAlive(StatusCode statusCode) {
-            alive.complete(statusCode);
+        public void onAlive() {
+            alive.complete(null);
         }
 
 
         @Override
         public void initialize (IEquipmentMessageSender sender) {
+        }
+
+        @Override
+        public void onTagInvalid(UInteger clientHandle, SourceDataTagQuality quality) {
+            if (debugEnabled) {
+                log.info("data tag {} invalid with quality {}", mapper.getTagId(clientHandle), quality);
+            }
+            tagInvalid.complete(mapper.getTagId(clientHandle));
         }
 
         @Override
@@ -121,6 +120,19 @@ public abstract class TestListeners {
         @Override
         public void onEquipmentStateUpdate(EquipmentState state) {
             stateUpdate.complete(state);
+        }
+
+        @Override
+        public void onValueUpdate(UInteger clientHandle, SourceDataTagQualityCode quality, ValueUpdate valueUpdate) {
+            if (!quality.equals(SourceDataTagQualityCode.OK)) {
+                onTagInvalid(clientHandle, new SourceDataTagQuality(quality));
+            } else {
+                final Long tagId = mapper.getTagId(clientHandle);
+                if (debugEnabled) {
+                    log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
+                }
+                tagUpdate.complete(tagId);
+            }
         }
 
         public CompletableFuture<EquipmentState> listen() {

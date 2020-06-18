@@ -74,7 +74,7 @@ public class AliveWriter {
     /**
      * The address to write to, represents the AliveTag.
      */
-    private OPCHardwareAddress address;
+    private NodeId address;
     /**
      * Flag indicating whether the aliveWriter is enabled.
      */
@@ -92,7 +92,7 @@ public class AliveWriter {
             if (aliveTag != null) {
                 this.enabled = true;
                 this.writeTime = config.getAliveTagInterval() / 2;
-                this.address = (OPCHardwareAddress) aliveTag.getHardwareAddress();
+                this.address = ItemDefinition.toNodeId((OPCHardwareAddress) aliveTag.getHardwareAddress());
                 startWriter();
             } else {
                 log.error("The target tag is not defined, cannot start the Alive Writer.");
@@ -137,8 +137,9 @@ public class AliveWriter {
             log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
         }
         try {
-            NodeId nodeId = ItemDefinition.toNodeId(address);
-            listener.onAlive(failover.getEndpoint().write(nodeId, castedValue));
+            if (failover.getEndpoint().write(address, castedValue)) {
+                listener.onAlive();
+            }
             writeCounter.incrementAndGet();
             writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
         } catch (OPCUAException e) {

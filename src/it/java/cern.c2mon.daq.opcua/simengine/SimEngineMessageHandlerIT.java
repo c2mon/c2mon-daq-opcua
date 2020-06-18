@@ -44,31 +44,25 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestPropertySource(locations = "classpath:opcua.properties")
 public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
-    private static ConnectionResolver.Venus resolver;
-    private OPCUAMessageHandler handler;
-    private SourceCommandTagValue value;
-    private final TestListeners.Pulse listener = new TestListeners.Pulse();
-
-    @Autowired
-    Controller controller;
-
-    @Autowired
-    CommandRunner commandRunner;
-
-    @Autowired
-    TagChanger tagChanger;
-
-    @Autowired
-    AliveWriter aliveWriter;
-
-    @Autowired
-    FailoverProxy failoverProxy;
-
     private static final long DATAID_VMON = 1L;
     private static final long DATAID_PW = 2L;
     private static final long CMDID_PW = 10L;
     private static final long CMDID_V0SET = 20L;
-
+    private static ConnectionResolver.Venus resolver;
+    @Autowired
+    TestListeners.Pulse listener;
+    @Autowired
+    Controller controller;
+    @Autowired
+    CommandRunner commandRunner;
+    @Autowired
+    TagChanger tagChanger;
+    @Autowired
+    AliveWriter aliveWriter;
+    @Autowired
+    FailoverProxy failoverProxy;
+    private OPCUAMessageHandler handler;
+    private SourceCommandTagValue value;
 
     @BeforeClass
     public static void startServer() {
@@ -83,7 +77,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
 
     @Override
-    protected void beforeTest () throws Exception {
+    protected void beforeTest() throws Exception {
         log.info("############### SET UP ##############");
         handler = (OPCUAMessageHandler) msgHandler;
         value = new SourceCommandTagValue();
@@ -99,6 +93,23 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         log.info("############### TEST ##############");
     }
 
+    @Override
+    protected void afterTest() throws Exception {
+    }
+
+    @After
+    public void cleanUp() throws Exception {
+        log.info("############### CLEAN UP ##############");
+        // must be called before the handler disconnect in GenericMessageHandlerTest's afterTest method
+        log.info("Cleaning up... ");
+        value.setValue(0);
+        for (long id : handler.getEquipmentConfiguration().getSourceCommandTags().keySet()) {
+            value.setId(id);
+            handler.runCommand(value);
+        }
+        super.cleanUp();
+    }
+
     // Work-around for non-fixed ports in testcontainers, since GenericMessageHandlerTest required ports to be included in the configuration
     private void mapEquipmentAddress() {
         final String hostRegex = ":(.[^/][^;]*)";
@@ -112,26 +123,9 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         }
     }
 
-    @After
-    public void cleanUp() throws Exception {
-        log.info("############### CLEAN UP ##############");
-        // must be called before the handler disconnect in GenericMessageHandlerTest's afterTest method
-        log.info("Cleaning up... ");
-        value.setValue(0);
-        for(long id : handler.getEquipmentConfiguration().getSourceCommandTags().keySet()) {
-            value.setId(id);
-            handler.runCommand(value);
-        }
-        super.cleanUp();
-    }
-
-    @Override
-    protected void afterTest () throws Exception {
-    }
-
     @Test
     @UseConf("empty_datatags.xml")
-    public void emptyDatatagsShouldThrowError () {
+    public void emptyDatatagsShouldThrowError() {
         assertThrows(ConfigurationException.class, handler::connectToDataSource);
     }
 

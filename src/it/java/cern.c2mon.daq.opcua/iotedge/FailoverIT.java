@@ -31,9 +31,9 @@ public class FailoverIT {
     private static ConnectionResolver.Edge fallback;
 
     private final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
-    private final TestListeners.Pulse pulseListener = new TestListeners.Pulse();
     final NonTransparentRedundancyTypeNode redundancyMock = mock(NonTransparentRedundancyTypeNode.class);
 
+    @Autowired TestListeners.Pulse pulseListener;
     @Autowired Controller controller;
     @Autowired FailoverProxy failoverProxy;
     @Autowired FailoverTestEndpoint testEndpoint;

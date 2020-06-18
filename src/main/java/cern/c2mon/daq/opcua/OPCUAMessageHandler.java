@@ -29,6 +29,7 @@ import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.TagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -88,7 +89,12 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         if (!address.supportsProtocol(uaTcpType)) {
             throw new ConfigurationException(ExceptionContext.ENDPOINT_TYPES_UNKNOWN);
         }
-        controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
+        try {
+            controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
+        } catch (OPCUAException e) {
+            listener.onEquipmentStateUpdate(EndpointListener.EquipmentState.CONNECTION_FAILED);
+            throw e;
+        }
         aliveWriter.initialize(config, address.isAliveWriterEnabled());
         controller.subscribeTags(config.getSourceDataTags().values());
         log.debug("connected");

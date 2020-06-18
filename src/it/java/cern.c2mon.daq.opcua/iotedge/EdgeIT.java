@@ -35,7 +35,9 @@ public class EdgeIT {
     private static ConnectionResolver.Edge resolver;
     private final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
     private final ISourceDataTag alreadySubscribedTag = ServerTagFactory.DipData.createDataTag();
-    private final TestListeners.Pulse pulseListener = new TestListeners.Pulse();
+
+    @Autowired
+    TestListeners.Pulse pulseListener;
 
     @Autowired
     Controller controller;
@@ -166,7 +168,7 @@ public class EdgeIT {
     }
 
     @Test
-    public void subscribingImproperDataTagShouldReturnOnTagInvalid () throws ConfigurationException {
+    public void subscribingImproperDataTagShouldReturnOnTagInvalid() throws ConfigurationException {
         final ISourceDataTag tag = ServerTagFactory.Invalid.createDataTag();
         pulseListener.setSourceID(tag.getId());
         pulseListener.setThreshold(0);
@@ -183,7 +185,7 @@ public class EdgeIT {
     }
 
     @Test
-    public void refreshProperTag () throws InterruptedException {
+    public void refreshProperTag() throws InterruptedException {
         pulseListener.setSourceID(tag.getId());
         controller.refreshDataTag(tag);
         Thread.sleep(2000);

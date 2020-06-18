@@ -1,21 +1,21 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.TriConsumer;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
-import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
@@ -28,7 +28,8 @@ public interface Endpoint {
     /**
      * Connects to a server through OPC UA.
      * @param uri the server address to connect to.
-     * @throws OPCUAException       of type {@link CommunicationException} or {@link ConfigurationException}.
+     * @param listeners the SessionActivityListeners to subscribe to the client before connection
+     * @throws OPCUAException of type {@link CommunicationException} or {@link ConfigurationException}.
      */
     void initialize(String uri, Collection<SessionActivityListener> listeners) throws OPCUAException;
 
@@ -39,67 +40,65 @@ public interface Endpoint {
     void disconnect() throws OPCUAException;
 
     /**
-     * Create and return a new subscription.
-     * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest
-     *                     supported interval.
-     * @return the newly created subscription.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     */
-    UaSubscription createSubscription(int timeDeadband) throws OPCUAException;
-
-    /**
      * Delete an existing subscription.
-     * @param subscription The subscription to delete along with all contained MonitoredItems.
+     * @param publishInterval The publishInterval of the subscription to delete along with all contained
+     *                        MonitoredItems.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    void deleteSubscription(UaSubscription subscription) throws OPCUAException;
+    void deleteSubscription(int publishInterval) throws OPCUAException;
 
     /**
      * Add a list of item definitions as monitored items to a subscription.
-     * @param subscription         The subscription to add the monitored items to
-     * @param definitions          the {@link cern.c2mon.daq.opcua.mapping.ItemDefinition}s for which to create
-     *                             monitored items
-     * @param itemCreationCallback the callback function to execute when each item has been created successfully
-     * @return a list of monitored items corresponding to the item definitions
+     * @param publishingInterval The publishing interval to request for the item definitions
+     * @param definitions        the {@link cern.c2mon.daq.opcua.mapping.ItemDefinition}s for which to create monitored
+     *                           items
+     * @param onValueUpdate      the callback function to execute when new value updates are received
+     * @return a map of the client handles corresponding to the item definitions along with the associated quality codes
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    List<UaMonitoredItem> subscribeItem(UaSubscription subscription, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
+    Map<UInteger, SourceDataTagQualityCode> subscribeWithValueUpdateCallback(int publishingInterval,
+                                                                             Collection<ItemDefinition> definitions,
+                                                                             TriConsumer<UInteger, SourceDataTagQualityCode, ValueUpdate> onValueUpdate) throws OPCUAException;
+
+    Map<UInteger, SourceDataTagQualityCode> subscribeWithCreationCallback(int publishingInterval,
+                                                                          Collection<ItemDefinition> definitions,
+                                                                          BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
 
     /**
      * Delete a monitored item from an OPC UA subscription.
-     * @param clientHandle the identifier of the monitored item to remove.
-     * @param subscription the subscription to remove the monitored item from.
+     * @param clientHandle    the identifier of the monitored item to remove.
+     * @param publishInterval the publishInterval of the subscription to remove the monitored item from.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws OPCUAException;
+    void deleteItemFromSubscription(UInteger clientHandle, int publishInterval) throws OPCUAException;
 
     /**
      * Read the current value from a node on the currently connected OPC UA server
      * @param nodeId the nodeId of the node whose value to read.
-     * @return the {@link DataValue} containing the value read from the node.
+     * @return the {@link ValueUpdate} and associated {@link SourceDataTagQualityCode} of the reading
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    DataValue read(NodeId nodeId) throws OPCUAException;
+    Map.Entry<ValueUpdate, SourceDataTagQualityCode> read(NodeId nodeId) throws OPCUAException;
 
     /**
      * Write a value to a node on the currently connected OPC UA server.
      * @param nodeId the nodeId of the node to write a value to.
      * @param value  the value to write to the node.
-     * @return a completable future  the {@link StatusCode} of the response to the write action
+     * @return whether the write command finished successfully
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    StatusCode write(NodeId nodeId, Object value) throws OPCUAException;
+    boolean write(NodeId nodeId, Object value) throws OPCUAException;
 
     /**
      * Call the method node with ID methodId contained in the object with ID objectId.
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
      * @param args     the input arguments to pass to the methodId call.
-     * @return the StatusCode of the methodId response as key and the output arguments of the called method (if
+     * @return whether the methodId was successful, and the output arguments of the called method (if
      * applicable, else null) in a Map Entry.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    Map.Entry<StatusCode, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException;
+    Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException;
 
     /**
      * Fetches the node's first parent object node, if such a node exists.

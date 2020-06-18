@@ -57,7 +57,7 @@ public class DataTagChangerTest extends ControllerTestBase {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tag);
         mocker.replay();
         tagChanger.onAddDataTag(tag, changeReport);
-        Assertions.assertTrue(mapper.isSubscribed(tag));
+        Assertions.assertTrue(mapper.getGroup(tag.getTimeDeadband()).contains(tag));
     }
 
     @Test
@@ -75,7 +75,7 @@ public class DataTagChangerTest extends ControllerTestBase {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagToRemove);
         mocker.replay();
         tagChanger.onRemoveDataTag(tagToRemove,changeReport);
-        Assertions.assertFalse(mapper.isSubscribed(tagToRemove));
+        Assertions.assertFalse(mapper.getGroup(tagToRemove.getTimeDeadband()).contains(tagToRemove));
     }
 
     @Test
@@ -136,13 +136,13 @@ public class DataTagChangerTest extends ControllerTestBase {
     public void removeDataTagShouldUnsubscribeDataTag() {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD,tag1);
         tagChanger.onRemoveDataTag(tag1, changeReport);
-        assertFalse(mapper.isSubscribed(tag1));
+        assertFalse(mapper.getGroup(tag1.getTimeDeadband()).contains(tag1));
     }
 
     @Test
     public void removeOneOfTwoTagsShouldUnsubscribeDataTag() {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tag2);
         tagChanger.onRemoveDataTag(tag1, changeReport);
-        assertTrue(!mapper.isSubscribed(tag1) && mapper.isSubscribed(tag2));
+        assertTrue(!mapper.getGroup(tag1.getTimeDeadband()).contains(tag1) && mapper.getGroup(tag2.getTimeDeadband()).contains(tag2));
     }
 }

@@ -1,19 +1,20 @@
 package cern.c2mon.daq.opcua.testutils;
 
+import cern.c2mon.daq.opcua.TriConsumer;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
-import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.function.BiConsumer;
+import java.util.Map;
 
 import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
 import static org.easymock.EasyMock.createMock;
@@ -30,32 +31,27 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     }
 
     @Override
-    public UaSubscription createSubscription (int timeDeadband) throws CommunicationException {
-        throw new CommunicationException(CREATE_SUBSCRIPTION);
-    }
-
-    @Override
-    public void deleteSubscription (UaSubscription subscription) throws CommunicationException {
+    public void deleteSubscription(int publishInterval) throws OPCUAException {
         throw new CommunicationException(DELETE_SUBSCRIPTION);
     }
 
     @Override
-    public List<UaMonitoredItem> subscribeItem(UaSubscription subscription, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws CommunicationException {
+    public Map<UInteger, SourceDataTagQualityCode> subscribeWithValueUpdateCallback(int publishingInterval, Collection<ItemDefinition> definitions, TriConsumer<UInteger, SourceDataTagQualityCode, ValueUpdate> onValueUpdate) throws CommunicationException {
         throw new CommunicationException(CREATE_MONITORED_ITEM);
     }
 
     @Override
-    public DataValue read (NodeId nodeId) throws CommunicationException {
+    public Map.Entry<ValueUpdate, SourceDataTagQualityCode> read(NodeId nodeId) throws CommunicationException {
         throw new CommunicationException(READ);
     }
 
     @Override
-    public StatusCode write (NodeId nodeId, Object value) throws CommunicationException {
+    public boolean write(NodeId nodeId, Object value) throws CommunicationException {
         throw new CommunicationException(WRITE);
     }
 
-
-    public void deleteItemFromSubscription(UInteger clientHandle, UaSubscription subscription) throws CommunicationException {
+    @Override
+    public void deleteItemFromSubscription(UInteger clientHandle, int publishInterval) throws CommunicationException {
         throw new CommunicationException(DELETE_MONITORED_ITEM);
     }
 }

@@ -28,10 +28,10 @@ public class RetryEndpointActionIT {
     @Autowired
     Endpoint endpoint;
 
-    OpcUaClient client = createMock(OpcUaClient.class);
-
     @Value("${app.maxRetryAttempts}")
     int maxRetryAttempts;
+
+    OpcUaClient client = createMock(OpcUaClient.class);
 
     @BeforeEach
     public void setUp() {
