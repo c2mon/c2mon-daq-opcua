@@ -8,7 +8,6 @@ import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,16 +24,11 @@ public class DataTagChangerTest extends ControllerTestBase {
     ISourceDataTag tag;
 
     @BeforeEach
-    public void castToDataTagChanger() throws OPCUAException, InterruptedException {
+    public void castToDataTagChanger() throws OPCUAException {
         tag = ServerTagFactory.DipData.createDataTag();
         controller.connect(uri);
         tagChanger = new TagChanger(controller);
         changeReport = new ChangeReport();
-    }
-
-    @AfterEach
-    public void cleanUp() {
-        ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(endpoint));
     }
 
     @Test
@@ -50,6 +44,7 @@ public class DataTagChangerTest extends ControllerTestBase {
         ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
         tagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
+        ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(endpoint));
     }
 
     @Test
@@ -57,7 +52,7 @@ public class DataTagChangerTest extends ControllerTestBase {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tag);
         mocker.replay();
         tagChanger.onAddDataTag(tag, changeReport);
-        Assertions.assertTrue(mapper.getGroup(tag.getTimeDeadband()).contains(tag));
+        Assertions.assertTrue(isSubscribed(tag));
     }
 
     @Test
@@ -75,7 +70,7 @@ public class DataTagChangerTest extends ControllerTestBase {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagToRemove);
         mocker.replay();
         tagChanger.onRemoveDataTag(tagToRemove,changeReport);
-        Assertions.assertFalse(mapper.getGroup(tagToRemove.getTimeDeadband()).contains(tagToRemove));
+        Assertions.assertFalse(isSubscribed(tagToRemove));
     }
 
     @Test
@@ -136,13 +131,13 @@ public class DataTagChangerTest extends ControllerTestBase {
     public void removeDataTagShouldUnsubscribeDataTag() {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD,tag1);
         tagChanger.onRemoveDataTag(tag1, changeReport);
-        assertFalse(mapper.getGroup(tag1.getTimeDeadband()).contains(tag1));
+        assertFalse(isSubscribed(tag1));
     }
 
     @Test
     public void removeOneOfTwoTagsShouldUnsubscribeDataTag() {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tag2);
         tagChanger.onRemoveDataTag(tag1, changeReport);
-        assertTrue(!mapper.getGroup(tag1.getTimeDeadband()).contains(tag1) && mapper.getGroup(tag2.getTimeDeadband()).contains(tag2));
+        assertTrue(!isSubscribed(tag1) && isSubscribed(tag2));
     }
 }

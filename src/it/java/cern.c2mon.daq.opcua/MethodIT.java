@@ -41,7 +41,7 @@ public class MethodIT {
         ReflectionTestUtils.setField(delegate, "timeout", 3000);
         ReflectionTestUtils.setField(delegate, "retryDelay", 1000);
         final MiloEndpoint wrapper = new MiloEndpoint(p, new EndpointSubscriptionListener(), delegate);
-        FailoverProxy failover = new FailoverProxyImpl(new TestListeners.TestListener(), new NoFailover(), new NoFailover(), wrapper);
+        FailoverProxy failover = new FailoverProxyImpl(new TestListeners.TestListener(null), new NoFailover(), new NoFailover(), wrapper);
         failover.initialize("opc.tcp://milo.digitalpetri.com:62541/milo");
         runner = new CommandRunner(failover);
     }

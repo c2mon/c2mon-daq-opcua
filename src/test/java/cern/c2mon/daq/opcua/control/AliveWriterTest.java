@@ -1,43 +1,48 @@
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AliveWriterTest {
-    TestListeners.TestListener listener = new TestListeners.TestListener();
+    TestListeners.TestListener listener = new TestListeners.TestListener(null);
     AliveWriter aliveWriter = new AliveWriter(TestUtils.getFailoverProxy(new TestEndpoint()), listener);
 
     @BeforeEach
     public void setUp() {
-        aliveWriter.stopWriter();
         ReflectionTestUtils.setField(aliveWriter, "writeTime", 1L);
-        ReflectionTestUtils.setField(aliveWriter, "address", new OPCHardwareAddressImpl("Test"));
+        ReflectionTestUtils.setField(aliveWriter, "address", ItemDefinition.toNodeId(new OPCHardwareAddressImpl("Test")));
+    }
+
+    @AfterEach
+    public void tearDown() {
+        aliveWriter.stopWriter();
     }
 
     @Test
-    public void writeAliveShouldNotifyListenerWithGoodStatusCode() throws ExecutionException, InterruptedException, TimeoutException {
+    public void writeAliveShouldNotifyListenerWithGoodStatusCode() {
+        ReflectionTestUtils.setField(aliveWriter, "failover", TestUtils.getFailoverProxy(new TestEndpoint()));
         aliveWriter.startWriter();
-        Assertions.assertEquals(StatusCode.GOOD, listener.getAlive().get(3000, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> listener.getAlive().get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void exceptionInWriteAliveShouldNotNotifyListener() {
         ReflectionTestUtils.setField(aliveWriter, "failover", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
         aliveWriter.startWriter();
-        assertThrows(TimeoutException.class, () -> listener.getAlive().get(3000, TimeUnit.MILLISECONDS));
+        assertThrows(TimeoutException.class, () -> listener.getAlive().get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }
 }

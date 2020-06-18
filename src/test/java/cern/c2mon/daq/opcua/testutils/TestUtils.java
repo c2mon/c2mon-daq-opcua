@@ -21,10 +21,7 @@ public abstract class TestUtils {
 
     public static AppConfig createDefaultConfig() {
         final var certificationPriority = ImmutableMap.<String, Integer>builder()
-                .put("none", 3)
-                .put("generate", 2)
-                .put("load", 1)
-                .build();
+                .put("none", 3).put("generate", 2).put("load", 1).build();
         return AppConfig.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")

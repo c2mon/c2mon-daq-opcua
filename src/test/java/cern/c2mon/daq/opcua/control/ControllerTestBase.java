@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.testutils.*;
@@ -17,7 +17,6 @@ import java.util.Map;
 
 public abstract class ControllerTestBase {
     protected static String ADDRESS_PROTOCOL_TCP = "URI=opc.tcp://";
-    protected static String ADDRESS_PROTOCOL_INVALID = "URI=http://";
     protected static String ADDRESS_BASE = "test;serverRetryTimeout=123;serverTimeout=12;aliveWriter=";
 
     protected ISourceDataTag tag1 = ServerTagFactory.RandomUnsignedInt32.createDataTag();
@@ -48,7 +47,7 @@ public abstract class ControllerTestBase {
         uri = ADDRESS_PROTOCOL_TCP + ADDRESS_BASE + true;
         endpoint = new TestEndpoint();
         mapper = new TagSubscriptionMapperImpl();
-        listener = new TestListeners.TestListener();
+        listener = new TestListeners.TestListener(mapper);
         controller = new ControllerImpl(mapper, listener, TestUtils.getFailoverProxy(endpoint));
         mocker = new MiloMocker(endpoint, mapper);
     }
@@ -58,15 +57,15 @@ public abstract class ControllerTestBase {
         controller = null;
     }
 
-
-    protected void subscribeTags (ISourceDataTag... tags) throws ConfigurationException {
-        controller.subscribeTags(Arrays.asList(tags));
-    }
-
     @SneakyThrows
     protected void subscribeTagsAndMockStatusCode (StatusCode code, ISourceDataTag... tags)  {
         mocker.mockStatusCodeAndClientHandle(code, tags);
         mocker.replay();
-        subscribeTags(tags);
+        controller.subscribeTags(Arrays.asList(tags));
+    }
+
+    protected boolean isSubscribed(ISourceDataTag tag) {
+        final SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
+        return group != null && group.contains(tag);
     }
 }

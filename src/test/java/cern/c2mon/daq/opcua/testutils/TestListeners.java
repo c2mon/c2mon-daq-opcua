@@ -7,7 +7,6 @@ import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +30,6 @@ public abstract class TestListeners {
         return threshold == 0 || Math.abs(valueUpdateToFloat(valueUpdate) - threshold) < 0.5;
     }
 
-    @RequiredArgsConstructor
     @Getter
     @Setter
     @Component(value = "pulseTestListener")
@@ -40,6 +38,10 @@ public abstract class TestListeners {
         private int threshold = 0;
         CompletableFuture<ValueUpdate> pulseTagUpdate = new CompletableFuture<>();
         CompletableFuture<ValueUpdate> tagValUpdate = new CompletableFuture<>();
+
+        public Pulse(TagSubscriptionMapper mapper) {
+            super(mapper);
+        }
 
         public void reset() {
             super.reset();
@@ -69,7 +71,7 @@ public abstract class TestListeners {
     }
 
     @Getter
-    @NoArgsConstructor
+    @RequiredArgsConstructor
     @Component(value = "testListener")
     public static class TestListener implements EndpointListener, SessionActivityListener {
         @Setter
@@ -80,7 +82,7 @@ public abstract class TestListeners {
         CompletableFuture<Void> alive = new CompletableFuture<>();
 
         @Autowired
-        TagSubscriptionMapper mapper;
+        protected final TagSubscriptionMapper mapper;
 
         public void reset() {
             tagUpdate = new CompletableFuture<>();

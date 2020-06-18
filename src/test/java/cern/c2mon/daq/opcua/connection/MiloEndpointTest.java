@@ -5,9 +5,8 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
-import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
-import org.eclipse.milo.opcua.sdk.client.subscriptions.OpcUaSubscriptionManager;
 import org.eclipse.milo.opcua.stack.core.UaException;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -22,11 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class MiloEndpointTest {
 
     RetryDelegate delegate = new RetryDelegate();
-    EndpointSubscriptionListener listener = new EndpointSubscriptionListener();
-    Endpoint endpoint = new MiloEndpoint(null, listener, delegate);
+    Endpoint endpoint = new MiloEndpoint(null, new EndpointSubscriptionListener(), delegate);
 
     OpcUaClient mockClient = createMock(OpcUaClient.class);
-    OpcUaSubscriptionManager managerMock = createMock(OpcUaSubscriptionManager.class);
 
     @BeforeEach
     public void setUp() {
@@ -36,40 +33,35 @@ public class MiloEndpointTest {
         ReflectionTestUtils.setField(delegate, "retryDelay", 1000);
     }
 
-    private void setUpDeleteSubscriptionMocks(CompletableFuture<UaSubscription> expected) {
-        expect(mockClient.getSubscriptionManager()).andReturn(managerMock).anyTimes();
-        expect(managerMock.deleteSubscription(anyObject())).andReturn(expected).anyTimes();
-        replay(mockClient, managerMock);
+    private void setUpDeleteSubscriptionMocks(Exception e) {
+        expect(mockClient.writeValue(anyObject(), anyObject()))
+                .andReturn(CompletableFuture.failedFuture(e))
+                .anyTimes();
+        replay(mockClient);
     }
 
     @Test
     public void uaExceptionOrTypeConfigShouldThrowConfigurationException() {
-        final UaException configUaException = new UaException(Bad_NodeIdUnknown);
-        final CompletableFuture<UaSubscription> expected = CompletableFuture.failedFuture(configUaException);
-        setUpDeleteSubscriptionMocks(expected);
-        assertThrows(ConfigurationException.class, () -> endpoint.deleteSubscription(1));
+        setUpDeleteSubscriptionMocks(new UaException(Bad_NodeIdUnknown));
+        assertThrows(ConfigurationException.class, () -> endpoint.write(NodeId.NULL_GUID, 1));
     }
 
     @Test
     public void unknownHostShouldThrowConfigurationException() {
-        final CompletableFuture<UaSubscription> expected = CompletableFuture.failedFuture(new UnknownHostException());
-        setUpDeleteSubscriptionMocks(expected);
-        assertThrows(ConfigurationException.class, () -> endpoint.deleteSubscription(1));
+        setUpDeleteSubscriptionMocks(new UnknownHostException());
+        assertThrows(ConfigurationException.class, () -> endpoint.write(NodeId.NULL_GUID, 1));
     }
 
     @Test
     public void anyOtherExceptionShouldThrowCommunicationException() {
-        final CompletableFuture<UaSubscription> expected = CompletableFuture.failedFuture(new IllegalArgumentException());
-        setUpDeleteSubscriptionMocks(expected);
-        assertThrows(CommunicationException.class, () -> endpoint.deleteSubscription(1));
+        setUpDeleteSubscriptionMocks(new IllegalArgumentException());
+        assertThrows(CommunicationException.class, () -> endpoint.write(NodeId.NULL_GUID, 1));
     }
 
     @Test
     public void alreadyAttemptingResubscriptionTooLongThrowsLongLostConnectionException() {
         ReflectionTestUtils.setField(delegate, "disconnectionInstant", 20);
-        final var expectedException = new LongLostConnectionException(ExceptionContext.DELETE_SUBSCRIPTION, new IllegalArgumentException());
-        final CompletableFuture<UaSubscription> expected = CompletableFuture.failedFuture(expectedException);
-        setUpDeleteSubscriptionMocks(expected);
-        assertThrows(LongLostConnectionException.class, () -> endpoint.deleteSubscription(1));
+        setUpDeleteSubscriptionMocks(new LongLostConnectionException(ExceptionContext.DELETE_SUBSCRIPTION, new IllegalArgumentException()));
+        assertThrows(LongLostConnectionException.class, () -> endpoint.write(NodeId.NULL_GUID, 1));
     }
 }

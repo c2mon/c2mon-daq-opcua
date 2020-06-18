@@ -56,7 +56,7 @@ public class TestEndpoint implements Endpoint {
             onValueUpdate.apply(item.getClientHandle(), tagQuality, valueUpdate);
         });
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
-        return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> SourceDataTagQualityCode.OK));
+        return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> MiloMapper.getDataTagQualityCode(monitoredItem.getStatusCode())));
     }
 
     @Override
