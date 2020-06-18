@@ -34,7 +34,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @AfterEach
     public void cleanUp() {
-        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(endpoint));
+        ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(endpoint));
     }
 
     @Test
@@ -47,7 +47,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @Test
     public void invalidOnAddDataTagShouldReportFail () {
-        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
+        ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
         tagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
     }

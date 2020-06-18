@@ -8,6 +8,7 @@ import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.failover.NoFailover;
 import com.google.common.collect.ImmutableMap;
 import org.easymock.Capture;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,7 +62,8 @@ public abstract class TestUtils {
     }
 
     public static FailoverProxy getFailoverProxy(Endpoint endpoint) {
-        final FailoverProxy proxy = new TestFailoverProxy(null, new NoFailover(), new NoFailover(), endpoint);
+        final TestFailoverProxy proxy = new TestFailoverProxy(null, new NoFailover(), new NoFailover(), endpoint);
+        proxy.setCurrentFailover(RedundancySupport.None);
         try {
             proxy.initialize("bla");
         } catch (OPCUAException ignored) { }

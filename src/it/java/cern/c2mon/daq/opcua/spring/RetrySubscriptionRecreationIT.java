@@ -56,7 +56,7 @@ public class RetrySubscriptionRecreationIT {
         endpointMock.initialize(anyString(), anyObject());
         EasyMock.expectLastCall().anyTimes();
         EasyMock.replay(endpointMock);
-        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(endpointMock));
+        ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(endpointMock));
         ReflectionTestUtils.setField(controller, "stopped", new AtomicBoolean(false));
         EasyMock.reset(endpointMock);
 
@@ -65,7 +65,7 @@ public class RetrySubscriptionRecreationIT {
     @AfterEach
     public void tearDown() {
         ReflectionTestUtils.setField(controller, "stopped", new AtomicBoolean(true));
-        ReflectionTestUtils.setField(controller, "failover", TestUtils.getFailoverProxy(endpoint));
+        ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(endpoint));
     }
 
 
