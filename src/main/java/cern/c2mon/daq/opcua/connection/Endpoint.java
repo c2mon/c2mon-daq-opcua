@@ -93,12 +93,12 @@ public interface Endpoint {
      * Call the method node with ID methodId contained in the object with ID objectId.
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
-     * @param args     the input arguments to pass to the methodId call.
+     * @param arg     the input argument to pass to the methodId call.
      * @return whether the methodId was successful, and the output arguments of the called method (if
      * applicable, else null) in a Map Entry.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException;
+    Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object arg) throws OPCUAException;
 
     /**
      * Fetches the node's first parent object node, if such a node exists.

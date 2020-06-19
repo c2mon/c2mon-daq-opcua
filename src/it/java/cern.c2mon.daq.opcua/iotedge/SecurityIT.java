@@ -7,7 +7,7 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
-import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import com.google.common.io.Files;
@@ -88,7 +88,7 @@ public class SecurityIT {
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
         final var f = testListener.getStateUpdate();
         controller.connect(resolver.getUri());
-        controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
+        controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
@@ -157,7 +157,7 @@ public class SecurityIT {
         final var state = testListener.listen();
 
         controller.connect(resolver.getUri());
-        controller.subscribeTags(Collections.singletonList(ServerTagFactory.DipData.createDataTag()));
+        controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         return state;
     }
 }

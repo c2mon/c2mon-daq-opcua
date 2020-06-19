@@ -7,7 +7,7 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
-import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.easymock.EasyMock;
@@ -30,8 +30,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static cern.c2mon.daq.opcua.testutils.ServerTagFactory.AlternatingBoolean;
-import static cern.c2mon.daq.opcua.testutils.ServerTagFactory.RandomUnsignedInt32;
+import static cern.c2mon.daq.opcua.testutils.EdgeTagFactory.AlternatingBoolean;
+import static cern.c2mon.daq.opcua.testutils.EdgeTagFactory.RandomUnsignedInt32;
 import static org.easymock.EasyMock.*;
 
 @SpringBootTest
@@ -115,7 +115,7 @@ public class RetrySubscriptionRecreationIT {
     }
 
     private void setUpMapper() {
-        for (ServerTagFactory tagConfig : new ServerTagFactory[]{AlternatingBoolean, RandomUnsignedInt32}) {
+        for (EdgeTagFactory tagConfig : new EdgeTagFactory[]{AlternatingBoolean, RandomUnsignedInt32}) {
             final ISourceDataTag tag = tagConfig.createDataTag();
             mapper.getOrCreateDefinition(tag);
             mapper.addTagToGroup(tag.getId());

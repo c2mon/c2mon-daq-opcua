@@ -19,9 +19,9 @@ public abstract class ControllerTestBase {
     protected static String ADDRESS_PROTOCOL_TCP = "URI=opc.tcp://";
     protected static String ADDRESS_BASE = "test;serverRetryTimeout=123;serverTimeout=12;aliveWriter=";
 
-    protected ISourceDataTag tag1 = ServerTagFactory.RandomUnsignedInt32.createDataTag();
-    protected ISourceDataTag tag2 = ServerTagFactory.DipData.createDataTag();
-    protected ISourceDataTag tagWithDeadband = ServerTagFactory.AlternatingBoolean.createDataTag(5f, (short)2, 800);
+    protected ISourceDataTag tag1 = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
+    protected ISourceDataTag tag2 = EdgeTagFactory.DipData.createDataTag();
+    protected ISourceDataTag tagWithDeadband = EdgeTagFactory.AlternatingBoolean.createDataTag(5f, (short)2, 800);
 
 
 
@@ -37,8 +37,8 @@ public abstract class ControllerTestBase {
 
     public static Map<Long, ISourceDataTag> generateSourceTags () {
         Map<Long, ISourceDataTag> sourceTags = new HashMap<>();
-        sourceTags.put(2L, ServerTagFactory.RandomUnsignedInt32.createDataTag());
-        sourceTags.put(3L, ServerTagFactory.AlternatingBoolean.createDataTag());
+        sourceTags.put(2L, EdgeTagFactory.RandomUnsignedInt32.createDataTag());
+        sourceTags.put(3L, EdgeTagFactory.AlternatingBoolean.createDataTag());
         return sourceTags;
     }
 

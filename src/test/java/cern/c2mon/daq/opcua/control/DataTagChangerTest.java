@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
-import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
@@ -25,7 +25,7 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @BeforeEach
     public void castToDataTagChanger() throws OPCUAException {
-        tag = ServerTagFactory.DipData.createDataTag();
+        tag = EdgeTagFactory.DipData.createDataTag();
         controller.connect(uri);
         tagChanger = new TagChanger(controller);
         changeReport = new ChangeReport();

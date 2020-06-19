@@ -2,15 +2,19 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
+import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
-import cern.c2mon.daq.opcua.testutils.ServerTagFactory;
+import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
+import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
+import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.junit.Ignore;
@@ -33,14 +37,17 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestPropertySource(locations = "classpath:opcua.properties")
 public class EdgeIT {
     private static ConnectionResolver.Edge resolver;
-    private final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
-    private final ISourceDataTag alreadySubscribedTag = ServerTagFactory.DipData.createDataTag();
+    private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
+    private final ISourceDataTag alreadySubscribedTag = EdgeTagFactory.DipData.createDataTag();
 
     @Autowired
     TestListeners.Pulse pulseListener;
 
     @Autowired
     Controller controller;
+
+    @Autowired
+    CommandRunner commandRunner;
 
     @Autowired
     FailoverProxy failoverProxy;
@@ -101,6 +108,22 @@ public class EdgeIT {
         final var stateUpdate = pulseListener.getStateUpdate();
         assertThrows(OPCUAException.class, () -> controller.connect("opc.tcp://somehost/somepath"));
         assertEquals(EndpointListener.EquipmentState.CONNECTION_FAILED, stateUpdate.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void executeCommandWithParentShouldReturnProperResult() throws EqCommandTagException {
+        final ISourceCommandTag methodTag = EdgeTagFactory.StartStepUp.createMethodTag(true);
+        final SourceCommandTagValue value = new SourceCommandTagValue();
+        final String s = commandRunner.runCommand(methodTag, value);
+        assertTrue(s.isEmpty());
+    }
+
+    @Test
+    public void executeCommandShouldReturnProperResult() throws EqCommandTagException {
+        final ISourceCommandTag methodTag = EdgeTagFactory.StartStepUp.createMethodTag(false);
+        final SourceCommandTagValue value = new SourceCommandTagValue();
+        final String s = commandRunner.runCommand(methodTag, value);
+        assertTrue(s.isEmpty());
     }
 
     @Ignore
@@ -169,7 +192,7 @@ public class EdgeIT {
 
     @Test
     public void subscribingImproperDataTagShouldReturnOnTagInvalid() throws ConfigurationException {
-        final ISourceDataTag tag = ServerTagFactory.Invalid.createDataTag();
+        final ISourceDataTag tag = EdgeTagFactory.Invalid.createDataTag();
         pulseListener.setSourceID(tag.getId());
         pulseListener.setThreshold(0);
         controller.subscribeTags(Collections.singletonList(tag));
@@ -178,7 +201,7 @@ public class EdgeIT {
 
     @Test
     public void subscribeWithDeadband() throws ConfigurationException {
-        var tagWithDeadband = ServerTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
+        var tagWithDeadband = EdgeTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
         pulseListener.setSourceID(tagWithDeadband.getId());
         controller.subscribeTags(Collections.singletonList(tagWithDeadband));
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));

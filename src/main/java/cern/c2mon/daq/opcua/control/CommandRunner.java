@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.common.conf.equipment.ICommandTagChanger;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
@@ -14,6 +15,7 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.type.TypeConverter;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
+import cern.c2mon.shared.daq.config.ChangeReport;
 import com.google.common.base.Joiner;
 import lombok.AllArgsConstructor;
 import lombok.Setter;
@@ -34,13 +36,31 @@ import java.util.concurrent.TimeUnit;
 @Component("commandRunner")
 @Slf4j
 @AllArgsConstructor
-public class CommandRunner {
+public class CommandRunner implements ICommandTagChanger {
 
     /**
      * The failover proxy to the current endpoint
      */
     @Setter
     private FailoverProxy failover;
+
+    @Override
+    public void onAddCommandTag(ISourceCommandTag sourceCommandTag, ChangeReport changeReport) {
+        changeReport.appendInfo("No action required.");
+        changeReport.setState(ChangeReport.CHANGE_STATE.SUCCESS);
+    }
+
+    @Override
+    public void onRemoveCommandTag(ISourceCommandTag sourceCommandTag, ChangeReport changeReport) {
+        changeReport.appendInfo("No action required.");
+        changeReport.setState(ChangeReport.CHANGE_STATE.SUCCESS);
+    }
+
+    @Override
+    public void onUpdateCommandTag(ISourceCommandTag sourceCommandTag, ISourceCommandTag oldSourceCommandTag, ChangeReport changeReport) {
+        changeReport.appendInfo("No action required.");
+        changeReport.setState(ChangeReport.CHANGE_STATE.SUCCESS);
+    }
 
     /**
      * Execute the action corresponding to a command tag, either by writing to a nodeId or by calling a method node on
@@ -53,9 +73,12 @@ public class CommandRunner {
      * @throws EqCommandTagException if the command cannot be executed or the server returns an invalid status code.
      */
     public String runCommand(ISourceCommandTag tag, SourceCommandTagValue command) throws EqCommandTagException {
-        Object arg = TypeConverter.cast(command.getValue(), command.getDataType());
-        if (arg == null) {
-            throw new EqCommandTagException(ExceptionContext.COMMAND_VALUE_ERROR.getMessage());
+        Object arg = command.getValue();
+        if (arg != null) {
+            arg = TypeConverter.cast(command.getValue(), command.getDataType());
+            if (arg == null) {
+                throw new EqCommandTagException(ExceptionContext.COMMAND_VALUE_ERROR.getMessage());
+            }
         }
         try {
             final var hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
@@ -89,13 +112,14 @@ public class CommandRunner {
      * @param arg the input arguments to pass to the method.
      * @return an array of the method's output arguments. If there are none, an empty array is returned.
      */
-    private Object[] executeMethod(ISourceCommandTag tag, Object arg) throws OPCUAException, InterruptedException {
+
+    private Object[] executeMethod(ISourceCommandTag tag, Object arg) throws OPCUAException {
         log.info("executeMethod of tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
         final ItemDefinition def = ItemDefinition.of(tag);
         final Map.Entry<Boolean, Object[]> result;
         if (def.getMethodNodeId() == null) {
             final NodeId parent = failover.getEndpoint().getParentObjectNodeId(def.getNodeId());
-            result = failover.getEndpoint().callMethod(parent, def.getMethodNodeId(), arg);
+            result = failover.getEndpoint().callMethod(parent, def.getNodeId(), arg);
         } else {
             result = failover.getEndpoint().callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
         }

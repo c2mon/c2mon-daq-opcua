@@ -30,7 +30,7 @@ public class FailoverIT {
     private static ConnectionResolver.Edge active;
     private static ConnectionResolver.Edge fallback;
 
-    private final ISourceDataTag tag = ServerTagFactory.RandomUnsignedInt32.createDataTag();
+    private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     final NonTransparentRedundancyTypeNode redundancyMock = mock(NonTransparentRedundancyTypeNode.class);
 
     @Autowired TestListeners.Pulse pulseListener;

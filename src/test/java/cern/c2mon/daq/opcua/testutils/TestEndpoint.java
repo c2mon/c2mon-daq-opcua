@@ -94,8 +94,8 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) {
-        return Map.entry(returnGoodStatusCodes, args);
+    public Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object args) {
+        return Map.entry(returnGoodStatusCodes, new Object[] {args});
     }
 
 }

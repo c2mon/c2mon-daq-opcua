@@ -99,7 +99,9 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         controller.subscribeTags(config.getSourceDataTags().values());
         log.debug("connected");
 
+        getEquipmentCommandHandler().setCommandRunner(this);
         getEquipmentConfigurationHandler().setDataTagChanger(tagChanger);
+        getEquipmentConfigurationHandler().setCommandTagChanger(commandRunner);
         getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
     }
 
@@ -139,7 +141,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      *              configuration.
      * @return If the command is of type method and returns values, the toString representation of the output is
      * returned. Otherwise null.
-     * @throws EqCommandTagException thrown when the command cannot be executed, or the status is erraneous or
+     * @throws EqCommandTagException thrown when the command cannot be executed, or the status is erroneous or
      *                               uncertain.
      */
     @Override

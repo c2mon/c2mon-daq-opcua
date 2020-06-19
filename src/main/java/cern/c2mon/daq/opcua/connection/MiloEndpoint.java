@@ -36,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static cern.c2mon.daq.opcua.exceptions.CommunicationException.of;
 import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
@@ -249,13 +248,13 @@ public class MiloEndpoint implements Endpoint, UaSubscriptionManager.Subscriptio
      * in case of connection error.
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
-     * @param args     the input arguments to pass to the methodId call.
+     * @param arg     the input arguments to pass to the methodId call.
      * @return the StatusCode of the methodId response as key and the output arguments of the called method (if
      * applicable, else null) in a Map Entry.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    public Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object... args) throws OPCUAException {
-        final var variants = Stream.of(args).map(Variant::new).toArray(Variant[]::new);
+    public Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object arg) throws OPCUAException {
+        final var variants = arg == null ? null : new Variant[] { new Variant(arg) };
         final CallMethodResult result = retryDelegate.completeOrThrow(METHOD, () -> client.call(new CallMethodRequest(objectId, methodId, variants)));
         final StatusCode statusCode = result.getStatusCode();
         log.info("Calling method {} on object {} returned status code {}.", methodId, objectId, statusCode);
