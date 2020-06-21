@@ -76,16 +76,9 @@ public class FailoverIT {
     }
 
     @AfterEach
-    public void cleanUp() throws InterruptedException {
+    public void cleanUp() {
         log.info("############ CLEAN UP ############");
-        final var f = pulseListener.listen();
         controller.stop();
-        try {
-            f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
-        } catch (TimeoutException | CompletionException | ExecutionException e) {
-            // assure that server has time to disconnect, fails for test on failed connections
-        }
-        controller = null;
     }
 
     @Test
