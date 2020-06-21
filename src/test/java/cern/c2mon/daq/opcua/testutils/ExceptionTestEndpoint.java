@@ -4,7 +4,7 @@ import cern.c2mon.daq.opcua.TriConsumer;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
@@ -36,12 +36,12 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     }
 
     @Override
-    public Map<UInteger, SourceDataTagQualityCode> subscribeWithValueUpdateCallback(int publishingInterval, Collection<ItemDefinition> definitions, TriConsumer<UInteger, SourceDataTagQualityCode, ValueUpdate> onValueUpdate) throws CommunicationException {
+    public Map<UInteger, SourceDataTagQuality> subscribeWithValueUpdateCallback(int publishingInterval, Collection<ItemDefinition> definitions, TriConsumer<UInteger, SourceDataTagQuality, ValueUpdate> onValueUpdate) throws CommunicationException {
         throw new CommunicationException(CREATE_MONITORED_ITEM);
     }
 
     @Override
-    public Map.Entry<ValueUpdate, SourceDataTagQualityCode> read(NodeId nodeId) throws CommunicationException {
+    public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws CommunicationException {
         throw new CommunicationException(READ);
     }
 

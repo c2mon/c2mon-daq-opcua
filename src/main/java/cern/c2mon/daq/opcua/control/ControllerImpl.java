@@ -29,7 +29,6 @@ import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import com.google.common.base.Joiner;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -186,18 +185,18 @@ public class ControllerImpl implements Controller {
             maxAttempts = Integer.MAX_VALUE,
             backoff = @Backoff(delayExpression = "${app.retryDelay}"))
     public synchronized void recreateSubscription(Endpoint endpoint, int publishInterval) throws OPCUAException {
-        log.info("entered");
         if (stopped.get() || Thread.currentThread().isInterrupted()) {
             log.info("Controller was stopped, cease subscription recreation attempts.");
         } else {
+            log.info("Attempt to recreate the subscription.");
             final var group = mapper.getGroup(publishInterval);
             if (group == null || group.size() == 0) {
                 throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
             }
             try {
                 endpoint.deleteSubscription(publishInterval);
-            } catch (OPCUAException e) {
-                log.error("Could not delete subscription. Proceed with recreation. ", e);
+            } catch (OPCUAException ignored) {
+                log.error("Could not delete subscription. Proceed with recreation.");
             }
             if (!subscribeToGroup(endpoint, group, group.getTagIds().values())) {
                 throw new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION);
@@ -237,20 +236,20 @@ public class ControllerImpl implements Controller {
                 allSuccessful = allSuccessful && onSubscriptionComplete(e.getKey(), e.getValue());
             }
             return allSuccessful;
-        } catch (OPCUAException e) {
+        } catch (OPCUAException ignored) {
             final String ids = Joiner.on(", ").join(definitions.stream().map(mapper::getTagId).toArray());
-            log.error("Tags with IDs {} could not be subscribed. ", ids, e);
+            log.error("Tags with IDs {} could not be subscribed. ", ids);
             return false;
         }
     }
 
-    public boolean onSubscriptionComplete(UInteger clientHandle, SourceDataTagQualityCode statusCode) {
-        if (!statusCode.equals(SourceDataTagQualityCode.OK)) {
-            endpointListener.onTagInvalid(clientHandle, new SourceDataTagQuality(statusCode));
-            return false;
-        } else {
+    public boolean onSubscriptionComplete(UInteger clientHandle, SourceDataTagQuality quality) {
+        final boolean valid = quality.isValid();
+        if (valid) {
             mapper.addTagToGroup(mapper.getTagId(clientHandle));
-            return true;
+        } else {
+            endpointListener.onTagInvalid(clientHandle, quality);
         }
+        return valid;
     }
 }

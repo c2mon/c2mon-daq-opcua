@@ -18,7 +18,6 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.AllArgsConstructor;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
@@ -48,5 +47,5 @@ public interface EndpointListener {
 
     void onEquipmentStateUpdate(EquipmentState state);
 
-    void onValueUpdate(UInteger clientHandle, SourceDataTagQualityCode quality, ValueUpdate valueUpdate);
+    void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate);
 }

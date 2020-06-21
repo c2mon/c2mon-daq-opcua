@@ -37,7 +37,7 @@ public class ItemDefinition {
             OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
             return new ItemDefinition(tag, toNodeId(opcAddress), toRedundantNodeId(opcAddress));
         } catch (ConfigurationException e) {
-            log.error("Configuration error, should be unreachable!", e);
+            log.error("The tag's hardware address should be of type OPC UA, but is {}.", tag.getHardwareAddress().getClass().getName(), e);
             return null;
         }
     }

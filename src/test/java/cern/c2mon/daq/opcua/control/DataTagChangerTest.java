@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
@@ -128,14 +129,14 @@ public class DataTagChangerTest extends ControllerTestBase {
     }
 
     @Test
-    public void removeDataTagShouldUnsubscribeDataTag() {
+    public void removeDataTagShouldUnsubscribeDataTag() throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD,tag1);
         tagChanger.onRemoveDataTag(tag1, changeReport);
         assertFalse(isSubscribed(tag1));
     }
 
     @Test
-    public void removeOneOfTwoTagsShouldUnsubscribeDataTag() {
+    public void removeOneOfTwoTagsShouldUnsubscribeDataTag() throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tag2);
         tagChanger.onRemoveDataTag(tag1, changeReport);
         assertTrue(!isSubscribed(tag1) && isSubscribed(tag2));

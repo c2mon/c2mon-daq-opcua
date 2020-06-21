@@ -152,7 +152,6 @@ public class ColdFailover extends FailoverBase {
                 this.endpoint.disconnect();
             }
         } catch (OPCUAException ignored) {
-            log.info("An expected error occurred disconnecting from the server at URI {}.", currentUri);
         }
     }
 

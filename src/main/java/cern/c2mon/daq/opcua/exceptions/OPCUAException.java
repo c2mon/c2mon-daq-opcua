@@ -3,6 +3,7 @@ package cern.c2mon.daq.opcua.exceptions;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import com.google.common.collect.Sets;
 import org.eclipse.milo.opcua.stack.core.UaException;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
 import java.net.UnknownHostException;
 import java.util.Collection;
@@ -19,6 +20,12 @@ public abstract class OPCUAException extends EqIOException {
 
     /** Status Codes returned by the server hinting at misconfigurations of security settings. */
     private static final Collection<Long> SECURITY_CONFIG = Sets.newHashSet(Bad_UserSignatureInvalid, Bad_UserAccessDenied, Bad_CertificateHostNameInvalid, Bad_ApplicationSignatureInvalid, Bad_CertificateIssuerUseNotAllowed, Bad_CertificateIssuerTimeInvalid, Bad_CertificateIssuerRevoked);
+
+    /** Status Codes indicating a node ID supplied by an incorrect hardware address */
+    private static final Collection<Long> NODE_CONFIG = Sets.newHashSet(Bad_NodeIdInvalid, Bad_NodeIdUnknown, Bad_ParentNodeIdInvalid, Bad_SourceNodeIdInvalid, Bad_TargetNodeIdInvalid);
+
+    /** Status Codes indicating a node ID supplied by an incorrect hardware address */
+    private static final Collection<Long> DATA_UNAVAILABLE = Sets.newHashSet(Bad_DataLost, Bad_DataUnavailable, Bad_NoData, Bad_NoDataAvailable);
 
     protected OPCUAException(final ExceptionContext context) {
         super(context.getMessage());
@@ -61,4 +68,21 @@ public abstract class OPCUAException extends EqIOException {
         return SECURITY_CONFIG.contains(e.getStatusCode().getValue());
     }
 
+    /**
+     * Check whether the {@link StatusCode} indicates a problem with the NodeId specified through the tag's {@link cern.c2mon.shared.common.datatag.address.OPCHardwareAddress}.
+     * @param code the code to check
+     * @return true if the {@link StatusCode} indicates a problem with the NodeId.
+     */
+    public static boolean isNodeIdConfigIssue(StatusCode code) {
+        return NODE_CONFIG.contains(code.getValue());
+    }
+
+    /**
+     * Check whether the {@link StatusCode} indicates missing or lost data values for a particular node.
+     * @param code the code to check
+     * @return true if the {@link StatusCode} indicates missing data.
+     */
+    public static boolean isDataUnavailable(StatusCode code) {
+        return DATA_UNAVAILABLE.contains(code.getValue());
+    }
 }

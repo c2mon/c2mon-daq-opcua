@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,15 +47,15 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
     }
 
     @Override
-    public void onValueUpdate(UInteger clientHandle, SourceDataTagQualityCode quality, ValueUpdate valueUpdate) {
-        if (!quality.equals(SourceDataTagQualityCode.OK)) {
-            onTagInvalid(clientHandle, new SourceDataTagQuality(quality));
-        } else {
+    public void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
+        if (quality.isValid()) {
             final Long tagId = mapper.getTagId(clientHandle);
-            this.sender.update(tagId, valueUpdate, new SourceDataTagQuality(quality));
+            this.sender.update(tagId, valueUpdate, quality);
             if (log.isDebugEnabled()) {
                 log.debug("onNewTagValue - Tag value " + valueUpdate + " sent for Tag #" + tagId);
             }
+        } else {
+            onTagInvalid(clientHandle, quality);
         }
     }
 

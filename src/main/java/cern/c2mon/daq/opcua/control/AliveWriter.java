@@ -143,7 +143,11 @@ public class AliveWriter {
             writeCounter.incrementAndGet();
             writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
         } catch (OPCUAException e) {
-            log.error("Error while writing alive. Retrying...", e);
+            if (log.isDebugEnabled()) {
+                log.error("Error while writing alive. Retrying...", e);
+            } else {
+                log.error("Error while writing alive. Retrying...");
+            }
         }
     }
 }

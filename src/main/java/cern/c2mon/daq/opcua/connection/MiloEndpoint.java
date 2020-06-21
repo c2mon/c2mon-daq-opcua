@@ -7,9 +7,10 @@ import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
@@ -61,8 +62,11 @@ public class MiloEndpoint implements Endpoint, UaSubscriptionManager.Subscriptio
     private final EndpointSubscriptionListener subscriptionListener;
     private final RetryDelegate retryDelegate;
 
-    private OpcUaClient client;
     private Collection<SessionActivityListener> sessionActivityListeners;
+    private OpcUaClient client;
+
+    @Setter
+    private MonitoringMode mode = MonitoringMode.Reporting;
 
     private final Map<Integer, UaSubscription> subscriptionMap = new ConcurrentHashMap<>();
 
@@ -120,7 +124,6 @@ public class MiloEndpoint implements Endpoint, UaSubscriptionManager.Subscriptio
             client = securityModule.createClientWithListeners(endpoints, this.sessionActivityListeners);
             subscriptionListener.initialize(this);
             client.getSubscriptionManager().addSubscriptionListener(subscriptionListener);
-            log.info("Connected");
         } catch (CompletionException e) {
             throw of(CONNECT, e.getCause(), false);
         }
@@ -151,18 +154,18 @@ public class MiloEndpoint implements Endpoint, UaSubscriptionManager.Subscriptio
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public Map<UInteger, SourceDataTagQualityCode> subscribeWithValueUpdateCallback(int publishingInterval,
+    public Map<UInteger, SourceDataTagQuality> subscribeWithValueUpdateCallback(int publishingInterval,
                                                                                     Collection<ItemDefinition> definitions,
-                                                                                    TriConsumer<UInteger, SourceDataTagQualityCode, ValueUpdate> onValueUpdate) throws OPCUAException {
+                                                                                    TriConsumer<UInteger, SourceDataTagQuality, ValueUpdate> onValueUpdate) throws OPCUAException {
         BiConsumer<UaMonitoredItem, Integer> itemCreationCallback = (item, integer) -> item.setValueConsumer(value -> {
-            SourceDataTagQualityCode tagQuality = MiloMapper.getDataTagQualityCode(value.getStatusCode());
+            SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality(value.getStatusCode());
             ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
             onValueUpdate.apply(item.getClientHandle(), tagQuality, valueUpdate);
         });
         return subscribeWithCreationCallback(publishingInterval, definitions, itemCreationCallback);
     }
 
-    public Map<UInteger, SourceDataTagQualityCode> subscribeWithCreationCallback(int publishingInterval,
+    public Map<UInteger, SourceDataTagQuality> subscribeWithCreationCallback(int publishingInterval,
                                                                                  Collection<ItemDefinition> definitions,
                                                                                  BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
         var subscription = getOrCreateSubscription(publishingInterval);
@@ -173,7 +176,7 @@ public class MiloEndpoint implements Endpoint, UaSubscriptionManager.Subscriptio
                 .completeOrThrow(CREATE_MONITORED_ITEM, () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback))
                 .stream().collect(toMap(
                         UaMonitoredItem::getClientHandle,
-                        item -> MiloMapper.getDataTagQualityCode(item.getStatusCode())));
+                        item -> MiloMapper.getDataTagQuality(item.getStatusCode())));
     }
 
     /**
@@ -217,11 +220,11 @@ public class MiloEndpoint implements Endpoint, UaSubscriptionManager.Subscriptio
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public Map.Entry<ValueUpdate, SourceDataTagQualityCode> read(NodeId nodeId) throws OPCUAException {
+    public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
         final DataValue value = retryDelegate.completeOrThrow(READ, () -> client.readValue(0, TimestampsToReturn.Both, nodeId));
         return Map.entry(
                 new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime()),
-                MiloMapper.getDataTagQualityCode(value.getStatusCode()));
+                MiloMapper.getDataTagQuality(value.getStatusCode()));
     }
 
     /**
@@ -345,6 +348,6 @@ public class MiloEndpoint implements Endpoint, UaSubscriptionManager.Subscriptio
                 AttributeId.Value.uid(),
                 null,
                 QualifiedName.NULL_VALUE);
-        return new MonitoredItemCreateRequest(id, MonitoringMode.Reporting, mp);
+        return new MonitoredItemCreateRequest(id, mode, mp);
     }
 }

@@ -13,55 +13,55 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SubscribeTagsTest extends ControllerTestBase{
 
     @Test
-    public void subscribeNewTagShouldSubscribeTagInMapper () {
+    public void subscribeNewTagShouldSubscribeTagInMapper () throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1);
         assertTrue(isSubscribed(tag1));
     }
 
     @Test
-    public void subscribeTwoNewTagsIterativelyShouldSubscribeBothInMapper () {
+    public void subscribeTwoNewTagsIterativelyShouldSubscribeBothInMapper () throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tag2);
         assertTrue(isSubscribed(tag1) && isSubscribed(tag2));
     }
 
     @Test
-    public void subscribeTwoNewTagsWithDifferentDeadbandsIterativelyShouldSubscribeBothInMapper () {
+    public void subscribeTwoNewTagsWithDifferentDeadbandsIterativelyShouldSubscribeBothInMapper () throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tagWithDeadband);
         assertTrue(isSubscribed(tag1) && isSubscribed(tagWithDeadband));
     }
 
     @Test
-    public void subscribeTagWithBadStatusCodeShouldUnsubscribeDataTag () {
+    public void subscribeTagWithBadStatusCodeShouldUnsubscribeDataTag () throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.BAD, tag1);
         assertFalse(isSubscribed(tag1));
     }
 
     @Test
-    public void subscribeNewTagAsCollectionShouldSubscribeTagInMapper () {
+    public void subscribeNewTagAsCollectionShouldSubscribeTagInMapper () throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1);
         assertTrue(isSubscribed(tag1));
     }
 
     @Test
-    public void subscribeTagsWithDifferentDeadbandShouldSubscribeBothTags () {
+    public void subscribeTagsWithDifferentDeadbandShouldSubscribeBothTags () throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tagWithDeadband);
         assertTrue(isSubscribed(tag1) && isSubscribed(tagWithDeadband));
     }
 
     @Test
-    public void subscribeTagsWithSameDeadbandShouldSubscribeBothTags () {
+    public void subscribeTagsWithSameDeadbandShouldSubscribeBothTags () throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1, tag2);
         assertTrue(isSubscribed(tag1) && isSubscribed(tag2));
     }
 
     @Test
-    public void badStatusCodeShouldUnsubscribeDataTag() {
+    public void badStatusCodeShouldUnsubscribeDataTag() throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.BAD, tag1);
         assertFalse(isSubscribed(tag1));
     }
 
     @Test
-    public void twoTagsWithBadSubscriptionStatusCodesShouldUnsubscribeBoth() {
+    public void twoTagsWithBadSubscriptionStatusCodesShouldUnsubscribeBoth() throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.BAD, tag1, tag2);
         assertFalse(isSubscribed(tag1) || isSubscribed(tag2));
     }

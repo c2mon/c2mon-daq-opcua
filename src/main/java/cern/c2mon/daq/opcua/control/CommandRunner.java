@@ -10,7 +10,7 @@ import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.type.TypeConverter;
@@ -135,7 +135,7 @@ public class CommandRunner implements ICommandTagChanger {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
             executeWriteCommand(tag, arg);
         } else {
-            final Map.Entry<ValueUpdate, SourceDataTagQualityCode> read = failover.getEndpoint().read(ItemDefinition.toNodeId(tag));
+            final Map.Entry<ValueUpdate, SourceDataTagQuality> read = failover.getEndpoint().read(ItemDefinition.toNodeId(tag));
             handleCommandResponseStatusCode(read.getValue(), ExceptionContext.READ);
             final Object original = read.getKey().getValue();
             if (original != null && original.equals(arg)) {
@@ -175,16 +175,16 @@ public class CommandRunner implements ICommandTagChanger {
     /**
      * {@link cern.c2mon.daq.common.messaging.impl.RequestController} assumes all command executions that do not throw
      * an error to be successful. To ensure a reliable result, repeat the execution by throwing an error upon status
-     * codes that are not "good".
+     * codes that are invalid.
      *
      * @param quality the quality returned by upon the taken action
      * @param context    The context of the action taken which resulted in the action code
      * @throws CompletionException a wrapper for a CommunicationException, since this method is only called from within
      *                             CompletableFutures and will be handled on join.
      */
-    private void handleCommandResponseStatusCode(@Nullable SourceDataTagQualityCode quality, ExceptionContext context) throws CommunicationException {
+    private void handleCommandResponseStatusCode(@Nullable SourceDataTagQuality quality, ExceptionContext context) throws CommunicationException {
         log.info("Action completed with Status Code: {}", quality);
-        if (quality != SourceDataTagQualityCode.OK) {
+        if (quality == null || !quality.isValid()) {
             throw new CommunicationException(context);
         }
     }

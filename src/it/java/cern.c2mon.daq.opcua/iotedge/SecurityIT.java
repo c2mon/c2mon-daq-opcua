@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @ExtendWith(SpringExtension.class)
 public class SecurityIT {
 
-    private static ConnectionResolver.Edge resolver;
+    private static ConnectionResolver.OpcUaImage.Edge edge;
 
     @Autowired
     Controller controller;
@@ -50,13 +50,14 @@ public class SecurityIT {
 
     @BeforeAll
     public static void startServers() {
-        resolver = new ConnectionResolver.Edge();
+        edge = new ConnectionResolver.OpcUaImage.Edge();
+        edge.startStandAlone();
     }
 
     @AfterAll
     public static void stopServer() {
-        resolver.close();
-        resolver = null;
+        edge.close();
+        edge = null;
     }
 
     @BeforeEach
@@ -72,7 +73,7 @@ public class SecurityIT {
         config.getCertificationPriority().put("none", 1);
         config.getCertificationPriority().put("generate", 2);
         config.getCertificationPriority().put("load", 3);
-        resolver.cleanUpCertificates();
+        edge.cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
         final var f = testListener.listen();
         controller.stop();
@@ -87,7 +88,7 @@ public class SecurityIT {
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
         final var f = testListener.getStateUpdate();
-        controller.connect(resolver.getUri());
+        controller.connect(edge.getUri());
         controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
@@ -131,7 +132,7 @@ public class SecurityIT {
         trustCertificatesOnClient();
 
         final var state = testListener.listen();
-        controller.connect(resolver.getUri());
+        controller.connect(edge.getUri());
         assertEquals(EndpointListener.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
@@ -146,17 +147,17 @@ public class SecurityIT {
     private CompletableFuture<EndpointListener.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
         log.info("Initial connection attempt...");
         try {
-            controller.connect(resolver.getUri());
+            controller.connect(edge.getUri());
         } catch (CommunicationException e) {
             // expected behavior: rejected by the server
         }
         controller.stop();
 
         log.info("Trust certificates server-side and reconnect...");
-        resolver.trustCertificates();
+        edge.trustCertificates();
         final var state = testListener.listen();
 
-        controller.connect(resolver.getUri());
+        controller.connect(edge.getUri());
         controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         return state;
     }

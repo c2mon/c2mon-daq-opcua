@@ -4,7 +4,6 @@ import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +51,7 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onValueUpdate(UInteger clientHandle, SourceDataTagQualityCode quality, ValueUpdate valueUpdate) {
+        public void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
             super.onValueUpdate(clientHandle, quality, valueUpdate);
             if (mapper.getTagId(clientHandle).equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
                 if (tagValUpdate.isDone()) {
@@ -125,15 +124,15 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onValueUpdate(UInteger clientHandle, SourceDataTagQualityCode quality, ValueUpdate valueUpdate) {
-            if (!quality.equals(SourceDataTagQualityCode.OK)) {
-                onTagInvalid(clientHandle, new SourceDataTagQuality(quality));
-            } else {
+        public void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
+            if (quality.isValid()) {
                 final Long tagId = mapper.getTagId(clientHandle);
                 if (debugEnabled) {
                     log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
                 }
                 tagUpdate.complete(tagId);
+            } else {
+                onTagInvalid(clientHandle, quality);
             }
         }
 

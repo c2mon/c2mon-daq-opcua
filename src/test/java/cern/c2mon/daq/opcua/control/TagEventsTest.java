@@ -31,13 +31,13 @@ public class TagEventsTest extends ControllerTestBase {
     }
 
     @Test
-    public void subscribeWithInvalidTagShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
+    public void subscribeWithInvalidTagShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException, ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.BAD, tag1);
         assertEquals(tag1.getId(), tagInvalid.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void subscribeWithValidTagShouldNotInformSender () {
+    public void subscribeWithValidTagShouldNotInformSender () throws ConfigurationException {
         subscribeTagsAndMockStatusCode(StatusCode.GOOD, tag1);
         assertFalse(tagInvalid.isDone());
     }

@@ -48,7 +48,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static final long DATAID_PW = 2L;
     private static final long CMDID_PW = 10L;
     private static final long CMDID_V0SET = 20L;
-    private static ConnectionResolver.Venus resolver;
+    private static ConnectionResolver.OpcUaImage.Venus image;
     @Autowired
     TestListeners.Pulse listener;
     @Autowired
@@ -67,12 +67,13 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @BeforeClass
     public static void startServer() {
         // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
-        resolver = new ConnectionResolver.Venus("sim_BASIC.short.xml");
+        image = new ConnectionResolver.OpcUaImage.Venus("sim_BASIC.short.xml");
+        image.startStandAlone();
     }
 
     @AfterClass
     public static void stopServer() {
-        resolver.close();
+        image.close();
     }
 
 
@@ -118,7 +119,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         final Matcher matcher = Pattern.compile(hostRegex).matcher(equipmentAddress);
         if (matcher.find()) {
             final String port = matcher.group(1);
-            final String mappedAddress = equipmentAddress.replace(port + "", resolver.getMappedPort(Integer.parseInt(port)) + "");
+            final String mappedAddress = equipmentAddress.replace(port + "", image.getMappedPort(Integer.parseInt(port)) + "");
             ReflectionTestUtils.setField(equipmentConfiguration, "equipmentAddress", mappedAddress);
         }
     }

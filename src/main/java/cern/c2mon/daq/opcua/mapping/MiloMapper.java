@@ -1,5 +1,7 @@
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.type.TypeConverter;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +11,8 @@ import org.eclipse.milo.opcua.stack.core.util.TypeUtil;
 
 import java.util.Objects;
 import java.util.stream.Stream;
+
+import static cern.c2mon.shared.common.datatag.SourceDataTagQualityCode.*;
 
 /**
  * This utility class provides a collection of functions mapping Milo- or OPCUA specific Java classes into a format that
@@ -20,16 +24,21 @@ public abstract class MiloMapper {
     /**
      * Represents a {@link StatusCode} as a {@link SourceDataTagQualityCode}
      *
-     * @param miloStatusCode the status code returned by the Eclipse Milo client
-     * @return a quality code that can be assiciated with a C2MON {@link cern.c2mon.shared.common.datatag.ISourceDataTag}.
+     * @param statusCode the status code returned by the Eclipse Milo client
+     * @return a quality code that can be associated with a C2MON {@link cern.c2mon.shared.common.datatag.ISourceDataTag}.
      */
-    public static SourceDataTagQualityCode getDataTagQualityCode(StatusCode miloStatusCode) {
-        if (StatusCode.GOOD.equals(miloStatusCode)) {
-            return SourceDataTagQualityCode.OK;
-        } else if (StatusCode.BAD.equals(miloStatusCode)) {
-            return SourceDataTagQualityCode.VALUE_CORRUPTED;
+    public static SourceDataTagQuality getDataTagQuality(StatusCode statusCode) {
+        SourceDataTagQualityCode tagCode = UNKNOWN;
+        if (statusCode.isGood()) {
+            tagCode = OK;
+        } else if (OPCUAException.isNodeIdConfigIssue(statusCode)) {
+            tagCode = INCORRECT_NATIVE_ADDRESS;
+        } else if (OPCUAException.isDataUnavailable(statusCode)) {
+            tagCode = INCORRECT_NATIVE_ADDRESS;
+        } else if (statusCode.isBad()) {
+            tagCode = VALUE_CORRUPTED;
         }
-        return SourceDataTagQualityCode.UNKNOWN;
+        return new SourceDataTagQuality(tagCode, statusCode.toString());
     }
 
     /**

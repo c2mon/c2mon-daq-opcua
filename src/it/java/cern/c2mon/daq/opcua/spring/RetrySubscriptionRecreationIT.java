@@ -71,7 +71,8 @@ public class RetrySubscriptionRecreationIT {
         CompletableFuture.runAsync(() -> listener.onSubscriptionTransferFailed(subscriptionMock, StatusCode.GOOD));
         //add a buffer to make sure that the nth execution finishes
         CompletableFuture.runAsync(() -> verify(endpointMock),
-                CompletableFuture.delayedExecutor(Math.round(delay * numAttempts), TimeUnit.MILLISECONDS)).join();
+                CompletableFuture.delayedExecutor(Math.round(delay * numAttempts), TimeUnit.MILLISECONDS))
+                .get(Math.round(delay * numAttempts) + TestUtils.TIMEOUT_IT, TimeUnit.SECONDS);
 
     }
 

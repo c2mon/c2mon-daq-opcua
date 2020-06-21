@@ -28,7 +28,7 @@ public class RetryDelegate implements SessionActivityListener {
 
 
     @Value("${app.serverTimeout}")
-    private int timeout;
+    private long timeout;
 
     @Value("${app.maxRetryAttempts}")
     private int maxRetryCount;

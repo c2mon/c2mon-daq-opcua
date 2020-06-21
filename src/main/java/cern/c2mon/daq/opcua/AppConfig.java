@@ -54,7 +54,7 @@ public class AppConfig {
      * The timeout indicating for how long the client is willing to wait for a server response on a single transaction
      * in milliseconds. The maximum value is 5000 due to a static timeout in the Eclipse Milo package.
      */
-    private int timeout;
+    private long timeout;
 
     /**
      * If enabled, the client will make no attempt to validate server certificates, but trust servers. If disabled,

@@ -1,12 +1,12 @@
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import lombok.SneakyThrows;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,8 +57,7 @@ public abstract class ControllerTestBase {
         controller = null;
     }
 
-    @SneakyThrows
-    protected void subscribeTagsAndMockStatusCode (StatusCode code, ISourceDataTag... tags)  {
+    protected void subscribeTagsAndMockStatusCode (StatusCode code, ISourceDataTag... tags) throws ConfigurationException {
         mocker.mockStatusCodeAndClientHandle(code, tags);
         mocker.replay();
         controller.subscribeTags(Arrays.asList(tags));

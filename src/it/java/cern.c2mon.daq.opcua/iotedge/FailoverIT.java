@@ -15,20 +15,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.Map;
 import java.util.concurrent.*;
 
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.mock;
-
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 @Slf4j
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
 public class FailoverIT {
-    private static ConnectionResolver.Edge active;
-    private static ConnectionResolver.Edge fallback;
+    private static ConnectionResolver connectionResolver;
+    private static Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> active;
+    private static Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> fallback;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     final NonTransparentRedundancyTypeNode redundancyMock = mock(NonTransparentRedundancyTypeNode.class);
@@ -40,26 +44,28 @@ public class FailoverIT {
 
     @BeforeAll
     public static void setupContainers() {
-        active = new ConnectionResolver.Edge();
-        fallback = new ConnectionResolver.Edge();
-
+        connectionResolver = new ConnectionResolver();
+        active = connectionResolver.addImage();
+        fallback = connectionResolver.addImage();
     }
 
     @AfterAll
     public static void tearDownContainers() {
-        active.close();
-        fallback.close();
+        connectionResolver.close();
     }
 
     @BeforeEach
     public void setupEndpoint() {
-        active.getProxy().setConnectionCut(false);
-        fallback.getProxy().setConnectionCut(true);
+        try {
+            fallback.getValue().setConnectionCut(true);
+        } catch (Exception ignored) {
+            //toxiproxy will throw a Runtime error when attempting to cut a connection that's already cut
+        }
+        active.getValue().setConnectionCut(false);
 
         log.info("############ SET UP ############");
         pulseListener.setDebugEnabled(true);
         pulseListener.setSourceID(tag.getId());
-
         testEndpoint.setRedundancyMock(redundancyMock);
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
         ReflectionTestUtils.setField(failoverProxy, "endpointListener", pulseListener);
@@ -83,31 +89,68 @@ public class FailoverIT {
     @Test
     public void coldFailoverShouldReconnectClient() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         mockColdFailover();
-        connectAndDisconnect();
+        connect();
+        cutConnection();
 
         final var reconnect = pulseListener.listen();
-        fallback.getProxy().setConnectionCut(false);
+        fallback.getValue().setConnectionCut(false);
         Assertions.assertEquals(EndpointListener.EquipmentState.OK, reconnect.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         mockColdFailover();
-        connectAndDisconnect();
+        connect();
+        cutConnection();
 
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
-        fallback.getProxy().setConnectionCut(false);
+        fallback.getValue().setConnectionCut(false);
+        Assertions.assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+
+        //cleanUp
+        active.getValue().setConnectionCut(false);
+        fallback.getValue().setConnectionCut(true);
+    }
+
+    @Test
+    public void restartServerWithColdFailoverShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+        mockColdFailover();
+        connect();
+
+        //restart server
+        final var connectionLost = pulseListener.listen();
+        active.getKey().close();
+        connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        pulseListener.reset();
+        pulseListener.setSourceID(tag.getId());
+        final var connectionRegained = pulseListener.getStateUpdate();
+        active.getKey().restart();
+
+        assertEquals(EndpointListener.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+    }
+    @Test
+    public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+        mockColdFailover();
+        connect();
+        cutConnection();
+
+        pulseListener.reset();
+        pulseListener.setSourceID(tag.getId());
+        active.getValue().setConnectionCut(false);
         Assertions.assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
-    private void connectAndDisconnect() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
-        controller.connect(active.getUri());
+    private void connect() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+        controller.connect(active.getKey().getUri());
         controller.subscribeTag(tag);
         pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+    }
 
+    private void cutConnection() throws InterruptedException, ExecutionException, TimeoutException {
         final var disconnected = pulseListener.listen();
-        active.getProxy().setConnectionCut(true);
+        active.getValue().setConnectionCut(true);
         disconnected.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
     }
 
@@ -116,8 +159,9 @@ public class FailoverIT {
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.Cold))
                 .anyTimes();
         expect(redundancyMock.getServerUriArray())
-                .andReturn(CompletableFuture.completedFuture(new String[]{fallback.getUri()}))
+                .andReturn(CompletableFuture.completedFuture(new String[]{fallback.getKey().getUri()}))
                 .anyTimes();
         EasyMock.replay(redundancyMock);
     }
+
 }

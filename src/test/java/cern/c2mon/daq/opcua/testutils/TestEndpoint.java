@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
@@ -48,19 +49,19 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public Map<UInteger, SourceDataTagQualityCode> subscribeWithValueUpdateCallback(int publishingInterval, Collection<ItemDefinition> definitions, TriConsumer<UInteger, SourceDataTagQualityCode, ValueUpdate> onValueUpdate) throws CommunicationException {
+    public Map<UInteger, SourceDataTagQuality> subscribeWithValueUpdateCallback(int publishingInterval, Collection<ItemDefinition> definitions, TriConsumer<UInteger, SourceDataTagQuality, ValueUpdate> onValueUpdate) throws CommunicationException {
         final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         BiConsumer<UaMonitoredItem, Integer> itemCreationCallback = (item, integer) -> item.setValueConsumer(value -> {
-            SourceDataTagQualityCode tagQuality = MiloMapper.getDataTagQualityCode(value.getStatusCode());
+            SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality(value.getStatusCode());
             ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime());
             onValueUpdate.apply(item.getClientHandle(), tagQuality, valueUpdate);
         });
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
-        return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> MiloMapper.getDataTagQualityCode(monitoredItem.getStatusCode())));
+        return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> MiloMapper.getDataTagQuality(monitoredItem.getStatusCode())));
     }
 
     @Override
-    public Map<UInteger, SourceDataTagQualityCode> subscribeWithCreationCallback(int publishingInterval, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
+    public Map<UInteger, SourceDataTagQuality> subscribeWithCreationCallback(int publishingInterval, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
         return null;
     }
 
@@ -74,8 +75,9 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public Map.Entry<ValueUpdate, SourceDataTagQualityCode> read(NodeId nodeId) throws OPCUAException {
-        return Map.entry(new ValueUpdate(0), returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
+    public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
+        final var quality = new SourceDataTagQuality(returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
+        return Map.entry(new ValueUpdate(0), quality);
     }
 
     @Override
