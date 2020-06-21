@@ -61,7 +61,7 @@ public class FailoverIT {
         try {
             fallback.getValue().setConnectionCut(true);
         } catch (Exception ignored) {
-            //toxiproxy will throw a Runtime error when attempting to cut a connection that's already cut
+            //toxiproxy will throw a runtime error when attempting to cut a connection that's already cut
         }
         active.getValue().setConnectionCut(false);
 
@@ -83,6 +83,7 @@ public class FailoverIT {
 
     @Test
     public void coldFailoverShouldReconnectClient() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+        log.info("coldFailoverShouldReconnectClient");
         mockColdFailover();
         connect();
         cutConnection();
@@ -94,6 +95,7 @@ public class FailoverIT {
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+        log.info("coldFailoverShouldResumeSubscriptions");
         mockColdFailover();
         connect();
         cutConnection();
@@ -101,15 +103,12 @@ public class FailoverIT {
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
         fallback.getValue().setConnectionCut(false);
-        Assertions.assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
-
-        //cleanUp
-        active.getValue().setConnectionCut(false);
-        fallback.getValue().setConnectionCut(true);
+        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     @Test
     public void restartServerWithColdFailoverShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+        log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
         mockColdFailover();
         connect();
 
@@ -119,7 +118,7 @@ public class FailoverIT {
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
-        final var connectionRegained = pulseListener.getStateUpdate();
+        final var connectionRegained = pulseListener.listen();
         active.getKey().restart();
 
         assertEquals(EndpointListener.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
@@ -127,6 +126,7 @@ public class FailoverIT {
     }
     @Test
     public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+        log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
         mockColdFailover();
         connect();
         cutConnection();
@@ -134,7 +134,7 @@ public class FailoverIT {
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
         active.getValue().setConnectionCut(false);
-        Assertions.assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     private void connect() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
