@@ -196,8 +196,8 @@ public class TagSubscriptionMapperTest extends MappingBase {
     }
 
     @Test
-    public void getTagByRandomClientHandleShouldThrowError() {
-        assertThrows(IllegalArgumentException.class, () -> mapper.getTagId(UInteger.valueOf(2)));
+    public void getTagByRandomClientHandleShouldReturnNull() {
+        assertNull(mapper.getTagId(UInteger.valueOf(2)));
     }
 
     @Test

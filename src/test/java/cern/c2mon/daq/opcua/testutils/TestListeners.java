@@ -53,7 +53,8 @@ public abstract class TestListeners {
         @Override
         public void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
             super.onValueUpdate(clientHandle, quality, valueUpdate);
-            if (mapper.getTagId(clientHandle).equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
+            final Long tagId = mapper.getTagId(clientHandle);
+            if (tagId != null && tagId.equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
                 if (tagValUpdate.isDone()) {
                     if (debugEnabled) {
                         log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
@@ -127,8 +128,10 @@ public abstract class TestListeners {
         public void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
             if (quality.isValid()) {
                 final Long tagId = mapper.getTagId(clientHandle);
-                if (debugEnabled) {
-                    log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
+                if (tagId == null) {
+                    log.error("received update for unknown clientHandle {} where mapper is in state {}.", clientHandle, mapper.getTagIdDefinitionMap());
+                } else if (debugEnabled) {
+                    log.info("received data tag {}, client handle {}, value update {}, quality {}", tagId, clientHandle, valueUpdate, quality);
                 }
                 tagUpdate.complete(tagId);
             } else {

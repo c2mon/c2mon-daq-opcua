@@ -9,6 +9,7 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager
 import org.eclipse.milo.opcua.stack.core.StatusCodes;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.retry.backoff.BackOffInterruptedException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -74,6 +75,8 @@ public class EndpointSubscriptionListener implements UaSubscriptionManager.Subsc
         } catch (CommunicationException e) {
             // only after Integer.MAX_VALUE retries have failed, should not happen
             recreate(subscription);
+        } catch (BackOffInterruptedException e) {
+            log.error("Recreation process interrupted and discontinued: ", e);
         } catch (Exception e) {
             log.error("Subscription recreation discontinued: ", e);
         }

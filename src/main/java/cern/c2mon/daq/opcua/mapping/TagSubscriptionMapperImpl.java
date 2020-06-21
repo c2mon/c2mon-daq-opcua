@@ -27,7 +27,6 @@ import org.springframework.stereotype.Component;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -40,7 +39,6 @@ import static java.util.stream.Collectors.toMap;
 public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
-
     private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
 
     @Override
@@ -58,14 +56,14 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public SubscriptionGroup getGroup (ISourceDataTag dataTag) {
+    public SubscriptionGroup getGroup(ISourceDataTag dataTag) {
         getOrCreateDefinition(dataTag);
         return getOrCreateGroup(dataTag.getTimeDeadband());
     }
 
 
     @Override
-    public SubscriptionGroup getGroup (int timeDeadband) {
+    public SubscriptionGroup getGroup(int timeDeadband) {
         return subscriptionGroups.get(timeDeadband);
     }
 
@@ -90,21 +88,18 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public long getTagId(ItemDefinition definition)  {
+    public long getTagId(ItemDefinition definition) {
         return tagIdDefinitionMap.inverse().get(definition);
     }
 
 
     @Override
     public Long getTagId(UInteger clientHandle) {
-        final Optional<Map.Entry<Long, ItemDefinition>> mapEntry = tagIdDefinitionMap.entrySet().stream()
+        return tagIdDefinitionMap.entrySet().stream()
                 .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
-                .findFirst();
-
-        if(mapEntry.isEmpty()) {
-            throw new IllegalArgumentException("This clientHandle is not associated with mapEntry tag.");
-        }
-        return mapEntry.get().getKey();
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -150,7 +145,7 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
         }
     }
 
-    private boolean groupExists (int deadband) {
+    private boolean groupExists(int deadband) {
         return subscriptionGroups.get(deadband) != null;
     }
 }

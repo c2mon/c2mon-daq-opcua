@@ -86,16 +86,9 @@ public class EdgeIT {
 
     @AfterEach
     public void cleanUp() throws InterruptedException {
-        log.info("############ CLEAN UP ############");
-        final var f = pulseListener.listen();
-        controller.stop();
-        try {
-            f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
-        } catch (TimeoutException | CompletionException | ExecutionException e) {
-            // assure that server has time to disconnect, fails for test on failed connections
-        }
-        controller = null;
         proxy.getValue().setConnectionCut(false);
+        log.info("############ CLEAN UP ############");
+        controller.stop();
     }
 
     @Test
@@ -178,9 +171,9 @@ public class EdgeIT {
     }
 
     @Test
-    public void interruptedServerShouldSendLOST() {
+    public void connectionCutServerShouldSendLOST() throws InterruptedException, ExecutionException, TimeoutException {
         proxy.getValue().setConnectionCut(true);
-        final EndpointListener.EquipmentState reconnectState = assertDoesNotThrow(() -> pulseListener.getStateUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        final var reconnectState = pulseListener.getStateUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         assertEquals(CONNECTION_LOST, reconnectState);
     }
 

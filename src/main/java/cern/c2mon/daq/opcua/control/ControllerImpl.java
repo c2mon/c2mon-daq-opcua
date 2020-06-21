@@ -231,7 +231,10 @@ public class ControllerImpl implements Controller {
     private boolean subscribeToGroup(Endpoint endpoint, SubscriptionGroup group, Collection<ItemDefinition> definitions) {
         try {
             boolean allSuccessful = true;
-            final var handleQualityMap = endpoint.subscribeWithValueUpdateCallback(group.getPublishInterval(), definitions, endpointListener::onValueUpdate);
+            final var handleQualityMap = endpoint.subscribeWithValueUpdateCallback(
+                    group.getPublishInterval(),
+                    definitions,
+                    endpointListener::onValueUpdate);
             for (var e : handleQualityMap.entrySet()) {
                 allSuccessful = allSuccessful && onSubscriptionComplete(e.getKey(), e.getValue());
             }
@@ -246,7 +249,10 @@ public class ControllerImpl implements Controller {
     public boolean onSubscriptionComplete(UInteger clientHandle, SourceDataTagQuality quality) {
         final boolean valid = quality.isValid();
         if (valid) {
-            mapper.addTagToGroup(mapper.getTagId(clientHandle));
+            final Long tagId = mapper.getTagId(clientHandle);
+            if (tagId != null) {
+                mapper.addTagToGroup(tagId);
+            }
         } else {
             endpointListener.onTagInvalid(clientHandle, quality);
         }

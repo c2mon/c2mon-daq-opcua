@@ -49,10 +49,18 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
     @Override
     public void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
         if (quality.isValid()) {
-            final Long tagId = mapper.getTagId(clientHandle);
-            this.sender.update(tagId, valueUpdate, quality);
-            if (log.isDebugEnabled()) {
-                log.debug("onNewTagValue - Tag value " + valueUpdate + " sent for Tag #" + tagId);
+            try {
+                final Long tagId = mapper.getTagId(clientHandle);
+                if (tagId == null) {
+                    log.error("Received update for unknown clientHandle: {}", clientHandle);
+                } else {
+                    this.sender.update(tagId, valueUpdate, quality);
+                    if (log.isDebugEnabled()) {
+                        log.debug("onNewTagValue - Tag value " + valueUpdate + " sent for Tag #" + tagId);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Caught for clientHandle {} with Mapper at state {}.", clientHandle, mapper.getTagIdDefinitionMap(), e);
             }
         } else {
             onTagInvalid(clientHandle, quality);
