@@ -21,6 +21,7 @@ import org.junit.Ignore;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.ToxiproxyContainer;
@@ -37,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class EdgeIT {
     private static Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> proxy;
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
@@ -140,11 +142,11 @@ public class EdgeIT {
 
     @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
-        final var connectionLost = pulseListener.getStateUpdate();
+        final var connectionLost = pulseListener.listen();
         proxy.getKey().close();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
-        final var connectionRegained = pulseListener.getStateUpdate();
+        final var connectionRegained = pulseListener.listen();
         pulseListener.setSourceID(alreadySubscribedTag.getId());
         proxy.getKey().restart();
 
