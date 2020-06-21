@@ -54,7 +54,9 @@ public class ColdFailover extends FailoverBase {
         // only one server can be healthy at a time in cold redundancy
         if (readServiceLevel(endpoint).compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
             disconnectAndProceed();
-            connectToHealthiestServer();
+            if (!connectToHealthiestServer()) {
+                return;
+            }
             this.redundantAddresses.add(currentUri);
         } else {
             log.info("Connected to healthy server in cold redundancy mode.");
@@ -80,12 +82,13 @@ public class ColdFailover extends FailoverBase {
      */
     @Override
     public void switchServers() throws OPCUAException {
-        if (listening.getAndSet(false)) {
+        if (listening.getAndSet(false) && !controller.isStopped()) {
             log.info("Attempt to switch to next healthy server.");
             disconnectAndProceed();
             redundantAddresses.add(currentUri);
+            boolean connectionSuccessful = false;
             try {
-                connectToHealthiestServer();
+                connectionSuccessful = connectToHealthiestServer();
             } catch (OPCUAException e) {
                 disconnectAndProceed();
                 log.info("Server not yet available.");
@@ -93,36 +96,40 @@ public class ColdFailover extends FailoverBase {
                 listening.set(true);
                 throw e;
             }
+            if (connectionSuccessful) {
 
-            final boolean subscriptionError = mapper.getSubscriptionGroups().values()
-                    .stream()
-                    .noneMatch(e -> controller.subscribeToGroup(e, e.getTagIds().values()));
-            if (subscriptionError) {
-                log.error("Could not recreate any subscriptions. Connect to next server... ");
-                throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
+                final boolean subscriptionError = mapper.getSubscriptionGroups().values()
+                        .stream()
+                        .noneMatch(e -> controller.subscribeToGroup(e, e.getTagIds().values()));
+                if (subscriptionError) {
+                    log.error("Could not recreate any subscriptions. Connect to next server... ");
+                    throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
+                }
+                log.info("Recreated subscriptions on server {}.", currentUri);
+                monitorConnection();
             }
-            log.info("Recreated subscriptions on server {}.", currentUri);
-            monitorConnection();
         } else {
             log.info("Server was manually shut down.");
         }
     }
 
-    private void connectToHealthiestServer() throws OPCUAException {
+    private boolean connectToHealthiestServer() throws OPCUAException {
         UByte maxServiceLevel = UByte.valueOf(0);
         String maxServiceUri = null;
         for (var iterator = redundantAddresses.iterator(); iterator.hasNext(); ) {
             final String nextUri = iterator.next();
             try {
+                if (controller.isStopped()) {
+                    return false;
+                }
                 endpoint.initialize(nextUri, listeners);
                 final UByte nextServiceLevel = readServiceLevel(endpoint);
                 if (nextServiceLevel.compareTo(maxServiceLevel) > 0) {
                     maxServiceLevel = nextServiceLevel;
                     maxServiceUri = nextUri;
-                    //don't disconnect from last server, if it is the active one
-                    if (!iterator.hasNext() || nextServiceLevel.compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
+                    if (nextServiceLevel.compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
                         currentUri = nextUri;
-                        return;
+                        return true;
                     }
                 }
                 endpoint.disconnect();
@@ -133,8 +140,11 @@ public class ColdFailover extends FailoverBase {
         if (maxServiceUri != null) {
             currentUri = maxServiceUri;
             endpoint.initialize(currentUri, listeners);
+            log.info("Connected to healthiest server with Service Level of {}.", maxServiceLevel);
+            return true;
+        } else {
+            throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
         }
-        throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
     }
 
     private void monitorConnection() {
@@ -154,6 +164,7 @@ public class ColdFailover extends FailoverBase {
         } catch (OPCUAException ignored) {
         }
     }
+
 
     /**
      * See UA Part 4, 6.6.2.4.2, Table 10.

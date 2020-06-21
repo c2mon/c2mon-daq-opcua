@@ -95,6 +95,11 @@ public class ControllerImpl implements Controller {
         }
     }
 
+    @Override
+    public boolean isStopped() {
+        return stopped.get();
+    }
+
     /**
      * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
      * @param dataTags the collection of ISourceDataTags to subscribe to.

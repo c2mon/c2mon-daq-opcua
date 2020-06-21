@@ -32,6 +32,7 @@ public interface Controller {
      */
     void stop();
 
+    boolean isStopped();
 
     /**
      * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
