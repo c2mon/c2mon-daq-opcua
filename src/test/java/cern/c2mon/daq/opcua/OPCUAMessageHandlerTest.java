@@ -44,10 +44,13 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     AliveWriter aliveWriter;
 
     @Autowired
-    EndpointListener listener;
+    EndpointListener endpointListener;
 
     @Autowired
     Endpoint miloEndpoint;
+
+    @Autowired
+    AppConfig appConfig;
 
     OPCUAMessageHandler handler;
     TestUtils.CommfaultSenderCapture capture;
@@ -61,7 +64,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         ReflectionTestUtils.setField(handler, "aliveWriter", aliveWriter);
         ReflectionTestUtils.setField(handler, "tagChanger", new TagChanger(controller));
         ReflectionTestUtils.setField(handler, "commandRunner", commandRunner);
-        ReflectionTestUtils.setField(handler, "listener", listener);
+        ReflectionTestUtils.setField(handler, "endpointListener", endpointListener);
+        ReflectionTestUtils.setField(handler, "appConfig", appConfig);
         ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(miloEndpoint));
         capture = new TestUtils.CommfaultSenderCapture(messageSender);
     }
@@ -101,7 +105,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         replay(messageSender);
         assertThrows(ConfigurationException.class,
                 () -> handler.connectToDataSource(),
-                ExceptionContext.ADDRESS_MISSING_PROPERTIES.getMessage());
+                ExceptionContext.URI_SYNTAX.getMessage());
     }
 
     @Test

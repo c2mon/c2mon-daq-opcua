@@ -34,14 +34,14 @@ public class AliveWriterTest {
 
     @Test
     public void writeAliveShouldNotifyListenerWithGoodStatusCode() {
-        ReflectionTestUtils.setField(aliveWriter, "failover", TestUtils.getFailoverProxy(new TestEndpoint()));
+        ReflectionTestUtils.setField(aliveWriter, "failoverProxy", TestUtils.getFailoverProxy(new TestEndpoint()));
         aliveWriter.startWriter();
         assertDoesNotThrow(() -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void exceptionInWriteAliveShouldNotNotifyListener() {
-        ReflectionTestUtils.setField(aliveWriter, "failover", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
+        ReflectionTestUtils.setField(aliveWriter, "failoverProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
         aliveWriter.startWriter();
         assertThrows(TimeoutException.class, () -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
     }

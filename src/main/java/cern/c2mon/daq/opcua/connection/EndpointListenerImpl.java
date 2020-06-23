@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.CONNECTION_LOST;
@@ -21,7 +20,6 @@ import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.OK
 @Component(value = "endpointListener")
 @RequiredArgsConstructor
 @Slf4j
-@Primary
 public class EndpointListenerImpl implements EndpointListener, SessionActivityListener {
 
     private final TagSubscriptionMapper mapper;

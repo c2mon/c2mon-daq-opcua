@@ -46,7 +46,7 @@ public class SecurityIT {
     AppConfig config;
 
     @Autowired
-    FailoverProxy failoverProxy;
+    FailoverProxy testFailoverProxy;
 
     @Autowired TestListeners.TestListener testListener;
 
@@ -59,13 +59,13 @@ public class SecurityIT {
     @AfterAll
     public static void stopServer() {
         edge.close();
-        edge = null;
     }
 
     @BeforeEach
     public void setUp() {
         ReflectionTestUtils.setField(controller, "endpointListener", testListener);
-        ReflectionTestUtils.setField(failoverProxy, "endpointListener", testListener);
+        ReflectionTestUtils.setField(controller, "failoverProxy", testFailoverProxy);
+        ReflectionTestUtils.setField(testFailoverProxy, "endpointListener", testListener);
         testListener.reset();
     }
 

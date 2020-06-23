@@ -35,8 +35,10 @@ public abstract class TestUtils {
                 .certificationPriority(certificationPriority)
                 .trustAllServers(true)
                 .keystore(AppConfig.KeystoreConfig.builder().build())
+                .pkiConfig(AppConfig.PKIConfig.builder().build())
                 .maxRetryAttempts(1)
                 .retryDelay(2000)
+                .aliveWriterEnabled(false)
                 .build();
     }
 

@@ -20,16 +20,11 @@ import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
-import cern.c2mon.daq.opcua.address.AddressStringParser;
-import cern.c2mon.daq.opcua.address.EquipmentAddress;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.TagChanger;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -39,7 +34,6 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
 import java.util.concurrent.TimeUnit;
@@ -55,18 +49,12 @@ import java.util.concurrent.TimeUnit;
 @EnableAutoConfiguration
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
 
-    @Value("${app.restartDelay}")
-    private long restartDelay;
-
     private Controller controller;
-
     private AliveWriter aliveWriter;
-
     private TagChanger tagChanger;
-
     private CommandRunner commandRunner;
-
-    private EndpointListener listener;
+    private EndpointListener endpointListener;
+    private AppConfig appConfig;
 
 
     /**
@@ -82,20 +70,12 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         IEquipmentMessageSender sender = getEquipmentMessageSender();
 
         log.debug("Connecting to the OPC UA data source...");
-        listener.initialize(sender);
+        endpointListener.initialize(sender);
 
-        String uaTcpType = "opc.tcp";
-        EquipmentAddress address = AddressStringParser.parse(config.getAddress());
-        if (!address.supportsProtocol(uaTcpType)) {
-            throw new ConfigurationException(ExceptionContext.ENDPOINT_TYPES_UNKNOWN);
-        }
-        try {
-            controller.connect(address.getServerAddressOfType(uaTcpType).getUriString());
-        } catch (OPCUAException e) {
-            listener.onEquipmentStateUpdate(EndpointListener.EquipmentState.CONNECTION_FAILED);
-            throw e;
-        }
-        aliveWriter.initialize(config, address.isAliveWriterEnabled());
+        String[] addresses = AddressParser.parse(config.getAddress(), appConfig);
+        controller.connect(addresses[0]);
+
+        aliveWriter.initialize(config, appConfig.isAliveWriterEnabled());
         controller.subscribeTags(config.getSourceDataTags().values());
         log.debug("connected");
 
@@ -171,7 +151,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         if (equipmentConfiguration.getAddress().equals(oldEquipmentConfiguration.getAddress())) {
             try {
                 disconnectFromDataSource();
-                TimeUnit.MILLISECONDS.sleep(restartDelay);
+                TimeUnit.MILLISECONDS.sleep(appConfig.getRestartDelay());
                 connectToDataSource();
                 changeReport.appendInfo("DAQ restarted.");
             } catch (EqIOException e) {

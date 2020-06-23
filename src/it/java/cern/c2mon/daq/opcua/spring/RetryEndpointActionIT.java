@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.spring;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.RetryDelegate;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
@@ -57,10 +56,9 @@ public class RetryEndpointActionIT {
     public void longLostConnectionExceptionShouldNotBeRepeated() {
         //results in longLostConnectionException
         // scope prototype on delegate -> fetch proper instance
-        RetryDelegate delegate = (RetryDelegate) ReflectionTestUtils.getField(endpoint, "retryDelegate");
-        ReflectionTestUtils.setField(delegate, "disconnectionInstant", 2L);
+        ReflectionTestUtils.setField(endpoint, "disconnectionInstant", 2L);
         verifyExceptionOnRead(new Exception(), 1);
-        ReflectionTestUtils.setField(delegate, "disconnectionInstant", 0L);
+        ReflectionTestUtils.setField(endpoint, "disconnectionInstant", 0L);
     }
 
     private void verifyExceptionOnRead(Exception e, int numTimes) {

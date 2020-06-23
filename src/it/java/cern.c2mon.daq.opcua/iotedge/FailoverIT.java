@@ -87,14 +87,14 @@ public class FailoverIT {
     }
 
     @Test
-    public void coldFailoverShouldReconnect() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+    public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldReconnectClient");
         cutConnection();
         Assertions.assertEquals(EndpointListener.EquipmentState.OK, uncutConnection(fallback.getValue()));
     }
 
     @Test
-    public void coldFailoverShouldResumeSubscriptions() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+    public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldResumeSubscriptions");
         cutConnection();
         uncutConnection(fallback.getValue());
@@ -102,7 +102,7 @@ public class FailoverIT {
     }
 
     @Test
-    public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+    public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
         cutConnection();
         uncutConnection(active.getValue());
@@ -110,7 +110,7 @@ public class FailoverIT {
     }
 
     @Test
-    public void restartServerWithColdFailoverShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+    public void restartServerWithColdFailoverShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
         //stop server
         final var connectionLost = pulseListener.listen();

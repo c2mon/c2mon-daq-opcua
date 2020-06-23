@@ -87,7 +87,7 @@ public class CommandRunnerTest {
         EasyMock.expectLastCall().anyTimes();
         //no call to write
         replay(mockEp);
-        commandRunner.setFailover(TestUtils.getFailoverProxy(mockEp));
+        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(mockEp));
         commandRunner.runCommand(tag, value);
         verify(mockEp);
     }
@@ -103,7 +103,7 @@ public class CommandRunnerTest {
         expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();
         expect(mockEp.write(def, 0)).andReturn(endpoint.write(def, 0)).once();
         replay(mockEp);
-        commandRunner.setFailover(TestUtils.getFailoverProxy(mockEp));
+        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(mockEp));
         commandRunner.runCommand(tag, value);
         verify(mockEp);
     }
@@ -131,7 +131,7 @@ public class CommandRunnerTest {
 
     @Test
     public void badClientShouldThrowException() {
-        commandRunner.setFailover(TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
+        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
         verifyCommunicationException(ExceptionContext.WRITE);
     }
 

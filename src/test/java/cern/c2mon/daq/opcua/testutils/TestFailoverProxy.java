@@ -10,12 +10,14 @@ import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
 @RequiredArgsConstructor
+@Component(value = "testFailoverProxy")
 public class TestFailoverProxy implements FailoverProxy, SessionActivityListener {
 
     @Lazy private final SessionActivityListener endpointListener;
@@ -42,6 +44,9 @@ public class TestFailoverProxy implements FailoverProxy, SessionActivityListener
     }
 
     public void initialize(String uri) throws OPCUAException {
+        if (currentFailover == null) {
+            currentFailover = noFailover;
+        }
         currentFailover.initialize(Map.entry(uri, endpoint), redundantUris, Collections.emptyList());
         endpoint.initialize(uri, Arrays.asList(endpointListener, this));
     }

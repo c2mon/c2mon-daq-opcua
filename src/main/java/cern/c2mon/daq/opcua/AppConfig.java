@@ -57,6 +57,12 @@ public class AppConfig {
     private long timeout;
 
     /**
+     * The AliveWriter ensures that the SubEquipments connected to the OPC UA server are still running and sends regular
+     * aliveTags to the C2MON Core
+     */
+    private boolean aliveWriterEnabled;
+
+    /**
      * If enabled, the client will make no attempt to validate server certificates, but trust servers. If disabled,
      * incoming server certificates are verified against the certificates listed in pkiBaseDir.
      */

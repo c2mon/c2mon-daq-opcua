@@ -17,6 +17,7 @@
 
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
@@ -61,7 +62,6 @@ public class ControllerImpl implements Controller {
 
     /** A flag indicating whether the controller was stopped. */
     private final AtomicBoolean stopped = new AtomicBoolean(true);
-
     /**
      * Attempt to connect to an OPC UA server and notify the {@link cern.c2mon.daq.common.IEquipmentMessageSender} about
      * a failure which prevents the DAQ from starting successfully.
@@ -188,7 +188,7 @@ public class ControllerImpl implements Controller {
     @Override
     @Retryable(value = CommunicationException.class,
             maxAttempts = Integer.MAX_VALUE,
-            backoff = @Backoff(delayExpression = "${app.retryDelay}"))
+            backoff = @Backoff(delayExpression = "#{@appConfig.getRetryDelay()}"))
     public synchronized void recreateSubscription(Endpoint endpoint, int publishInterval) throws OPCUAException {
         if (stopped.get() || Thread.currentThread().isInterrupted()) {
             log.info("Controller was stopped, cease subscription recreation attempts.");

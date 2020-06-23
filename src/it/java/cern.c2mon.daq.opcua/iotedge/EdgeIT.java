@@ -38,8 +38,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class EdgeIT {
+    private static ConnectionResolver resolver = new ConnectionResolver();
     private static Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> proxy;
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final ISourceDataTag alreadySubscribedTag = EdgeTagFactory.DipData.createDataTag();
@@ -60,12 +61,13 @@ public class EdgeIT {
 
     @BeforeAll
     public static void setupContainers() {
-        proxy = new ConnectionResolver().addImage();
+        resolver = new ConnectionResolver();
+        proxy = resolver.addImage();
     }
 
     @AfterAll
     public static void tearDownContainers() {
-        proxy.getKey().close();
+        resolver.close();
     }
 
     @BeforeEach

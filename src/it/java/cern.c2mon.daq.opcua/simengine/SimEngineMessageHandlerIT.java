@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.simengine;
 
+import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.control.CommandRunner;
@@ -52,7 +53,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static final long CMDID_V0SET = 20L;
     private static ConnectionResolver.OpcUaImage.Venus image;
     @Autowired
-    TestListeners.Pulse listener;
+    TestListeners.Pulse endpointListener;
     @Autowired
     Controller controller;
     @Autowired
@@ -63,6 +64,9 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     AliveWriter aliveWriter;
     @Autowired
     FailoverProxy failoverProxy;
+    @Autowired
+    AppConfig config;
+
     private OPCUAMessageHandler handler;
     private SourceCommandTagValue value;
 
@@ -89,9 +93,10 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         ReflectionTestUtils.setField(handler, "aliveWriter", aliveWriter);
         ReflectionTestUtils.setField(handler, "tagChanger", tagChanger);
         ReflectionTestUtils.setField(handler, "commandRunner", commandRunner);
-        ReflectionTestUtils.setField(handler, "listener", listener);
-        ReflectionTestUtils.setField(controller, "endpointListener", listener);
-        ReflectionTestUtils.setField(failoverProxy, "endpointListener", listener);
+        ReflectionTestUtils.setField(handler, "endpointListener", endpointListener);
+        ReflectionTestUtils.setField(handler, "appConfig", config);
+        ReflectionTestUtils.setField(controller, "endpointListener", endpointListener);
+        ReflectionTestUtils.setField(failoverProxy, "endpointListener", endpointListener);
         mapEquipmentAddress();
         log.info("############### TEST ##############");
     }
@@ -135,14 +140,14 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Test
     @UseConf("simengine_power.xml")
     public void write1SetsValueTo1() throws EqIOException, EqCommandTagException, InterruptedException, ExecutionException, TimeoutException {
-        listener.setSourceID(DATAID_PW);
-        listener.setThreshold(1);
+        endpointListener.setSourceID(DATAID_PW);
+        endpointListener.setThreshold(1);
         handler.connectToDataSource();
 
         setIDTo(CMDID_PW, 1);
 
         // Assert power is set to 1
-        final ValueUpdate valueUpdate = listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        final ValueUpdate valueUpdate = endpointListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
         assertEquals(1, valueUpdate.getValue());
 
 
@@ -152,27 +157,27 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Test
     @UseConf("simengine_power.xml")
     public void testPowerOnAndSetV0ShouldNotifyVMon() throws EqIOException, EqCommandTagException {
-        listener.setSourceID(DATAID_VMON);
-        listener.setThreshold(10);
+        endpointListener.setSourceID(DATAID_VMON);
+        endpointListener.setThreshold(10);
         handler.connectToDataSource();
         setIDTo(CMDID_PW, 1);
         setIDTo(CMDID_V0SET, 10);
 
         // Assert monitored voltage close to threshold within reasonable time
-        assertDoesNotThrow(() -> listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> endpointListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
 
     @Test
     @UseConf("simengine_power_pulse.xml")
     public void testPowerOnAndOff() throws EqIOException, ExecutionException, InterruptedException, EqCommandTagException, TimeoutException {
-        listener.setSourceID(DATAID_PW);
-        listener.setThreshold(1);
+        endpointListener.setSourceID(DATAID_PW);
+        endpointListener.setThreshold(1);
         handler.connectToDataSource();
         setIDTo(CMDID_PW, 1);
 
-        final ValueUpdate pwOnUpdate = listener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
-        final ValueUpdate pwOffUpdate = listener.getPulseTagUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        final ValueUpdate pwOnUpdate = endpointListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        final ValueUpdate pwOffUpdate = endpointListener.getPulseTagUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
         final long timeDiff = pwOffUpdate.getSourceTimestamp() - pwOnUpdate.getSourceTimestamp();
 
         assertEquals(1, pwOnUpdate.getValue());

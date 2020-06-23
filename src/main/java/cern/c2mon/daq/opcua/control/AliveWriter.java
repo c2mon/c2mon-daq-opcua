@@ -48,12 +48,12 @@ public class AliveWriter {
     /**
      * The failover proxy for the endpoint to write to.
      */
-    private final FailoverProxy failover;
+    private final FailoverProxy failoverProxy;
 
     /**
      * The Endpoint listener which notifies the Server of a new alive.
      */
-    private final EndpointListener listener;
+    private final EndpointListener endpointListener;
 
     /**
      * The service to schedule periodically to write to the alive tag hardware address
@@ -137,8 +137,8 @@ public class AliveWriter {
             log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
         }
         try {
-            if (failover.getEndpoint().write(address, castedValue)) {
-                listener.onAlive();
+            if (failoverProxy.getEndpoint().write(address, castedValue)) {
+                endpointListener.onAlive();
             }
             writeCounter.incrementAndGet();
             writeCounter.compareAndSet(Byte.MAX_VALUE, 0);

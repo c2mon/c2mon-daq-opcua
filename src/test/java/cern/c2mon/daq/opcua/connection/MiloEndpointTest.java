@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -20,17 +21,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class MiloEndpointTest {
 
-    RetryDelegate delegate = new RetryDelegate();
-    Endpoint endpoint = new MiloEndpoint(null, new EndpointSubscriptionListener(), delegate);
+    Endpoint endpoint;
 
     OpcUaClient mockClient = createMock(OpcUaClient.class);
 
     @BeforeEach
     public void setUp() {
+        AppConfig config = AppConfig.builder().maxRetryAttempts(3).timeout(300).retryDelay(1000).build();
+        endpoint = new MiloEndpoint(null, new EndpointSubscriptionListener(), new RetryDelegate(config));
         ReflectionTestUtils.setField(endpoint, "client", mockClient);
-        ReflectionTestUtils.setField(delegate, "maxRetryCount", 3);
-        ReflectionTestUtils.setField(delegate, "timeout", 300);
-        ReflectionTestUtils.setField(delegate, "retryDelay", 1000);
     }
 
     private void setUpDeleteSubscriptionMocks(Exception e) {
@@ -60,7 +59,7 @@ public class MiloEndpointTest {
 
     @Test
     public void alreadyAttemptingResubscriptionTooLongThrowsLongLostConnectionException() {
-        ReflectionTestUtils.setField(delegate, "disconnectionInstant", 20);
+        ReflectionTestUtils.setField(endpoint, "disconnectionInstant", 20);
         setUpDeleteSubscriptionMocks(new LongLostConnectionException(ExceptionContext.DELETE_SUBSCRIPTION, new IllegalArgumentException()));
         assertThrows(LongLostConnectionException.class, () -> endpoint.write(NodeId.NULL_GUID, 1));
     }
