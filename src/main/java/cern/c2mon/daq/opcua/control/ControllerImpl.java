@@ -17,7 +17,6 @@
 
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
@@ -35,14 +34,10 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -54,6 +49,7 @@ import java.util.stream.Collectors;
 @Component("controller")
 @Slf4j
 @RequiredArgsConstructor
+@Lazy
 public class ControllerImpl implements Controller {
 
     private final TagSubscriptionMapper mapper;
@@ -71,6 +67,7 @@ public class ControllerImpl implements Controller {
      *                              ConfigurationException} if it is not possible to connect to any of the the OPC UA
      *                              server's endpoints with the given authentication configuration settings.
      */
+    @Override
     public void connect(String uri) throws OPCUAException {
         try {
             failoverProxy.initialize(uri);
@@ -86,12 +83,17 @@ public class ControllerImpl implements Controller {
      */
     @Override
     public void stop() {
+        log.info("Disconnecting... ");
         stopped.set(true);
         mapper.clear();
-        try {
-            failoverProxy.disconnect();
-        } catch (OPCUAException e) {
-            log.error("Error disconnecting: ", e);
+        final Collection<Endpoint> endpoints = new ArrayList<>(failoverProxy.getPassiveEndpoints());
+        endpoints.add(failoverProxy.getActiveEndpoint());
+        for (var e : endpoints) {
+            try {
+                e.disconnect();
+            } catch (OPCUAException ex) {
+                log.error("Error disconnecting from endpoint with uri {}: ", e.getUri(), ex);
+            }
         }
     }
 
@@ -136,6 +138,19 @@ public class ControllerImpl implements Controller {
         return subscribeToGroup(group, Collections.singletonList(definition));
     }
 
+    @Override
+    public boolean subscribeToGroup(SubscriptionGroup group, Collection<ItemDefinition> definitions) {
+        final Map<UInteger, SourceDataTagQuality> tagQualityMap = subscribeToGroup(failoverProxy.getActiveEndpoint(), group, definitions);
+        boolean allSuccessful  = tagQualityMap != null;
+        if (allSuccessful) {
+            for (var e : tagQualityMap.entrySet()) {
+                allSuccessful = allSuccessful && completeSubscriptionAndReportSuccess(e.getKey(), e.getValue());
+            }
+        }
+        failoverProxy.getPassiveEndpoints().forEach(e -> subscribeToGroup(e, group, definitions));
+        return allSuccessful;
+    }
+
     /**
      * Removes a Tag from the internal configuration and if already subscribed from the OPC UA subscription. It the
      * subscription is then empty, it is deleted along with the monitored item.
@@ -147,16 +162,24 @@ public class ControllerImpl implements Controller {
         final boolean wasSubscribed = mapper.wasSubscribed(dataTag);
         if (wasSubscribed) {
             log.info("Unsubscribing tag from server.");
-            try {
-                final UInteger clientHandle = mapper.getDefinition(dataTag.getId()).getClientHandle();
-                failoverProxy.getEndpoint().deleteItemFromSubscription(clientHandle, dataTag.getTimeDeadband());
-            } catch (OPCUAException e) {
-                log.error("Deleting empty subscription could not be completed successfully.");
+            final UInteger clientHandle = mapper.getDefinition(dataTag.getId()).getClientHandle();
+            failoverProxy.getPassiveEndpoints().forEach(e -> deleteAndReport(e, clientHandle, dataTag.getId(), dataTag.getTimeDeadband()));
+            if (!deleteAndReport(failoverProxy.getActiveEndpoint(), clientHandle, dataTag.getId(), dataTag.getTimeDeadband())) {
                 return false;
             }
         }
         mapper.removeTag(dataTag);
         return wasSubscribed;
+    }
+
+    private boolean deleteAndReport(Endpoint endpoint, UInteger clientHandle, long tagID, int publishTime) {
+        try {
+            endpoint.deleteItemFromSubscription(clientHandle, publishTime);
+            return true;
+        } catch (OPCUAException ex) {
+            log.error("Tag with ID {} could not be completed successfully on endpoint {}.", tagID, endpoint.getUri());
+            return false;
+        }
     }
 
     /**
@@ -176,39 +199,6 @@ public class ControllerImpl implements Controller {
         refresh(Map.of(sourceDataTag.getId(), mapper.getOrCreateDefinition(sourceDataTag)));
     }
 
-    /**
-     * Called when a subscription could not be automatically transferred in between sessions. In this case, the
-     * subscription is recreated from scratch. If the controller received the command to stop, the subscription is not
-     * recreated and the method exists silently.
-     * @param publishInterval the publishInterval of the old session which must be recreated.
-     * @throws OPCUAException of type {@link CommunicationException} if the subscription could not be recreated due to
-     *                        communication difficulty, and of type {@link ConfigurationException} if the subscription
-     *                        can not be mapped to current DataTags, and therefore cannot be recreated.
-     */
-    @Override
-    @Retryable(value = CommunicationException.class,
-            maxAttempts = Integer.MAX_VALUE,
-            backoff = @Backoff(delayExpression = "#{@appConfig.getRetryDelay()}"))
-    public synchronized void recreateSubscription(Endpoint endpoint, int publishInterval) throws OPCUAException {
-        if (stopped.get() || Thread.currentThread().isInterrupted()) {
-            log.info("Controller was stopped, cease subscription recreation attempts.");
-        } else {
-            log.info("Attempt to recreate the subscription.");
-            final var group = mapper.getGroup(publishInterval);
-            if (group == null || group.size() == 0) {
-                throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
-            }
-            try {
-                endpoint.deleteSubscription(publishInterval);
-            } catch (OPCUAException ignored) {
-                log.error("Could not delete subscription. Proceed with recreation.");
-            }
-            if (!subscribeToGroup(endpoint, group, group.getTagIds().values())) {
-                throw new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION);
-            }
-        }
-    }
-
     private synchronized void refresh(Map<Long, ItemDefinition> entries) {
         final var notRefreshable = new ArrayList<Long>();
         for (var e : entries.entrySet()) {
@@ -217,7 +207,7 @@ public class ControllerImpl implements Controller {
                 return;
             }
             try {
-                final var reading = failoverProxy.getEndpoint().read(e.getValue().getNodeId());
+                final var reading = failoverProxy.getActiveEndpoint().read(e.getValue().getNodeId());
                 endpointListener.onValueUpdate(e.getValue().getClientHandle(), reading.getValue(), reading.getKey());
             } catch (OPCUAException ex) {
                 notRefreshable.add(e.getKey());
@@ -228,39 +218,26 @@ public class ControllerImpl implements Controller {
         }
     }
 
-    @Override
-    public boolean subscribeToGroup(SubscriptionGroup group, Collection<ItemDefinition> definitions) {
-        return subscribeToGroup(failoverProxy.getEndpoint(), group, definitions);
-    }
-
-    private boolean subscribeToGroup(Endpoint endpoint, SubscriptionGroup group, Collection<ItemDefinition> definitions) {
+    private Map<UInteger, SourceDataTagQuality> subscribeToGroup(Endpoint endpoint, SubscriptionGroup group, Collection<ItemDefinition> definitions) {
         try {
-            boolean allSuccessful = true;
-            final var handleQualityMap = endpoint.subscribeWithValueUpdateCallback(
-                    group.getPublishInterval(),
-                    definitions,
-                    endpointListener::onValueUpdate);
-            for (var e : handleQualityMap.entrySet()) {
-                allSuccessful = allSuccessful && onSubscriptionComplete(e.getKey(), e.getValue());
-            }
-            return allSuccessful;
+            return endpoint.subscribeToGroup(group.getPublishInterval(), definitions);
         } catch (OPCUAException ignored) {
             final String ids = Joiner.on(", ").join(definitions.stream().map(mapper::getTagId).toArray());
-            log.error("Tags with IDs {} could not be subscribed. ", ids);
-            return false;
+            log.error("Tags with IDs {} could not be subscribed on endpoint with uri {}. ", ids, endpoint.getUri());
         }
+        return null;
     }
 
-    public boolean onSubscriptionComplete(UInteger clientHandle, SourceDataTagQuality quality) {
-        final boolean valid = quality.isValid();
-        if (valid) {
+    private boolean completeSubscriptionAndReportSuccess(UInteger clientHandle, SourceDataTagQuality quality) {
+        if (quality.isValid()) {
             final Long tagId = mapper.getTagId(clientHandle);
             if (tagId != null) {
                 mapper.addTagToGroup(tagId);
             }
+            return true;
         } else {
             endpointListener.onTagInvalid(clientHandle, quality);
+            return false;
         }
-        return valid;
     }
 }

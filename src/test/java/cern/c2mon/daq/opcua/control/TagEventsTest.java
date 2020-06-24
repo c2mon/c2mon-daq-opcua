@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -43,20 +42,20 @@ public class TagEventsTest extends ControllerTestBase {
     }
 
     @Test
-    public void refreshInvalidTagShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException, ConfigurationException, CommunicationException {
+    public void refreshInvalidTagShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
         endpoint.setReturnGoodStatusCodes(false);
         controller.refreshDataTag(tag1);
         assertEquals(tag1.getId(), tagInvalid.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void refreshValidShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException, ConfigurationException, CommunicationException {
+    public void refreshValidShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException {
         controller.refreshDataTag(tag1);
         assertEquals(tag1.getId(), tagUpdate.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void validSubscriptionEventShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException, ConfigurationException, CommunicationException {
+    public void validSubscriptionEventShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException, ConfigurationException {
         mocker.mockValueConsumerAndSubscribeTagAndReplay(StatusCode.GOOD, tag1);
         controller.subscribeTags(Collections.singletonList(tag1));
         assertEquals(tag1.getId(), tagUpdate.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));
@@ -64,7 +63,7 @@ public class TagEventsTest extends ControllerTestBase {
     }
 
     @Test
-    public void invalidSubscriptionEventShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException, ConfigurationException, CommunicationException {
+    public void invalidSubscriptionEventShouldInformSender () throws ExecutionException, InterruptedException, TimeoutException, ConfigurationException {
         mocker.mockValueConsumerAndSubscribeTagAndReplay(StatusCode.BAD, tag1);
         controller.subscribeTags(Collections.singletonList(tag1));
         assertEquals(tag1.getId(), tagInvalid.get(TestUtils.TIMEOUT, TimeUnit.MILLISECONDS));

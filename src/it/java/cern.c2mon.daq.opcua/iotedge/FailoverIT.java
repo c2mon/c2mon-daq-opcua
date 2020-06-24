@@ -1,9 +1,12 @@
 package cern.c2mon.daq.opcua.iotedge;
 
+import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.ColdFailover;
+import cern.c2mon.daq.opcua.failover.FailoverMode;
+import cern.c2mon.daq.opcua.failover.NoFailover;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +16,6 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.ToxiproxyContainer;
@@ -26,25 +28,26 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.mock;
+import static org.easymock.EasyMock.niceMock;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 @Slf4j
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class FailoverIT {
     private static ConnectionResolver connectionResolver;
     private static Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> active;
     private static Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> fallback;
-
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
-    final NonTransparentRedundancyTypeNode redundancyMock = mock(NonTransparentRedundancyTypeNode.class);
+    final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
 
     @Autowired TestListeners.Pulse pulseListener;
     @Autowired Controller controller;
-    @Autowired FailoverProxy failoverProxy;
+    @Autowired NoFailover noFailover;
+    @Autowired FailoverMode coldFailover;
     @Autowired FailoverTestEndpoint testEndpoint;
+    @Autowired AppConfig config;
 
     @BeforeAll
     public static void setupContainers() {
@@ -68,15 +71,18 @@ public class FailoverIT {
         active.getValue().setConnectionCut(false);
 
         log.info("############ SET UP ############");
-        pulseListener.setDebugEnabled(true);
         pulseListener.setSourceID(tag.getId());
         testEndpoint.setRedundancyMock(redundancyMock);
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
-        ReflectionTestUtils.setField(failoverProxy, "endpointListener", pulseListener);
-        ReflectionTestUtils.setField(failoverProxy, "endpoint", testEndpoint);
+        ReflectionTestUtils.setField(coldFailover, "endpointListener", pulseListener);
+        ReflectionTestUtils.setField(noFailover, "endpoint", testEndpoint);
+        ReflectionTestUtils.setField(testEndpoint, "endpointListener", pulseListener);
 
         mockColdFailover();
-        connect();
+
+        controller.connect(active.getKey().getUri());
+        controller.subscribeTag(tag);
+        pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         log.info("############ TEST ############");
     }
 
@@ -89,14 +95,16 @@ public class FailoverIT {
     @Test
     public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldReconnectClient");
-        cutConnection();
+        cutConnection(active.getValue());
+        triggerServerSwitch();
         Assertions.assertEquals(EndpointListener.EquipmentState.OK, uncutConnection(fallback.getValue()));
     }
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldResumeSubscriptions");
-        cutConnection();
+        cutConnection(active.getValue());
+        triggerServerSwitch();
         uncutConnection(fallback.getValue());
         resetListenerAndAssertTagUpdate();
     }
@@ -104,24 +112,28 @@ public class FailoverIT {
     @Test
     public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
-        cutConnection();
+        cutConnection(active.getValue());
+        triggerServerSwitch();
+        TimeUnit.MILLISECONDS.sleep(TestUtils.TIMEOUT);
         uncutConnection(active.getValue());
         resetListenerAndAssertTagUpdate();
     }
 
     @Test
-    public void restartServerWithColdFailoverShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
+    public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
-        //stop server
-        final var connectionLost = pulseListener.listen();
-        active.getKey().close();
-        connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        cutConnection(active.getValue());
+        TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
+        uncutConnection(fallback.getValue());
+        resetListenerAndAssertTagUpdate();
+    }
 
-        //restart server
-        final var connectionRegained = pulseListener.listen();
-        active.getKey().restart();
-        connectionRegained.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
-
+    @Test
+    public void reconnectAfterLongDisconnectShouldCancelReconnection() throws InterruptedException, ExecutionException, TimeoutException {
+        log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
+        cutConnection(active.getValue());
+        TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
+        uncutConnection(active.getValue());
         resetListenerAndAssertTagUpdate();
     }
 
@@ -135,27 +147,27 @@ public class FailoverIT {
         EasyMock.replay(redundancyMock);
     }
 
-    private void connect() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
-        controller.connect(active.getKey().getUri());
-        controller.subscribeTag(tag);
-        pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
-    }
-
-    private void cutConnection() throws InterruptedException, ExecutionException, TimeoutException {
+    private void cutConnection(ToxiproxyContainer.ContainerProxy proxy) throws InterruptedException, ExecutionException, TimeoutException {
+        log.info("cutting connection");
         final var disconnected = pulseListener.listen();
-        active.getValue().setConnectionCut(true);
-        disconnected.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        proxy.setConnectionCut(true);
+        disconnected.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
     }
 
     private EndpointListener.EquipmentState uncutConnection(ToxiproxyContainer.ContainerProxy proxy) throws InterruptedException, ExecutionException, TimeoutException {
+        log.info("uncutting connection");
         final var connectionRegained = pulseListener.listen();
         proxy.setConnectionCut(false);
-        return connectionRegained.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        return connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
     }
 
     private void resetListenerAndAssertTagUpdate() {
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
-        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
+    }
+
+    private void triggerServerSwitch() {
+        CompletableFuture.runAsync(() -> ((ColdFailover) coldFailover).triggerServerSwitch());
     }
 }

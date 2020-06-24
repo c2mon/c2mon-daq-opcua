@@ -1,13 +1,12 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.TriConsumer;
+import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
-import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
@@ -25,8 +24,12 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
 
+    public ExceptionTestEndpoint(EndpointListener endpointListener) {
+        super(endpointListener);
+    }
+
     @Override
-    public void initialize(String uri, Collection<SessionActivityListener> listeners) throws CommunicationException {
+    public void initialize(String uri) throws CommunicationException {
         throw new CommunicationException(CONNECT);
     }
 
@@ -36,7 +39,7 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     }
 
     @Override
-    public Map<UInteger, SourceDataTagQuality> subscribeWithValueUpdateCallback(int publishingInterval, Collection<ItemDefinition> definitions, TriConsumer<UInteger, SourceDataTagQuality, ValueUpdate> onValueUpdate) throws CommunicationException {
+    public Map<UInteger, SourceDataTagQuality> subscribeToGroup(int publishingInterval, Collection<ItemDefinition> definitions) throws CommunicationException {
         throw new CommunicationException(CREATE_MONITORED_ITEM);
     }
 

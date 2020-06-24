@@ -1,12 +1,14 @@
 package cern.c2mon.daq.opcua.failover;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.connection.RetryDelegate;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -17,27 +19,22 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public abstract class FailoverBase implements FailoverMode {
 
-    @Autowired @Lazy protected TagSubscriptionMapper mapper;
-    @Autowired @Lazy protected Controller controller;
-    @Autowired protected RetryDelegate retryDelegate;
-
+    protected static UByte SERVICE_LEVEL_HEALTH_LIMIT = UByte.valueOf(200);
     protected static List<ItemDefinition> connectionMonitoringNodes = List.of(
             ItemDefinition.of(Identifiers.Server_ServiceLevel),
             ItemDefinition.of(Identifiers.ServerState));
+    protected static final AtomicBoolean listening = new AtomicBoolean(true);
 
-    enum ServiceLevels {
-        Maintenance(0,0), NoData(1,1), Degraded(2,199), Healthy(200,255);
-        UByte lowerLimit;
-        UByte upperLimit;
-        ServiceLevels(int l, int u) {
-            lowerLimit = UByte.valueOf(l);
-            upperLimit = UByte.valueOf(u);
-        }
-    }
+
+    @Autowired @Lazy protected Controller controller;
+    @Autowired protected TagSubscriptionMapper mapper;
+    @Autowired protected EndpointListener endpointListener;
+    @Autowired protected RetryDelegate retryDelegate;
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -46,12 +43,17 @@ public abstract class FailoverBase implements FailoverMode {
         return applicationContext.getBean(Endpoint.class);
     }
 
-    @Override
     public void triggerServerSwitch() {
-        try {
-            retryDelegate.triggerServerSwitchRetry(this);
-        } catch (OPCUAException e) {
-            triggerServerSwitch();
+        log.info("switchServer");
+        if (listening.getAndSet(false)) {
+            currentEndpoint().monitorEquipmentState(false, (SessionActivityListener) endpointListener);
+            try {
+                retryDelegate.triggerServerSwitchRetry(this);
+                listening.set(true);
+            } catch (OPCUAException e) {
+                //should not happen - only after Integer.MAX_VALUE failures
+                triggerServerSwitch();
+            }
         }
     }
 
@@ -66,8 +68,8 @@ public abstract class FailoverBase implements FailoverMode {
 
     protected void serviceLevelConsumer (DataValue value) {
         final var serviceLevel = (UByte) value.getValue().getValue();
-        if (serviceLevel.compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
-            log.info("Service level is outside of the healthy range. Switching server...");
+        if (serviceLevel.compareTo(SERVICE_LEVEL_HEALTH_LIMIT) < 0) {
+            log.info("Service level is outside of the healthy range at {}. Switching server...", serviceLevel.intValue());
             triggerServerSwitch();
         }
     }
@@ -81,5 +83,4 @@ public abstract class FailoverBase implements FailoverMode {
     }
 
     public abstract void switchServers() throws OPCUAException;
-
 }

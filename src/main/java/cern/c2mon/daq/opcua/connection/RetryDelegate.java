@@ -4,6 +4,7 @@ import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.failover.FailoverBase;
 import lombok.RequiredArgsConstructor;
+import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -67,5 +68,15 @@ public class RetryDelegate {
                     multiplier = 3))
     public void triggerServerSwitchRetry(FailoverBase failover) throws OPCUAException {
         failover.switchServers();
+    }
+
+    @Retryable(value = CommunicationException.class,
+            maxAttempts = Integer.MAX_VALUE,
+            backoff = @Backoff(
+                    delayExpression = "#{@appConfig.getRetryDelay()}",
+                    maxDelayExpression = "#{@appConfig.getMaxFailoverDelay()}",
+                    multiplier = 3))
+    public void triggerRecreateSubscription(Endpoint endpoint, UaSubscription subscription) throws OPCUAException {
+        endpoint.recreateSubscription(subscription);
     }
 }

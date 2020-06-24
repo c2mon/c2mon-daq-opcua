@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.failover.FailoverMode;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
@@ -29,7 +30,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.CONNECTION_LOST;
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,19 +49,11 @@ public class EdgeIT {
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final ISourceDataTag alreadySubscribedTag = EdgeTagFactory.DipData.createDataTag();
 
-    @Autowired
-    TestListeners.Pulse pulseListener;
-
-    @Autowired
-    Controller controller;
-
-    @Autowired
-    CommandRunner commandRunner;
-
-    @Autowired
-    FailoverProxy failoverProxy;
-
-    Endpoint endpoint;
+    @Autowired TestListeners.Pulse pulseListener;
+    @Autowired Controller controller;
+    @Autowired CommandRunner commandRunner;
+    @Autowired FailoverProxy failoverProxy;
+    @Autowired FailoverMode noFailover;
 
     @BeforeAll
     public static void setupContainers() {
@@ -73,12 +69,9 @@ public class EdgeIT {
     @BeforeEach
     public void setupEndpoint() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         log.info("############ SET UP ############");
-        pulseListener.setDebugEnabled(true);
-
         pulseListener.setSourceID(tag.getId());
-        endpoint = (Endpoint) ReflectionTestUtils.getField(failoverProxy, "endpoint");
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
-        ReflectionTestUtils.setField(failoverProxy, "endpointListener", pulseListener);
+        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "endpointListener", pulseListener);
 
         controller.connect(proxy.getKey().getUri());
         controller.subscribeTags(Collections.singletonList(alreadySubscribedTag));

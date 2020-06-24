@@ -8,6 +8,7 @@ import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Arrays;
@@ -63,7 +64,7 @@ public class MiloMocker {
         monitoredItem.setValueConsumer(capture(capturedConsumer));
         expectLastCall().andAnswer(() -> {
             Consumer<DataValue> consumer = capturedConsumer.getValue();
-            consumer.accept(new DataValue(statusCode));
+            consumer.accept(new DataValue(new Variant(1), statusCode));
             return consumer;
         });
         replay();

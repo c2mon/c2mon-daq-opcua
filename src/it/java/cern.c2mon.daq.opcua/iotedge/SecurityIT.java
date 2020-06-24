@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.NoFailover;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -39,15 +40,10 @@ public class SecurityIT {
 
     private static ConnectionResolver.OpcUaImage.Edge edge;
 
-    @Autowired
-    Controller controller;
-
-    @Autowired
-    AppConfig config;
-
-    @Autowired
-    FailoverProxy testFailoverProxy;
-
+    @Autowired AppConfig config;
+    @Autowired Controller controller;
+    @Autowired FailoverProxy testFailoverProxy;
+    @Autowired NoFailover noFailover;
     @Autowired TestListeners.TestListener testListener;
 
     @BeforeAll
@@ -65,7 +61,7 @@ public class SecurityIT {
     public void setUp() {
         ReflectionTestUtils.setField(controller, "endpointListener", testListener);
         ReflectionTestUtils.setField(controller, "failoverProxy", testFailoverProxy);
-        ReflectionTestUtils.setField(testFailoverProxy, "endpointListener", testListener);
+        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "endpointListener", testListener);
         testListener.reset();
     }
 

@@ -22,13 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class MiloEndpointTest {
 
     Endpoint endpoint;
-
     OpcUaClient mockClient = createMock(OpcUaClient.class);
 
     @BeforeEach
     public void setUp() {
         AppConfig config = AppConfig.builder().maxRetryAttempts(3).timeout(300).retryDelay(1000).build();
-        endpoint = new MiloEndpoint(null, new EndpointSubscriptionListener(), new RetryDelegate(config));
+        endpoint = new MiloEndpoint(null, new RetryDelegate(config), null, null);
         ReflectionTestUtils.setField(endpoint, "client", mockClient);
     }
 
@@ -59,7 +58,7 @@ public class MiloEndpointTest {
 
     @Test
     public void alreadyAttemptingResubscriptionTooLongThrowsLongLostConnectionException() {
-        ReflectionTestUtils.setField(endpoint, "disconnectionInstant", 20);
+        ReflectionTestUtils.setField(endpoint, "disconnectedOn", 20);
         setUpDeleteSubscriptionMocks(new LongLostConnectionException(ExceptionContext.DELETE_SUBSCRIPTION, new IllegalArgumentException()));
         assertThrows(LongLostConnectionException.class, () -> endpoint.write(NodeId.NULL_GUID, 1));
     }

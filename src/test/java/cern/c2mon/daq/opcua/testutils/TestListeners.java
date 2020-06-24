@@ -56,14 +56,10 @@ public abstract class TestListeners {
             final Long tagId = mapper.getTagId(clientHandle);
             if (tagId != null && tagId.equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
                 if (tagValUpdate.isDone()) {
-                    if (debugEnabled) {
-                        log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
-                    }
+                    log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
                     pulseTagUpdate.complete(valueUpdate);
                 } else {
-                    if (debugEnabled) {
-                        log.info("completing tagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
-                    }
+                    log.info("completing tagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
                     tagValUpdate.complete(valueUpdate);
                 }
             }
@@ -74,8 +70,6 @@ public abstract class TestListeners {
     @RequiredArgsConstructor
     @Component(value = "testListener")
     public static class TestListener implements EndpointListener, SessionActivityListener {
-        @Setter
-        boolean debugEnabled = true;
         CompletableFuture<Long> tagUpdate = new CompletableFuture<>();
         CompletableFuture<Long> tagInvalid = new CompletableFuture<>();
         CompletableFuture<EquipmentState> stateUpdate = new CompletableFuture<>();
@@ -98,30 +92,31 @@ public abstract class TestListeners {
 
 
         @Override
-        public void initialize (IEquipmentMessageSender sender) {
+        public void initialize(IEquipmentMessageSender sender) {
         }
 
         @Override
         public void onTagInvalid(UInteger clientHandle, SourceDataTagQuality quality) {
-            if (debugEnabled) {
-                log.info("data tag {} invalid with quality {}", mapper.getTagId(clientHandle), quality);
-            }
+            log.info("data tag {} invalid with quality {}", mapper.getTagId(clientHandle), quality);
             tagInvalid.complete(mapper.getTagId(clientHandle));
         }
 
         @Override
         public void onSessionActive(UaSession session) {
-            completeAndReset(true);
+            onEquipmentStateUpdate(EquipmentState.OK);
         }
 
         @Override
         public void onSessionInactive(UaSession session) {
-            completeAndReset(false);
+            onEquipmentStateUpdate(EquipmentState.CONNECTION_LOST);
         }
 
         @Override
         public void onEquipmentStateUpdate(EquipmentState state) {
-            stateUpdate.complete(state);
+            log.info("State update: {}", state);
+            if (stateUpdate != null && !stateUpdate.isDone()) {
+                stateUpdate.complete(state);
+            }
         }
 
         @Override
@@ -130,7 +125,7 @@ public abstract class TestListeners {
                 final Long tagId = mapper.getTagId(clientHandle);
                 if (tagId == null) {
                     log.error("received update for unknown clientHandle {} where mapper is in state {}.", clientHandle, mapper.getTagIdDefinitionMap());
-                } else if (debugEnabled) {
+                } else {
                     log.info("received data tag {}, client handle {}, value update {}, quality {}", tagId, clientHandle, valueUpdate, quality);
                 }
                 tagUpdate.complete(tagId);
@@ -143,15 +138,5 @@ public abstract class TestListeners {
             stateUpdate = new CompletableFuture<>();
             return stateUpdate;
         }
-
-        private void completeAndReset(boolean value) {
-            if (debugEnabled) {
-                log.info("State update: {}", value ? "connected." : "disconnected");
-            }
-            if (stateUpdate != null && !stateUpdate.isDone()) {
-                stateUpdate.completeAsync(() -> value ? EquipmentState.OK : EquipmentState.CONNECTION_LOST);
-            }
-        }
-
     }
 }

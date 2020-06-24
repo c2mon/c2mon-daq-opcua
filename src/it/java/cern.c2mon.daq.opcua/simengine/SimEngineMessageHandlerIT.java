@@ -2,12 +2,13 @@ package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.TagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.FailoverMode;
 import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -63,7 +64,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Autowired
     AliveWriter aliveWriter;
     @Autowired
-    FailoverProxy failoverProxy;
+    FailoverMode noFailover;
     @Autowired
     AppConfig config;
 
@@ -96,7 +97,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         ReflectionTestUtils.setField(handler, "endpointListener", endpointListener);
         ReflectionTestUtils.setField(handler, "appConfig", config);
         ReflectionTestUtils.setField(controller, "endpointListener", endpointListener);
-        ReflectionTestUtils.setField(failoverProxy, "endpointListener", endpointListener);
+        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "endpointListener", endpointListener);
         mapEquipmentAddress();
         log.info("############### TEST ##############");
     }

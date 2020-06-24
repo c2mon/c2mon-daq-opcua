@@ -56,9 +56,9 @@ public class RetryEndpointActionIT {
     public void longLostConnectionExceptionShouldNotBeRepeated() {
         //results in longLostConnectionException
         // scope prototype on delegate -> fetch proper instance
-        ReflectionTestUtils.setField(endpoint, "disconnectionInstant", 2L);
+        ReflectionTestUtils.setField(endpoint, "disconnectedOn", 2L);
         verifyExceptionOnRead(new Exception(), 1);
-        ReflectionTestUtils.setField(endpoint, "disconnectionInstant", 0L);
+        ReflectionTestUtils.setField(endpoint, "disconnectedOn", 0L);
     }
 
     private void verifyExceptionOnRead(Exception e, int numTimes) {

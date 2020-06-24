@@ -4,16 +4,21 @@ import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
+import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * In Cold Failover mode a client can only connect to one server at a time. When the client loses connectivity with the
@@ -23,41 +28,41 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 @Lazy
 @Component("coldFailover")
-public class ColdFailover extends FailoverBase {
-
-    private static final AtomicBoolean listening = new AtomicBoolean(false);
-    List<String> redundantAddresses;
+@RequiredArgsConstructor
+public class ColdFailover extends FailoverBase implements SessionActivityListener {
+    List<String> redundantAddresses = new ArrayList<>();
     String currentUri;
     Endpoint endpoint;
-    private Collection<SessionActivityListener> listeners;
-    @Value("${app.connectionMonitoringRate}")
+
+    @Value("#{@appConfig.getConnectionMonitoringRate()}")
     private int monitoringRate;
 
+    @Value("#{@appConfig.getTimeout()}")
+    private int timeout;
+
     /**
-     * Connect to the healthy endpoint of the set which. Since in Cold Failover only one endpoint can be active and
-     * healthy at a time, the first endpoint with a healthy service level that is encountered is deemed active.
-     * @param server             A Map.Entry containing the currently connected server URI and the corresponding
-     *                           endpoint.
+     * Connect to the healthiest endpoint of the redundant server set. Since in Cold Failover only one endpoint can be
+     * active and healthy at a time, the first endpoint with a healthy service level that is encountered is deemed
+     * active.
+     * @param uri                The URI of the server that is currently connected
+     * @param endpoint           The currently connected endpoint associated with the URI.
      * @param redundantAddresses an array containing the URIs of the servers within the redundant server set
-     * @param listeners          The SessionActivityListeners to subscribe to the client when created.
      * @throws OPCUAException in case there is no healthy server to connect to in the redundant server set.
      */
     @Override
-    public void initialize(Map.Entry<String, Endpoint> server, String[] redundantAddresses, Collection<SessionActivityListener> listeners) throws OPCUAException {
-
+    public void initialize(String uri, Endpoint endpoint, String[] redundantAddresses) throws OPCUAException {
         // Clients are expected to connect to the server with the highest service level.
-        this.redundantAddresses = new ArrayList<>();
         Collections.addAll(this.redundantAddresses, redundantAddresses);
-        this.listeners = listeners;
-        this.endpoint = server.getValue();
-        this.currentUri = server.getKey();
-        // only one server can be healthy at a time in cold redundancy
-        if (readServiceLevel(endpoint).compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
+        this.endpoint = endpoint;
+        this.currentUri = uri;
+        this.redundantAddresses.add(currentUri);
+        // Only one server can be healthy at a time in cold redundancy
+        if (readServiceLevel(endpoint).compareTo(SERVICE_LEVEL_HEALTH_LIMIT) < 0) {
             disconnectAndProceed();
-            if (!connectToHealthiestServer()) {
+            if (!connectToHealthiestServerFinished()) {
+                log.info("Controller stopped. Stopping initialization process.");
                 return;
             }
-            this.redundantAddresses.add(currentUri);
         } else {
             log.info("Connected to healthy server in cold redundancy mode.");
         }
@@ -75,37 +80,23 @@ public class ColdFailover extends FailoverBase {
         return endpoint;
     }
 
+    @Override
+    public List<Endpoint> passiveEndpoints() {
+        return Collections.emptyList();
+    }
+
     /**
-     * Attempt to create a connection to one of the redundant Server(s). If no healthy redundant server is not
-     * available, the client waits for the redundant servers to become available. Called when the client loses
-     * connectivity with the active Server.
+     * Called periodically  when the client loses connectivity with the active Server until connection can be
+     * reestablished. Attempt to create a connection a healthy redundant Server. Connection is attempted also to the
+     * previously active server in case it starts back up and connection loss was temporary.
      */
     @Override
-    public void switchServers() throws OPCUAException {
-        if (listening.getAndSet(false) && !controller.isStopped()) {
+    public synchronized void switchServers() throws OPCUAException {
+        if (!controller.isStopped()) {
             log.info("Attempt to switch to next healthy server.");
             disconnectAndProceed();
-            redundantAddresses.add(currentUri);
-            boolean connectionSuccessful = false;
-            try {
-                connectionSuccessful = connectToHealthiestServer();
-            } catch (OPCUAException e) {
-                disconnectAndProceed();
-                log.info("Server not yet available.");
-                redundantAddresses.remove(currentUri);
-                listening.set(true);
-                throw e;
-            }
-            if (connectionSuccessful) {
-
-                final boolean subscriptionError = mapper.getSubscriptionGroups().values()
-                        .stream()
-                        .noneMatch(e -> controller.subscribeToGroup(e, e.getTagIds().values()));
-                if (subscriptionError) {
-                    log.error("Could not recreate any subscriptions. Connect to next server... ");
-                    throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
-                }
-                log.info("Recreated subscriptions on server {}.", currentUri);
+            if (reconnectionSucceeded()) {
+                recreateSubscriptions();
                 monitorConnection();
             }
         } else {
@@ -113,44 +104,90 @@ public class ColdFailover extends FailoverBase {
         }
     }
 
-    private boolean connectToHealthiestServer() throws OPCUAException {
+    private CompletableFuture<Void> reconnected = new CompletableFuture<>();
+
+    @Override
+    public void onSessionInactive(UaSession session) {
+        log.info("SessionInactive, start countdown");
+        reconnected = new CompletableFuture<>();
+        reconnected.orTimeout(timeout, TimeUnit.MILLISECONDS)
+                .exceptionally(t -> {
+                    log.info("Trigger server switch due to long disconnection");
+                    triggerServerSwitch();
+                    return null;
+                });
+    }
+
+    @Override
+    public void onSessionActive(UaSession session) {
+        log.info("SessionActive, stop countdown");
+        reconnected.complete(null);
+    }
+
+    private boolean reconnectionSucceeded() throws OPCUAException {
+        try {
+            //move current URI to end of list of servers to try
+            redundantAddresses.remove(currentUri);
+            redundantAddresses.add(currentUri);
+            return connectToHealthiestServerFinished();
+        } catch (OPCUAException e) {
+            log.info("Server not yet available.");
+            disconnectAndProceed();
+            throw e;
+        }
+    }
+
+    private boolean connectToHealthiestServerFinished() throws OPCUAException {
+        log.info("Current uri: {}, redundantAddressList, {}.", currentUri, redundantAddresses);
         UByte maxServiceLevel = UByte.valueOf(0);
         String maxServiceUri = null;
-        for (var iterator = redundantAddresses.iterator(); iterator.hasNext(); ) {
-            final String nextUri = iterator.next();
+        for (final String nextUri : redundantAddresses) {
+            if (controller.isStopped()) {
+                return false;
+            }
+            log.info("Attempt connection to server at {}", nextUri);
             try {
-                if (controller.isStopped()) {
-                    return false;
-                }
-                endpoint.initialize(nextUri, listeners);
+                endpoint.initialize(nextUri);
                 final UByte nextServiceLevel = readServiceLevel(endpoint);
-                if (nextServiceLevel.compareTo(maxServiceLevel) > 0) {
+                if (nextServiceLevel.compareTo(SERVICE_LEVEL_HEALTH_LIMIT) >= 0) {
+                    log.info("Connected to healthy server at {} with service level: {}.", nextUri, nextServiceLevel);
+                    currentUri = nextUri;
+                    return true;
+                } else if (nextServiceLevel.compareTo(maxServiceLevel) > 0) {
                     maxServiceLevel = nextServiceLevel;
                     maxServiceUri = nextUri;
-                    if (nextServiceLevel.compareTo(ServiceLevels.Healthy.lowerLimit) < 0) {
-                        currentUri = nextUri;
-                        return true;
-                    }
                 }
                 endpoint.disconnect();
             } catch (OPCUAException ignored) {
-                log.info("Could not connect to server at {}. Proceed with next server.", nextUri);
+                log.info("Could not connect to server at {}. Proceeding with next server.", nextUri);
             }
         }
         if (maxServiceUri != null) {
             currentUri = maxServiceUri;
-            endpoint.initialize(currentUri, listeners);
-            log.info("Connected to healthiest server with Service Level of {}.", maxServiceLevel);
+            endpoint.initialize(currentUri);
+            log.info("Connected to server at {} with highest but still unhealthy service level: {}.", currentUri, maxServiceLevel);
             return true;
         } else {
             throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
         }
     }
 
+    private void recreateSubscriptions() throws CommunicationException {
+        final boolean subscriptionError = mapper.getSubscriptionGroups().values().stream()
+                .noneMatch(e -> controller.subscribeToGroup(e, e.getTagIds().values()));
+        if (subscriptionError) {
+            log.error("Could not recreate any subscriptions. Connect to next server... ");
+            throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
+        }
+        log.info("Recreated subscriptions on server {}.", currentUri);
+    }
+
+
     private void monitorConnection() {
+        this.endpoint.monitorEquipmentState(true, (SessionActivityListener) endpointListener);
+        this.endpoint.monitorEquipmentState(true, this);
         try {
-            endpoint.subscribeWithCreationCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
-            listening.set(true);
+            endpoint.subscribeWithCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
         } catch (OPCUAException e) {
             log.info("An error occurred when setting up connection monitoring.");
         }
@@ -162,9 +199,9 @@ public class ColdFailover extends FailoverBase {
                 this.endpoint.disconnect();
             }
         } catch (OPCUAException ignored) {
+            log.info("ignored: ", ignored);
         }
     }
-
 
     /**
      * See UA Part 4, 6.6.2.4.2, Table 10.

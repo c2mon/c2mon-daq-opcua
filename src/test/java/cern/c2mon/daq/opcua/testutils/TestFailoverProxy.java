@@ -4,24 +4,21 @@ import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverMode;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.NoFailover;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
-import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
+import java.util.Collection;
 
 @RequiredArgsConstructor
 @Component(value = "testFailoverProxy")
 public class TestFailoverProxy implements FailoverProxy, SessionActivityListener {
 
-    @Lazy private final SessionActivityListener endpointListener;
-    @Lazy private final FailoverMode noFailover;
+    @Lazy private final NoFailover noFailover;
     @Lazy private final FailoverMode coldFailover;
     private final Endpoint endpoint;
 
@@ -47,21 +44,16 @@ public class TestFailoverProxy implements FailoverProxy, SessionActivityListener
         if (currentFailover == null) {
             currentFailover = noFailover;
         }
-        currentFailover.initialize(Map.entry(uri, endpoint), redundantUris, Collections.emptyList());
-        endpoint.initialize(uri, Arrays.asList(endpointListener, this));
+        noFailover.initializeEndpoint(uri);
+        currentFailover.initialize(uri, endpoint, redundantUris);
     }
 
-    @Override
-    public void disconnect() throws OPCUAException {
-        currentFailover.disconnect();
-    }
-
-    @Override
-    public void onSessionInactive(UaSession session) {
-        currentFailover.triggerServerSwitch();
-    }
-
-    public Endpoint getEndpoint() {
+    public Endpoint getActiveEndpoint() {
         return currentFailover.currentEndpoint();
+    }
+
+    @Override
+    public Collection<Endpoint> getPassiveEndpoints() {
+        return currentFailover.passiveEndpoints();
     }
 }

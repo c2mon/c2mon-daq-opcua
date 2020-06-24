@@ -5,10 +5,9 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.NoFailover;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
-import cern.c2mon.daq.opcua.testutils.TestEndpoint;
-import cern.c2mon.daq.opcua.testutils.TestUtils;
+import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.SourceCommandTag;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
@@ -16,8 +15,11 @@ import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,7 +28,6 @@ public class CommandRunnerTest {
     TestEndpoint endpoint;
     CommandRunner commandRunner;
 
-
     SourceCommandTagValue value;
     SourceCommandTag tag;
     OPCHardwareAddressImpl address;
@@ -34,7 +35,7 @@ public class CommandRunnerTest {
 
     @BeforeEach
     public void setUp() {
-        this.endpoint = new TestEndpoint();
+        this.endpoint = new TestEndpoint(null);
         tag = new SourceCommandTag(0L, "Power");
 
         address = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw");
@@ -76,15 +77,13 @@ public class CommandRunnerTest {
 
 
     @Test
-    public void commandWithPulseShouldNotDoAnythingIfAlreadySet() throws EqCommandTagException, OPCUAException, InterruptedException {
+    public void commandWithPulseShouldNotDoAnythingIfAlreadySet() throws EqCommandTagException, OPCUAException {
         tag.setHardwareAddress(pulseAddress);
         value.setValue(0);
-        final Endpoint mockEp = EasyMock.mock(Endpoint.class);
+        final Endpoint mockEp = EasyMock.niceMock(Endpoint.class);
         expect(mockEp.read(anyObject()))
                 .andReturn(endpoint.read(ItemDefinition.toNodeId(tag)))
                 .anyTimes();
-        mockEp.initialize(anyString(), anyObject());
-        EasyMock.expectLastCall().anyTimes();
         //no call to write
         replay(mockEp);
         commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(mockEp));
@@ -93,12 +92,10 @@ public class CommandRunnerTest {
     }
 
     @Test
-    public void commandWithPulseShouldReadSetReset() throws EqCommandTagException, OPCUAException, InterruptedException {
+    public void commandWithPulseShouldReadSetReset() throws EqCommandTagException, OPCUAException {
         tag.setHardwareAddress(pulseAddress);
         final NodeId def = ItemDefinition.toNodeId(tag);
-        final Endpoint mockEp = EasyMock.mock(Endpoint.class);
-        mockEp.initialize(anyString(), anyObject());
-        EasyMock.expectLastCall().anyTimes();
+        final Endpoint mockEp = EasyMock.niceMock(Endpoint.class);
         expect(mockEp.read(anyObject())).andReturn(endpoint.read(def)).anyTimes();
         expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();
         expect(mockEp.write(def, 0)).andReturn(endpoint.write(def, 0)).once();
@@ -131,7 +128,10 @@ public class CommandRunnerTest {
 
     @Test
     public void badClientShouldThrowException() {
-        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(new ExceptionTestEndpoint()));
+        final NoFailover noFailover = new NoFailover(new ExceptionTestEndpoint(null));
+        final TestFailoverProxy proxy = new TestFailoverProxy(noFailover, noFailover, new ExceptionTestEndpoint(null));
+        proxy.setCurrentFailover(RedundancySupport.None);
+        commandRunner.setFailoverProxy(proxy);
         verifyCommunicationException(ExceptionContext.WRITE);
     }
 

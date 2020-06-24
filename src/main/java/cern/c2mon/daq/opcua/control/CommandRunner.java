@@ -118,10 +118,10 @@ public class CommandRunner implements ICommandTagChanger {
         final ItemDefinition def = ItemDefinition.of(tag);
         final Map.Entry<Boolean, Object[]> result;
         if (def.getMethodNodeId() == null) {
-            final NodeId parent = failoverProxy.getEndpoint().getParentObjectNodeId(def.getNodeId());
-            result = failoverProxy.getEndpoint().callMethod(parent, def.getNodeId(), arg);
+            final NodeId parent = failoverProxy.getActiveEndpoint().getParentObjectNodeId(def.getNodeId());
+            result = failoverProxy.getActiveEndpoint().callMethod(parent, def.getNodeId(), arg);
         } else {
-            result = failoverProxy.getEndpoint().callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
+            result = failoverProxy.getActiveEndpoint().callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
         }
         log.info("executeMethod returned {}.", result.getValue());
         if (!result.getKey()) {
@@ -135,7 +135,7 @@ public class CommandRunner implements ICommandTagChanger {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
             executeWriteCommand(tag, arg);
         } else {
-            final Map.Entry<ValueUpdate, SourceDataTagQuality> read = failoverProxy.getEndpoint().read(ItemDefinition.toNodeId(tag));
+            final Map.Entry<ValueUpdate, SourceDataTagQuality> read = failoverProxy.getActiveEndpoint().read(ItemDefinition.toNodeId(tag));
             handleCommandResponseStatusCode(read.getValue(), ExceptionContext.READ);
             final Object original = read.getKey().getValue();
             if (original != null && original.equals(arg)) {
@@ -167,7 +167,7 @@ public class CommandRunner implements ICommandTagChanger {
     }
 
     private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException {
-        if (!failoverProxy.getEndpoint().write(ItemDefinition.toNodeId(tag), arg)) {
+        if (!failoverProxy.getActiveEndpoint().write(ItemDefinition.toNodeId(tag), arg)) {
             throw new CommunicationException(ExceptionContext.COMMAND_CLASSIC);
         }
     }

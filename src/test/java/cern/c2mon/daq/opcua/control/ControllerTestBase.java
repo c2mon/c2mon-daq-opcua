@@ -33,6 +33,7 @@ public abstract class ControllerTestBase {
     TestListeners.TestListener listener;
     Controller controller;
     MiloMocker mocker;
+    TestFailoverProxy proxy;
 
 
     public static Map<Long, ISourceDataTag> generateSourceTags () {
@@ -45,11 +46,13 @@ public abstract class ControllerTestBase {
     @BeforeEach
     public void setUp() throws OPCUAException, InterruptedException {
         uri = ADDRESS_PROTOCOL_TCP + ADDRESS_BASE + true;
-        endpoint = new TestEndpoint();
         mapper = new TagSubscriptionMapperImpl();
         listener = new TestListeners.TestListener(mapper);
-        controller = new ControllerImpl(mapper, listener, TestUtils.getFailoverProxy(endpoint));
+        endpoint = new TestEndpoint(listener);
+        proxy = TestUtils.getFailoverProxy(endpoint);
+        controller = new ControllerImpl(mapper, listener, proxy);
         mocker = new MiloMocker(endpoint, mapper);
+        controller.connect("test");
     }
 
     @AfterEach

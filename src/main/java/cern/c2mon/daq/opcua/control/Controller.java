@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -67,15 +66,6 @@ public interface Controller {
      */
     void refreshDataTag(ISourceDataTag sourceDataTag);
 
-    /**
-     * Called when a subscription could not be automatically transferred in between sessions. In this case, the     *
-     * subscription is recreated from scratch.
-     * @param publishInterval the publishInterval of the subscription of the old session which must be recreated.
-     * @throws OPCUAException of type {@link CommunicationException} if the subscription could not be recreated due to
-     *                        communication difficulty, and of type {@link ConfigurationException} if the subscription
-     *                        can not be mapped to current DataTags, and therefore cannot be recreated.
-     */
-    void recreateSubscription(Endpoint endpoint, int publishInterval) throws OPCUAException;
 
     boolean subscribeToGroup(SubscriptionGroup group, Collection<ItemDefinition> definitions);
 }

@@ -137,7 +137,7 @@ public class AliveWriter {
             log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
         }
         try {
-            if (failoverProxy.getEndpoint().write(address, castedValue)) {
+            if (failoverProxy.getActiveEndpoint().write(address, castedValue)) {
                 endpointListener.onAlive();
             }
             writeCounter.incrementAndGet();

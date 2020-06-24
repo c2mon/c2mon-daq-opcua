@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.TriConsumer;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
@@ -28,11 +27,14 @@ public interface Endpoint {
 
     /**
      * Connects to a server through OPC UA.
-     * @param uri       the server address to connect to.
-     * @param listeners the SessionActivityListeners to subscribe to the client before connection
+     * @param uri the server address to connect to.
      * @throws OPCUAException of type {@link CommunicationException} or {@link ConfigurationException}.
      */
-    void initialize(String uri, Collection<SessionActivityListener> listeners) throws OPCUAException;
+    void initialize(String uri) throws OPCUAException;
+
+    void monitorEquipmentState(boolean shouldMonitor, SessionActivityListener listener);
+
+    String getUri();
 
     /**
      * Disconnect from the server.
@@ -49,21 +51,20 @@ public interface Endpoint {
     void deleteSubscription(int publishInterval) throws OPCUAException;
 
     /**
-     * Add a list of item definitions as monitored items to a subscription.
+     * Add a list of item definitions as monitored items to a subscription and notify the endpointListener of future
+     * value updates
      * @param publishingInterval The publishing interval to request for the item definitions
-     * @param definitions        the {@link cern.c2mon.daq.opcua.mapping.ItemDefinition}s for which to create monitored
-     *                           items
-     * @param onValueUpdate      the callback function to execute when new value updates are received
+     * @param definitions        the {@link ItemDefinition}s for which to create monitored items
      * @return a map of the client handles corresponding to the item definitions along with the associated tag quality
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    Map<UInteger, SourceDataTagQuality> subscribeWithValueUpdateCallback(int publishingInterval,
-                                                                         Collection<ItemDefinition> definitions,
-                                                                         TriConsumer<UInteger, SourceDataTagQuality, ValueUpdate> onValueUpdate) throws OPCUAException;
+    Map<UInteger, SourceDataTagQuality> subscribeToGroup(int publishingInterval, Collection<ItemDefinition> definitions) throws OPCUAException;
 
-    Map<UInteger, SourceDataTagQuality> subscribeWithCreationCallback(int publishingInterval,
-                                                                      Collection<ItemDefinition> definitions,
-                                                                      BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
+    Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
+                                                              Collection<ItemDefinition> definitions,
+                                                              BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
+
+    void recreateSubscription(UaSubscription subscription) throws OPCUAException;
 
     /**
      * Delete a monitored item from an OPC UA subscription.
@@ -95,8 +96,8 @@ public interface Endpoint {
      * @param objectId the nodeId of class Object containing the method node
      * @param methodId the nodeId of class Method which shall be called
      * @param arg      the input argument to pass to the methodId call.
-     * @return whether the methodId was successful, and the output arguments of the called method (if
-     * applicable, else null) in a Map Entry.
+     * @return whether the methodId was successful, and the output arguments of the called method (if applicable, else
+     * null) in a Map Entry.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object arg) throws OPCUAException;

@@ -2,42 +2,45 @@ package cern.c2mon.daq.opcua.failover;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
+import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.Map;
+import java.util.Collections;
+import java.util.List;
 
 @Lazy
 @Component("noFailover")
-@NoArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
-public class NoFailover implements FailoverMode {
+public class NoFailover implements FailoverMode, UaSubscriptionManager.SubscriptionListener {
 
-    private Map.Entry<String, Endpoint> server;
+    private final Endpoint endpoint;
+
+    public void initializeEndpoint(String uri) throws OPCUAException {
+        this.endpoint.initialize(uri);
+    }
 
     @Override
-    public void initialize(Map.Entry<String, Endpoint> server, String[] redundantAddresses, Collection<SessionActivityListener> listeners) {
-        this.server = server;
+    public void initialize(String uri, Endpoint endpoint, String[] redundantAddresses) {
+        log.info("Monitoring equipmentState from NoFailover");
+        this.endpoint.monitorEquipmentState(true, null);
     }
 
     @Override
     public void disconnect() throws OPCUAException {
-        if (currentEndpoint() != null) {
-            currentEndpoint().disconnect();
-        }
+        endpoint.disconnect();
     }
 
     @Override
     public Endpoint currentEndpoint() {
-        return (server == null) ? null : server.getValue();
+        return endpoint;
     }
 
     @Override
-    public void triggerServerSwitch() {
-        log.info("No server to fall back to.");
+    public List<Endpoint> passiveEndpoints() {
+        return Collections.emptyList();
     }
 }
