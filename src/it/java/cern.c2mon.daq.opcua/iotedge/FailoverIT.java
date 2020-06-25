@@ -16,6 +16,7 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.ToxiproxyContainer;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT {
     @Autowired ConnectionResolver connectionResolver;
     @Autowired TestListeners.Pulse pulseListener;

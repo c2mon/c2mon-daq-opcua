@@ -152,16 +152,16 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      */
     @Override
     public void disconnect() throws OPCUAException {
-        log.debug("Disconnecting endpoint at {}", uri);
-        subscriptionMap.clear();
+        log.info("Disconnecting endpoint at {}", uri);
         if (client != null) {
-            client.getSubscriptionManager().removeSubscriptionListener(this);
             client.getSubscriptionManager().clearSubscriptions();
+            client.getSubscriptionManager().removeSubscriptionListener(this);
             sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
-            sessionActivityListeners.clear();
-            log.debug("Disconnect: {}", uri);
             retryDelegate.completeOrThrow(DISCONNECT, this::getDisconnectPeriod, client::disconnect);
             client = null;
+            sessionActivityListeners.clear();
+            subscriptionMap.clear();
+            log.info("Disconnected.");
         } else {
             log.info("Client not connected, skipping disconnection attempt.");
         }
@@ -222,15 +222,13 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      *                        can not be mapped to current DataTags, and therefore cannot be recreated.
      */
     public synchronized void recreateSubscription(UaSubscription subscription) throws OPCUAException {
-        if (client == null || subscriptionMap.inverse() == null || Thread.currentThread().isInterrupted()) {
+        if (client == null || Thread.currentThread().isInterrupted()) {
             log.info("Client was stopped, cease subscription recreation attempts.");
             return;
         }
         log.info("Attempt to recreate the subscription.");
-        log.info("Subscription {}, in SubscriptionMap {}", subscription, subscriptionMap);
-        subscription.getMonitoredItems().stream().map(UaMonitoredItem::getClientHandle).forEach(uInteger -> log.info("ClientHandle {}, tagId in mapper {}.", uInteger, mapper.getTagId(uInteger)));
-        final int publishInterval = subscriptionMap.inverse().get(subscription);
-        final var group = mapper.getGroup(publishInterval);
+        final Integer publishInterval = subscriptionMap.inverse().get(subscription);
+        final var group = publishInterval == null ? null : mapper.getGroup(publishInterval);
         if (group == null || group.size() == 0) {
             throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
         }

@@ -7,13 +7,13 @@ import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import com.google.common.collect.BiMap;
-import org.easymock.EasyMock;
+import com.google.common.collect.HashBiMap;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
-import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager;
 import org.eclipse.milo.opcua.sdk.client.subscriptions.OpcUaSubscriptionManager;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,11 +24,11 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.net.UnknownHostException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiConsumer;
 
 import static cern.c2mon.daq.opcua.testutils.EdgeTagFactory.AlternatingBoolean;
 import static cern.c2mon.daq.opcua.testutils.EdgeTagFactory.RandomUnsignedInt32;
@@ -39,70 +39,66 @@ import static org.easymock.EasyMock.*;
 @ExtendWith(SpringExtension.class)
 public class RetrySubscriptionRecreationIT {
 
-    OpcUaClient clientMock = createNiceMock(OpcUaClient.class);
-    private final UaSubscription subscriptionMock = createNiceMock(UaSubscription.class);
-    private final int numAttempts = 3;
     @Autowired TagSubscriptionMapper mapper;
     @Autowired UaSubscriptionManager.SubscriptionListener endpoint;
-    @Value("${app.retryDelay}")
-    int delay;
+    @Value("${app.retryDelay}") int delay;
+
+    private final OpcUaClient clientMock = createNiceMock(OpcUaClient.class);
+    private final UaSubscription subscriptionMock = createNiceMock(UaSubscription.class);
+    private final OpcUaSubscriptionManager managerMock = createNiceMock(OpcUaSubscriptionManager.class);
+    private final int numAttempts = 3;
 
     @BeforeEach
     public void setUp() {
-        mapper.clear();
-        EasyMock.reset(subscriptionMock);
+        resetToNice(clientMock, managerMock, subscriptionMock);
         ReflectionTestUtils.setField(endpoint, "client", clientMock);
-        final BiMap<Integer, UaSubscription> subscriptionMap = (BiMap<Integer, UaSubscription>) ReflectionTestUtils.getField(endpoint, "subscriptionMap");
+        BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
         subscriptionMap.put(0, subscriptionMock);
-    }
-
-    @Test
-    public void callOnceEveryDelayOnCommunicationException() throws InterruptedException, ExecutionException, TimeoutException {
-        mockNAttempts(numAttempts);
-        CompletableFuture.runAsync(() -> endpoint.onSubscriptionTransferFailed(subscriptionMock, StatusCode.GOOD));
-        //add a buffer to make sure that the nth execution finishes
-        CompletableFuture.runAsync(() -> verify(clientMock),
-                CompletableFuture.delayedExecutor(Math.round(delay * numAttempts), TimeUnit.MILLISECONDS))
-                .get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
-
+        ReflectionTestUtils.setField(endpoint, "subscriptionMap", subscriptionMap);
+        mapper.clear();
+        setUpMapper();
     }
 
     @Test
     public void stopCallingOnInterruptedThread() throws InterruptedException, ExecutionException, TimeoutException {
-        mockNAttempts(numAttempts);
+        mockNAttempts(numAttempts, new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION));
         final Thread thread = new Thread(() -> endpoint.onSubscriptionTransferFailed(subscriptionMock, StatusCode.GOOD));
         thread.start();
-        CompletableFuture.runAsync(thread::interrupt, CompletableFuture.delayedExecutor(Math.round(delay * numAttempts), TimeUnit.MILLISECONDS))
-                .thenRun(() -> verify(clientMock))
+        // add small bugger
+        CompletableFuture.runAsync(thread::interrupt, CompletableFuture.delayedExecutor(Math.round(delay * (numAttempts + 1.5)), TimeUnit.MILLISECONDS))
+                .thenRun(() -> verify(subscriptionMock, clientMock, managerMock))
                 .get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
     }
 
     @Test
     public void callOnceOnConfigurationException() {
-        // not setting up the mapper causes a configuration exception to be thrown before the endpoint is ever called.
-        replay(clientMock);
+        // UnknownHostException is thrown as ConfigurationException
+        mockNAttempts(1, new UnknownHostException());
         endpoint.onSubscriptionTransferFailed(subscriptionMock, StatusCode.GOOD);
-        verify(clientMock);
+        verify(subscriptionMock, clientMock, managerMock);
     }
 
     @Test
     public void statusChangedShouldNotRetryIfStatusCodeIsBadButNotTimeout() {
-        replay(clientMock);
-        setUpMapper();
+        replay(subscriptionMock, clientMock, managerMock);
         endpoint.onStatusChanged(subscriptionMock, StatusCode.BAD);
-        //ass a buffer to make sure that the nth execution finishes
-        verify(clientMock);
+        verify(subscriptionMock, clientMock, managerMock);
     }
 
-    private void mockNAttempts(int numAttempts) {
-        final OpcUaSubscriptionManager managerMock = createNiceMock(OpcUaSubscriptionManager.class);
-        expect(clientMock.getSubscriptionManager()).andReturn(managerMock).anyTimes();
-        expect(managerMock.deleteSubscription(anyObject())).andReturn(CompletableFuture.completedFuture(null)).anyTimes();
-        expect(subscriptionMock.createMonitoredItems(anyObject(), anyObject(), (BiConsumer<UaMonitoredItem, Integer>) anyObject()))
-                .andReturn(CompletableFuture.failedFuture(new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION)))
+    private void mockNAttempts(int numAttempts, Exception e) {
+        expect(subscriptionMock.getSubscriptionId())
+                .andReturn(UInteger.valueOf(1))
+                .anyTimes();
+        expect(clientMock.getSubscriptionManager())
+                .andReturn(managerMock)
+                .anyTimes();
+        expect(managerMock.deleteSubscription(anyObject()))
+                .andReturn(CompletableFuture.completedFuture(subscriptionMock))
+                .anyTimes();
+        expect(managerMock.createSubscription(anyDouble()))
+                .andReturn(CompletableFuture.failedFuture(e))
                 .times(numAttempts);
-        replay(clientMock, managerMock);
-        setUpMapper();
+        replay(subscriptionMock, clientMock, managerMock);
     }
 
     private void setUpMapper() {

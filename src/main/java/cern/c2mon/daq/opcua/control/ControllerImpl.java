@@ -88,7 +88,9 @@ public class ControllerImpl implements Controller {
         mapper.clear();
         final Collection<Endpoint> endpoints = new ArrayList<>(failoverProxy.getPassiveEndpoints());
         endpoints.add(failoverProxy.getActiveEndpoint());
+        log.info("Get endpoints: {} ", endpoints.stream().map(Endpoint::getUri).collect(Collectors.joining(", ")));
         for (var e : endpoints) {
+            log.info("Attempting to disconnect from endpoint with URI {}.", e.getUri());
             try {
                 e.disconnect();
             } catch (OPCUAException ex) {

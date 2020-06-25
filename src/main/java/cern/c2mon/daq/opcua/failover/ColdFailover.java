@@ -197,7 +197,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
                 this.endpoint.disconnect();
             }
         } catch (OPCUAException ignored) {
-            log.info("ignored: ", ignored);
         }
     }
 

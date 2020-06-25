@@ -59,11 +59,10 @@ public class RetryDelegate {
             // but not the underlying action on the OpcUaClient
             return futureSupplier.get().get(config.getTimeout(), TimeUnit.MILLISECONDS);
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
-            if (context == ExceptionContext.DISCONNECT) {
-                log.debug("Exception during disconnect: ", e);
-            }
-            boolean longDisconnection = config.getMaxRetryAttempts() * (config.getRetryDelay() + config.getTimeout()) < disconnectionTime.get();
-            throw OPCUAException.of(context, e.getCause(), longDisconnection);
+            throw OPCUAException.of(context, e.getCause(), isLongDisconnection(disconnectionTime));
+        } catch (Exception e) {
+            log.info("An unexpected exception occurred during {}.", context.name(), e);
+            throw OPCUAException.of(context, e, isLongDisconnection(disconnectionTime));
         }
     }
 
@@ -85,5 +84,9 @@ public class RetryDelegate {
                     multiplier = 3))
     public void triggerRecreateSubscription(Endpoint endpoint, UaSubscription subscription) throws OPCUAException {
         endpoint.recreateSubscription(subscription);
+    }
+
+    private boolean isLongDisconnection(Supplier<Long> disconnectionTime) {
+        return config.getMaxRetryAttempts() * (config.getRetryDelay() + config.getTimeout()) < disconnectionTime.get();
     }
 }
