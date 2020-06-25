@@ -113,7 +113,7 @@ public class FailoverIT {
 
     @Test
     public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
-        log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
+        log.info("longDisconnectShouldTriggerReconnectToAnyAvailableServer");
         cutConnection(active.getValue());
         TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
         uncutConnection(fallback.getValue());

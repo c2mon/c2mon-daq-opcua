@@ -5,7 +5,7 @@ stages:
 
 services:
   # To obtain a Docker daemon, request a Docker-in-Docker service
-  - docker:19.03.1-dind
+  - docker:19.03.11-dind
 
 variables:
   DOCKER_TLS_CERTDIR: ""
