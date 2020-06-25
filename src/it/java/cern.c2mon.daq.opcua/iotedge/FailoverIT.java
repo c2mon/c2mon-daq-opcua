@@ -36,12 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
 public class FailoverIT {
-    private static ConnectionResolver connectionResolver;
-    private static Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> active;
-    private static Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> fallback;
-    private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
-    final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
-
+    @Autowired ConnectionResolver connectionResolver;
     @Autowired TestListeners.Pulse pulseListener;
     @Autowired Controller controller;
     @Autowired NoFailover noFailover;
@@ -49,20 +44,17 @@ public class FailoverIT {
     @Autowired FailoverTestEndpoint testEndpoint;
     @Autowired AppConfig config;
 
-    @BeforeAll
-    public static void setupContainers() {
-        connectionResolver = new ConnectionResolver();
-        active = connectionResolver.addImage();
-        fallback = connectionResolver.addImage();
-    }
+    private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
+    private final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
 
-    @AfterAll
-    public static void tearDownContainers() {
-        connectionResolver.close();
-    }
+    private Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> active;
+    private Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> fallback;
 
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+        active = connectionResolver.getProxyAt(0);
+        fallback = connectionResolver.getProxyAt(1);
+
         try {
             fallback.getValue().setConnectionCut(true);
         } catch (Exception ignored) {

@@ -220,7 +220,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      *                        can not be mapped to current DataTags, and therefore cannot be recreated.
      */
     public synchronized void recreateSubscription(UaSubscription subscription) throws OPCUAException {
-        if (client == null || Thread.currentThread().isInterrupted()) {
+        if (client == null || subscriptionMap.inverse() == null || Thread.currentThread().isInterrupted()) {
             log.info("Client was stopped, cease subscription recreation attempts.");
             return;
         }

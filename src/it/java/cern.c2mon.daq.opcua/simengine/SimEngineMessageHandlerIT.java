@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
@@ -21,13 +20,10 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -45,44 +41,24 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @TestPropertySource(locations = "classpath:opcua.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     private static final long DATAID_VMON = 1L;
     private static final long DATAID_PW = 2L;
     private static final long CMDID_PW = 10L;
     private static final long CMDID_V0SET = 20L;
-    private static ConnectionResolver.OpcUaImage.Venus image;
-    @Autowired
-    TestListeners.Pulse endpointListener;
-    @Autowired
-    Controller controller;
-    @Autowired
-    CommandRunner commandRunner;
-    @Autowired
-    TagChanger tagChanger;
-    @Autowired
-    AliveWriter aliveWriter;
-    @Autowired
-    FailoverMode noFailover;
-    @Autowired
-    AppConfig config;
+
+    @Autowired ConnectionResolver.OpcUaImage.BasicVenus venus;
+    @Autowired TestListeners.Pulse endpointListener;
+    @Autowired Controller controller;
+    @Autowired CommandRunner commandRunner;
+    @Autowired TagChanger tagChanger;
+    @Autowired AliveWriter aliveWriter;
+    @Autowired FailoverMode noFailover;
+    @Autowired AppConfig config;
 
     private OPCUAMessageHandler handler;
     private SourceCommandTagValue value;
-
-    @BeforeClass
-    public static void startServer() {
-        // TODO: don't extend MessageHandler but use spring boot for DI, migrate all tests to junit 5
-        image = new ConnectionResolver.OpcUaImage.Venus("sim_BASIC.short.xml");
-        image.startStandAlone();
-    }
-
-    @AfterClass
-    public static void stopServer() {
-        image.close();
-    }
-
 
     @Override
     protected void beforeTest() throws Exception {
@@ -127,7 +103,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         final Matcher matcher = Pattern.compile(hostRegex).matcher(equipmentAddress);
         if (matcher.find()) {
             final String port = matcher.group(1);
-            final String mappedAddress = equipmentAddress.replace(port + "", image.getMappedPort(Integer.parseInt(port)) + "");
+            final String mappedAddress = equipmentAddress.replace(port + "", venus.getMappedPort(Integer.parseInt(port)) + "");
             ReflectionTestUtils.setField(equipmentConfiguration, "equipmentAddress", mappedAddress);
         }
     }
