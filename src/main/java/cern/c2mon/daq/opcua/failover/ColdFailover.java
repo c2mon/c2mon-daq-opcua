@@ -108,7 +108,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     @Override
     public void onSessionInactive(UaSession session) {
-        log.info("SessionInactive, start countdown");
         reconnected = new CompletableFuture<>();
         reconnected.orTimeout(timeout, TimeUnit.MILLISECONDS)
                 .exceptionally(t -> {
@@ -120,7 +119,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     @Override
     public void onSessionActive(UaSession session) {
-        log.info("SessionActive, stop countdown");
         reconnected.complete(null);
     }
 

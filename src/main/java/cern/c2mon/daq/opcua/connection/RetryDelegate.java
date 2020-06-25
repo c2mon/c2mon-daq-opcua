@@ -4,13 +4,16 @@ import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.failover.FailoverBase;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 /**
@@ -22,6 +25,7 @@ import java.util.function.Supplier;
  */
 @Component(value = "retryDelegate")
 @RequiredArgsConstructor
+@Slf4j
 public class RetryDelegate {
 
     private final AppConfig config;
@@ -53,8 +57,11 @@ public class RetryDelegate {
         try {
             // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
             // but not the underlying action on the OpcUaClient
-            return futureSupplier.get().orTimeout(config.getTimeout(), TimeUnit.MILLISECONDS).join();
-        } catch (Exception e) {
+            return futureSupplier.get().get(config.getTimeout(), TimeUnit.MILLISECONDS);
+        } catch (ExecutionException | InterruptedException | TimeoutException e) {
+            if (context == ExceptionContext.DISCONNECT) {
+                log.debug("Exception during disconnect: ", e);
+            }
             boolean longDisconnection = config.getMaxRetryAttempts() * (config.getRetryDelay() + config.getTimeout()) < disconnectionTime.get();
             throw OPCUAException.of(context, e.getCause(), longDisconnection);
         }

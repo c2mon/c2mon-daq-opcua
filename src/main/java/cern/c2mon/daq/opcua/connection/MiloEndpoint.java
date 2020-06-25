@@ -152,12 +152,14 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      */
     @Override
     public void disconnect() throws OPCUAException {
+        log.debug("Disconnecting endpoint at {}", uri);
         subscriptionMap.clear();
         if (client != null) {
             client.getSubscriptionManager().removeSubscriptionListener(this);
             client.getSubscriptionManager().clearSubscriptions();
             sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
             sessionActivityListeners.clear();
+            log.debug("Disconnect: {}", uri);
             retryDelegate.completeOrThrow(DISCONNECT, this::getDisconnectPeriod, client::disconnect);
             client = null;
         } else {
