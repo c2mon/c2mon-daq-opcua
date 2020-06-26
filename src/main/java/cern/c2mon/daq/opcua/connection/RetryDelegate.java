@@ -57,6 +57,10 @@ public class RetryDelegate {
         try {
             // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
             // but not the underlying action on the OpcUaClient
+            if(disconnectionTime.get() < 0L) {
+                log.info("Endpoint was stopped, cease retries.");
+                return null;
+            }
             return futureSupplier.get().get(config.getTimeout(), TimeUnit.MILLISECONDS);
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
             throw OPCUAException.of(context, e.getCause(), isLongDisconnection(disconnectionTime));

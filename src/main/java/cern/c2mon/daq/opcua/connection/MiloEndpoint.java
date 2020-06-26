@@ -36,6 +36,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -69,7 +70,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private OpcUaClient client;
     @Getter
     private String uri;
-    private long disconnectedOn = 0L;
+    private final AtomicLong disconnectedOn = new AtomicLong(0);
 
     @Setter
     private MonitoringMode mode = MonitoringMode.Reporting;
@@ -122,6 +123,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     public void initialize(String uri) throws OPCUAException {
         this.uri = uri;
         sessionActivityListeners.add(this);
+        disconnectedOn.set(0L);
         try {
             var endpoints = DiscoveryClient.getEndpoints(uri).join();
             endpoints = updateEndpointUrls(uri, endpoints);
@@ -137,8 +139,10 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         if (shouldMonitor && !sessionActivityListeners.contains(listener)) {
             sessionActivityListeners.add(listener);
             client.addSessionActivityListener(listener);
-            if (disconnectedOn <= 1L) {
-                listener.onSessionActive(null);
+            synchronized (this) {
+                if (disconnectedOn.get() <= 1L) {
+                    listener.onSessionActive(null);
+                }
             }
         } else {
             sessionActivityListeners.remove(listener);
@@ -151,7 +155,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public void disconnect() throws OPCUAException {
+    public synchronized void disconnect() throws OPCUAException {
         log.info("Disconnecting endpoint at {}", uri);
         if (client != null) {
             client.getSubscriptionManager().clearSubscriptions();
@@ -159,12 +163,12 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
             retryDelegate.completeOrThrow(DISCONNECT, this::getDisconnectPeriod, client::disconnect);
             client = null;
-            sessionActivityListeners.clear();
-            subscriptionMap.clear();
-            log.info("Disconnected.");
         } else {
             log.info("Client not connected, skipping disconnection attempt.");
         }
+        sessionActivityListeners.clear();
+        subscriptionMap.clear();
+        disconnectedOn.set(-1);
     }
 
     /**
@@ -222,7 +226,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      *                        can not be mapped to current DataTags, and therefore cannot be recreated.
      */
     public synchronized void recreateSubscription(UaSubscription subscription) throws OPCUAException {
-        if (client == null || Thread.currentThread().isInterrupted()) {
+        if (disconnectedOn.get() < 0L || Thread.currentThread().isInterrupted()) {
             log.info("Client was stopped, cease subscription recreation attempts.");
             return;
         }
@@ -376,7 +380,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      */
     @Override
     public void onSessionActive(UaSession session) {
-        this.disconnectedOn = 0L;
+        disconnectedOn.getAndUpdate(l -> Math.min(l, 0L));
     }
 
     /**
@@ -385,7 +389,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      */
     @Override
     public void onSessionInactive(UaSession session) {
-        this.disconnectedOn = System.currentTimeMillis();
+        disconnectedOn.getAndUpdate(l -> l < 0 ? l : System.currentTimeMillis());
     }
 
     /**
@@ -481,7 +485,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         return new MonitoredItemCreateRequest(id, mode, mp);
     }
 
-    private long getDisconnectPeriod() {
-        return disconnectedOn > 0L ? System.currentTimeMillis() - disconnectedOn : 0L;
+    private synchronized long getDisconnectPeriod() {
+        final long l = disconnectedOn.get();
+        return l > 0L ? System.currentTimeMillis() - l : l;
     }
 }

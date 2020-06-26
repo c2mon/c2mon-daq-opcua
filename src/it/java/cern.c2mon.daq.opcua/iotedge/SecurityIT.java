@@ -7,8 +7,8 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.failover.NoFailover;
-import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
+import cern.c2mon.daq.opcua.testutils.EdgeTestBase;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import com.google.common.io.Files;
@@ -36,26 +36,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @TestPropertySource(locations = "classpath:securityIT.properties")
 @ExtendWith(SpringExtension.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class SecurityIT {
+public class SecurityIT extends EdgeTestBase {
 
-    private static ConnectionResolver.OpcUaImage.Edge edge;
 
     @Autowired AppConfig config;
     @Autowired Controller controller;
     @Autowired FailoverProxy testFailoverProxy;
     @Autowired NoFailover noFailover;
     @Autowired TestListeners.TestListener testListener;
-
-    @BeforeAll
-    public static void startServers() {
-        edge = new ConnectionResolver.OpcUaImage.Edge();
-        edge.startStandAlone();
-    }
-
-    @AfterAll
-    public static void stopServer() {
-        edge.close();
-    }
 
     @BeforeEach
     public void setUp() {
@@ -71,7 +59,7 @@ public class SecurityIT {
         config.getCertificationPriority().put("none", 1);
         config.getCertificationPriority().put("generate", 2);
         config.getCertificationPriority().put("load", 3);
-        edge.cleanUpCertificates();
+        active.cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
         final var f = testListener.listen();
         controller.stop();
@@ -86,7 +74,7 @@ public class SecurityIT {
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
         final var f = testListener.getStateUpdate();
-        controller.connect(edge.getUri());
+        controller.connect(active.getUri());
         controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
@@ -130,7 +118,7 @@ public class SecurityIT {
         trustCertificatesOnClient();
 
         final var state = testListener.listen();
-        controller.connect(edge.getUri());
+        controller.connect(active.getUri());
         assertEquals(EndpointListener.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
@@ -145,17 +133,17 @@ public class SecurityIT {
     private CompletableFuture<EndpointListener.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
         log.info("Initial connection attempt...");
         try {
-            controller.connect(edge.getUri());
+            controller.connect(active.getUri());
         } catch (CommunicationException e) {
             // expected behavior: rejected by the server
         }
         controller.stop();
 
         log.info("Trust certificates server-side and reconnect...");
-        edge.trustCertificates();
+        active.trustCertificates();
         final var state = testListener.listen();
 
-        controller.connect(edge.getUri());
+        controller.connect(active.getUri());
         controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         return state;
     }

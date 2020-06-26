@@ -134,7 +134,7 @@ public abstract class TestListeners {
             }
         }
 
-        public CompletableFuture<EquipmentState> listen() {
+        public synchronized CompletableFuture<EquipmentState> listen() {
             stateUpdate = new CompletableFuture<>();
             return stateUpdate;
         }

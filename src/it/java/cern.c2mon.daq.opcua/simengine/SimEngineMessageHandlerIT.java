@@ -8,7 +8,6 @@ import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.TagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.failover.FailoverMode;
-import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
@@ -20,6 +19,7 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.After;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +28,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -45,12 +47,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
+    private static final int PILOT = 8890;
+    private static final int SIMENGINE = 4841;
+    private static final String environment = "sim_BASIC.short.xml";
     private static final long DATAID_VMON = 1L;
     private static final long DATAID_PW = 2L;
     private static final long CMDID_PW = 10L;
     private static final long CMDID_V0SET = 20L;
 
-    @Autowired ConnectionResolver.OpcUaImage.BasicVenus venus;
     @Autowired TestListeners.Pulse endpointListener;
     @Autowired Controller controller;
     @Autowired CommandRunner commandRunner;
@@ -59,8 +63,15 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Autowired FailoverMode noFailover;
     @Autowired AppConfig config;
 
+
     private OPCUAMessageHandler handler;
     private SourceCommandTagValue value;
+
+    @ClassRule
+    public static final GenericContainer image = new GenericContainer("gitlab-registry.cern.ch/mludwig/venuscaensimulationengine:venuscombo1.0.3")
+            .waitingFor(Wait.forLogMessage(".*Server opened endpoints for following URLs:.*", 2))
+            .withEnv("SIMCONFIG", environment)
+            .withExposedPorts(PILOT, SIMENGINE);
 
     @Override
     protected void beforeTest() throws Exception {
@@ -80,6 +91,20 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         log.info("############### TEST ##############");
     }
 
+    // Work-around for non-fixed ports in testcontainers, since GenericMessageHandlerTest required ports to be included in the configuration
+    private void mapEquipmentAddress() {
+        final String hostRegex = ":(.[^/][^;]*)";
+        final String equipmentAddress = equipmentConfiguration.getEquipmentAddress();
+
+        final Matcher matcher = Pattern.compile(hostRegex).matcher(equipmentAddress);
+        if (matcher.find()) {
+            final String port = matcher.group(1);
+            final String mappedAddress = equipmentAddress.replace(port + "", image.getMappedPort(Integer.parseInt(port)) + "");
+            ReflectionTestUtils.setField(equipmentConfiguration, "equipmentAddress", mappedAddress);
+        }
+    }
+
+
     @Override
     protected void afterTest() throws Exception {
     }
@@ -95,19 +120,6 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
             handler.runCommand(value);
         }
         super.cleanUp();
-    }
-
-    // Work-around for non-fixed ports in testcontainers, since GenericMessageHandlerTest required ports to be included in the configuration
-    private void mapEquipmentAddress() {
-        final String hostRegex = ":(.[^/][^;]*)";
-        final String equipmentAddress = equipmentConfiguration.getEquipmentAddress();
-
-        final Matcher matcher = Pattern.compile(hostRegex).matcher(equipmentAddress);
-        if (matcher.find()) {
-            final String port = matcher.group(1);
-            final String mappedAddress = equipmentAddress.replace(port + "", venus.getMappedPort(Integer.parseInt(port)) + "");
-            ReflectionTestUtils.setField(equipmentConfiguration, "equipmentAddress", mappedAddress);
-        }
     }
 
     @Test

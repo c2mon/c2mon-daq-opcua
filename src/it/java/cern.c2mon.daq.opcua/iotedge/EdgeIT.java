@@ -6,8 +6,8 @@ import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverMode;
-import cern.c2mon.daq.opcua.testutils.ConnectionResolver;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
+import cern.c2mon.daq.opcua.testutils.EdgeTestBase;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
@@ -25,11 +25,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -43,28 +41,24 @@ import static org.junit.jupiter.api.Assertions.*;
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class EdgeIT {
+public class EdgeIT extends EdgeTestBase {
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final ISourceDataTag alreadySubscribedTag = EdgeTagFactory.DipData.createDataTag();
 
-    @Autowired ConnectionResolver resolver;
     @Autowired TestListeners.Pulse pulseListener;
     @Autowired Controller controller;
     @Autowired CommandRunner commandRunner;
     @Autowired FailoverMode noFailover;
 
-    private Map.Entry<ConnectionResolver.OpcUaImage.Edge, ToxiproxyContainer.ContainerProxy> proxy;
-
     @BeforeEach
     public void setupEndpoint() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         log.info("############ SET UP ############");
-        proxy = resolver.getProxyAt(0);
         pulseListener.setSourceID(tag.getId());
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
         ReflectionTestUtils.setField(noFailover.currentEndpoint(), "endpointListener", pulseListener);
 
-        controller.connect(proxy.getKey().getUri());
+        controller.connect(active.getUri());
         controller.subscribeTags(Collections.singletonList(alreadySubscribedTag));
         pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS); // that tag is subscribed
         pulseListener.reset();
@@ -76,13 +70,6 @@ public class EdgeIT {
     public void cleanUp() {
         log.info("############ CLEAN UP ############");
         controller.stop();
-    }
-
-    @Test
-    public void connectToRunningServerShouldSendOK() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
-        final var stateUpdate = pulseListener.getStateUpdate();
-        controller.connect(proxy.getKey().getUri());
-        assertEquals(EndpointListener.EquipmentState.OK, stateUpdate.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     @Test
@@ -111,11 +98,11 @@ public class EdgeIT {
     @Ignore
     public void stopServerForVeryLongShouldRestartEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
         final var connectionLost = pulseListener.getStateUpdate();
-        proxy.getKey().close();
+        active.close();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         CompletableFuture.runAsync(() -> {
-            proxy.getKey().restart();
+            active.restart();
             final var connectionRegained = pulseListener.getStateUpdate();
             pulseListener.setSourceID(alreadySubscribedTag.getId());
 
@@ -128,12 +115,12 @@ public class EdgeIT {
     @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
         final var connectionLost = pulseListener.listen();
-        proxy.getKey().close();
+        active.close();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
 
         final var connectionRegained = pulseListener.listen();
-        proxy.getKey().restart();
-        assertEquals(EndpointListener.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        active.restart();
+        assertEquals(EndpointListener.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
 
         pulseListener.reset();
         pulseListener.setSourceID(alreadySubscribedTag.getId());
@@ -143,30 +130,18 @@ public class EdgeIT {
     @Test
     public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
         controller.subscribeTags(Collections.singletonList(tag));
-        cutConnection();
+        cutConnection(pulseListener, active);
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
-        uncutConnection();
+        uncutConnection(pulseListener, active);
 
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     @Test
     public void connectionCutServerShouldSendLOST() throws InterruptedException, ExecutionException, TimeoutException {
-        assertEquals(CONNECTION_LOST, cutConnection());
-        uncutConnection(); //cleanup
-    }
-
-    private EndpointListener.EquipmentState cutConnection() throws InterruptedException, ExecutionException, TimeoutException {
-        proxy.getValue().setConnectionCut(true);
-        final var connectionLost = pulseListener.listen();
-        return connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
-    }
-
-    private EndpointListener.EquipmentState uncutConnection() throws InterruptedException, ExecutionException, TimeoutException {
-        final var connectionRegained = pulseListener.listen();
-        proxy.getValue().setConnectionCut(false);
-        return connectionRegained.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        assertEquals(CONNECTION_LOST, cutConnection(pulseListener, active));
+        uncutConnection(pulseListener, active); //cleanup
     }
 
     @Test

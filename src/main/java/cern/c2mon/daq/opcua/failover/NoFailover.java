@@ -25,7 +25,6 @@ public class NoFailover implements FailoverMode, UaSubscriptionManager.Subscript
 
     @Override
     public void initialize(String uri, Endpoint endpoint, String[] redundantAddresses) {
-        log.info("Monitoring equipmentState from NoFailover");
         this.endpoint.monitorEquipmentState(true, null);
     }
 

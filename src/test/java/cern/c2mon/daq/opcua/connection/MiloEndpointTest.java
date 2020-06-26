@@ -14,6 +14,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.UnknownHostException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.easymock.EasyMock.*;
 import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NodeIdUnknown;
@@ -58,7 +59,7 @@ public class MiloEndpointTest {
 
     @Test
     public void alreadyAttemptingResubscriptionTooLongThrowsLongLostConnectionException() {
-        ReflectionTestUtils.setField(endpoint, "disconnectedOn", 20);
+        ReflectionTestUtils.setField(endpoint, "disconnectedOn", new AtomicLong(20L));
         setUpDeleteSubscriptionMocks(new LongLostConnectionException(ExceptionContext.DELETE_SUBSCRIPTION, new IllegalArgumentException()));
         assertThrows(LongLostConnectionException.class, () -> endpoint.write(NodeId.NULL_GUID, 1));
     }

@@ -16,6 +16,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.UnknownHostException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.easymock.EasyMock.*;
 
@@ -54,9 +55,9 @@ public class RetryEndpointActionIT {
     public void longLostConnectionExceptionShouldNotBeRepeated() {
         //results in longLostConnectionException
         // scope prototype on delegate -> fetch proper instance
-        ReflectionTestUtils.setField(endpoint, "disconnectedOn", 2L);
+        ReflectionTestUtils.setField(endpoint, "disconnectedOn", new AtomicLong(2L));
         verifyExceptionOnRead(new Exception(), 1);
-        ReflectionTestUtils.setField(endpoint, "disconnectedOn", 0L);
+        ReflectionTestUtils.setField(endpoint, "disconnectedOn", new AtomicLong(0L));
     }
 
     private void verifyExceptionOnRead(Exception e, int numTimes) {

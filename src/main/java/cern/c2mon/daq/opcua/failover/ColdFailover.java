@@ -187,7 +187,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         try {
             endpoint.subscribeWithCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
         } catch (OPCUAException e) {
-            log.info("An error occurred when setting up connection monitoring.");
+            log.info("An error occurred when setting up connection monitoring.", e);
         }
     }
 
