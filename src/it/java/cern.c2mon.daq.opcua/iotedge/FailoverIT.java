@@ -51,13 +51,11 @@ public class FailoverIT extends EdgeTestBase {
 
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
-
         try {
             fallback.proxy.setConnectionCut(true);
         } catch (Exception ignored) {
             //toxiproxy will throw a runtime error when attempting to cut a connection that's already cut
         }
-        active.proxy.setConnectionCut(false);
 
         log.info("############ SET UP ############");
         pulseListener.setSourceID(tag.getId());
@@ -79,6 +77,7 @@ public class FailoverIT extends EdgeTestBase {
     public void cleanUp() {
         log.info("############ CLEAN UP ############");
         controller.stop();
+        active.proxy.setConnectionCut(false);
     }
 
     @Test

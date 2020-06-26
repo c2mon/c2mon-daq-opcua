@@ -26,6 +26,7 @@ public class FailoverProxyImpl implements FailoverProxy {
     @Override
     public void initialize(String uri) throws OPCUAException {
         noFailover.initializeEndpoint(uri);
+        log.info("Initialized endpoint");
         final Map.Entry<RedundancySupport, String[]> redundancyInfo = redundancySupport(noFailover.currentEndpoint());
         switch (redundancyInfo.getKey()) {
             case HotAndMirrored:
@@ -37,6 +38,7 @@ public class FailoverProxyImpl implements FailoverProxy {
             default:
                 currentFailover = noFailover;
         }
+        log.info("Redundancy support {}, redundancyInfo {}, current failover {}", redundancyInfo.getKey().name(), redundancyInfo.getValue(), currentFailover.getClass().getName());
         currentFailover.initialize(uri, noFailover.currentEndpoint(), redundancyInfo.getValue());
     }
 

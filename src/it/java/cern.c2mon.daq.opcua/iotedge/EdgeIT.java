@@ -16,7 +16,6 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +27,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -95,31 +93,14 @@ public class EdgeIT extends EdgeTestBase {
         assertTrue(s.isEmpty());
     }
 
-    @Ignore
-    public void stopServerForVeryLongShouldRestartEndpoint() throws InterruptedException, ExecutionException, TimeoutException {
-        final var connectionLost = pulseListener.getStateUpdate();
-        active.close();
-        connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
-        pulseListener.reset();
-        CompletableFuture.runAsync(() -> {
-            active.restart();
-            final var connectionRegained = pulseListener.getStateUpdate();
-            pulseListener.setSourceID(alreadySubscribedTag.getId());
-
-            final EndpointListener.EquipmentState reconnectState = assertDoesNotThrow(() -> connectionRegained.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
-            assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
-            assertEquals(EndpointListener.EquipmentState.OK, reconnectState);
-        }, CompletableFuture.delayedExecutor(2, TimeUnit.MINUTES)).join();
-    }
-
     @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
         final var connectionLost = pulseListener.listen();
-        active.close();
+        active.image.close();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
 
         final var connectionRegained = pulseListener.listen();
-        active.restart();
+        active.image.start();
         assertEquals(EndpointListener.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
 
         pulseListener.reset();

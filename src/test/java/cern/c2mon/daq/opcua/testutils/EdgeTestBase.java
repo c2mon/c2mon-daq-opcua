@@ -71,13 +71,5 @@ public abstract class EdgeTestBase {
             log.info("Cleanup.");
             image.execInContainer("rm", "-r", "pki/trusted");
         }
-
-        public void restart() {
-            image.start();
-        }
-
-        public void close() {
-            image.stop();
-        }
     }
 }

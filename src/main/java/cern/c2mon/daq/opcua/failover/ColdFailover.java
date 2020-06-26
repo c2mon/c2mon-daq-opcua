@@ -93,11 +93,13 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     @Override
     public synchronized void switchServers() throws OPCUAException {
         if (!controller.isStopped()) {
-            log.info("Attempt to switch to next healthy server.");
-            disconnectAndProceed();
-            if (reconnectionSucceeded()) {
-                recreateSubscriptions();
-                monitorConnection();
+            synchronized (this) {
+                log.info("Attempt to switch to next healthy server.");
+                disconnectAndProceed();
+                if (reconnectionSucceeded()) {
+                    recreateSubscriptions();
+                    monitorConnection();
+                }
             }
         } else {
             log.info("Server was manually shut down.");
