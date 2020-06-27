@@ -77,6 +77,7 @@ public class FailoverIT extends EdgeTestBase {
     public void cleanUp() {
         log.info("############ CLEAN UP ############");
         controller.stop();
+        log.info("Uncutting active proxy connection.");
         active.proxy.setConnectionCut(false);
     }
 

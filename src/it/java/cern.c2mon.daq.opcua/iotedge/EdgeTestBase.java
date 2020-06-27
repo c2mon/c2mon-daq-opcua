@@ -1,14 +1,17 @@
-package cern.c2mon.daq.opcua.testutils;
+package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.connection.EndpointListener;
+import cern.c2mon.daq.opcua.testutils.TestListeners;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
-import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -16,17 +19,32 @@ import java.util.concurrent.TimeoutException;
 @Slf4j
 public abstract class EdgeTestBase {
 
-    private static final int IOTEDGE  = 50000;
-    static final Network network = Network.newNetwork();
-    static final ToxiproxyContainer toxiProxyContainer;
-    public static final EdgeImage active;
-    public static final EdgeImage fallback;
+    public static final int IOTEDGE  = 50000;
+    private static final Network network = Network.newNetwork();
+    private static final ToxiproxyContainer toxiProxyContainer;
+    public static EdgeImage active;
+    public static EdgeImage fallback;
 
     static {
         toxiProxyContainer = new ToxiproxyContainer().withNetwork(network);
+    }
+
+    @BeforeAll
+    public static void setupContainers() {
+        log.info("Starting EdgeTestBase containers");
         toxiProxyContainer.start();
         active = new EdgeImage(toxiProxyContainer, network);
         fallback = new EdgeImage(toxiProxyContainer, network);
+
+    }
+
+    @AfterAll
+    public static void stopContainers() {
+        log.info("Stopping EdgeTestBase containers");
+        toxiProxyContainer.stop();
+        active.image.stop();
+        fallback.image.stop();
+
     }
 
     protected static EndpointListener.EquipmentState cutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
@@ -59,17 +77,6 @@ public abstract class EdgeTestBase {
             proxy = proxyContainer.getProxy(image, IOTEDGE);
             uri = "opc.tcp://" + proxy.getContainerIpAddress() + ":" + proxy.getProxyPort();
             log.info("Edge server ready at {}. ", uri);
-        }
-
-        public void trustCertificates() throws IOException, InterruptedException {
-            log.info("Trust certificate.");
-            image.execInContainer("mkdir", "pki/trusted");
-            image.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
-        }
-
-        public void cleanUpCertificates() throws IOException, InterruptedException {
-            log.info("Cleanup.");
-            image.execInContainer("rm", "-r", "pki/trusted");
         }
     }
 }

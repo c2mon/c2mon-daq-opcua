@@ -7,7 +7,6 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverMode;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
-import cern.c2mon.daq.opcua.testutils.EdgeTestBase;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
@@ -96,7 +95,7 @@ public class EdgeIT extends EdgeTestBase {
     @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
         final var connectionLost = pulseListener.listen();
-        active.image.close();
+        active.image.stop();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
 
         final var connectionRegained = pulseListener.listen();
