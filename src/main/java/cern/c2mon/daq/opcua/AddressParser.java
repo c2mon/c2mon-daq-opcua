@@ -26,9 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.MutablePropertySources;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -59,13 +56,14 @@ public abstract class AddressParser {
      * and key must match exactly.
      * @param address The address String in the following form, where brackets indicate optional values:
      *                URI=protocol1://host1[:port1]/[path1][,protocol2://host2[:port2]/[path2]]
-     *                [;optionalConfigurationProperty=value]
-     *                [;keystore.optionalKeystoreProperty=value]
+     *                [;optionalConfigurationProperty=value] [;keystore.optionalKeystoreProperty=value]
      *                [;pki.optionalPkiProperty=value]
+     * @param config  The equipment configuration to modify in accordance with the optional configuration properties
+     *                appended to the address parameter
      * @return An array of Strings for containing the URI for a server, or all servers in a redundant server cluster
+     * @throws ConfigurationException in case the address String is malformed or missing required properties
      */
     public static String[] parse(final String address, AppConfig config) throws ConfigurationException {
-//    public static String[] parse(final String address, ConfigurableEnvironment environment, String propertyFileName) throws ConfigurationException {
         Map<String, String> properties = parsePropertiesFromString(address);
         String uri = properties.remove(URI);
         if (StringUtil.isNullOrEmpty(uri)) {
@@ -100,18 +98,13 @@ public abstract class AddressParser {
         return properties;
     }
 
-    private static void overrideEnv(Map<String, Object> properties, ConfigurableEnvironment env, String propertyFileName) {
-        MutablePropertySources propertySources = env.getPropertySources();
-        propertySources.addFirst(new MapPropertySource(propertyFileName, properties));
-    }
-
     private static void overrideConfig(Map<String, String> properties, AppConfig config) {
         final List<Map.Entry<String, String>> entries = setFields(getSubConfig(properties, KEYSTORE), config.getKeystore());
         entries.addAll(setFields(getSubConfig(properties, PKI), config.getPkiConfig()));
         properties.keySet().removeIf(s -> s.startsWith(KEYSTORE) | s.startsWith(PKI));
         entries.addAll(setFields(properties, config));
         if (!entries.isEmpty()) {
-            log.info("Could not set fields {}. ",StringUtils.join(entries, ", "));
+            log.info("Could not set fields {}. ", StringUtils.join(entries, ", "));
         }
     }
 
@@ -131,17 +124,14 @@ public abstract class AddressParser {
         try {
             final Field declaredField = target.getClass().getDeclaredField(name);
             if (declaredField.trySetAccessible()) {
-                try {
-                    final Object val = converter.convert(value, declaredField.getType());
-                    declaredField.set(target, val);
-                    return true;
-                } catch (ClassCastException | IllegalAccessException e) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Error setting field {}.", name, e);
-                    }
-                }
+                final Object val = converter.convert(value, declaredField.getType());
+                declaredField.set(target, val);
+                return true;
             }
+        } catch (ClassCastException | IllegalAccessException e) {
+            log.debug("Error setting field {}.", name, e);
         } catch (NoSuchFieldException ignored) {
+            log.debug("No field with name {} exists in class {}.", name, target.getClass().getName());
         }
         return false;
     }

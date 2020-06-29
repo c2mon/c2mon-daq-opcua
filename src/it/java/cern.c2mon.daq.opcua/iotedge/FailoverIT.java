@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
     @Autowired TestListeners.Pulse pulseListener;
     @Autowired Controller controller;
@@ -48,7 +48,7 @@ public class FailoverIT extends EdgeTestBase {
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
-    private boolean resetConnection = false;
+    private boolean resetConnection;
 
 
     @BeforeEach
@@ -65,6 +65,7 @@ public class FailoverIT extends EdgeTestBase {
         controller.subscribeTag(tag);
         pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
+        resetConnection = false;
         log.info("############ TEST ############");
     }
 
@@ -77,7 +78,6 @@ public class FailoverIT extends EdgeTestBase {
             active.proxy.setConnectionCut(false);
             log.info("Resetting fallpack proxy {}", fallback.proxy);
             fallback.proxy.setConnectionCut(true);
-            resetConnection = false;
         } else {
             log.info("Skip resetting proxies");
         }

@@ -70,8 +70,8 @@ public class ControllerImpl implements Controller {
     @Override
     public void connect(String uri) throws OPCUAException {
         try {
-            failoverProxy.initialize(uri);
             stopped.set(false);
+            failoverProxy.initialize(uri);
         } catch (OPCUAException e) {
             endpointListener.onEquipmentStateUpdate(EndpointListener.EquipmentState.CONNECTION_FAILED);
             throw e;
