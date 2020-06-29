@@ -16,10 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
@@ -40,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class FailoverIT extends EdgeTestBase {
     @Autowired TestListeners.Pulse pulseListener;
     @Autowired Controller controller;
@@ -52,6 +49,7 @@ public class FailoverIT extends EdgeTestBase {
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
     private boolean resetConnection = false;
+
 
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
@@ -75,7 +73,7 @@ public class FailoverIT extends EdgeTestBase {
         log.info("############ CLEAN UP ############");
         controller.stop();
         if (resetConnection) {
-            log.info("Rsetting active proxy {}", active.proxy);
+            log.info("Resetting active proxy {}", active.proxy);
             active.proxy.setConnectionCut(false);
             log.info("Resetting fallpack proxy {}", fallback.proxy);
             fallback.proxy.setConnectionCut(true);

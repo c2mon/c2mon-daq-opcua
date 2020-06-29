@@ -40,6 +40,8 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     @Value("#{@appConfig.getTimeout()}")
     private int timeout;
 
+    private CompletableFuture<Void> reconnected = new CompletableFuture<>();
+
     /**
      * Connect to the healthiest endpoint of the redundant server set. Since in Cold Failover only one endpoint can be
      * active and healthy at a time, the first endpoint with a healthy service level that is encountered is deemed
@@ -105,8 +107,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             log.info("Server was manually shut down.");
         }
     }
-
-    private CompletableFuture<Void> reconnected = new CompletableFuture<>();
 
     @Override
     public void onSessionInactive(UaSession session) {
@@ -186,15 +186,18 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     }
 
 
-    private void monitorConnection() {
-        this.endpoint.monitorEquipmentState(true, (SessionActivityListener) endpointListener);
-        this.endpoint.monitorEquipmentState(true, this);
-        try {
-            endpoint.subscribeWithCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
-        } catch (OPCUAException e) {
-            log.info("An error occurred when setting up connection monitoring.", e);
+    private synchronized void monitorConnection() {
+        if (controller.isStopped()) {
+            this.endpoint.monitorEquipmentState(true, (SessionActivityListener) endpointListener);
+            this.endpoint.monitorEquipmentState(true, this);
+            try {
+                endpoint.subscribeWithCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
+            } catch (OPCUAException e) {
+                log.info("An error occurred when setting up connection monitoring.", e);
+            }
         }
     }
+
 
     private void disconnectAndProceed() {
         try {
