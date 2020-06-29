@@ -132,6 +132,8 @@ public class AppConfig {
     /**
      * Settings required for authentication with username and password
      */
+    @Configuration
+    @ConfigurationProperties(prefix = "app.usr")
     @Data
     @Builder
     @AllArgsConstructor

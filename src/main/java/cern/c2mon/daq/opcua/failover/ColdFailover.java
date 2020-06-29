@@ -110,13 +110,16 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     @Override
     public void onSessionInactive(UaSession session) {
-        reconnected = new CompletableFuture<>();
-        reconnected.orTimeout(timeout, TimeUnit.MILLISECONDS)
-                .exceptionally(t -> {
-                    log.info("Trigger server switch due to long disconnection");
-                    triggerServerSwitch();
-                    return null;
-                });
+        if (!controller.isStopped()) {
+            log.info("Starting timeout on inactive session.");
+            reconnected = new CompletableFuture<Void>()
+                    .orTimeout(timeout, TimeUnit.MILLISECONDS)
+                    .exceptionally(t -> {
+                        log.info("Trigger server switch due to long disconnection");
+                        triggerServerSwitch();
+                        return null;
+                    });
+        }
     }
 
     @Override

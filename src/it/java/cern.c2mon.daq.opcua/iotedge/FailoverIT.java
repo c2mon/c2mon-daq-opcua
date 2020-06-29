@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,12 +63,11 @@ public class FailoverIT extends EdgeTestBase {
         ReflectionTestUtils.setField(coldFailover, "endpointListener", pulseListener);
         ReflectionTestUtils.setField(noFailover, "endpoint", testEndpoint);
         ReflectionTestUtils.setField(testEndpoint, "endpointListener", pulseListener);
-
         mockColdFailover();
-
         controller.connect(active.getUri());
         controller.subscribeTag(tag);
         pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        pulseListener.reset();
         log.info("############ TEST ############");
     }
 
@@ -100,7 +100,7 @@ public class FailoverIT extends EdgeTestBase {
         cutConnection(pulseListener, active);
         triggerServerSwitch();
         uncutConnection(pulseListener, fallback);
-        resetListenerAndAssertTagUpdate();
+        assertTagUpdate();
         resetConnection = true;
     }
 
@@ -110,7 +110,7 @@ public class FailoverIT extends EdgeTestBase {
         cutConnection(pulseListener, active);
         TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
         uncutConnection(pulseListener, fallback);
-        resetListenerAndAssertTagUpdate();
+        assertTagUpdate();
         resetConnection = true;
     }
 
@@ -121,7 +121,7 @@ public class FailoverIT extends EdgeTestBase {
         triggerServerSwitch();
         TimeUnit.MILLISECONDS.sleep(TestUtils.TIMEOUT);
         uncutConnection(pulseListener, active);
-        resetListenerAndAssertTagUpdate();
+        assertTagUpdate();
     }
 
     @Test
@@ -130,7 +130,7 @@ public class FailoverIT extends EdgeTestBase {
         cutConnection(pulseListener, active);
         TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
         uncutConnection(pulseListener, active);
-        resetListenerAndAssertTagUpdate();
+        assertTagUpdate();
     }
 
     private void mockColdFailover() {
@@ -143,7 +143,7 @@ public class FailoverIT extends EdgeTestBase {
         EasyMock.replay(redundancyMock);
     }
 
-    private void resetListenerAndAssertTagUpdate() {
+    private void assertTagUpdate() {
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));

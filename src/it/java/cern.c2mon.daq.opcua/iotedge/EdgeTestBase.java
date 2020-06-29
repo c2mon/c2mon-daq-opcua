@@ -36,7 +36,6 @@ public abstract class EdgeTestBase {
         active = new EdgeImage(toxiProxyContainer, network);
         fallback = new EdgeImage(toxiProxyContainer, network);
         fallback.proxy.setConnectionCut(true);
-
     }
 
     @AfterAll
