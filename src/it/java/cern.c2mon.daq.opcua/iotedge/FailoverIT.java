@@ -75,8 +75,9 @@ public class FailoverIT extends EdgeTestBase {
         log.info("############ CLEAN UP ############");
         controller.stop();
         if (resetConnection) {
-            log.info("Resetting proxies");
+            log.info("Rsetting active proxy {}", active.proxy);
             active.proxy.setConnectionCut(false);
+            log.info("Resetting fallpack proxy {}", fallback.proxy);
             fallback.proxy.setConnectionCut(true);
             resetConnection = false;
         } else {
