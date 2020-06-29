@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,6 +82,7 @@ public class FailoverIT extends EdgeTestBase {
         } else {
             log.info("Skip resetting proxies");
         }
+        log.info("Done cleaning up.");
     }
 
     @Test
