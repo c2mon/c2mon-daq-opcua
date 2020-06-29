@@ -187,7 +187,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
 
     private synchronized void monitorConnection() {
-        if (controller.isStopped()) {
+        if (!controller.isStopped()) {
             this.endpoint.monitorEquipmentState(true, (SessionActivityListener) endpointListener);
             this.endpoint.monitorEquipmentState(true, this);
             try {
