@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
@@ -17,7 +17,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CertificateGeneratorTest {
-    AppConfig config;
+    AppConfigProperties config;
     CertificateGenerator generator;
     List<MessageSecurityMode> modes;
     List<SecurityPolicy> policies;
@@ -71,7 +71,7 @@ class CertificateGeneratorTest {
 
     @Test
     void canCertifyWithBadConfigurationShouldReturnFalse() {
-        CertificateGenerator badGenerator = new CertificateGenerator(AppConfig.builder().build());
+        CertificateGenerator badGenerator = new CertificateGenerator(AppConfigProperties.builder().build());
         final EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
         assertFalse(badGenerator.canCertify(e));
     }

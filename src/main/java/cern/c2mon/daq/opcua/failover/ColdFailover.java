@@ -34,10 +34,10 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     String currentUri;
     Endpoint endpoint;
 
-    @Value("#{@appConfig.getConnectionMonitoringRate()}")
+    @Value("#{@appConfigProperties.getConnectionMonitoringRate()}")
     private int monitoringRate;
 
-    @Value("#{@appConfig.getTimeout()}")
+    @Value("#{@appConfigProperties.getTimeout()}")
     private int timeout;
 
     private CompletableFuture<Void> reconnected = new CompletableFuture<>();

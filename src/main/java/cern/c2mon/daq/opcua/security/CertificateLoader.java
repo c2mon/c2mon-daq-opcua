@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import com.google.common.collect.ImmutableSet;
 import io.netty.util.internal.StringUtil;
@@ -27,8 +27,8 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 @Slf4j
 @RequiredArgsConstructor
 public class CertificateLoader extends CertifierBase {
-    final AppConfig.KeystoreConfig keystoreConfig;
-    final AppConfig.PKIConfig pkiConfig;
+    final AppConfigProperties.KeystoreConfig keystoreConfig;
+    final AppConfigProperties.PKIConfig pkiConfig;
     private static final ImmutableSet<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_SecurityChecksFailed, Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown, Bad_CertificateInvalid).build();
 
     /**

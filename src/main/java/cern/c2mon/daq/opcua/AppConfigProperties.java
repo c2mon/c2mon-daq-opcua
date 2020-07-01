@@ -21,7 +21,7 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class AppConfig {
+public class AppConfigProperties {
 
     /**
      * The publishing rate of the subscription for connection monitoring for redundant server sets in seconds.

@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.iotedge.SecurityIT;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
@@ -20,8 +20,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CertificateLoaderTest {
-    AppConfig.KeystoreConfig ksConfig;
-    AppConfig.PKIConfig pkiConfig;
+    AppConfigProperties.KeystoreConfig ksConfig;
+    AppConfigProperties.PKIConfig pkiConfig;
     CertificateLoader loader;
 
     List<SecurityPolicy> policies;
@@ -29,13 +29,13 @@ class CertificateLoaderTest {
     @BeforeEach
     public void setUp() {
         String path = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
-        ksConfig = AppConfig.KeystoreConfig.builder()
+        ksConfig = AppConfigProperties.KeystoreConfig.builder()
                 .type("PKCS12")
                 .path(path)
                 .pwd("password")
                 .alias("1")
                 .build();
-        pkiConfig = AppConfig.PKIConfig.builder()
+        pkiConfig = AppConfigProperties.PKIConfig.builder()
                 .crtPath(SecurityIT.class.getClassLoader().getResource("server.crt").getPath())
                 .pkPath(SecurityIT.class.getClassLoader().getResource("pkcs8server.key").getPath())
                 .build();

@@ -52,7 +52,7 @@ public abstract class AddressParser {
     /**
      * Parses the C2MON equipment address String specified in the configuration into an array of addresses. If more than
      * one address is given, the servers at these addresses are considered as part of a redundant server cluster.
-     * Optionally, any field in {@link AppConfig} can by overridden by adding a key value pair. In this case, the field
+     * Optionally, any field in {@link AppConfigProperties} can by overridden by adding a key value pair. In this case, the field
      * and key must match exactly.
      * @param address The address String in the following form, where brackets indicate optional values:
      *                URI=protocol1://host1[:port1]/[path1][,protocol2://host2[:port2]/[path2]]
@@ -63,7 +63,7 @@ public abstract class AddressParser {
      * @return An array of Strings for containing the URI for a server, or all servers in a redundant server cluster
      * @throws ConfigurationException in case the address String is malformed or missing required properties
      */
-    public static String[] parse(final String address, AppConfig config) throws ConfigurationException {
+    public static String[] parse(final String address, AppConfigProperties config) throws ConfigurationException {
         Map<String, String> properties = parsePropertiesFromString(address);
         String uri = properties.remove(URI);
         if (StringUtil.isNullOrEmpty(uri)) {
@@ -98,7 +98,7 @@ public abstract class AddressParser {
         return properties;
     }
 
-    private static void overrideConfig(Map<String, String> properties, AppConfig config) {
+    private static void overrideConfig(Map<String, String> properties, AppConfigProperties config) {
         final List<Map.Entry<String, String>> entries = setFields(getSubConfig(properties, KEYSTORE), config.getKeystore());
         entries.addAll(setFields(getSubConfig(properties, PKI), config.getPkiConfig()));
         properties.keySet().removeIf(s -> s.startsWith(KEYSTORE) | s.startsWith(PKI));

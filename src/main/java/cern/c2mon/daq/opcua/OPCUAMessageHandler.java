@@ -50,7 +50,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     private Controller controller;
     private AliveWriter aliveWriter;
     private CommandRunner commandRunner;
-    private AppConfig appConfig;
+    private AppConfigProperties appConfigProperties;
 
     /**
      * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial
@@ -63,7 +63,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         controller = getContext().getBean(Controller.class);
         aliveWriter = getContext().getBean(AliveWriter.class);
         commandRunner = getContext().getBean(CommandRunner.class);
-        appConfig = getContext().getBean(AppConfig.class);
+        appConfigProperties = getContext().getBean(AppConfigProperties.class);
 
         // getEquipmentConfiguration always fetches the most recent equipment configuration, even if changes have occurred to the configuration since start-up of the DAQ.
         IEquipmentConfiguration config = getEquipmentConfiguration();
@@ -72,10 +72,10 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         log.debug("Connecting to the OPC UA data source...");
         getContext().getBean(EndpointListener.class).initialize(sender);
 
-        String[] addresses = AddressParser.parse(config.getAddress(), appConfig);
+        String[] addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         controller.connect(addresses[0]);
 
-        aliveWriter.initialize(config, appConfig.isAliveWriterEnabled());
+        aliveWriter.initialize(config, appConfigProperties.isAliveWriterEnabled());
         controller.subscribeTags(config.getSourceDataTags().values());
         log.debug("connected");
 
@@ -151,7 +151,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         if (equipmentConfiguration.getAddress().equals(oldEquipmentConfiguration.getAddress())) {
             try {
                 disconnectFromDataSource();
-                TimeUnit.MILLISECONDS.sleep(appConfig.getRestartDelay());
+                TimeUnit.MILLISECONDS.sleep(appConfigProperties.getRestartDelay());
                 connectToDataSource();
                 changeReport.appendInfo("DAQ restarted.");
             } catch (EqIOException e) {

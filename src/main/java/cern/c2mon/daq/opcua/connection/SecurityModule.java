@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -30,12 +30,11 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 /**
- * Chooses an endpoint to connect to and creates a client as configured in {@link AppConfig}, selecting from a list of
+ * Chooses an endpoint to connect to and creates a client as configured in {@link AppConfigProperties}, selecting from a list of
  * endpoints.
  */
 @Component("securityModule")
@@ -43,11 +42,11 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Slf4j
 public class SecurityModule {
 
-    private final AppConfig config;
+    private final AppConfigProperties config;
     private final Map<String, Certifier> key2Certifier;
 
     @Autowired
-    public SecurityModule(AppConfig config, Certifier loader, Certifier generator, Certifier noSecurity ){
+    public SecurityModule(AppConfigProperties config, Certifier loader, Certifier generator, Certifier noSecurity ){
         this.config = config;
         key2Certifier = ImmutableMap.<String, Certifier>builder()
                 .put("none", noSecurity)
@@ -59,7 +58,7 @@ public class SecurityModule {
     private OpcUaClientConfigBuilder builder;
 
     /**
-     * Creates an {@link OpcUaClient} according to the configuration specified in {@link AppConfig} and connect to it.
+     * Creates an {@link OpcUaClient} according to the configuration specified in {@link AppConfigProperties} and connect to it.
      * The endpoint to connect to is chosen according to the security policy. Preference is given to endpoints to which
      * a connection can be made using a certificate loaded from a keystore file, is so configured. If this is not
      * possible and on-the-fly certificate generation is enabled, self-signed certificates will be generated to attempt
@@ -116,7 +115,7 @@ public class SecurityModule {
         throw new ConfigurationException(ExceptionContext.PKI_ERROR);
     }
 
-    private boolean isUsrPwdConfigured(AppConfig.UsrPwdConfig upConfig) {
+    private boolean isUsrPwdConfigured(AppConfigProperties.UsrPwdConfig upConfig) {
         return upConfig != null && !Strings.isNullOrEmpty(upConfig.getUsr()) && !Strings.isNullOrEmpty(upConfig.getPwd());
     }
 

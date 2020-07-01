@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.NoFailover;
@@ -18,10 +18,10 @@ public abstract class TestUtils {
     public final static int TIMEOUT_TOXI = 25;
     public final static int TIMEOUT_REDUNDANCY = 2;
 
-    public static AppConfig createDefaultConfig() {
+    public static AppConfigProperties createDefaultConfig() {
         final var certificationPriority = ImmutableMap.<String, Integer>builder()
                 .put("none", 3).put("generate", 2).put("load", 1).build();
-        return AppConfig.builder()
+        return AppConfigProperties.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
                 .productUri("urn:cern:ch:UA:C2MON")
@@ -33,8 +33,8 @@ public abstract class TestUtils {
                 .requestTimeout(5000)
                 .certificationPriority(certificationPriority)
                 .trustAllServers(true)
-                .keystore(AppConfig.KeystoreConfig.builder().build())
-                .pkiConfig(AppConfig.PKIConfig.builder().build())
+                .keystore(AppConfigProperties.KeystoreConfig.builder().build())
+                .pkiConfig(AppConfigProperties.PKIConfig.builder().build())
                 .maxRetryAttempts(1)
                 .retryDelay(2000)
                 .aliveWriterEnabled(false)

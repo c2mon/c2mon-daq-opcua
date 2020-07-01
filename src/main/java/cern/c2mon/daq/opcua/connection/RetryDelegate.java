@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.failover.FailoverBase;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 @Slf4j
 public class RetryDelegate {
 
-    private final AppConfig config;
+    private final AppConfigProperties config;
 
     /**
      * Attempt to execute the get() method of a given supplier for a certain number of times with a timeout given as
@@ -51,8 +51,8 @@ public class RetryDelegate {
      */
 
     @Retryable(value = {CommunicationException.class},
-            maxAttemptsExpression = "#{@appConfig.getMaxRetryAttempts()}",
-            backoff = @Backoff(delayExpression = "#{@appConfig.getRetryDelay()}"))
+            maxAttemptsExpression = "#{@appConfigProperties.getMaxRetryAttempts()}",
+            backoff = @Backoff(delayExpression = "#{@appConfigProperties.getRetryDelay()}"))
     public <T> T completeOrThrow(ExceptionContext context, Supplier<Long> disconnectionTime, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
         try {
             // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
@@ -73,8 +73,8 @@ public class RetryDelegate {
     @Retryable(value = {OPCUAException.class},
             maxAttempts = Integer.MAX_VALUE,
             backoff = @Backoff(
-                    delayExpression = "#{@appConfig.getRetryDelay()}",
-                    maxDelayExpression = "#{@appConfig.getMaxFailoverDelay()}",
+                    delayExpression = "#{@appConfigProperties.getRetryDelay()}",
+                    maxDelayExpression = "#{@appConfigProperties.getMaxFailoverDelay()}",
                     multiplier = 3))
     public void triggerServerSwitchRetry(FailoverBase failover) throws OPCUAException {
         failover.switchServers();
@@ -83,8 +83,8 @@ public class RetryDelegate {
     @Retryable(value = CommunicationException.class,
             maxAttempts = Integer.MAX_VALUE,
             backoff = @Backoff(
-                    delayExpression = "#{@appConfig.getRetryDelay()}",
-                    maxDelayExpression = "#{@appConfig.getMaxFailoverDelay()}",
+                    delayExpression = "#{@appConfigProperties.getRetryDelay()}",
+                    maxDelayExpression = "#{@appConfigProperties.getMaxFailoverDelay()}",
                     multiplier = 3))
     public void triggerRecreateSubscription(Endpoint endpoint, UaSubscription subscription) throws OPCUAException {
         endpoint.recreateSubscription(subscription);

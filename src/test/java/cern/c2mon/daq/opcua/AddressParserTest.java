@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class AddressParserTest {
 
-    AppConfig config;
+    AppConfigProperties config;
 
     @BeforeEach
     public void setUp() {

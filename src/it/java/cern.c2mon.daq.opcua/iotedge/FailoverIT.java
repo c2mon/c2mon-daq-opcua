@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -44,7 +44,8 @@ public class FailoverIT extends EdgeTestBase {
     @Autowired NoFailover noFailover;
     @Autowired FailoverMode coldFailover;
     @Autowired FailoverTestEndpoint testEndpoint;
-    @Autowired AppConfig config;
+    @Autowired
+    AppConfigProperties config;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);

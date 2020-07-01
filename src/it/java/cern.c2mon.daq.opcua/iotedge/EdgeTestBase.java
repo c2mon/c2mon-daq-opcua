@@ -48,17 +48,23 @@ public abstract class EdgeTestBase {
     }
 
     protected static EndpointListener.EquipmentState cutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
-        log.info("cutting connection");
+        log.info("Cutting connection.");
         final var connectionLost = listener.listen();
         img.proxy.setConnectionCut(true);
-        return connectionLost.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
+        return connectionLost.thenApply(c -> {
+            log.info("Connection cut.");
+            return c;
+        }).get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
     }
 
     protected static EndpointListener.EquipmentState uncutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
-        log.info("uncutting connection");
+        log.info("Reestablishing connection.");
         final var connectionRegained = listener.listen();
         img.proxy.setConnectionCut(false);
-        return connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
+        return connectionRegained.thenApply(c -> {
+            log.info("Connection reestablished.");
+            return c;
+        }).get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
     }
 
     public static class EdgeImage {

@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import org.bouncycastle.util.io.pem.PemObject;
@@ -46,7 +46,7 @@ public class PkiUtil {
      * @return A Map.Entry of the certificate and key pair
      * @throws ConfigurationException if certificate or keypair cannot be loaded
      */
-    public static Map.Entry<X509Certificate, KeyPair> loadFromPfx(AppConfig.KeystoreConfig config) throws ConfigurationException {
+    public static Map.Entry<X509Certificate, KeyPair> loadFromPfx(AppConfigProperties.KeystoreConfig config) throws ConfigurationException {
         try (InputStream in = Files.newInputStream(Paths.get(config.getPath()))) {
             final KeyStore keyStore = KeyStore.getInstance(config.getType());
             keyStore.load(in, config.getPwd().toCharArray());

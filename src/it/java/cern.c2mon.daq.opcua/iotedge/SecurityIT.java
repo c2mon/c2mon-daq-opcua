@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.AppConfig;
+import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
@@ -43,7 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class SecurityIT {
 
 
-    @Autowired AppConfig config;
+    @Autowired
+    AppConfigProperties config;
     @Autowired Controller controller;
     @Autowired FailoverProxy testFailoverProxy;
     @Autowired NoFailover noFailover;
