@@ -34,7 +34,6 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
 import java.util.concurrent.TimeUnit;
 
@@ -46,16 +45,12 @@ import java.util.concurrent.TimeUnit;
  * @author Andreas Lang, Nacho Vilches
  */
 @Slf4j
-@EnableAutoConfiguration
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
 
     private Controller controller;
     private AliveWriter aliveWriter;
-    private TagChanger tagChanger;
     private CommandRunner commandRunner;
-    private EndpointListener endpointListener;
     private AppConfig appConfig;
-
 
     /**
      * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial
@@ -65,12 +60,17 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public synchronized void connectToDataSource() throws EqIOException {
+        controller = getContext().getBean(Controller.class);
+        aliveWriter = getContext().getBean(AliveWriter.class);
+        commandRunner = getContext().getBean(CommandRunner.class);
+        appConfig = getContext().getBean(AppConfig.class);
+
         // getEquipmentConfiguration always fetches the most recent equipment configuration, even if changes have occurred to the configuration since start-up of the DAQ.
         IEquipmentConfiguration config = getEquipmentConfiguration();
         IEquipmentMessageSender sender = getEquipmentMessageSender();
 
         log.debug("Connecting to the OPC UA data source...");
-        endpointListener.initialize(sender);
+        getContext().getBean(EndpointListener.class).initialize(sender);
 
         String[] addresses = AddressParser.parse(config.getAddress(), appConfig);
         controller.connect(addresses[0]);
@@ -80,7 +80,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         log.debug("connected");
 
         getEquipmentCommandHandler().setCommandRunner(this);
-        getEquipmentConfigurationHandler().setDataTagChanger(tagChanger);
+        getEquipmentConfigurationHandler().setDataTagChanger(getContext().getBean(TagChanger.class));
         getEquipmentConfigurationHandler().setCommandTagChanger(commandRunner);
         getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
     }

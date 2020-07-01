@@ -1,11 +1,7 @@
 package cern.c2mon.daq.opcua.simengine;
 
-import cern.c2mon.daq.opcua.AppConfig;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.control.AliveWriter;
-import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.TagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.failover.FailoverMode;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -24,6 +20,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -55,13 +52,10 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static final long CMDID_PW = 10L;
     private static final long CMDID_V0SET = 20L;
 
+    @Autowired ApplicationContext context;
     @Autowired TestListeners.Pulse endpointListener;
     @Autowired Controller controller;
-    @Autowired CommandRunner commandRunner;
-    @Autowired TagChanger tagChanger;
-    @Autowired AliveWriter aliveWriter;
     @Autowired FailoverMode noFailover;
-    @Autowired AppConfig config;
 
 
     private OPCUAMessageHandler handler;
@@ -77,14 +71,9 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     protected void beforeTest() throws Exception {
         log.info("############### SET UP ##############");
         handler = (OPCUAMessageHandler) msgHandler;
+        handler.setContext(context);
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
-        ReflectionTestUtils.setField(handler, "controller", controller);
-        ReflectionTestUtils.setField(handler, "aliveWriter", aliveWriter);
-        ReflectionTestUtils.setField(handler, "tagChanger", tagChanger);
-        ReflectionTestUtils.setField(handler, "commandRunner", commandRunner);
-        ReflectionTestUtils.setField(handler, "endpointListener", endpointListener);
-        ReflectionTestUtils.setField(handler, "appConfig", config);
         ReflectionTestUtils.setField(controller, "endpointListener", endpointListener);
         ReflectionTestUtils.setField(noFailover.currentEndpoint(), "endpointListener", endpointListener);
         mapEquipmentAddress();

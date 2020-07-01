@@ -2,10 +2,7 @@ package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.EndpointListener;
-import cern.c2mon.daq.opcua.control.AliveWriter;
-import cern.c2mon.daq.opcua.control.CommandRunner;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.TagChanger;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -19,6 +16,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -34,23 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @RunWith(SpringRunner.class)
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
-    @Autowired
-    CommandRunner commandRunner;
-
-    @Autowired
-    Controller controller;
-
-    @Autowired
-    AliveWriter aliveWriter;
-
-    @Autowired
-    EndpointListener endpointListener;
-
-    @Autowired
-    Endpoint miloEndpoint;
-
-    @Autowired
-    AppConfig appConfig;
+    @Autowired ApplicationContext context;
+    @Autowired Controller controller;
+    @Autowired EndpointListener endpointListener;
+    @Autowired Endpoint miloEndpoint;
 
     OPCUAMessageHandler handler;
     TestUtils.CommfaultSenderCapture capture;
@@ -58,14 +43,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     @Override
     protected void beforeTest() throws Exception {
-        // must be injected manually to work with test framework
         handler = (OPCUAMessageHandler) msgHandler;
-        ReflectionTestUtils.setField(handler, "controller", controller);
-        ReflectionTestUtils.setField(handler, "aliveWriter", aliveWriter);
-        ReflectionTestUtils.setField(handler, "tagChanger", new TagChanger(controller));
-        ReflectionTestUtils.setField(handler, "commandRunner", commandRunner);
-        ReflectionTestUtils.setField(handler, "endpointListener", endpointListener);
-        ReflectionTestUtils.setField(handler, "appConfig", appConfig);
+        handler.setContext(context);
         ReflectionTestUtils.setField(controller, "failoverProxy", TestUtils.getFailoverProxy(miloEndpoint));
         capture = new TestUtils.CommfaultSenderCapture(messageSender);
     }
