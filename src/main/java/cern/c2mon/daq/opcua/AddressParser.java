@@ -55,7 +55,7 @@ public abstract class AddressParser {
      * Optionally, any field in {@link AppConfigProperties} can by overridden by adding a key value pair. In this case, the field
      * and key must match exactly.
      * @param address The address String in the following form, where brackets indicate optional values:
-     *                URI=protocol1://host1[:port1]/[path1][,protocol2://host2[:port2]/[path2]]
+     *                [URI=]protocol1://host1[:port1]/[path1][,protocol2://host2[:port2]/[path2]]
      *                [;optionalConfigurationProperty=value] [;keystore.optionalKeystoreProperty=value]
      *                [;pki.optionalPkiProperty=value]
      * @param config  The equipment configuration to modify in accordance with the optional configuration properties
@@ -67,6 +67,7 @@ public abstract class AddressParser {
         Map<String, String> properties = parsePropertiesFromString(address);
         String uri = properties.remove(URI);
         if (StringUtil.isNullOrEmpty(uri)) {
+            log.error("Missing URI in equipment address string {}.", address);
             throw new ConfigurationException(ExceptionContext.URI_MISSING);
         }
         // Some hostnames contain characters not allowed in a URI, such as underscores in Windows machine hostnames.
@@ -86,13 +87,15 @@ public abstract class AddressParser {
     private static Map<String, String> parsePropertiesFromString(final String address) {
         Map<String, String> properties = new HashMap<>();
         String[] keyValues = address.split(";");
-        for (String keyValueString : keyValues) {
+        for (int i = 0; i < keyValues.length; i++) {
+            String keyValueString = keyValues[i];
             String[] keyValuePair = keyValueString.trim().split("=");
-            // if there is nothing to split ignore it
             if (keyValuePair.length > 1) {
                 String key = keyValuePair[0].trim();
                 String value = keyValuePair[1].trim();
                 properties.put(key, value);
+            } else if (i == 0) {
+                properties.put(URI, keyValueString);
             }
         }
         return properties;

@@ -69,10 +69,10 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         IEquipmentConfiguration config = getEquipmentConfiguration();
         IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-        log.debug("Connecting to the OPC UA data source...");
         getContext().getBean(EndpointListener.class).initialize(sender);
 
         String[] addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
+        log.info("Connecting to the OPC UA data source at {}... ", addresses[0]);
         controller.connect(addresses[0]);
 
         aliveWriter.initialize(config, appConfigProperties.isAliveWriterEnabled());

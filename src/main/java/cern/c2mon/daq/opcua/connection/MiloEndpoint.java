@@ -130,6 +130,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             client = securityModule.createClientWithListeners(endpoints, sessionActivityListeners);
             client.getSubscriptionManager().addSubscriptionListener(this);
         } catch (CompletionException e) {
+            log.error("Error on connection to uri {}: ", uri, e);
             throw of(CONNECT, e.getCause(), false);
         }
     }
@@ -194,7 +195,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     public Map<UInteger, SourceDataTagQuality> subscribeToGroup(int publishingInterval, Collection<ItemDefinition> definitions) throws OPCUAException {
+        log.info("Subscribing definition {} with publishing interval {}.", definitions, publishingInterval);
         return subscribeWithCallback(publishingInterval, definitions, (item, i) -> item.setValueConsumer(value -> {
+            log.info("Creating callback for definition {}.", definitions);
             SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
             final Object updateValue = MiloMapper.toObject(value.getValue());
             ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
@@ -302,11 +305,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     public boolean write(NodeId nodeId, Object value) throws OPCUAException {
         // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
         DataValue dataValue = new DataValue(new Variant(value), null, null);
-        return retryDelegate.completeOrThrow(WRITE, this::getDisconnectPeriod, () -> client.writeValue(nodeId, dataValue)
-                .thenApply(c -> {
-                    log.info("Writing value {} to node {} returned status code {}.", value, nodeId, c);
-                    return c.isGood();
-                }));
+        final StatusCode statusCode = retryDelegate.completeOrThrow(WRITE, this::getDisconnectPeriod, () -> client.writeValue(nodeId, dataValue));
+        log.info("Writing value {} to node {} yielded status code {}.", value, nodeId, statusCode);
+        return statusCode.isGood();
     }
 
     /**

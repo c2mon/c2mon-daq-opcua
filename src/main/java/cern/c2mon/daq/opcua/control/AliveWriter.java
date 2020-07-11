@@ -138,6 +138,7 @@ public class AliveWriter {
         }
         try {
             if (failoverProxy.getActiveEndpoint().write(address, castedValue)) {
+                log.info("Written successfully to alive, sending status tag.");
                 endpointListener.onAlive();
             }
             writeCounter.incrementAndGet();

@@ -52,7 +52,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      * @throws OPCUAException in case there is no healthy server to connect to in the redundant server set.
      */
     @Override
-    public void initialize(String uri, Endpoint endpoint, String[] redundantAddresses) throws OPCUAException {
+    public void initializeMonitoring(String uri, Endpoint endpoint, String[] redundantAddresses) throws OPCUAException {
         // Clients are expected to connect to the server with the highest service level.
         Collections.addAll(this.redundantAddresses, redundantAddresses);
         this.endpoint = endpoint;

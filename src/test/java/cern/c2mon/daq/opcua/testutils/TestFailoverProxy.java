@@ -44,8 +44,8 @@ public class TestFailoverProxy implements FailoverProxy, SessionActivityListener
         if (currentFailover == null) {
             currentFailover = noFailover;
         }
-        noFailover.initializeEndpoint(uri);
-        currentFailover.initialize(uri, endpoint, redundantUris);
+        noFailover.currentEndpoint().initialize(uri);
+        currentFailover.initializeMonitoring(uri, endpoint, redundantUris);
     }
 
     public Endpoint getActiveEndpoint() {

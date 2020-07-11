@@ -15,6 +15,7 @@ import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
+import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -38,6 +39,7 @@ public class TestEndpoint implements Endpoint {
     private final EndpointListener endpointListener;
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
+    NonTransparentRedundancyTypeNode serverRedundancyTypeNode = createMock(NonTransparentRedundancyTypeNode.class);
     private boolean returnGoodStatusCodes = true;
     final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
     String uri;
@@ -108,7 +110,7 @@ public class TestEndpoint implements Endpoint {
 
     @Override
     public ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException {
-        return null;
+        return serverRedundancyTypeNode;
     }
 
     @Override

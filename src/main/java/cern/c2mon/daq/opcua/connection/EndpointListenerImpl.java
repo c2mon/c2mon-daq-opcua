@@ -40,9 +40,6 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
     public void onTagInvalid(UInteger clientHandle, final SourceDataTagQuality quality) {
         final Long tagId = mapper.getTagId(clientHandle);
         this.sender.update(tagId, quality);
-        if (log.isDebugEnabled()) {
-            log.debug("onTagInvalid - sent for Tag #" + tagId);
-        }
 
     }
 
@@ -55,9 +52,6 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
                     log.error("Received update for unknown clientHandle: {}", clientHandle);
                 } else {
                     this.sender.update(tagId, valueUpdate, quality);
-                    if (log.isDebugEnabled()) {
-                        log.debug("onNewTagValue - Tag value " + valueUpdate + " sent for Tag #" + tagId);
-                    }
                 }
             } catch (Exception e) {
                 log.error("Caught for clientHandle {} with Mapper at state {}.", clientHandle, mapper.getTagIdDefinitionMap(), e);
@@ -69,6 +63,7 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
 
     @Override
     public void onAlive() {
+        log.info("Supervision alive!");
         sender.sendSupervisionAlive();
     }
 
@@ -88,9 +83,6 @@ public class EndpointListenerImpl implements EndpointListener, SessionActivityLi
             sender.confirmEquipmentStateOK(state.message);
         } else {
             sender.confirmEquipmentStateIncorrect(state.message);
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("EquipmentStatueUpdate returned state {}", state);
         }
     }
 }

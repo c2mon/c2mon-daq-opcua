@@ -8,7 +8,6 @@ import cern.c2mon.daq.opcua.failover.ColdFailover;
 import cern.c2mon.daq.opcua.failover.FailoverMode;
 import cern.c2mon.daq.opcua.failover.NoFailover;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
-import cern.c2mon.daq.opcua.testutils.FailoverTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -16,7 +15,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
@@ -24,6 +26,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -43,9 +46,7 @@ public class FailoverIT extends EdgeTestBase {
     @Autowired Controller controller;
     @Autowired NoFailover noFailover;
     @Autowired FailoverMode coldFailover;
-    @Autowired FailoverTestEndpoint testEndpoint;
-    @Autowired
-    AppConfigProperties config;
+    @Autowired AppConfigProperties config;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
@@ -55,12 +56,12 @@ public class FailoverIT extends EdgeTestBase {
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("############ SET UP ############");
+        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundantServerUris(Collections.singletonList(fallback.getUri()));
         pulseListener.setSourceID(tag.getId());
-        testEndpoint.setRedundancyMock(redundancyMock);
         ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
         ReflectionTestUtils.setField(coldFailover, "endpointListener", pulseListener);
-        ReflectionTestUtils.setField(noFailover, "endpoint", testEndpoint);
-        ReflectionTestUtils.setField(testEndpoint, "endpointListener", pulseListener);
+        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "endpointListener", pulseListener);
         mockColdFailover();
         controller.connect(active.getUri());
         controller.subscribeTag(tag);

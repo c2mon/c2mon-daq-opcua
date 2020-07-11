@@ -19,12 +19,8 @@ public class NoFailover implements FailoverMode, UaSubscriptionManager.Subscript
 
     private final Endpoint endpoint;
 
-    public void initializeEndpoint(String uri) throws OPCUAException {
-        this.endpoint.initialize(uri);
-    }
-
     @Override
-    public void initialize(String uri, Endpoint endpoint, String[] redundantAddresses) {
+    public void initializeMonitoring(String uri, Endpoint endpoint, String[] redundantAddresses) {
         this.endpoint.monitorEquipmentState(true, null);
     }
 

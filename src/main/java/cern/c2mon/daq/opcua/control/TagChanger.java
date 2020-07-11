@@ -33,11 +33,13 @@ public class TagChanger implements IDataTagChanger {
 
     @Override
     public void onAddDataTag(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
+        log.info("Adding data tag {}", sourceDataTag);
         addDataTagFutureAndReturnFuture(sourceDataTag, changeReport);
     }
 
     @Override
     public void onRemoveDataTag(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
+        log.info("Removing data tag {}", sourceDataTag);
         removeDataTagFutureAndReturnFuture(sourceDataTag, changeReport);
     }
 
@@ -51,6 +53,7 @@ public class TagChanger implements IDataTagChanger {
      */
     @Override
     public void onUpdateDataTag(final ISourceDataTag sourceDataTag, final ISourceDataTag oldSourceDataTag, final ChangeReport changeReport) {
+        log.info("Updating data tag {} to {}", oldSourceDataTag, sourceDataTag);
         if (sourceDataTag.getHardwareAddress().equals(oldSourceDataTag.getHardwareAddress())) {
             r.apply(true, "The new and old sourceDataTags have the same hardware address, no update was required.", changeReport);
         } else {

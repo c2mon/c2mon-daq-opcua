@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.annotation.EnableRetry;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -22,6 +23,21 @@ import java.util.Map;
 @NoArgsConstructor
 @Builder
 public class AppConfigProperties {
+
+    /**
+     * The Java class name of the a custom redundancy failover mode, if one shall be used. If specified, the default
+     * query on an OPC UA server for its redundancy support information and proceeding and resolving the appropriate
+     * failover mode. Must match exactly the Java class name of the class implementing {@link
+     * cern.c2mon.daq.opcua.failover.FailoverMode}.
+     */
+    private String redundancyMode;
+
+    /**
+     * If set, the client will not query a server its redundant server uri array upon initial connection, but use these
+     * values as its redundant server set.
+     */
+    private List<String> redundantServerUris;
+
 
     /**
      * The publishing rate of the subscription for connection monitoring for redundant server sets in seconds.
