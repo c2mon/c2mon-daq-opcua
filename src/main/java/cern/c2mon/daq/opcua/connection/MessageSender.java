@@ -22,7 +22,7 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.AllArgsConstructor;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
-public interface EndpointListener {
+public interface MessageSender {
 
     /**
      * A representation of equipment states and descriptions.

@@ -1,10 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 
 import java.util.Collection;
@@ -14,24 +10,7 @@ import java.util.Collection;
  * points as SourceDataTags, and the {@link cern.c2mon.daq.opcua.connection.Endpoint}'s mapping of points in the address space
  * using uint clientHandles.
  */
-public interface Controller {
-
-    /**
-     * Connects to an OPC UA server.
-     * @param uri the URI of the OPC UA server to connect to.
-     * @throws OPCUAException       of type {@link CommunicationException} if an error not related to authentication
-     *                              configuration occurs on connecting to the OPC UA server, and of type {@link
-     *                              ConfigurationException} if it is not possible to connect to any of the the OPC UA
-     *                              server's endpoints with the given authentication configuration settings.
-     */
-    void connect(String uri) throws OPCUAException;
-
-    /**
-     * Disconnect from the OPC UA server and reset the controller to a neutral state.
-     */
-    void stop();
-
-    boolean isStopped();
+public interface TagController {
 
     /**
      * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
@@ -65,7 +44,4 @@ public interface Controller {
      * @param sourceDataTag the tag whose current value to read
      */
     void refreshDataTag(ISourceDataTag sourceDataTag);
-
-
-    boolean subscribeToGroup(SubscriptionGroup group, Collection<ItemDefinition> definitions);
 }

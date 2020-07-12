@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
@@ -64,7 +65,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private final SecurityModule securityModule;
     private final RetryDelegate retryDelegate;
     private final TagSubscriptionMapper mapper;
-    private final EndpointListener endpointListener;
+    private final MessageSender messageSender;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
     private OpcUaClient client;
@@ -136,7 +137,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     public void monitorEquipmentState(boolean shouldMonitor, SessionActivityListener listener) {
-        listener = (listener == null) ? (SessionActivityListener) endpointListener : listener;
+        listener = (listener == null) ? (SessionActivityListener) messageSender : listener;
         if (shouldMonitor && !sessionActivityListeners.contains(listener)) {
             sessionActivityListeners.add(listener);
             client.addSessionActivityListener(listener);
@@ -203,7 +204,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
                     new ValueUpdate(updateValue) :
                     new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-            endpointListener.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
+            messageSender.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
         }));
     }
 

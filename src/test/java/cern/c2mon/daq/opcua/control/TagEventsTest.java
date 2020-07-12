@@ -16,7 +16,7 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class TagEventsTest extends ControllerTestBase {
+public class TagEventsTest extends TagControllerTestBase {
 
     CompletableFuture<Long> tagUpdate;
     CompletableFuture<Long> tagInvalid;
@@ -24,7 +24,7 @@ public class TagEventsTest extends ControllerTestBase {
     @BeforeEach
     public void setUp() throws OPCUAException, InterruptedException {
         super.setUp();
-        controller.connect(uri);
+        proxy.connect(uri);
         tagUpdate = listener.getTagUpdate();
         tagInvalid = listener.getTagInvalid();
     }

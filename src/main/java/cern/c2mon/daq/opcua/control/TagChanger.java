@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
-import cern.c2mon.daq.opcua.TriConsumer;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +17,11 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 @Slf4j
 public class TagChanger implements IDataTagChanger {
 
+    @FunctionalInterface
+    public interface TriConsumer<A, B, C> {
+        void apply(A a, B b, C c);
+    }
+
     private final static TriConsumer<Boolean, String, ChangeReport> r = (success, message, report) -> {
         final Function<String, String> prevMsg = s -> s == null ? "" : s;
         if (success) {
@@ -29,7 +33,7 @@ public class TagChanger implements IDataTagChanger {
             report.setState(FAIL);
         }
     };
-    private final Controller controller;
+    private final TagController controller;
 
     @Override
     public void onAddDataTag(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {

@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.connection.EndpointListener;
+import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
@@ -53,7 +53,7 @@ public class AliveWriter {
     /**
      * The Endpoint listener which notifies the Server of a new alive.
      */
-    private final EndpointListener endpointListener;
+    private final MessageSender messageSender;
 
     /**
      * The service to schedule periodically to write to the alive tag hardware address
@@ -139,7 +139,7 @@ public class AliveWriter {
         try {
             if (failoverProxy.getActiveEndpoint().write(address, castedValue)) {
                 log.info("Written successfully to alive, sending status tag.");
-                endpointListener.onAlive();
+                messageSender.onAlive();
             }
             writeCounter.incrementAndGet();
             writeCounter.compareAndSet(Byte.MAX_VALUE, 0);

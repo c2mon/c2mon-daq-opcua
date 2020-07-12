@@ -1,8 +1,8 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua;
 
-import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.*;
-import cern.c2mon.daq.opcua.failover.FailoverBase;
+import cern.c2mon.daq.opcua.failover.ControllerBase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -76,7 +76,7 @@ public class RetryDelegate {
                     delayExpression = "#{@appConfigProperties.getRetryDelay()}",
                     maxDelayExpression = "#{@appConfigProperties.getMaxFailoverDelay()}",
                     multiplier = 3))
-    public void triggerServerSwitchRetry(FailoverBase failover) throws OPCUAException {
+    public void triggerServerSwitchRetry(ControllerBase failover) throws OPCUAException {
         failover.switchServers();
     }
 

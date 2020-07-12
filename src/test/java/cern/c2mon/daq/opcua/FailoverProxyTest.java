@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua;
 
-import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.*;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
@@ -14,11 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 import static org.easymock.EasyMock.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FailoverProxyTest {
     AppConfigProperties config = TestUtils.createDefaultConfig();
@@ -30,16 +27,11 @@ public class FailoverProxyTest {
 
     @BeforeEach
     public void setUp() {
-        testEndpoint = new TestEndpoint(new TestListeners.TestListener(new TagSubscriptionMapperImpl()));
-        proxy = new FailoverProxyImpl(applicationContext, config, noFailover);
+        final TestListeners.TestListener listener = new TestListeners.TestListener(new TagSubscriptionMapperImpl());
+        testEndpoint = new TestEndpoint(listener);
+        proxy = new FailoverProxyImpl(applicationContext, config, listener, noFailover);
         expect(coldFailover.currentEndpoint()).andReturn(testEndpoint).anyTimes();
         expect(noFailover.currentEndpoint()).andReturn(testEndpoint).anyTimes();
-    }
-
-    @Test
-    public void getPassiveEndpointsShouldReturnEmptyListIfNotInitialized(){
-        final Collection<Endpoint> passiveEndpoints = proxy.getPassiveEndpoints();
-        assertTrue(passiveEndpoints.isEmpty());
     }
 
     @Test
@@ -49,7 +41,7 @@ public class FailoverProxyTest {
                 .once();
         mockFailoverInitialization(noFailover);
         replay(testEndpoint.getServerRedundancyTypeNode(), noFailover);
-        proxy.initialize("test");
+        proxy.connect("test");
         verify(noFailover);
     }
 
@@ -60,7 +52,7 @@ public class FailoverProxyTest {
                 .once();
         mockFailoverInitialization(noFailover);
         replay(testEndpoint.getServerRedundancyTypeNode(), noFailover);
-        proxy.initialize("test");
+        proxy.connect("test");
         verify(testEndpoint.getServerRedundancyTypeNode());
     }
 
@@ -71,7 +63,7 @@ public class FailoverProxyTest {
         expect(applicationContext.getBean(EasyMock.<Class>anyObject())).andReturn(coldFailover).anyTimes();
         mockFailoverInitialization(coldFailover);
         replay(applicationContext, noFailover, coldFailover,testEndpoint.getServerRedundancyTypeNode());
-        proxy.initialize("test");
+        proxy.connect("test");
         verify(coldFailover);
     }
 
@@ -82,11 +74,11 @@ public class FailoverProxyTest {
         expect(applicationContext.getBean(EasyMock.<Class>anyObject())).andReturn(coldFailover).anyTimes();
         mockFailoverInitialization(coldFailover);
         replay(applicationContext, noFailover, coldFailover);
-        proxy.initialize("test");
+        proxy.connect("test");
         verify(coldFailover);
     }
 
-    private void mockFailoverInitialization(FailoverMode mode) throws OPCUAException {
+    private void mockFailoverInitialization(Controller mode) throws OPCUAException {
         mode.initializeMonitoring(anyString(), anyObject(), anyObject());
         expectLastCall().atLeastOnce();
     }

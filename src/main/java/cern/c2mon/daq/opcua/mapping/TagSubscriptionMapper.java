@@ -30,7 +30,7 @@ public interface TagSubscriptionMapper {
 
     Map<Long, ItemDefinition> getTagIdDefinitionMap();
 
-    Map<SubscriptionGroup, List<ItemDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> dataTags);
+    Map<SubscriptionGroup, List<ItemDefinition>> mapToGroups(Collection<ItemDefinition> definitions);
 
     SubscriptionGroup getGroup (ISourceDataTag dataTag);
 

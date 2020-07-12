@@ -1,59 +1,46 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.RetryDelegate;
+import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.FailoverMode;
-import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.ColdFailover;
+import cern.c2mon.daq.opcua.failover.FailoverProxyImpl;
 import cern.c2mon.daq.opcua.failover.NoFailover;
-import lombok.RequiredArgsConstructor;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import lombok.Setter;
-import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-
-@RequiredArgsConstructor
 @Component(value = "testFailoverProxy")
-public class TestFailoverProxy implements FailoverProxy, SessionActivityListener {
-
-    @Lazy private final NoFailover noFailover;
-    @Lazy private final FailoverMode coldFailover;
-    private final Endpoint endpoint;
-
-    private FailoverMode currentFailover;
-
+public class TestFailoverProxy extends FailoverProxyImpl {
     @Setter
     private String[] redundantUris = new String[0];
 
-    public void setCurrentFailover(RedundancySupport mode) {
+    public TestFailoverProxy(ApplicationContext appContext, AppConfigProperties config, MessageSender messageSender, NoFailover noFailover) {
+        super(appContext, config, messageSender, noFailover);
+    }
+
+    public void setFailoverMode(RedundancySupport mode, TagSubscriptionMapper mapper, RetryDelegate delegate, ApplicationContext context) {
         switch (mode) {
             case HotAndMirrored:
             case Hot:
             case Warm:
             case Cold:
-                currentFailover = coldFailover;
+                failoverMode = new ColdFailover(mapper, messageSender, delegate, context);
                 break;
             default:
-                currentFailover = noFailover;
+                failoverMode = noFailover;
         }
-    }
-
-    public void initialize(String uri) throws OPCUAException {
-        if (currentFailover == null) {
-            currentFailover = noFailover;
-        }
-        noFailover.currentEndpoint().initialize(uri);
-        currentFailover.initializeMonitoring(uri, endpoint, redundantUris);
-    }
-
-    public Endpoint getActiveEndpoint() {
-        return currentFailover.currentEndpoint();
     }
 
     @Override
-    public Collection<Endpoint> getPassiveEndpoints() {
-        return currentFailover.passiveEndpoints();
+    public void connect(String uri) throws OPCUAException {
+        if (failoverMode == null) {
+            failoverMode = noFailover;
+        }
+        noFailover.currentEndpoint().initialize(uri);
+        failoverMode.initializeMonitoring(uri, noFailover.currentEndpoint(), redundantUris);
     }
 }

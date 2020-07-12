@@ -16,13 +16,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Map;
-
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DataTagChangerTest extends ControllerTestBase {
+public class DataTagChangerTest extends TagControllerTestBase {
 
     private IDataTagChanger tagChanger;
     ChangeReport changeReport;
@@ -31,7 +29,6 @@ public class DataTagChangerTest extends ControllerTestBase {
     @BeforeEach
     public void castToDataTagChanger() throws OPCUAException {
         tag = EdgeTagFactory.DipData.createDataTag();
-        controller.connect(uri);
         tagChanger = new TagChanger(controller);
         changeReport = new ChangeReport();
     }
@@ -46,14 +43,14 @@ public class DataTagChangerTest extends ControllerTestBase {
 
     @Test
     public void invalidOnAddDataTagShouldReportFail () {
-        final NoFailover noFailover = new NoFailover(new ExceptionTestEndpoint(listener));
+        final NoFailover noFailover = new NoFailover(mapper, listener, null, null, new ExceptionTestEndpoint(listener));
         ReflectionTestUtils.setField(proxy, "noFailover", noFailover);
-        proxy.setCurrentFailover(RedundancySupport.None);
+        proxy.setFailoverMode(RedundancySupport.None, mapper, null, null);
 
         tagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
 
-        proxy = TestUtils.getFailoverProxy(endpoint);
+        proxy = TestUtils.getFailoverProxy(endpoint, mapper, listener);
     }
 
     @Test

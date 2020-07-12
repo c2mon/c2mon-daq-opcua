@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.EndpointListener;
+import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
@@ -36,7 +36,7 @@ import static org.easymock.EasyMock.createMock;
 @RequiredArgsConstructor
 @Component(value = "testEndpoint")
 public class TestEndpoint implements Endpoint {
-    private final EndpointListener endpointListener;
+    private final MessageSender messageSender;
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
     NonTransparentRedundancyTypeNode serverRedundancyTypeNode = createMock(NonTransparentRedundancyTypeNode.class);
@@ -67,7 +67,7 @@ public class TestEndpoint implements Endpoint {
             ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
                     new ValueUpdate(updateValue) :
                     new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-            endpointListener.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
+            messageSender.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
         });
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
         return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> MiloMapper.getDataTagQuality(monitoredItem.getStatusCode())));

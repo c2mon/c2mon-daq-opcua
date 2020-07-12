@@ -2,19 +2,25 @@ package cern.c2mon.daq.opcua.failover;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
+import java.util.Map;
 
 public interface FailoverProxy {
 
 
     /**
-     * Delegates failover handling to an appropriate {@link FailoverMode} according to the application configuration or,
+     * Delegates failover handling to an appropriate {@link Controller} according to the application configuration or,
      * secondarily, according to server capabilities.
      * @param uri the URI of the active server
      * @throws OPCUAException if an exception occurrs when initially connecting to the active server.
      */
-    void initialize(String uri) throws OPCUAException;
+    void connect(String uri) throws OPCUAException;
+
+    void stop();
 
     /**
      * Fetch the currently active endpoint on which all actions are executed
@@ -23,10 +29,10 @@ public interface FailoverProxy {
     Endpoint getActiveEndpoint();
 
     /**
-     * Called when creating or modifying subscriptions, or disconnecting to fetch all those endpoints on which action
-     * shall be taken according to the failover mode. Sampling and publishing is set directly in the endpoint.
-     * @return all endpoints on which subscriptions shall created or modified, or from which it is necessary to
-     * disconnect. If the connected server is not within a redundant server set, an empty list is returned.
+     * Remove an ItemDefinition from all active and passive endpoints.
+     * @throws OPCUAException is the actions fails on the currently active endpoint
      */
-    Collection<Endpoint> getPassiveEndpoints();
+    void unsubscribeDefinition(ItemDefinition definition) throws OPCUAException;
+
+    Map<UInteger, SourceDataTagQuality> subscribeDefinitions(Collection<ItemDefinition> definitions);
 }

@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.opcua.connection.EndpointListener;
+import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -69,7 +69,7 @@ public abstract class TestListeners {
     @Getter
     @RequiredArgsConstructor
     @Component(value = "testListener")
-    public static class TestListener implements EndpointListener, SessionActivityListener {
+    public static class TestListener implements MessageSender, SessionActivityListener {
         CompletableFuture<Long> tagUpdate = new CompletableFuture<>();
         CompletableFuture<Long> tagInvalid = new CompletableFuture<>();
         CompletableFuture<EquipmentState> stateUpdate = new CompletableFuture<>();

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class ControllerTest extends ControllerTestBase {
+public class TagControllerTest extends TagControllerTestBase {
 
     SourceCommandTag tag;
     SourceCommandTagValue value;
@@ -31,17 +31,13 @@ public class ControllerTest extends ControllerTestBase {
     public void initializeShouldSubscribeTags() throws OPCUAException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
-        controller.connect(uri);
         controller.subscribeTags(sourceTags.values());
         sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag).contains(dataTag)));
     }
 
     @Test
     public void stopShouldResetEndpoint() {
-
-        controller.stop();
+        proxy.stop();
         Assertions.assertTrue(mapper.getTagIdDefinitionMap().isEmpty());
     }
-
-
 }

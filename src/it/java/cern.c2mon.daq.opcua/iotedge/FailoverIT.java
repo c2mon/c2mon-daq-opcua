@@ -1,11 +1,12 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
-import cern.c2mon.daq.opcua.connection.EndpointListener;
-import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.connection.MessageSender;
+import cern.c2mon.daq.opcua.control.TagController;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.ColdFailover;
-import cern.c2mon.daq.opcua.failover.FailoverMode;
+import cern.c2mon.daq.opcua.failover.Controller;
+import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.opcua.failover.NoFailover;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -43,9 +44,10 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class FailoverIT extends EdgeTestBase {
     @Autowired TestListeners.Pulse pulseListener;
-    @Autowired Controller controller;
+    @Autowired TagController controller;
     @Autowired NoFailover noFailover;
-    @Autowired FailoverMode coldFailover;
+    @Autowired Controller coldFailover;
+    @Autowired FailoverProxy failoverProxy;
     @Autowired AppConfigProperties config;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
@@ -59,12 +61,13 @@ public class FailoverIT extends EdgeTestBase {
         config.setRedundancyMode(ColdFailover.class.getName());
         config.setRedundantServerUris(Collections.singletonList(fallback.getUri()));
         pulseListener.setSourceID(tag.getId());
-        ReflectionTestUtils.setField(controller, "endpointListener", pulseListener);
-        ReflectionTestUtils.setField(coldFailover, "endpointListener", pulseListener);
-        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "endpointListener", pulseListener);
+        ReflectionTestUtils.setField(failoverProxy, "messageSender", pulseListener);
+        ReflectionTestUtils.setField(controller, "messageSender", pulseListener);
+        ReflectionTestUtils.setField(coldFailover, "messageSender", pulseListener);
+        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "messageSender", pulseListener);
         mockColdFailover();
-        controller.connect(active.getUri());
-        controller.subscribeTag(tag);
+        failoverProxy.connect(active.getUri());
+        controller.subscribeTags(Collections.singletonList(tag));
         pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         resetConnection = false;
@@ -74,7 +77,7 @@ public class FailoverIT extends EdgeTestBase {
     @AfterEach
     public void cleanUp() {
         log.info("############ CLEAN UP ############");
-        controller.stop();
+        failoverProxy.stop();
         if (resetConnection) {
             log.info("Resetting active proxy {}", active.proxy);
             active.proxy.setConnectionCut(false);
@@ -91,7 +94,7 @@ public class FailoverIT extends EdgeTestBase {
         log.info("coldFailoverShouldReconnectClient");
         cutConnection(pulseListener, active);
         triggerServerSwitch();
-        Assertions.assertEquals(EndpointListener.EquipmentState.OK, uncutConnection(pulseListener, fallback));
+        Assertions.assertEquals(MessageSender.EquipmentState.OK, uncutConnection(pulseListener, fallback));
         resetConnection = true;
     }
 

@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AliveWriterTest {
     TestListeners.TestListener listener = new TestListeners.TestListener(null);
-    AliveWriter aliveWriter = new AliveWriter(TestUtils.getFailoverProxy(new TestEndpoint(listener)), listener);
+    AliveWriter aliveWriter = new AliveWriter(TestUtils.getFailoverProxy(new TestEndpoint(listener), null, listener), listener);
 
     @BeforeEach
     public void setUp() {
@@ -34,14 +34,14 @@ public class AliveWriterTest {
 
     @Test
     public void writeAliveShouldNotifyListenerWithGoodStatusCode() {
-        ReflectionTestUtils.setField(aliveWriter, "failoverProxy", TestUtils.getFailoverProxy(new TestEndpoint(listener)));
+        ReflectionTestUtils.setField(aliveWriter, "failoverProxy", TestUtils.getFailoverProxy(new TestEndpoint(listener), null, listener));
         aliveWriter.startWriter();
         assertDoesNotThrow(() -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void exceptionInWriteAliveShouldNotNotifyListener() {
-        ReflectionTestUtils.setField(aliveWriter, "failoverProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(listener)));
+        ReflectionTestUtils.setField(aliveWriter, "failoverProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(listener), null, listener));
         aliveWriter.startWriter();
         assertThrows(TimeoutException.class, () -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
     }

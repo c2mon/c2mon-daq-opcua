@@ -20,6 +20,8 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -84,24 +86,26 @@ public class TagSubscriptionMapperTest extends MappingBase {
     }
 
     @Test
-    public void tagsToGroupsShouldReturnAsManyGroupsAsDistinctDeadbands() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Arrays.asList(tag, tagWithDifferentDeadband, tagWithSameDeadband));
-
+    public void mapToGroupsShouldReturnAsManyGroupsAsDistinctDeadbands() {
+        final List<ItemDefinition> definitions = Stream.of(tag, tagWithDifferentDeadband, tagWithSameDeadband).map(tag -> mapper.getOrCreateDefinition(tag)).collect(Collectors.toList());
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapToGroups(definitions);
         assertEquals(2, pairs.size());
     }
 
     @Test
-    public void tagsToGroupsShouldCombineTagsWithSameDeadbands() {
+    public void mapToGroupsShouldCombineTagsWithSameDeadbands() {
         final List<ItemDefinition> expected = Arrays.asList(mapper.getOrCreateDefinition(tag), mapper.getOrCreateDefinition(tagWithSameDeadband));
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Arrays.asList(tag, tagWithSameDeadband));
+        final List<ItemDefinition> definitions = Stream.of(tag, tagWithDifferentDeadband, tagWithSameDeadband).map(tag -> mapper.getOrCreateDefinition(tag)).collect(Collectors.toList());
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapToGroups(definitions);
         SubscriptionGroup groupWithTwoTags = mapper.getGroup(tag);
         final List<ItemDefinition> actual = pairs.get(groupWithTwoTags);
         assertEquals(expected, actual);
     }
 
     @Test
-    public void tagsToGroupsShouldSeparateTagsWithDifferentDeadbands() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Arrays.asList(tag, tagWithDifferentDeadband));
+    public void mapToGroupsShouldSeparateTagsWithDifferentDeadbands() {
+        final List<ItemDefinition> definitions = Stream.of(tag, tagWithDifferentDeadband, tagWithSameDeadband).map(tag -> mapper.getOrCreateDefinition(tag)).collect(Collectors.toList());
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapToGroups(definitions);
 
         SubscriptionGroup group1 = mapper.getGroup(tag);
         SubscriptionGroup group2 = mapper.getGroup(tagWithDifferentDeadband);
@@ -112,7 +116,8 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void tagsToGroupsShouldNotAddTagsToGroups() {
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapTagsToGroupsAndDefinitions(Collections.singletonList(tag));
+        final List<ItemDefinition> definitions = Stream.of(tag, tagWithDifferentDeadband, tagWithSameDeadband).map(tag -> mapper.getOrCreateDefinition(tag)).collect(Collectors.toList());
+        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapToGroups(definitions);
         assertFalse(pairs.keySet().stream().anyMatch(group -> group.contains(tag)));
     }
 

@@ -20,11 +20,12 @@ import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
-import cern.c2mon.daq.opcua.connection.EndpointListener;
+import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.control.AliveWriter;
 import cern.c2mon.daq.opcua.control.CommandRunner;
-import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.TagChanger;
+import cern.c2mon.daq.opcua.control.TagController;
+import cern.c2mon.daq.opcua.failover.FailoverProxy;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -47,7 +48,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
 
-    private Controller controller;
+    private FailoverProxy failoverProxy;
+    private TagController tagController;
     private AliveWriter aliveWriter;
     private CommandRunner commandRunner;
     private AppConfigProperties appConfigProperties;
@@ -60,7 +62,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public synchronized void connectToDataSource() throws EqIOException {
-        controller = getContext().getBean(Controller.class);
+        failoverProxy = getContext().getBean("failoverProxy", FailoverProxy.class);
+        tagController = getContext().getBean(TagController.class);
         aliveWriter = getContext().getBean(AliveWriter.class);
         commandRunner = getContext().getBean(CommandRunner.class);
         appConfigProperties = getContext().getBean(AppConfigProperties.class);
@@ -69,14 +72,14 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         IEquipmentConfiguration config = getEquipmentConfiguration();
         IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-        getContext().getBean(EndpointListener.class).initialize(sender);
+        getContext().getBean(MessageSender.class).initialize(sender);
 
         String[] addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         log.info("Connecting to the OPC UA data source at {}... ", addresses[0]);
-        controller.connect(addresses[0]);
+        failoverProxy.connect(addresses[0]);
 
         aliveWriter.initialize(config, appConfigProperties.isAliveWriterEnabled());
-        controller.subscribeTags(config.getSourceDataTags().values());
+        tagController.subscribeTags(config.getSourceDataTags().values());
         log.debug("connected");
 
         getEquipmentCommandHandler().setCommandRunner(this);
@@ -91,7 +94,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     @Override
     public synchronized void disconnectFromDataSource() {
         log.debug("disconnecting from OPC data source...");
-        controller.stop();
+        failoverProxy.stop();
         aliveWriter.stopWriter();
         log.debug("disconnected");
     }
@@ -99,7 +102,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     /** Triggers the refresh of all values directly from the OPC server. */
     @Override
     public synchronized void refreshAllDataTags() {
-        controller.refreshAllDataTags();
+        tagController.refreshAllDataTags();
     }
 
     /**
@@ -112,7 +115,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         if (sourceDataTag == null) {
             log.error("SourceDataTag with ID {} is unknown", dataTagId);
         }
-        controller.refreshDataTag(sourceDataTag);
+        tagController.refreshDataTag(sourceDataTag);
     }
 
     /**

@@ -2,9 +2,12 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.NoFailover;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import com.google.common.collect.ImmutableMap;
 import org.easymock.Capture;
 
@@ -59,11 +62,12 @@ public abstract class TestUtils {
         }
     }
 
-    public static TestFailoverProxy getFailoverProxy(Endpoint endpoint) {
-        final NoFailover f = new NoFailover(endpoint);
-        final TestFailoverProxy proxy = new TestFailoverProxy(f, f, endpoint);
+    public static TestFailoverProxy getFailoverProxy(Endpoint endpoint, TagSubscriptionMapper mapper, MessageSender messageSender) {
+        final AppConfigProperties config = createDefaultConfig();
+        final NoFailover noFailover = new NoFailover(mapper, messageSender, new RetryDelegate(config), null, endpoint);
+        final TestFailoverProxy proxy = new TestFailoverProxy(null, config, messageSender, noFailover);
         try {
-            proxy.initialize("bla");
+            proxy.connect("test");
         } catch (OPCUAException ignored) { }
         return proxy;
     }

@@ -12,8 +12,8 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.CONNECTION_LOST;
-import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.OK;
+import static cern.c2mon.daq.opcua.connection.MessageSender.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.connection.MessageSender.EquipmentState.OK;
 
 /**
  * A listener responsible to relay information regarding events on the DAQ to the IEquipmentMessageSender.
@@ -22,7 +22,7 @@ import static cern.c2mon.daq.opcua.connection.EndpointListener.EquipmentState.OK
 @RequiredArgsConstructor
 @Slf4j
 @Primary
-public class EndpointListenerImpl implements EndpointListener, SessionActivityListener {
+public class MessageSenderImpl implements MessageSender, SessionActivityListener {
 
     private final TagSubscriptionMapper mapper;
     private IEquipmentMessageSender sender;

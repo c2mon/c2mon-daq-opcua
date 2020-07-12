@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;

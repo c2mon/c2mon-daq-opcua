@@ -2,70 +2,96 @@ package cern.c2mon.daq.opcua.failover;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.MessageSender;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletionException;
 
 /**
  * This class is responsible for fetching a server's redundancy support information and for delegating to the proper
- * {@link FailoverMode} according to the application properties in {@link AppConfigProperties} and to server
+ * {@link Controller} according to the application properties in {@link AppConfigProperties} and to server
  * capabilities.
  */
 @Slf4j
 @RequiredArgsConstructor
 @Component(value = "failoverProxy")
+@Primary
 public class FailoverProxyImpl implements FailoverProxy {
-    private final ApplicationContext appContext;
-    private final AppConfigProperties config;
+    protected final ApplicationContext appContext;
+    protected final AppConfigProperties config;
+    protected final MessageSender messageSender;
 
     @Lazy
-    private final NoFailover noFailover;
+    protected final NoFailover noFailover;
 
-    FailoverMode currentFailover;
+    protected Controller failoverMode;
 
     /**
-     * Delegated failover handling to an appropriate {@link FailoverMode} according to the application configuration or,
+     * Delegated failover handling to an appropriate {@link Controller} according to the application configuration or,
      * secondarily, according to server capabilities. If no redundant Uris are preconfigured, they are read from the
      * server's ServerUriArray node. In case of errors in the configuration and when reading from the server's address
      * space, the FailoverProxy treats the server as not part of a redundant setup.
+     * Notify the {@link cern.c2mon.daq.common.IEquipmentMessageSender} if a failure occurs which prevents the DAQ from starting successfully.
      * @param uri the URI of the active server
-     * @throws OPCUAException if an exception occurrs when initially connecting to the active server.
+     * @throws OPCUAException       of type {@link CommunicationException} if an error not related to authentication
+     *                              configuration occurs on connecting to the OPC UA server, and of type {@link
+     *                              ConfigurationException} if it is not possible to connect to any of the the OPC UA
+     *                              server's endpoints with the given authentication configuration settings.
      */
     @Override
-    public void initialize(String uri) throws OPCUAException {
-        final String[] redundantUris;
-        if (loadedConfiguredFailoverSuccessfully()) {
-            redundantUris = loadRedundantUris(noFailover.currentEndpoint(), uri);
-        } else {
-            currentFailover = noFailover;
-            final Map.Entry<RedundancySupport, String[]> redundancySupport = redundancySupport(currentFailover.currentEndpoint(), uri);
-            switch (redundancySupport.getKey()) {
-                case HotAndMirrored:
-                case Hot:
-                case Warm:
-                case Cold:
-                    currentFailover = appContext.getBean(ColdFailover.class);
-                    break;
-                default:
-                    currentFailover = noFailover;
+    public void connect(String uri) throws OPCUAException {
+        try {
+            String[] redundantUris;
+            if (loadedConfiguredFailoverSuccessfully()) {
+                redundantUris = failoverMode instanceof NoFailover ?
+                        new String[0] : loadRedundantUris(noFailover.currentEndpoint(), uri);
+            } else {
+                failoverMode = noFailover;
+                final Map.Entry<RedundancySupport, String[]> redundancySupport = redundancySupport(failoverMode.currentEndpoint(), uri);
+                switch (redundancySupport.getKey()) {
+                    case HotAndMirrored:
+                    case Hot:
+                    case Warm:
+                    case Cold:
+                        failoverMode = appContext.getBean(ColdFailover.class);
+                        break;
+                    default:
+                        failoverMode = noFailover;
+                }
+                redundantUris = redundancySupport.getValue();
             }
-            redundantUris = redundancySupport.getValue();
+            log.info("Using redundancy mode {}, redundant URIs {}.", failoverMode.getClass().getName(), redundantUris);
+            failoverMode.initializeMonitoring(uri, noFailover.currentEndpoint(), redundantUris);
+        } catch (OPCUAException e) {
+            messageSender.onEquipmentStateUpdate(MessageSender.EquipmentState.CONNECTION_FAILED);
+            throw e;
         }
-        log.info("Using redundancy mode {}, redundant URIs {}.", currentFailover.getClass().getName(), redundantUris);
-        currentFailover.initializeMonitoring(uri, noFailover.currentEndpoint(), redundantUris);
+    }
+
+    /**
+     * Disconnect from the OPC UA server and reset the controller to a neutral state.
+     */
+    @Override
+    public void stop() {
+        if (failoverMode != null) {
+            failoverMode.stop();
+        }
     }
 
     /**
@@ -74,7 +100,7 @@ public class FailoverProxyImpl implements FailoverProxy {
      */
     @Override
     public Endpoint getActiveEndpoint() {
-        return currentFailover.currentEndpoint();
+        return failoverMode.currentEndpoint();
     }
 
     /**
@@ -84,8 +110,13 @@ public class FailoverProxyImpl implements FailoverProxy {
      * disconnect. If the connected server is not within a redundant server set, an empty list is returned.
      */
     @Override
-    public Collection<Endpoint> getPassiveEndpoints() {
-        return currentFailover == null ? Collections.emptyList() : currentFailover.passiveEndpoints();
+    public void unsubscribeDefinition(ItemDefinition definition) throws OPCUAException {
+        failoverMode.unsubscribe(definition);
+    }
+
+    @Override
+    public Map<UInteger, SourceDataTagQuality> subscribeDefinitions(Collection<ItemDefinition> definitions) {
+        return failoverMode.subscribe(definitions);
     }
 
     private boolean loadedConfiguredFailoverSuccessfully() {
@@ -95,8 +126,8 @@ public class FailoverProxyImpl implements FailoverProxy {
         }
         try {
             final Class<?> redundancyMode = Class.forName(customRedundancyMode);
-            if (FailoverMode.class.isAssignableFrom(redundancyMode)) {
-                currentFailover = (FailoverMode) appContext.getBean(redundancyMode);
+            if (Controller.class.isAssignableFrom(redundancyMode)) {
+                failoverMode = (Controller) appContext.getBean(redundancyMode);
                 return true;
             }
             log.error("The redundancy mode in the application properties {} must implement the FailoverProxy interface. Proceeding without.", config.getRedundancyMode());

@@ -28,7 +28,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
@@ -42,17 +41,13 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
 
     @Override
-    public Map<SubscriptionGroup, List<ItemDefinition>> mapTagsToGroupsAndDefinitions(Collection<ISourceDataTag> tags) {
-        return tags
+    public Map<SubscriptionGroup, List<ItemDefinition>> mapToGroups(Collection<ItemDefinition> definitions) {
+        return definitions
                 .stream()
-                .collect(groupingBy(ISourceDataTag::getTimeDeadband))
+                .collect(groupingBy(ItemDefinition::getTimeDeadband))
                 .entrySet()
                 .stream()
-                .collect(toMap(
-                        e -> getOrCreateGroup(e.getKey()),
-                        e -> e.getValue().stream()
-                                .map(this::getOrCreateDefinition)
-                                .collect(Collectors.toList())));
+                .collect(toMap(e -> getOrCreateGroup(e.getKey()),Map.Entry::getValue));
     }
 
     @Override

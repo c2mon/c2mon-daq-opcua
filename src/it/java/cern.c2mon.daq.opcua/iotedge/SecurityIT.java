@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
-import cern.c2mon.daq.opcua.connection.EndpointListener;
-import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.connection.MessageSender;
+import cern.c2mon.daq.opcua.control.TagController;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.FailoverProxy;
@@ -31,8 +31,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 @SpringBootTest
@@ -43,12 +42,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class SecurityIT {
 
 
-    @Autowired
-    AppConfigProperties config;
-    @Autowired Controller controller;
+    @Autowired AppConfigProperties config;
+    @Autowired FailoverProxy failoverProxy;
+    @Autowired TagController controller;
     @Autowired FailoverProxy testFailoverProxy;
     @Autowired NoFailover noFailover;
-    @Autowired TestListeners.TestListener testListener;
+    @Autowired TestListeners.Pulse listener;
 
     private String uri;
 
@@ -61,10 +60,11 @@ public class SecurityIT {
     @BeforeEach
     public void setUp() {
         uri = "opc.tcp://" + active.getContainerIpAddress() + ":" + active.getFirstMappedPort();
-        ReflectionTestUtils.setField(controller, "endpointListener", testListener);
+        ReflectionTestUtils.setField(failoverProxy, "messageSender", listener);
+        ReflectionTestUtils.setField(controller, "messageSender", listener);
         ReflectionTestUtils.setField(controller, "failoverProxy", testFailoverProxy);
-        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "endpointListener", testListener);
-        testListener.reset();
+        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "messageSender", listener);
+        listener.reset();
     }
 
     @AfterEach
@@ -75,8 +75,8 @@ public class SecurityIT {
         config.getCertificationPriority().put("load", 3);
         cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
-        final var f = testListener.listen();
-        controller.stop();
+        final var f = listener.listen();
+        failoverProxy.stop();
         try {
             f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
         } catch (TimeoutException | CompletionException | ExecutionException e) {
@@ -87,10 +87,10 @@ public class SecurityIT {
 
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
-        final var f = testListener.getStateUpdate();
-        controller.connect(uri);
+        final var f = listener.getStateUpdate();
+        failoverProxy.connect(uri);
         controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
-        assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -98,7 +98,7 @@ public class SecurityIT {
         config.getCertificationPriority().remove("none");
         config.getCertificationPriority().remove("load");
         final var f = trustCertificatesOnServerAndConnect();
-        assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -106,7 +106,7 @@ public class SecurityIT {
         config.getCertificationPriority().remove("none");
         config.getCertificationPriority().remove("generate");
         final var f = trustCertificatesOnServerAndConnect();
-        assertEquals(EndpointListener.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -131,9 +131,9 @@ public class SecurityIT {
 
         trustCertificatesOnClient();
 
-        final var state = testListener.listen();
-        controller.connect(uri);
-        assertEquals(EndpointListener.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        final var state = listener.listen();
+        failoverProxy.connect(uri);
+        assertEquals(MessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     private void trustCertificatesOnClient() throws IOException {
@@ -144,20 +144,20 @@ public class SecurityIT {
         }
     }
 
-    private CompletableFuture<EndpointListener.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
+    private CompletableFuture<MessageSender.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
         log.info("Initial connection attempt...");
         try {
-            controller.connect(uri);
+            failoverProxy.connect(uri);
         } catch (CommunicationException e) {
             // expected behavior: rejected by the server
         }
-        controller.stop();
+        failoverProxy.stop();
 
         log.info("Trust certificates server-side and reconnect...");
         trustCertificates();
-        final var state = testListener.listen();
+        final var state = listener.listen();
 
-        controller.connect(uri);
+        failoverProxy.connect(uri);
         controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         return state;
     }

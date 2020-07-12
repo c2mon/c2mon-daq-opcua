@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class ControllerTestBase {
+public abstract class TagControllerTestBase {
     protected static String ADDRESS_PROTOCOL_TCP = "URI=opc.tcp://";
     protected static String ADDRESS_BASE = "test;serverRetryTimeout=123;serverTimeout=12;aliveWriter=";
 
@@ -31,7 +31,7 @@ public abstract class ControllerTestBase {
     TagSubscriptionMapper mapper;
     TestEndpoint endpoint;
     TestListeners.TestListener listener;
-    Controller controller;
+    TagController controller;
     MiloMocker mocker;
     TestFailoverProxy proxy;
 
@@ -49,10 +49,9 @@ public abstract class ControllerTestBase {
         mapper = new TagSubscriptionMapperImpl();
         listener = new TestListeners.TestListener(mapper);
         endpoint = new TestEndpoint(listener);
-        proxy = TestUtils.getFailoverProxy(endpoint);
-        controller = new ControllerImpl(mapper, listener, proxy);
+        proxy = TestUtils.getFailoverProxy(endpoint, mapper, listener);
+        controller = new TagControllerImpl(mapper, listener, proxy);
         mocker = new MiloMocker(endpoint, mapper);
-        controller.connect("test");
     }
 
     @AfterEach

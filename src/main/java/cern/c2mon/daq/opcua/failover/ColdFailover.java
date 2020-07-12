@@ -1,16 +1,20 @@
 package cern.c2mon.daq.opcua.failover;
 
+import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import lombok.RequiredArgsConstructor;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -28,8 +32,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Lazy
 @Component("coldFailover")
-@RequiredArgsConstructor
-public class ColdFailover extends FailoverBase implements SessionActivityListener {
+public class ColdFailover extends ControllerBase implements SessionActivityListener {
     List<String> redundantAddresses = new ArrayList<>();
     String currentUri;
     Endpoint endpoint;
@@ -42,6 +45,10 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     private CompletableFuture<Void> reconnected = new CompletableFuture<>();
 
+    public ColdFailover(TagSubscriptionMapper mapper, MessageSender messageSender, RetryDelegate retryDelegate, ApplicationContext applicationContext) {
+        super(mapper, messageSender, retryDelegate, applicationContext);
+    }
+
     /**
      * Connect to the healthiest endpoint of the redundant server set. Since in Cold Failover only one endpoint can be
      * active and healthy at a time, the first endpoint with a healthy service level that is encountered is deemed
@@ -53,6 +60,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      */
     @Override
     public void initializeMonitoring(String uri, Endpoint endpoint, String[] redundantAddresses) throws OPCUAException {
+        super.initializeMonitoring(uri, endpoint, redundantAddresses);
         // Clients are expected to connect to the server with the highest service level.
         Collections.addAll(this.redundantAddresses, redundantAddresses);
         this.endpoint = endpoint;
@@ -72,12 +80,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     }
 
     @Override
-    public synchronized void disconnect() {
-        listening.set(false);
-        disconnectAndProceed();
-    }
-
-    @Override
     public Endpoint currentEndpoint() {
         return endpoint;
     }
@@ -94,7 +96,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      */
     @Override
     public synchronized void switchServers() throws OPCUAException {
-        if (!controller.isStopped()) {
+        if (!stopped.get()) {
             synchronized (this) {
                 log.info("Attempt to switch to next healthy server.");
                 disconnectAndProceed();
@@ -110,7 +112,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     @Override
     public void onSessionInactive(UaSession session) {
-        if (!controller.isStopped()) {
+        if (!stopped.get()) {
             log.info("Starting timeout on inactive session.");
             reconnected = new CompletableFuture<Void>()
                     .orTimeout(timeout, TimeUnit.MILLISECONDS)
@@ -145,7 +147,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         UByte maxServiceLevel = UByte.valueOf(0);
         String maxServiceUri = null;
         for (final String nextUri : redundantAddresses) {
-            if (controller.isStopped()) {
+            if (stopped.get()) {
                 return false;
             }
             log.info("Attempt connection to server at {}", nextUri);
@@ -176,19 +178,19 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     }
 
     private void recreateSubscriptions() throws CommunicationException {
-        final boolean subscriptionError = mapper.getSubscriptionGroups().values().stream()
-                .noneMatch(e -> controller.subscribeToGroup(e, e.getTagIds().values()));
-        if (subscriptionError) {
+        if (mapper.getSubscriptionGroups().values()
+                .stream()
+                .flatMap(e -> subscribeGroup(e, e.getTagIds().values()).values().stream())
+                .noneMatch(SourceDataTagQuality::isValid)) {
             log.error("Could not recreate any subscriptions. Connect to next server... ");
             throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
         }
         log.info("Recreated subscriptions on server {}.", currentUri);
     }
 
-
     private synchronized void monitorConnection() {
-        if (!controller.isStopped()) {
-            this.endpoint.monitorEquipmentState(true, (SessionActivityListener) endpointListener);
+        if (!stopped.get()) {
+            this.endpoint.monitorEquipmentState(true, (SessionActivityListener) messageSender);
             this.endpoint.monitorEquipmentState(true, this);
             try {
                 endpoint.subscribeWithCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
@@ -197,7 +199,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             }
         }
     }
-
 
     private void disconnectAndProceed() {
         try {

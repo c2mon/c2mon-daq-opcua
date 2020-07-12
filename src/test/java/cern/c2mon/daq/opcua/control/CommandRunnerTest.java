@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -19,8 +20,6 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
-
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,6 +31,7 @@ public class CommandRunnerTest {
     SourceCommandTag tag;
     OPCHardwareAddressImpl address;
     OPCHardwareAddressImpl pulseAddress;
+    MessageSender l = new TestListeners.TestListener(null);
 
     @BeforeEach
     public void setUp() {
@@ -48,7 +48,7 @@ public class CommandRunnerTest {
         value = new SourceCommandTagValue();
         value.setDataType(Integer.class.getName());
         value.setValue(1);
-        final FailoverProxy failoverProxy = TestUtils.getFailoverProxy(endpoint);
+        final FailoverProxy failoverProxy = TestUtils.getFailoverProxy(endpoint, null, l);
         commandRunner = new CommandRunner(failoverProxy);
     }
 
@@ -86,7 +86,7 @@ public class CommandRunnerTest {
                 .anyTimes();
         //no call to write
         replay(mockEp);
-        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(mockEp));
+        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(mockEp, null, l));
         commandRunner.runCommand(tag, value);
         verify(mockEp);
     }
@@ -100,7 +100,7 @@ public class CommandRunnerTest {
         expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();
         expect(mockEp.write(def, 0)).andReturn(endpoint.write(def, 0)).once();
         replay(mockEp);
-        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(mockEp));
+        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(mockEp, null, l));
         commandRunner.runCommand(tag, value);
         verify(mockEp);
     }
@@ -128,9 +128,9 @@ public class CommandRunnerTest {
 
     @Test
     public void badClientShouldThrowException() {
-        final NoFailover noFailover = new NoFailover(new ExceptionTestEndpoint(null));
-        final TestFailoverProxy proxy = new TestFailoverProxy(noFailover, noFailover, new ExceptionTestEndpoint(null));
-        proxy.setCurrentFailover(RedundancySupport.None);
+        final NoFailover noFailover = new NoFailover(null, l, null, null, new ExceptionTestEndpoint(null));
+        final TestFailoverProxy proxy = new TestFailoverProxy(null, TestUtils.createDefaultConfig(), l, noFailover);
+        proxy.setFailoverMode(RedundancySupport.None, null, null, null);
         commandRunner.setFailoverProxy(proxy);
         verifyCommunicationException(ExceptionContext.WRITE);
     }

@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua;
 
+import cern.c2mon.daq.opcua.failover.Controller;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,7 +29,7 @@ public class AppConfigProperties {
      * The Java class name of the a custom redundancy failover mode, if one shall be used. If specified, the default
      * query on an OPC UA server for its redundancy support information and proceeding and resolving the appropriate
      * failover mode. Must match exactly the Java class name of the class implementing {@link
-     * cern.c2mon.daq.opcua.failover.FailoverMode}.
+     * Controller}.
      */
     private String redundancyMode;
 
