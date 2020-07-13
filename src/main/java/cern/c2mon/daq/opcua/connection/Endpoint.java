@@ -45,8 +45,8 @@ public interface Endpoint {
     /**
      * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
      * connection error and notify the endpointListener of future value updates
-     * @param group The subscriptionGroup to add the definitions to
-     * @param definitions        the {@link ItemDefinition}s for which to create monitored items
+     * @param group       The subscriptionGroup to add the definitions to
+     * @param definitions the {@link ItemDefinition}s for which to create monitored items
      * @return valid client handles
      */
     Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException;
@@ -56,6 +56,7 @@ public interface Endpoint {
     void recreateAllSubscriptions() throws CommunicationException;
 
     Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
+
     /**
      * Delete a monitored item from an OPC UA subscription.
      * @param clientHandle    the identifier of the monitored item to remove.
@@ -82,25 +83,16 @@ public interface Endpoint {
     boolean write(NodeId nodeId, Object value) throws OPCUAException;
 
     /**
-     * Call the method node with ID methodId contained in the object with ID objectId.
-     * @param objectId the nodeId of class Object containing the method node
-     * @param methodId the nodeId of class Method which shall be called
-     * @param arg      the input argument to pass to the methodId call.
+     * Call the method node associated with the definition. It no method node is specified within the definition, it is
+     * assumed that the primary node is the method node, and the first object node ID encountered during browse is used
+     * as object node.
+     * @param definition the definition containing the nodeId of Method which shall be called
+     * @param arg        the input argument to pass to the methodId call.
      * @return whether the methodId was successful, and the output arguments of the called method (if applicable, else
      * null) in a Map Entry.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object arg) throws OPCUAException;
-
-    /**
-     * Fetches the node's first parent object node, if such a node exists.
-     * @param nodeId the node whose parent to fetch
-     * @return the parent node's NodeId
-     * @throws OPCUAException of type {@link ConfigurationException} in case the nodeId is orphaned, or of types {@link
-     *                        CommunicationException} or {@link LongLostConnectionException} as detailed in the
-     *                        implementation class's JavaDoc.
-     */
-    NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException;
+    Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException;
 
     /**
      * Return the node containing the server's redundancy information. See OPC UA Part 5, 6.3.7

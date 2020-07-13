@@ -20,7 +20,6 @@ import com.google.common.base.Joiner;
 import lombok.AllArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Nullable;
@@ -116,13 +115,7 @@ public class CommandTagHandler implements ICommandTagChanger {
     private Object[] executeMethod(ISourceCommandTag tag, Object arg) throws OPCUAException {
         log.info("executeMethod of tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
         final ItemDefinition def = ItemDefinition.of(tag);
-        final Map.Entry<Boolean, Object[]> result;
-        if (def.getMethodNodeId() == null) {
-            final NodeId parent = controllerProxy.getActiveEndpoint().getParentObjectNodeId(def.getNodeId());
-            result = controllerProxy.getActiveEndpoint().callMethod(parent, def.getNodeId(), arg);
-        } else {
-            result = controllerProxy.getActiveEndpoint().callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
-        }
+        final Map.Entry<Boolean, Object[]> result = controllerProxy.getActiveEndpoint().callMethod(def, arg);
         log.info("executeMethod returned {}.", result.getValue());
         if (!result.getKey()) {
             throw new CommunicationException(ExceptionContext.METHOD_CODE);

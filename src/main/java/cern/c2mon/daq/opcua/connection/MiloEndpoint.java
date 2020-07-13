@@ -2,7 +2,10 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.exceptions.*;
-import cern.c2mon.daq.opcua.mapping.*;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.MiloMapper;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -68,11 +71,10 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private final MessageSender messageSender;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
+    private final AtomicLong disconnectedOn = new AtomicLong(0);
     private OpcUaClient client;
     @Getter
     private String uri;
-    private final AtomicLong disconnectedOn = new AtomicLong(0);
-
     @Setter
     private MonitoringMode mode = MonitoringMode.Reporting;
 
@@ -180,15 +182,32 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Delete an existing subscription with a certain number of retries in case of connection error.
-     * @param timeDeadband The timeDeadband of the subscription to delete along with all contained MonitoredItems.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
+     * connection error and notify the endpointListener of future value updates
+     * @param group       The subscriptionGroup to add the definitions to
+     * @param definitions the {@link ItemDefinition}s for which to create monitored items
+     * @return valid client handles
      */
-    private void deleteSubscription(int timeDeadband) throws OPCUAException {
-        final UaSubscription subscription = subscriptionMap.remove(timeDeadband);
-        if (subscription != null) {
-            retryDelegate.completeOrThrow(DELETE_SUBSCRIPTION, this::getDisconnectPeriod,
-                    () -> client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()));
+    public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException {
+        try {
+            log.info("Subscribing definition {} with publishing interval {}.", definitions, group.getPublishInterval());
+            return subscribeWithCallback(group.getPublishInterval(), definitions, (item, i) -> item.setValueConsumer(value -> {
+                log.info("Creating callback for definition {}.", definitions);
+                SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
+                final Object updateValue = MiloMapper.toObject(value.getValue());
+                ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
+                        new ValueUpdate(updateValue) :
+                        new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
+                messageSender.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
+            }));
+        } catch (ConfigurationException e) {
+            throw e;
+        } catch (OPCUAException e) {
+            final String ids = Joiner.on(", ").join(definitions.stream().map(d -> mapper.getTagId(d.getClientHandle())).toArray());
+            log.error("Tags with IDs {} could not be subscribed on endpoint with uri {}. ", ids, getUri());
+            return definitions.stream()
+                    .map(definition -> Map.entry(definition.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)))
+                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
         }
     }
 
@@ -208,7 +227,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
         log.info("Attempt to recreate the subscription.");
         final Integer publishInterval = subscriptionMap.inverse().getOrDefault(subscription, -1);
-        final var group =  mapper.getGroup(publishInterval);
+        final var group = mapper.getGroup(publishInterval);
         if (group == null || group.size() == 0) {
             throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
         }
@@ -239,41 +258,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
         }
         log.info("Recreated subscriptions on server {}.", uri);
-    }
-
-    private boolean resubscribeGroupsAndReportSuccess(SubscriptionGroup group) throws ConfigurationException {
-        final Map<UInteger, SourceDataTagQuality> handleQualityMap = subscribe(group, group.getTagIds().values());
-        return handleQualityMap != null && handleQualityMap.values().stream().anyMatch(SourceDataTagQuality::isValid);
-    }
-
-    /**
-     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
-     * connection error and notify the endpointListener of future value updates
-     * @param group The subscriptionGroup to add the definitions to
-     * @param definitions        the {@link ItemDefinition}s for which to create monitored items
-     * @return valid client handles
-     */
-    public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException {
-        try {
-            log.info("Subscribing definition {} with publishing interval {}.", definitions, group.getPublishInterval());
-            return subscribeWithCallback(group.getPublishInterval(), definitions, (item, i) -> item.setValueConsumer(value -> {
-                log.info("Creating callback for definition {}.", definitions);
-                SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
-                final Object updateValue = MiloMapper.toObject(value.getValue());
-                ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
-                        new ValueUpdate(updateValue) :
-                        new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-                messageSender.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
-            }));
-        } catch (ConfigurationException e) {
-          throw e;
-        } catch (OPCUAException e) {
-            final String ids = Joiner.on(", ").join(definitions.stream().map(d -> mapper.getTagId(d.getClientHandle())).toArray());
-            log.error("Tags with IDs {} could not be subscribed on endpoint with uri {}. ", ids, getUri());
-            return definitions.stream()
-                    .map(definition -> Map.entry(definition.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)))
-                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-        }
     }
 
     public Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
@@ -348,34 +332,32 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Call the method node with ID methodId contained in the object with ID objectId with a certain number of retries
-     * in case of connection error.
-     * @param objectId the nodeId of class Object containing the method node
-     * @param methodId the nodeId of class Method which shall be called
-     * @param arg      the input arguments to pass to the methodId call.
-     * @return the StatusCode of the methodId response as key and the output arguments of the called method (if
-     * applicable, else null) in a Map Entry.
+     * Call the method node associated with the definition with a certain number of retries in case of connection
+     * error.. It no method node is specified within the definition, it is assumed that the primary node is the method
+     * node, and the first object node ID encountered during browse is used as object node.
+     * @param definition the definition containing the nodeId of Method which shall be called
+     * @param arg        the input argument to pass to the methodId call.
+     * @return whether the methodId was successful, and the output arguments of the called method (if applicable, else
+     * null) in a Map Entry.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    public Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object arg) throws OPCUAException {
-        final var variants = arg == null ? null : new Variant[]{new Variant(arg)};
-        final CallMethodResult result = retryDelegate.completeOrThrow(METHOD, this::getDisconnectPeriod,
-                () -> client.call(new CallMethodRequest(objectId, methodId, variants)));
-        final StatusCode statusCode = result.getStatusCode();
-        log.info("Calling method {} on object {} returned status code {}.", methodId, objectId, statusCode);
-        return Map.entry(statusCode.isGood(), MiloMapper.toObject(result.getOutputArguments()));
+    public Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException {
+        return (definition.getMethodNodeId() == null)
+                ? callMethod(getParentObjectNodeId(definition.getNodeId()), definition.getNodeId(), arg)
+                : callMethod(definition.getNodeId(), definition.getMethodNodeId(), arg);
     }
 
     /**
-     * Fetches the node's first parent object node, if such a node exists with a certain number of retries in case of
-     * connection error.
-     * @param nodeId the node whose parent object to fetch
-     * @return the parent node's NodeId, if it exists. Else a {@link ConfigurationException} is thrown.
-     * @throws OPCUAException of type {@link ConfigurationException} in case the nodeId is orphaned, or of types {@link
-     *                        CommunicationException} or {@link LongLostConnectionException} as detailed in the
-     *                        implementation class's JavaDoc.
+     * Return the node containing the server's redundancy information. See OPC UA Part 5, 6.3.7
+     * @return the server's {@link ServerRedundancyTypeNode}
+     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    public NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException {
+    public ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException {
+        return retryDelegate.completeOrThrow(SERVER_NODE, this::getDisconnectPeriod,
+                () -> client.getAddressSpace().getObjectNode(Identifiers.Server_ServerRedundancy, ServerRedundancyTypeNode.class));
+    }
+
+    private NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException {
         final BrowseDescription bd = new BrowseDescription(
                 nodeId,
                 BrowseDirection.Inverse,
@@ -394,13 +376,30 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Return the node containing the server's redundancy information. See OPC UA Part 5, 6.3.7
-     * @return the server's {@link ServerRedundancyTypeNode}
+     * Delete an existing subscription with a certain number of retries in case of connection error.
+     * @param timeDeadband The timeDeadband of the subscription to delete along with all contained MonitoredItems.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    public ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException {
-        return retryDelegate.completeOrThrow(SERVER_NODE, this::getDisconnectPeriod,
-                () -> client.getAddressSpace().getObjectNode(Identifiers.Server_ServerRedundancy, ServerRedundancyTypeNode.class));
+    private void deleteSubscription(int timeDeadband) throws OPCUAException {
+        final UaSubscription subscription = subscriptionMap.remove(timeDeadband);
+        if (subscription != null) {
+            retryDelegate.completeOrThrow(DELETE_SUBSCRIPTION, this::getDisconnectPeriod,
+                    () -> client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()));
+        }
+    }
+
+    private boolean resubscribeGroupsAndReportSuccess(SubscriptionGroup group) throws ConfigurationException {
+        final Map<UInteger, SourceDataTagQuality> handleQualityMap = subscribe(group, group.getTagIds().values());
+        return handleQualityMap != null && handleQualityMap.values().stream().anyMatch(SourceDataTagQuality::isValid);
+    }
+
+    private Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object arg) throws OPCUAException {
+        final var variants = arg == null ? null : new Variant[]{new Variant(arg)};
+        final CallMethodResult result = retryDelegate.completeOrThrow(METHOD, this::getDisconnectPeriod,
+                () -> client.call(new CallMethodRequest(objectId, methodId, variants)));
+        final StatusCode statusCode = result.getStatusCode();
+        log.info("Calling method {} on object {} returned status code {}.", methodId, objectId, statusCode);
+        return Map.entry(statusCode.isGood(), MiloMapper.toObject(result.getOutputArguments()));
     }
 
     /**
