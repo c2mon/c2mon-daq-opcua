@@ -2,12 +2,13 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.RetryDelegate;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.ColdFailoverDecorator;
+import cern.c2mon.daq.opcua.failover.ColdFailover;
 import cern.c2mon.daq.opcua.failover.Controller;
-import cern.c2mon.daq.opcua.failover.ControllerImpl;
 import cern.c2mon.daq.opcua.failover.ControllerProxyImpl;
+import cern.c2mon.daq.opcua.failover.NoFailover;
 import lombok.Setter;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.context.ApplicationContext;
@@ -18,8 +19,12 @@ public class TestControllerProxy extends ControllerProxyImpl {
     @Setter
     private String[] redundantUris = new String[0];
 
-    public TestControllerProxy(ApplicationContext appContext, AppConfigProperties config, MessageSender messageSender, Controller singleServerController) {
-        super(appContext, config, messageSender, singleServerController);
+    public void setController(Controller controller) {
+        this.controller = controller;
+    }
+
+    public TestControllerProxy(ApplicationContext appContext, AppConfigProperties config, MessageSender messageSender, Endpoint endpoint) {
+        super(appContext, config, messageSender, endpoint);
     }
 
     public void setFailoverMode(RedundancySupport mode) {
@@ -28,19 +33,19 @@ public class TestControllerProxy extends ControllerProxyImpl {
             case Hot:
             case Warm:
             case Cold:
-                currentController = new ColdFailoverDecorator(appContext, new RetryDelegate(config), (ControllerImpl) singleServerController);
+                controller = new ColdFailover(appContext, new RetryDelegate(config));
                 break;
             default:
-                currentController = singleServerController;
+                controller = new NoFailover();
         }
     }
 
     @Override
     public void connect(String uri) throws OPCUAException {
-        if (currentController == null) {
-            currentController = singleServerController;
+        if (controller == null) {
+            controller = new NoFailover();
         }
-        singleServerController.connect(uri);
-        currentController.initializeMonitoring(redundantUris);
+        endpoint.initialize(uri);
+        controller.initialize(endpoint, redundantUris);
     }
 }

@@ -6,8 +6,8 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.Controller;
-import cern.c2mon.daq.opcua.failover.ControllerImpl;
 import cern.c2mon.daq.opcua.failover.ControllerProxy;
+import cern.c2mon.daq.opcua.failover.NoFailover;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
@@ -17,7 +17,6 @@ import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -128,10 +127,11 @@ public class CommandTagHandlerTest {
     }
 
     @Test
-    public void badClientShouldThrowException() {
-        Controller controller = new ControllerImpl(l, new ExceptionTestEndpoint(null));
-        final TestControllerProxy proxy = new TestControllerProxy(null, TestUtils.createDefaultConfig(), l, controller);
-        proxy.setFailoverMode(RedundancySupport.None);
+    public void badClientShouldThrowException() throws OPCUAException {
+        Controller controller = new NoFailover();
+        controller.initialize(new ExceptionTestEndpoint(null), new String[0]);
+        final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, l);
+        proxy.setController(controller);
         commandTagHandler.setControllerProxy(proxy);
         verifyCommunicationException(ExceptionContext.WRITE);
     }

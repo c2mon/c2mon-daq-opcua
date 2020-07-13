@@ -108,18 +108,13 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public NodeId getParentObjectNodeId(NodeId nodeId) {
-        return nodeId;
+    public Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException {
+        return Map.entry(returnGoodStatusCodes, new Object[] {arg});
     }
 
     @Override
     public ServerRedundancyTypeNode getServerRedundancyNode() {
         return serverRedundancyTypeNode;
-    }
-
-    @Override
-    public Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object args) {
-        return Map.entry(returnGoodStatusCodes, new Object[] {args});
     }
 
 }

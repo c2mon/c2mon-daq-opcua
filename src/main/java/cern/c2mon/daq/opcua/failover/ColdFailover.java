@@ -26,10 +26,11 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Component("coldFailover")
-public class ColdFailoverDecorator extends FailoverDecorator implements SessionActivityListener {
+public class ColdFailover extends FailoverBase implements SessionActivityListener {
 
     List<String> redundantAddresses = new ArrayList<>();
     String currentUri;
+    Endpoint activeEndpoint;
 
     @Value("#{@appConfigProperties.getConnectionMonitoringRate()}")
     private int monitoringRate;
@@ -39,9 +40,10 @@ public class ColdFailoverDecorator extends FailoverDecorator implements SessionA
 
     private CompletableFuture<Void> reconnected = new CompletableFuture<>();
 
-    public ColdFailoverDecorator(ApplicationContext applicationContext, RetryDelegate retryDelegate, ControllerImpl singleServerController) {
-        super(applicationContext, retryDelegate, singleServerController);
+    public ColdFailover(ApplicationContext applicationContext, RetryDelegate retryDelegate) {
+        super(applicationContext, retryDelegate);
     }
+
 
     /**
      * Connect to the healthiest endpoint of the redundant server set. Since in Cold Failover only one endpoint can be
@@ -51,13 +53,14 @@ public class ColdFailoverDecorator extends FailoverDecorator implements SessionA
      * @throws OPCUAException in case there is no healthy server to connect to in the redundant server set.
      */
     @Override
-    public void initializeMonitoring(String[] redundantAddresses) throws OPCUAException {
-        // Clients are expected to connect to the server with the highest service level.
+    public void initialize(Endpoint endpoint, String[] redundantAddresses) throws OPCUAException {
+        super.initialize(endpoint, redundantAddresses);
+        activeEndpoint = endpoint;
+        this.currentUri = activeEndpoint.getUri();
         Collections.addAll(this.redundantAddresses, redundantAddresses);
-        this.currentUri = singleServerController.currentEndpoint().getUri();
         this.redundantAddresses.add(currentUri);
         // Only one server can be healthy at a time in cold redundancy
-        if (readServiceLevel(singleServerController.currentEndpoint()).compareTo(SERVICE_LEVEL_HEALTH_LIMIT) < 0) {
+        if (readServiceLevel(activeEndpoint).compareTo(SERVICE_LEVEL_HEALTH_LIMIT) < 0) {
             disconnectAndProceed();
             if (!connectToHealthiestServerFinished()) {
                 log.info("Controller stopped. Stopping initialization process.");
@@ -70,7 +73,12 @@ public class ColdFailoverDecorator extends FailoverDecorator implements SessionA
     }
 
     @Override
-    public List<Endpoint> passiveEndpoints() {
+    protected Endpoint currentEndpoint() {
+        return activeEndpoint;
+    }
+
+    @Override
+    protected List<Endpoint> passiveEndpoints() {
         return Collections.emptyList();
     }
 
@@ -82,12 +90,12 @@ public class ColdFailoverDecorator extends FailoverDecorator implements SessionA
      */
     @Override
     public synchronized void switchServers() throws OPCUAException {
-        if (!singleServerController.isStopped()) {
+        if (!stopped.get()) {
             synchronized (this) {
                 log.info("Attempt to switch to next healthy server.");
                 disconnectAndProceed();
                 if (reconnectionSucceeded()) {
-                    singleServerController.currentEndpoint().recreateAllSubscriptions();
+                    activeEndpoint.recreateAllSubscriptions();
                     monitorConnection();
                 }
             }
@@ -98,7 +106,7 @@ public class ColdFailoverDecorator extends FailoverDecorator implements SessionA
 
     @Override
     public void onSessionInactive(UaSession session) {
-        if (!singleServerController.isStopped()) {
+        if (!stopped.get()) {
             log.info("Starting timeout on inactive session.");
             reconnected = new CompletableFuture<Void>()
                     .orTimeout(timeout, TimeUnit.MILLISECONDS)
@@ -133,13 +141,13 @@ public class ColdFailoverDecorator extends FailoverDecorator implements SessionA
         UByte maxServiceLevel = UByte.valueOf(0);
         String maxServiceUri = null;
         for (final String nextUri : redundantAddresses) {
-            if (singleServerController.isStopped()) {
+            if (stopped.get()) {
                 return false;
             }
             log.info("Attempt connection to server at {}", nextUri);
             try {
-                singleServerController.currentEndpoint().initialize(nextUri);
-                final UByte nextServiceLevel = readServiceLevel(singleServerController.currentEndpoint());
+                activeEndpoint.initialize(nextUri);
+                final UByte nextServiceLevel = readServiceLevel(activeEndpoint);
                 if (nextServiceLevel.compareTo(SERVICE_LEVEL_HEALTH_LIMIT) >= 0) {
                     log.info("Connected to healthy server at {} with service level: {}.", nextUri, nextServiceLevel);
                     currentUri = nextUri;
@@ -148,14 +156,14 @@ public class ColdFailoverDecorator extends FailoverDecorator implements SessionA
                     maxServiceLevel = nextServiceLevel;
                     maxServiceUri = nextUri;
                 }
-                singleServerController.currentEndpoint().disconnect();
+                activeEndpoint.disconnect();
             } catch (OPCUAException ignored) {
                 log.info("Could not connect to server at {}. Proceeding with next server.", nextUri);
             }
         }
         if (maxServiceUri != null) {
             currentUri = maxServiceUri;
-            singleServerController.currentEndpoint().initialize(currentUri);
+            activeEndpoint.initialize(currentUri);
             log.info("Connected to server at {} with highest but still unhealthy service level: {}.", currentUri, maxServiceLevel);
             return true;
         } else {
@@ -164,11 +172,11 @@ public class ColdFailoverDecorator extends FailoverDecorator implements SessionA
     }
 
     private synchronized void monitorConnection() {
-        if (!singleServerController.isStopped()) {
-            singleServerController.currentEndpoint().manageSessionActivityListener(true, null);
-            singleServerController.currentEndpoint().manageSessionActivityListener(true, this);
+        if (!stopped.get()) {
+            activeEndpoint.manageSessionActivityListener(true, null);
+            activeEndpoint.manageSessionActivityListener(true, this);
             try {
-                singleServerController.currentEndpoint().subscribeWithCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
+                activeEndpoint.subscribeWithCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
             } catch (OPCUAException e) {
                 log.info("An error occurred when setting up connection monitoring.", e);
             }
@@ -176,10 +184,8 @@ public class ColdFailoverDecorator extends FailoverDecorator implements SessionA
     }
 
     private void disconnectAndProceed() {
-        if (singleServerController.currentEndpoint() != null) {
-            try {
-                singleServerController.currentEndpoint().disconnect();
-            } catch (OPCUAException ignored) { }
+        if (activeEndpoint != null) {
+            activeEndpoint.disconnect();
         }
     }
 }

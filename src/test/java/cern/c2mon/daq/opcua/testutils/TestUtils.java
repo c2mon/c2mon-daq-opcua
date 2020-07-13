@@ -5,8 +5,6 @@ import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.Controller;
-import cern.c2mon.daq.opcua.failover.ControllerImpl;
 import com.google.common.collect.ImmutableMap;
 import org.easymock.Capture;
 
@@ -63,8 +61,7 @@ public abstract class TestUtils {
 
     public static TestControllerProxy getFailoverProxy(Endpoint endpoint, MessageSender messageSender) {
         final AppConfigProperties config = createDefaultConfig();
-        final Controller controller = new ControllerImpl(messageSender, endpoint);
-        final TestControllerProxy proxy = new TestControllerProxy(null, config, messageSender, controller);
+        final TestControllerProxy proxy = new TestControllerProxy(null, config, messageSender, endpoint);
         try {
             proxy.connect("test");
         } catch (OPCUAException ignored) { }

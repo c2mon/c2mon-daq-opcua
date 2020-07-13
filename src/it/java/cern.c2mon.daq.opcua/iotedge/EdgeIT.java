@@ -1,11 +1,11 @@
 package cern.c2mon.daq.opcua.iotedge;
 
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.control.CommandTagHandler;
 import cern.c2mon.daq.opcua.control.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.Controller;
 import cern.c2mon.daq.opcua.failover.ControllerProxy;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -48,7 +48,8 @@ public class EdgeIT extends EdgeTestBase {
     @Autowired ControllerProxy controllerProxy;
     @Autowired DataTagHandler tagHandler;
     @Autowired CommandTagHandler commandTagHandler;
-    @Autowired Controller singleServerController;
+    @Autowired
+    ControllerProxy singleServerController;
 
     @BeforeEach
     public void setupEndpoint() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
@@ -56,7 +57,8 @@ public class EdgeIT extends EdgeTestBase {
         pulseListener.setSourceID(tag.getId());
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         ReflectionTestUtils.setField(controllerProxy, "messageSender", pulseListener);
-        ReflectionTestUtils.setField(singleServerController.currentEndpoint(), "messageSender", pulseListener);
+        final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
+        ReflectionTestUtils.setField(e, "messageSender", pulseListener);
 
         controllerProxy.connect(active.getUri());
         tagHandler.subscribeTags(Collections.singletonList(alreadySubscribedTag));

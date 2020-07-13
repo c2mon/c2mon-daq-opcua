@@ -4,23 +4,21 @@ import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
-import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
 import org.springframework.context.ApplicationContext;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
-public abstract class FailoverDecorator implements Controller {
+@RequiredArgsConstructor
+public abstract class FailoverBase extends ControllerBase {
 
     protected static UByte SERVICE_LEVEL_HEALTH_LIMIT = UByte.valueOf(200);
     protected static List<ItemDefinition> connectionMonitoringNodes = List.of(
@@ -32,32 +30,10 @@ public abstract class FailoverDecorator implements Controller {
 
     private final ApplicationContext applicationContext;
     protected final RetryDelegate retryDelegate;
-    protected final ControllerImpl singleServerController;
 
-    public FailoverDecorator(ApplicationContext applicationContext, RetryDelegate retryDelegate, ControllerImpl singleServerController) {
-        this.singleServerController = singleServerController;
-        this.applicationContext = applicationContext;
-        this.retryDelegate = retryDelegate;
-    }
-
-    @Override
-    public void connect(String uri) throws OPCUAException {
+    public void initialize(Endpoint endpoint, String[] redundantUris) throws OPCUAException {
         stopped.set(false);
-        singleServerController.connect(uri);
     }
-
-    @Override
-    public Endpoint currentEndpoint() {
-        return singleServerController.currentEndpoint();
-    }
-
-    /**
-     * Called when creating or modifying subscriptions, or disconnecting to fetch all those endpoints on which action
-     * shall be taken according to the failover mode. Sampling and publishing is set directly in the endpoint.
-     * @return all endpoints on which subscriptions shall created or modified, or from which it is necessary to
-     * disconnect. If the connected server is not within a redundant server set, an empty list is returned.
-     */
-    protected abstract List<Endpoint> passiveEndpoints();
 
     protected Endpoint nextEndpoint() {
         return applicationContext.getBean(Endpoint.class);
@@ -67,21 +43,7 @@ public abstract class FailoverDecorator implements Controller {
     public void stop() {
         log.info("Disconnecting... ");
         stopped.set(true);
-        singleServerController.stop();
-        passiveEndpoints().forEach(Endpoint::disconnect);
-    }
-
-    @Override
-    public boolean unsubscribe(ItemDefinition definition) {
-        passiveEndpoints().forEach(e -> e.deleteItemFromSubscription(definition.getClientHandle(), definition.getTimeDeadband()));
-        return singleServerController.unsubscribe(definition);
-    }
-
-    @Override
-    public Map<UInteger, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions) {
-        passiveEndpoints().forEach(endpoint -> groupsWithDefinitions.entrySet()
-                        .forEach(e -> ControllerImpl.subscribeOnEndpoint(endpoint, e)));
-        return singleServerController.subscribe(groupsWithDefinitions);
+        super.stop();
     }
 
     public void triggerServerSwitch() {

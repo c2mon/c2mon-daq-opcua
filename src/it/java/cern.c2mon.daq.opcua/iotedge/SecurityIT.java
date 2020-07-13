@@ -1,11 +1,11 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.control.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.Controller;
 import cern.c2mon.daq.opcua.failover.ControllerProxy;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -45,8 +45,6 @@ public class SecurityIT {
     @Autowired AppConfigProperties config;
     @Autowired ControllerProxy controllerProxy;
     @Autowired DataTagHandler tagHandler;
-    @Autowired ControllerProxy testControllerProxy;
-    @Autowired Controller singleServerController;
     @Autowired TestListeners.Pulse listener;
 
     private String uri;
@@ -62,8 +60,10 @@ public class SecurityIT {
         uri = "opc.tcp://" + active.getContainerIpAddress() + ":" + active.getFirstMappedPort();
         ReflectionTestUtils.setField(controllerProxy, "messageSender", listener);
         ReflectionTestUtils.setField(tagHandler, "messageSender", listener);
-        ReflectionTestUtils.setField(tagHandler, "controllerProxy", testControllerProxy);
-        ReflectionTestUtils.setField(singleServerController.currentEndpoint(), "messageSender", listener);
+        ReflectionTestUtils.setField(tagHandler, "controllerProxy", controllerProxy);
+        final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
+        ReflectionTestUtils.setField(e, "messageSender", listener);
+
         listener.reset();
     }
 

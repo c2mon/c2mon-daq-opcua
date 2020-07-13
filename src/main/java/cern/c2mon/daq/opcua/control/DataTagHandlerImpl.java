@@ -76,7 +76,7 @@ public class DataTagHandlerImpl implements DataTagHandler {
                 .entrySet()
                 .stream()
                 .collect(toMap(e -> mapper.getGroup(e.getKey()), Map.Entry::getValue));
-        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribeToGroups(groupsWithDefinitions);
+        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.getController().subscribe(groupsWithDefinitions);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
     }
 
@@ -91,7 +91,7 @@ public class DataTagHandlerImpl implements DataTagHandler {
         ItemDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
         final ConcurrentHashMap<SubscriptionGroup, List<ItemDefinition>> map = new ConcurrentHashMap<>();
         map.put(mapper.getGroup(definition.getTimeDeadband()), Collections.singletonList(definition));
-        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribeToGroups(map);
+        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.getController().subscribe(map);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
         final SourceDataTagQuality quality = handleQualityMap.get(definition.getClientHandle());
         return quality != null && quality.isValid();
@@ -109,7 +109,7 @@ public class DataTagHandlerImpl implements DataTagHandler {
         final boolean wasSubscribed = group != null && group.contains(dataTag);
         if (wasSubscribed) {
             log.info("Unsubscribing tag from server.");
-            if (!controllerProxy.unsubscribeDefinition(mapper.getDefinition(dataTag.getId()))) {
+            if (!controllerProxy.getController().unsubscribe(mapper.getDefinition(dataTag.getId()))) {
                 return false;
             }
         }
@@ -153,7 +153,7 @@ public class DataTagHandlerImpl implements DataTagHandler {
                 return;
             }
             try {
-                final var reading = controllerProxy.getActiveEndpoint().read(e.getValue().getNodeId());
+                final var reading = controllerProxy.getController().read(e.getValue().getNodeId());
                 messageSender.onValueUpdate(e.getValue().getClientHandle(), reading.getValue(), reading.getKey());
             } catch (OPCUAException ex) {
                 notRefreshable.add(e.getKey());

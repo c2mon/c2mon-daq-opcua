@@ -4,18 +4,17 @@ import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.Controller;
-import cern.c2mon.daq.opcua.failover.ControllerImpl;
+import cern.c2mon.daq.opcua.failover.NoFailover;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
+import cern.c2mon.daq.opcua.testutils.TestControllerProxy;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
@@ -43,15 +42,14 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     }
 
     @Test
-    public void invalidOnAddDataTagShouldReportFail () {
-        Controller controller = new ControllerImpl(listener, new ExceptionTestEndpoint(listener));
-        ReflectionTestUtils.setField(proxy, "singleServerController", controller);
-        proxy.setFailoverMode(RedundancySupport.None);
-
-        tagChanger.onAddDataTag(tag, changeReport);
+    public void invalidOnAddDataTagShouldReportFail () throws OPCUAException {
+        Controller controller = new NoFailover();
+        controller.initialize(new ExceptionTestEndpoint(null), new String[0]);
+        final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, listener);
+        proxy.setController(controller);
+        final DataTagChanger testTagChanger = new DataTagChanger(new DataTagHandlerImpl(mapper, listener, proxy));
+        testTagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
-
-        proxy = TestUtils.getFailoverProxy(endpoint, listener);
     }
 
     @Test

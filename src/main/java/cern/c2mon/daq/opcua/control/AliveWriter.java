@@ -137,7 +137,7 @@ public class AliveWriter {
             log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
         }
         try {
-            if (controllerProxy.getActiveEndpoint().write(address, castedValue)) {
+            if (controllerProxy.getController().write(address, castedValue)) {
                 log.info("Written successfully to alive, sending status tag.");
                 messageSender.onAlive();
             }

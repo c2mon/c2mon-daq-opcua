@@ -115,7 +115,7 @@ public class CommandTagHandler implements ICommandTagChanger {
     private Object[] executeMethod(ISourceCommandTag tag, Object arg) throws OPCUAException {
         log.info("executeMethod of tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
         final ItemDefinition def = ItemDefinition.of(tag);
-        final Map.Entry<Boolean, Object[]> result = controllerProxy.getActiveEndpoint().callMethod(def, arg);
+        final Map.Entry<Boolean, Object[]> result = controllerProxy.getController().callMethod(def, arg);
         log.info("executeMethod returned {}.", result.getValue());
         if (!result.getKey()) {
             throw new CommunicationException(ExceptionContext.METHOD_CODE);
@@ -128,7 +128,7 @@ public class CommandTagHandler implements ICommandTagChanger {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
             executeWriteCommand(tag, arg);
         } else {
-            final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controllerProxy.getActiveEndpoint().read(ItemDefinition.toNodeId(tag));
+            final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controllerProxy.getController().read(ItemDefinition.toNodeId(tag));
             handleCommandResponseStatusCode(read.getValue(), ExceptionContext.READ);
             final Object original = read.getKey().getValue();
             if (original != null && original.equals(arg)) {
@@ -160,7 +160,7 @@ public class CommandTagHandler implements ICommandTagChanger {
     }
 
     private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException {
-        if (!controllerProxy.getActiveEndpoint().write(ItemDefinition.toNodeId(tag), arg)) {
+        if (!controllerProxy.getController().write(ItemDefinition.toNodeId(tag), arg)) {
             throw new CommunicationException(ExceptionContext.COMMAND_CLASSIC);
         }
     }
