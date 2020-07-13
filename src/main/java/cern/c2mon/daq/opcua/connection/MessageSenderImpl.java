@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ import static cern.c2mon.daq.opcua.connection.MessageSender.EquipmentState.OK;
 @Primary
 public class MessageSenderImpl implements MessageSender, SessionActivityListener {
 
-    private final TagSubscriptionMapper mapper;
+    private final TagSubscriptionMapReader mapper;
     private IEquipmentMessageSender sender;
 
     /**
@@ -54,7 +54,7 @@ public class MessageSenderImpl implements MessageSender, SessionActivityListener
                     this.sender.update(tagId, valueUpdate, quality);
                 }
             } catch (Exception e) {
-                log.error("Caught for clientHandle {} with Mapper at state {}.", clientHandle, mapper.getTagIdDefinitionMap(), e);
+                log.error("Exceptionc caught for clientHandle {} with Mapper at state {}.", clientHandle, mapper.getTagIdDefinitionMap(), e);
             }
         } else {
             onTagInvalid(clientHandle, quality);

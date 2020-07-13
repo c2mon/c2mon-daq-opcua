@@ -3,8 +3,7 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -15,7 +14,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class TagControllerTestBase {
+public abstract class TagHandlerTestBase {
     protected static String ADDRESS_PROTOCOL_TCP = "URI=opc.tcp://";
     protected static String ADDRESS_BASE = "test;serverRetryTimeout=123;serverTimeout=12;aliveWriter=";
 
@@ -28,12 +27,12 @@ public abstract class TagControllerTestBase {
     protected static Map<Long, ISourceDataTag> sourceTags = generateSourceTags();
     protected static String uri;
 
-    TagSubscriptionMapper mapper;
+    TagSubscriptionManager mapper;
     TestEndpoint endpoint;
     TestListeners.TestListener listener;
-    TagController controller;
+    DataTagHandler controller;
     MiloMocker mocker;
-    TestFailoverProxy proxy;
+    TestControllerProxy proxy;
 
 
     public static Map<Long, ISourceDataTag> generateSourceTags () {
@@ -46,11 +45,11 @@ public abstract class TagControllerTestBase {
     @BeforeEach
     public void setUp() throws OPCUAException, InterruptedException {
         uri = ADDRESS_PROTOCOL_TCP + ADDRESS_BASE + true;
-        mapper = new TagSubscriptionMapperImpl();
+        mapper = new TagSubscriptionManager();
         listener = new TestListeners.TestListener(mapper);
         endpoint = new TestEndpoint(listener);
-        proxy = TestUtils.getFailoverProxy(endpoint, mapper, listener);
-        controller = new TagControllerImpl(mapper, listener, proxy);
+        proxy = TestUtils.getFailoverProxy(endpoint, listener);
+        controller = new DataTagHandlerImpl(mapper, listener, proxy);
         mocker = new MiloMocker(endpoint, mapper);
     }
 

@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.spring;
+package cern.c2mon.daq.opcua.retry;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;

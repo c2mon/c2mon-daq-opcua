@@ -2,11 +2,11 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.exceptions.*;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.MiloMapper;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.mapping.*;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
+import com.google.common.base.Joiner;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.Getter;
@@ -64,7 +64,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     private final SecurityModule securityModule;
     private final RetryDelegate retryDelegate;
-    private final TagSubscriptionMapper mapper;
+    private final TagSubscriptionMapReader mapper;
     private final MessageSender messageSender;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
@@ -136,9 +136,11 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-    public void monitorEquipmentState(boolean shouldMonitor, SessionActivityListener listener) {
-        listener = (listener == null) ? (SessionActivityListener) messageSender : listener;
-        if (shouldMonitor && !sessionActivityListeners.contains(listener)) {
+    public void manageSessionActivityListener(boolean add, SessionActivityListener listener) {
+        if (listener == null) {
+            listener = (SessionActivityListener) messageSender;
+        }
+        if (add && !sessionActivityListeners.contains(listener)) {
             sessionActivityListeners.add(listener);
             client.addSessionActivityListener(listener);
             synchronized (this) {
@@ -146,7 +148,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                     listener.onSessionActive(null);
                 }
             }
-        } else {
+        } else if (!add) {
             sessionActivityListeners.remove(listener);
             client.removeSessionActivityListener(listener);
         }
@@ -178,46 +180,12 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @param timeDeadband The timeDeadband of the subscription to delete along with all contained MonitoredItems.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    @Override
-    public void deleteSubscription(int timeDeadband) throws OPCUAException {
+    private void deleteSubscription(int timeDeadband) throws OPCUAException {
         final UaSubscription subscription = subscriptionMap.remove(timeDeadband);
         if (subscription != null) {
             retryDelegate.completeOrThrow(DELETE_SUBSCRIPTION, this::getDisconnectPeriod,
                     () -> client.getSubscriptionManager().deleteSubscription(subscription.getSubscriptionId()));
         }
-    }
-
-    /**
-     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
-     * connection error and notify the endpointListener of future value updates
-     * @param publishingInterval The publishing interval to request for the item definitions
-     * @param definitions        the {@link ItemDefinition}s for which to create monitored items
-     * @return valid client handles
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     */
-    public Map<UInteger, SourceDataTagQuality> subscribeToGroup(int publishingInterval, Collection<ItemDefinition> definitions) throws OPCUAException {
-        log.info("Subscribing definition {} with publishing interval {}.", definitions, publishingInterval);
-        return subscribeWithCallback(publishingInterval, definitions, (item, i) -> item.setValueConsumer(value -> {
-            log.info("Creating callback for definition {}.", definitions);
-            SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
-            final Object updateValue = MiloMapper.toObject(value.getValue());
-            ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
-                    new ValueUpdate(updateValue) :
-                    new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-            messageSender.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
-        }));
-    }
-
-    public Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
-                                                                     Collection<ItemDefinition> definitions,
-                                                                     BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
-        var subscription = getOrCreateSubscription(publishingInterval);
-        var requests = definitions.stream().map(this::toMonitoredItemCreateRequest).collect(toList());
-        return retryDelegate
-                .completeOrThrow(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
-                        () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback))
-                .stream()
-                .collect(toMap(UaMonitoredItem::getClientHandle, item -> MiloMapper.getDataTagQuality(item.getStatusCode())));
     }
 
     /**
@@ -235,8 +203,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             return;
         }
         log.info("Attempt to recreate the subscription.");
-        final Integer publishInterval = subscriptionMap.inverse().get(subscription);
-        final var group = publishInterval == null ? null : mapper.getGroup(publishInterval);
+        final Integer publishInterval = subscriptionMap.inverse().getOrDefault(subscription, -1);
+        final var group =  mapper.getGroup(publishInterval);
         if (group == null || group.size() == 0) {
             throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
         }
@@ -246,10 +214,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             log.error("Could not delete subscription. Proceed with recreation.");
         }
         try {
-            if (subscribeToGroup(publishInterval, group.getTagIds().values())
-                    .entrySet()
-                    .stream()
-                    .noneMatch(e -> e.getValue().isValid())) {
+            if (!resubscribeGroupsAndReportSuccess(group)) {
                 throw new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION);
             }
         } finally {
@@ -257,25 +222,92 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
+    public void recreateAllSubscriptions() throws CommunicationException {
+        final boolean anySuccess = mapper.getGroups().stream().allMatch(group -> {
+            try {
+                return resubscribeGroupsAndReportSuccess(group);
+            } catch (ConfigurationException e) {
+                return false;
+            }
+        });
+        if (!anySuccess) {
+            log.error("Could not recreate any subscriptions. Connect to next server... ");
+            throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);
+        }
+        log.info("Recreated subscriptions on server {}.", uri);
+    }
+
+    private boolean resubscribeGroupsAndReportSuccess(SubscriptionGroup group) throws ConfigurationException {
+        final Map<UInteger, SourceDataTagQuality> handleQualityMap = subscribe(group, group.getTagIds().values());
+        return handleQualityMap != null && handleQualityMap.values().stream().anyMatch(SourceDataTagQuality::isValid);
+    }
+
+    /**
+     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
+     * connection error and notify the endpointListener of future value updates
+     * @param group The subscriptionGroup to add the definitions to
+     * @param definitions        the {@link ItemDefinition}s for which to create monitored items
+     * @return valid client handles
+     */
+    public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException {
+        try {
+            log.info("Subscribing definition {} with publishing interval {}.", definitions, group.getPublishInterval());
+            return subscribeWithCallback(group.getPublishInterval(), definitions, (item, i) -> item.setValueConsumer(value -> {
+                log.info("Creating callback for definition {}.", definitions);
+                SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
+                final Object updateValue = MiloMapper.toObject(value.getValue());
+                ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
+                        new ValueUpdate(updateValue) :
+                        new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
+                messageSender.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
+            }));
+        } catch (ConfigurationException e) {
+          throw e;
+        } catch (OPCUAException e) {
+            final String ids = Joiner.on(", ").join(definitions.stream().map(d -> mapper.getTagId(d.getClientHandle())).toArray());
+            log.error("Tags with IDs {} could not be subscribed on endpoint with uri {}. ", ids, getUri());
+            return definitions.stream()
+                    .map(definition -> Map.entry(definition.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)))
+                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
+    }
+
+    public Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
+                                                                     Collection<ItemDefinition> definitions,
+                                                                     BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
+        var subscription = getOrCreateSubscription(publishingInterval);
+        var requests = definitions.stream().map(this::toMonitoredItemCreateRequest).collect(toList());
+        return retryDelegate
+                .completeOrThrow(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
+                        () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback))
+                .stream()
+                .collect(toMap(UaMonitoredItem::getClientHandle, item -> MiloMapper.getDataTagQuality(item.getStatusCode())));
+    }
+
     /**
      * Delete an item from an OPC UA subscription with a certain number of retries in case of connection. If the
      * subscription contains only the one item, the whole subscription is deleted. error.
      * @param clientHandle    the identifier of the monitored item to remove.
      * @param publishInterval the publishing interval subscription to remove the monitored item from.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public void deleteItemFromSubscription(UInteger clientHandle, int publishInterval) throws OPCUAException {
-        final UaSubscription subscription = subscriptionMap.get(publishInterval);
-        if (subscription != null && subscription.getMonitoredItems().size() <= 1) {
-            deleteSubscription(publishInterval);
-        } else if (subscription != null) {
-            List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
-                    .filter(i -> clientHandle.equals(i.getClientHandle()))
-                    .collect(toList());
-            retryDelegate.completeOrThrow(DELETE_MONITORED_ITEM, this::getDisconnectPeriod,
-                    () -> subscription.deleteMonitoredItems(itemsToRemove));
+    public boolean deleteItemFromSubscription(UInteger clientHandle, int publishInterval) {
+        try {
+            final UaSubscription subscription = subscriptionMap.get(publishInterval);
+            if (subscription != null && subscription.getMonitoredItems().size() <= 1) {
+                deleteSubscription(publishInterval);
+            } else if (subscription != null) {
+                List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
+                        .filter(i -> clientHandle.equals(i.getClientHandle()))
+                        .collect(toList());
+                retryDelegate.completeOrThrow(DELETE_MONITORED_ITEM, this::getDisconnectPeriod,
+                        () -> subscription.deleteMonitoredItems(itemsToRemove));
+            }
+        } catch (OPCUAException ex) {
+            log.error("Tag with ID {} could not be completed successfully on endpoint {}.", mapper.getTagId(clientHandle), getUri());
+            return false;
         }
+        return true;
     }
 
     /**
@@ -368,15 +400,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Check whether a subscription is subscribed as part of the current session.
-     * @param subscription the subscription to check for currentness.
-     * @return true if the subscription is a valid in the current session.
-     */
-    public boolean isCurrent(UaSubscription subscription) {
-        return client.getSubscriptionManager().getSubscriptions().contains(subscription);
-    }
-
-    /**
      * Called when the client is connected to the server and the session activates.
      * @param session the current session
      */
@@ -454,11 +477,12 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      */
     private UaSubscription getOrCreateSubscription(int timeDeadband) throws OPCUAException {
         var subscription = subscriptionMap.get(timeDeadband);
-        if (subscription != null && !isCurrent(subscription)) {
+        if (subscription != null && !client.getSubscriptionManager().getSubscriptions().contains(subscription)) {
             subscription = null;
         }
         if (subscription == null) {
-            subscription = retryDelegate.completeOrThrow(CREATE_SUBSCRIPTION, this::getDisconnectPeriod, () -> client.getSubscriptionManager().createSubscription(timeDeadband));
+            subscription = retryDelegate.completeOrThrow(CREATE_SUBSCRIPTION, this::getDisconnectPeriod,
+                    () -> client.getSubscriptionManager().createSubscription(timeDeadband));
             subscriptionMap.put(timeDeadband, subscription);
         }
         return subscription;

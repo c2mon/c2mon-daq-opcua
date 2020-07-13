@@ -3,13 +3,14 @@ package cern.c2mon.daq.opcua.failover;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
-public interface FailoverProxy {
+public interface ControllerProxy {
 
 
     /**
@@ -30,9 +31,9 @@ public interface FailoverProxy {
 
     /**
      * Remove an ItemDefinition from all active and passive endpoints.
-     * @throws OPCUAException is the actions fails on the currently active endpoint
+     * @return whether the ItemDefinition could be removed successfully from the active endpoint.
      */
-    void unsubscribeDefinition(ItemDefinition definition) throws OPCUAException;
+    boolean unsubscribeDefinition(ItemDefinition definition);
 
-    Map<UInteger, SourceDataTagQuality> subscribeDefinitions(Collection<ItemDefinition> definitions);
+    Map<UInteger, SourceDataTagQuality> subscribeToGroups(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions);
 }

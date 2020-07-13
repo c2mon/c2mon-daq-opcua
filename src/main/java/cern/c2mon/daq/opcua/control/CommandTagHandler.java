@@ -6,7 +6,7 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.ControllerProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -36,13 +36,13 @@ import java.util.concurrent.TimeUnit;
 @Component("commandRunner")
 @Slf4j
 @AllArgsConstructor
-public class CommandRunner implements ICommandTagChanger {
+public class CommandTagHandler implements ICommandTagChanger {
 
     /**
      * The failover proxy to the current endpoint
      */
     @Setter
-    private FailoverProxy failoverProxy;
+    private ControllerProxy controllerProxy;
 
     @Override
     public void onAddCommandTag(ISourceCommandTag sourceCommandTag, ChangeReport changeReport) {
@@ -118,10 +118,10 @@ public class CommandRunner implements ICommandTagChanger {
         final ItemDefinition def = ItemDefinition.of(tag);
         final Map.Entry<Boolean, Object[]> result;
         if (def.getMethodNodeId() == null) {
-            final NodeId parent = failoverProxy.getActiveEndpoint().getParentObjectNodeId(def.getNodeId());
-            result = failoverProxy.getActiveEndpoint().callMethod(parent, def.getNodeId(), arg);
+            final NodeId parent = controllerProxy.getActiveEndpoint().getParentObjectNodeId(def.getNodeId());
+            result = controllerProxy.getActiveEndpoint().callMethod(parent, def.getNodeId(), arg);
         } else {
-            result = failoverProxy.getActiveEndpoint().callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
+            result = controllerProxy.getActiveEndpoint().callMethod(def.getNodeId(), def.getMethodNodeId(), arg);
         }
         log.info("executeMethod returned {}.", result.getValue());
         if (!result.getKey()) {
@@ -135,7 +135,7 @@ public class CommandRunner implements ICommandTagChanger {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
             executeWriteCommand(tag, arg);
         } else {
-            final Map.Entry<ValueUpdate, SourceDataTagQuality> read = failoverProxy.getActiveEndpoint().read(ItemDefinition.toNodeId(tag));
+            final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controllerProxy.getActiveEndpoint().read(ItemDefinition.toNodeId(tag));
             handleCommandResponseStatusCode(read.getValue(), ExceptionContext.READ);
             final Object original = read.getKey().getValue();
             if (original != null && original.equals(arg)) {
@@ -167,7 +167,7 @@ public class CommandRunner implements ICommandTagChanger {
     }
 
     private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException {
-        if (!failoverProxy.getActiveEndpoint().write(ItemDefinition.toNodeId(tag), arg)) {
+        if (!controllerProxy.getActiveEndpoint().write(ItemDefinition.toNodeId(tag), arg)) {
             throw new CommunicationException(ExceptionContext.COMMAND_CLASSIC);
         }
     }

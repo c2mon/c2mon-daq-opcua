@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class TagControllerTest extends TagControllerTestBase {
+public class DataTagHandlerTest extends TagHandlerTestBase {
 
     SourceCommandTag tag;
     SourceCommandTagValue value;
@@ -32,7 +32,7 @@ public class TagControllerTest extends TagControllerTestBase {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
         controller.subscribeTags(sourceTags.values());
-        sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag).contains(dataTag)));
+        sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag.getTimeDeadband()).contains(dataTag)));
     }
 
     @Test

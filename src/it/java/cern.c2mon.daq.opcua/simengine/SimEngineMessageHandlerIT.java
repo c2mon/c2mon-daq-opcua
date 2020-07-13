@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.control.TagController;
+import cern.c2mon.daq.opcua.control.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.failover.Controller;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -54,10 +54,8 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     @Autowired ApplicationContext context;
     @Autowired TestListeners.Pulse endpointListener;
-    @Autowired
-    TagController controller;
-    @Autowired
-    Controller noFailover;
+    @Autowired DataTagHandler tagHandler;
+    @Autowired Controller singleServerController;
 
 
     private OPCUAMessageHandler handler;
@@ -71,14 +69,13 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     @Override
     protected void beforeTest() throws Exception {
-        log.info("############### SET UP ##############");
         handler = (OPCUAMessageHandler) msgHandler;
         handler.setContext(context);
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
-        ReflectionTestUtils.setField(controller, "messageSender", endpointListener);
-        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "messageSender", endpointListener);
-        ReflectionTestUtils.setField(noFailover, "messageSender", endpointListener);
+        ReflectionTestUtils.setField(tagHandler, "messageSender", endpointListener);
+        ReflectionTestUtils.setField(singleServerController.currentEndpoint(), "messageSender", endpointListener);
+        ReflectionTestUtils.setField(singleServerController, "messageSender", endpointListener);
         mapEquipmentAddress();
         log.info("############### TEST ##############");
     }

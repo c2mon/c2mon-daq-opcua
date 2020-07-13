@@ -3,7 +3,8 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.NoFailover;
+import cern.c2mon.daq.opcua.failover.Controller;
+import cern.c2mon.daq.opcua.failover.ControllerImpl;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -20,7 +21,7 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DataTagChangerTest extends TagControllerTestBase {
+public class DataTagChangerTest extends TagHandlerTestBase {
 
     private IDataTagChanger tagChanger;
     ChangeReport changeReport;
@@ -29,7 +30,7 @@ public class DataTagChangerTest extends TagControllerTestBase {
     @BeforeEach
     public void castToDataTagChanger() throws OPCUAException {
         tag = EdgeTagFactory.DipData.createDataTag();
-        tagChanger = new TagChanger(controller);
+        tagChanger = new DataTagChanger(controller);
         changeReport = new ChangeReport();
     }
 
@@ -43,14 +44,14 @@ public class DataTagChangerTest extends TagControllerTestBase {
 
     @Test
     public void invalidOnAddDataTagShouldReportFail () {
-        final NoFailover noFailover = new NoFailover(mapper, listener, null, null, new ExceptionTestEndpoint(listener));
-        ReflectionTestUtils.setField(proxy, "noFailover", noFailover);
-        proxy.setFailoverMode(RedundancySupport.None, mapper, null, null);
+        Controller controller = new ControllerImpl(listener, new ExceptionTestEndpoint(listener));
+        ReflectionTestUtils.setField(proxy, "singleServerController", controller);
+        proxy.setFailoverMode(RedundancySupport.None);
 
         tagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
 
-        proxy = TestUtils.getFailoverProxy(endpoint, mapper, listener);
+        proxy = TestUtils.getFailoverProxy(endpoint, listener);
     }
 
     @Test

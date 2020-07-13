@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -20,9 +20,9 @@ import static org.easymock.EasyMock.*;
 public class MiloMocker {
 
     TestEndpoint client;
-    TagSubscriptionMapper mapper;
+    TagSubscriptionMapReader mapper;
 
-    public MiloMocker(Endpoint client, TagSubscriptionMapper mapper) {
+    public MiloMocker(Endpoint client, TagSubscriptionMapReader mapper) {
         assert client instanceof TestEndpoint;
         this.client = (TestEndpoint) client;
         this.mapper = mapper;

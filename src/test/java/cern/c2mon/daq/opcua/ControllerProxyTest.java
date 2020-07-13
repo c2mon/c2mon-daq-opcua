@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.*;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapperImpl;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -17,21 +17,21 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.easymock.EasyMock.*;
 
-public class FailoverProxyTest {
+public class ControllerProxyTest {
     AppConfigProperties config = TestUtils.createDefaultConfig();
     ApplicationContext applicationContext = createMock(ApplicationContext.class);
-    FailoverProxy proxy;
+    ControllerProxy proxy;
     TestEndpoint testEndpoint;
-    NoFailover noFailover = createMock(NoFailover.class);
-    ColdFailover coldFailover = createMock(ColdFailover.class);
+    Controller singleServerController = createNiceMock(Controller.class);
+    ColdFailoverDecorator coldFailover = createNiceMock(ColdFailoverDecorator.class);
 
     @BeforeEach
     public void setUp() {
-        final TestListeners.TestListener listener = new TestListeners.TestListener(new TagSubscriptionMapperImpl());
+        final TestListeners.TestListener listener = new TestListeners.TestListener(new TagSubscriptionManager());
         testEndpoint = new TestEndpoint(listener);
-        proxy = new FailoverProxyImpl(applicationContext, config, listener, noFailover);
+        proxy = new ControllerProxyImpl(applicationContext, config, listener, singleServerController);
         expect(coldFailover.currentEndpoint()).andReturn(testEndpoint).anyTimes();
-        expect(noFailover.currentEndpoint()).andReturn(testEndpoint).anyTimes();
+        expect(singleServerController.currentEndpoint()).andReturn(testEndpoint).anyTimes();
     }
 
     @Test
@@ -39,10 +39,10 @@ public class FailoverProxyTest {
         expect(testEndpoint.getServerRedundancyTypeNode().getRedundancySupport())
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
                 .once();
-        mockFailoverInitialization(noFailover);
-        replay(testEndpoint.getServerRedundancyTypeNode(), noFailover);
+        mockFailoverInitialization(singleServerController);
+        replay(testEndpoint.getServerRedundancyTypeNode(), singleServerController);
         proxy.connect("test");
-        verify(noFailover);
+        verify(singleServerController);
     }
 
     @Test
@@ -50,36 +50,36 @@ public class FailoverProxyTest {
         expect(testEndpoint.getServerRedundancyTypeNode().getRedundancySupport())
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
                 .once();
-        mockFailoverInitialization(noFailover);
-        replay(testEndpoint.getServerRedundancyTypeNode(), noFailover);
+        mockFailoverInitialization(singleServerController);
+        replay(testEndpoint.getServerRedundancyTypeNode(), singleServerController);
         proxy.connect("test");
         verify(testEndpoint.getServerRedundancyTypeNode());
     }
 
     @Test
     public void coldConfigNoUrisShouldQueryServerForUrisNotForMode() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(ColdFailoverDecorator.class.getName());
         mockServerUriCall();
         expect(applicationContext.getBean(EasyMock.<Class>anyObject())).andReturn(coldFailover).anyTimes();
         mockFailoverInitialization(coldFailover);
-        replay(applicationContext, noFailover, coldFailover,testEndpoint.getServerRedundancyTypeNode());
+        replay(applicationContext, singleServerController, coldFailover,testEndpoint.getServerRedundancyTypeNode());
         proxy.connect("test");
         verify(coldFailover);
     }
 
     @Test
     public void coldConfigWithUrisNoQueryServer() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(ColdFailoverDecorator.class.getName());
         config.setRedundantServerUris(Arrays.asList("test1", "test2"));
         expect(applicationContext.getBean(EasyMock.<Class>anyObject())).andReturn(coldFailover).anyTimes();
         mockFailoverInitialization(coldFailover);
-        replay(applicationContext, noFailover, coldFailover);
+        replay(applicationContext, singleServerController, coldFailover);
         proxy.connect("test");
         verify(coldFailover);
     }
 
     private void mockFailoverInitialization(Controller mode) throws OPCUAException {
-        mode.initializeMonitoring(anyString(), anyObject(), anyObject());
+        mode.initializeMonitoring(anyObject());
         expectLastCall().atLeastOnce();
     }
 

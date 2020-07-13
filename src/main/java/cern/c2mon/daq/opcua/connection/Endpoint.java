@@ -5,6 +5,7 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -32,7 +33,7 @@ public interface Endpoint {
      */
     void initialize(String uri) throws OPCUAException;
 
-    void monitorEquipmentState(boolean shouldMonitor, SessionActivityListener listener);
+    void manageSessionActivityListener(boolean add, SessionActivityListener listener);
 
     String getUri();
 
@@ -43,36 +44,26 @@ public interface Endpoint {
     void disconnect() throws OPCUAException;
 
     /**
-     * Delete an existing subscription.
-     * @param publishInterval The publishInterval of the subscription to delete along with all contained
-     *                        MonitoredItems.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     */
-    void deleteSubscription(int publishInterval) throws OPCUAException;
-
-    /**
-     * Add a list of item definitions as monitored items to a subscription and notify the endpointListener of future
-     * value updates
-     * @param publishingInterval The publishing interval to request for the item definitions
+     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
+     * connection error and notify the endpointListener of future value updates
+     * @param group The subscriptionGroup to add the definitions to
      * @param definitions        the {@link ItemDefinition}s for which to create monitored items
-     * @return a map of the client handles corresponding to the item definitions along with the associated tag quality
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @return valid client handles
      */
-    Map<UInteger, SourceDataTagQuality> subscribeToGroup(int publishingInterval, Collection<ItemDefinition> definitions) throws OPCUAException;
-
-    Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
-                                                              Collection<ItemDefinition> definitions,
-                                                              BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
+    Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException;
 
     void recreateSubscription(UaSubscription subscription) throws OPCUAException;
 
+    void recreateAllSubscriptions() throws CommunicationException;
+
+    Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException;
     /**
      * Delete a monitored item from an OPC UA subscription.
      * @param clientHandle    the identifier of the monitored item to remove.
      * @param publishInterval the publishInterval of the subscription to remove the monitored item from.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @return whether the monitored item could be removed successfully
      */
-    void deleteItemFromSubscription(UInteger clientHandle, int publishInterval) throws OPCUAException;
+    boolean deleteItemFromSubscription(UInteger clientHandle, int publishInterval);
 
     /**
      * Read the current value from a node on the currently connected OPC UA server
@@ -118,12 +109,5 @@ public interface Endpoint {
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException;
-
-    /**
-     * Check whether a subscription is subscribed as part of the current session.
-     * @param subscription the subscription to check for currentness.
-     * @return true if the subscription is a valid in the current session.
-     */
-    boolean isCurrent(UaSubscription subscription);
 
 }

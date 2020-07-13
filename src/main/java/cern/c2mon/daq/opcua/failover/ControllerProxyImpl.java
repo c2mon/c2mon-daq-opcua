@@ -7,6 +7,7 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,11 +17,13 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionException;
 
 /**
@@ -32,15 +35,13 @@ import java.util.concurrent.CompletionException;
 @RequiredArgsConstructor
 @Component(value = "failoverProxy")
 @Primary
-public class FailoverProxyImpl implements FailoverProxy {
+public class ControllerProxyImpl implements ControllerProxy {
     protected final ApplicationContext appContext;
     protected final AppConfigProperties config;
     protected final MessageSender messageSender;
 
-    @Lazy
-    protected final NoFailover noFailover;
-
-    protected Controller failoverMode;
+    protected final Controller singleServerController;
+    protected Controller currentController;
 
     /**
      * Delegated failover handling to an appropriate {@link Controller} according to the application configuration or,
@@ -57,27 +58,27 @@ public class FailoverProxyImpl implements FailoverProxy {
     @Override
     public void connect(String uri) throws OPCUAException {
         try {
-            String[] redundantUris;
-            if (loadedConfiguredFailoverSuccessfully()) {
-                redundantUris = failoverMode instanceof NoFailover ?
-                        new String[0] : loadRedundantUris(noFailover.currentEndpoint(), uri);
-            } else {
-                failoverMode = noFailover;
-                final Map.Entry<RedundancySupport, String[]> redundancySupport = redundancySupport(failoverMode.currentEndpoint(), uri);
+            String[] redundantUris = new String[0];
+            singleServerController.connect(uri);
+            final boolean wasFailoverLoadedFromConfig = loadedFailoverFromConfigurationSuccessfully();
+            if (wasFailoverLoadedFromConfig && currentController instanceof FailoverDecorator) {
+                redundantUris = loadRedundantUris(singleServerController);
+            } else if (!wasFailoverLoadedFromConfig) {
+                final Map.Entry<RedundancySupport, String[]> redundancySupport = redundancySupport(singleServerController.currentEndpoint(), uri);
                 switch (redundancySupport.getKey()) {
                     case HotAndMirrored:
                     case Hot:
                     case Warm:
                     case Cold:
-                        failoverMode = appContext.getBean(ColdFailover.class);
+                        currentController = appContext.getBean(ColdFailoverDecorator.class);
                         break;
                     default:
-                        failoverMode = noFailover;
+                        currentController = singleServerController;
                 }
                 redundantUris = redundancySupport.getValue();
             }
-            log.info("Using redundancy mode {}, redundant URIs {}.", failoverMode.getClass().getName(), redundantUris);
-            failoverMode.initializeMonitoring(uri, noFailover.currentEndpoint(), redundantUris);
+            log.info("Using redundancy mode {}, redundant URIs {}.", currentController.getClass().getName(), redundantUris);
+            currentController.initializeMonitoring(redundantUris);
         } catch (OPCUAException e) {
             messageSender.onEquipmentStateUpdate(MessageSender.EquipmentState.CONNECTION_FAILED);
             throw e;
@@ -89,8 +90,8 @@ public class FailoverProxyImpl implements FailoverProxy {
      */
     @Override
     public void stop() {
-        if (failoverMode != null) {
-            failoverMode.stop();
+        if (currentController != null) {
+            currentController.stop();
         }
     }
 
@@ -100,26 +101,25 @@ public class FailoverProxyImpl implements FailoverProxy {
      */
     @Override
     public Endpoint getActiveEndpoint() {
-        return failoverMode.currentEndpoint();
+        return currentController.currentEndpoint();
     }
 
     /**
      * Called when creating or modifying subscriptions, or disconnecting to fetch all those endpoints on which action
      * shall be taken according to the failover mode. Sampling and publishing is set directly in the endpoint.
-     * @return all endpoints on which subscriptions shall created or modified, or from which it is necessary to
-     * disconnect. If the connected server is not within a redundant server set, an empty list is returned.
+     * @return whether the itemDefinition could be removed successfully from the active endpoint
      */
     @Override
-    public void unsubscribeDefinition(ItemDefinition definition) throws OPCUAException {
-        failoverMode.unsubscribe(definition);
+    public boolean unsubscribeDefinition(ItemDefinition definition) {
+        return currentController.unsubscribe(definition);
     }
 
     @Override
-    public Map<UInteger, SourceDataTagQuality> subscribeDefinitions(Collection<ItemDefinition> definitions) {
-        return failoverMode.subscribe(definitions);
+    public Map<UInteger, SourceDataTagQuality> subscribeToGroups(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions) {
+        return currentController.subscribe(groupsWithDefinitions);
     }
 
-    private boolean loadedConfiguredFailoverSuccessfully() {
+    private boolean loadedFailoverFromConfigurationSuccessfully() {
         final String customRedundancyMode = config.getRedundancyMode();
         if (customRedundancyMode == null || customRedundancyMode.isEmpty()) {
             return false;
@@ -127,7 +127,7 @@ public class FailoverProxyImpl implements FailoverProxy {
         try {
             final Class<?> redundancyMode = Class.forName(customRedundancyMode);
             if (Controller.class.isAssignableFrom(redundancyMode)) {
-                failoverMode = (Controller) appContext.getBean(redundancyMode);
+                currentController = (Controller) appContext.getBean(redundancyMode);
                 return true;
             }
             log.error("The redundancy mode in the application properties {} must implement the FailoverProxy interface. Proceeding without.", config.getRedundancyMode());
@@ -139,17 +139,16 @@ public class FailoverProxyImpl implements FailoverProxy {
         return false;
     }
 
-    private String[] loadRedundantUris(Endpoint endpoint, String uri) throws OPCUAException {
-        endpoint.initialize(uri);
-        String[] redundantUris = loadRedundantUris();
+    private String[] loadRedundantUris(Controller controller) throws OPCUAException {
+        String[] redundantUris = loadRedundantUrisFromConfig();
         if (redundantUris.length == 0) {
-            final ServerRedundancyTypeNode redundancyNode = endpoint.getServerRedundancyNode();
+            final ServerRedundancyTypeNode redundancyNode = controller.currentEndpoint().getServerRedundancyNode();
             redundantUris = getRedundantUriArray(redundancyNode);
         }
         return redundantUris;
     }
 
-    private String[] loadRedundantUris() {
+    private String[] loadRedundantUrisFromConfig() {
         final Collection<String> redundantServerUris = config.getRedundantServerUris();
         if (redundantServerUris != null && !redundantServerUris.isEmpty()) {
             log.info("Loaded redundant uris from configuration: {}.", redundantServerUris);
@@ -177,7 +176,7 @@ public class FailoverProxyImpl implements FailoverProxy {
     }
 
     private String[] getRedundantUriArray(ServerRedundancyTypeNode redundancyNode) {
-        String[] redundantUris = loadRedundantUris();
+        String[] redundantUris = loadRedundantUrisFromConfig();
         if (redundantUris.length == 0) {
             redundantUris = ((NonTransparentRedundancyTypeNode) redundancyNode).getServerUriArray().join();
             log.info("Loaded redundant uri array from server: {}.", Arrays.toString(redundantUris));

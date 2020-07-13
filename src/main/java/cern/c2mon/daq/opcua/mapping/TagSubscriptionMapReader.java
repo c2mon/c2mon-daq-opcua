@@ -20,36 +20,15 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 
-public interface TagSubscriptionMapper {
-
-    Map<Integer, SubscriptionGroup> getSubscriptionGroups();
-
+public interface TagSubscriptionMapReader {
     Map<Long, ItemDefinition> getTagIdDefinitionMap();
-
-    Map<SubscriptionGroup, List<ItemDefinition>> mapToGroups(Collection<ItemDefinition> definitions);
-
-    SubscriptionGroup getGroup (ISourceDataTag dataTag);
-
     SubscriptionGroup getGroup (int timeDeadband);
-
+    Collection<SubscriptionGroup> getGroups ();
     ItemDefinition getDefinition(Long tagId);
-
-    long getTagId(ItemDefinition definition);
-
-    ItemDefinition getOrCreateDefinition(ISourceDataTag tag);
-
     Long getTagId(UInteger clientHandle);
-
-    void addTagToGroup (Long dataTag);
-
-    boolean removeTag(ISourceDataTag dataTag);
-
-    void clear();
-
-    boolean wasSubscribed(ISourceDataTag dataTag);
+    ItemDefinition getOrCreateDefinition(ISourceDataTag tag);
 }
 

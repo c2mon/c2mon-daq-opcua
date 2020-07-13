@@ -21,9 +21,10 @@ import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.ControllerProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import lombok.NonNull;
@@ -33,26 +34,31 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * The Controller acts as an interface in between The {@link cern.c2mon.daq.opcua.OPCUAMessageHandler}'s mapping of data
  * points as SourceDataTags, and the {@link cern.c2mon.daq.opcua.connection.Endpoint}'s mapping of points in the address space
  * using uint clientHandles.
  */
-@Component("controller")
+@Component("tagController")
 @Slf4j
 @RequiredArgsConstructor
 @Lazy
-public class TagControllerImpl implements TagController {
+public class DataTagHandlerImpl implements DataTagHandler {
 
-    private final TagSubscriptionMapper mapper;
+    private final TagSubscriptionManager mapper;
     private final MessageSender messageSender;
-    private final FailoverProxy failoverProxy;
+    private final ControllerProxy controllerProxy;
+
+    @Override
+    public void reset() {
+        mapper.clear();
+    }
 
     /**
      * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
@@ -64,8 +70,13 @@ public class TagControllerImpl implements TagController {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ExceptionContext.DATATAGS_EMPTY);
         }
-        final Collection<ItemDefinition> definitions = dataTags.stream().map(mapper::getOrCreateDefinition).collect(Collectors.toList());
-        final Map<UInteger, SourceDataTagQuality> handleQualityMap = failoverProxy.subscribeDefinitions(definitions);
+        final Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions = dataTags.stream()
+                .map(mapper::getOrCreateDefinition)
+                .collect(groupingBy(ItemDefinition::getTimeDeadband))
+                .entrySet()
+                .stream()
+                .collect(toMap(e -> mapper.getGroup(e.getKey()), Map.Entry::getValue));
+        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribeToGroups(groupsWithDefinitions);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
     }
 
@@ -78,7 +89,9 @@ public class TagControllerImpl implements TagController {
     @Override
     public synchronized boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
         ItemDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
-        final Map<UInteger, SourceDataTagQuality> handleQualityMap = failoverProxy.subscribeDefinitions(Collections.singletonList(definition));
+        final ConcurrentHashMap<SubscriptionGroup, List<ItemDefinition>> map = new ConcurrentHashMap<>();
+        map.put(mapper.getGroup(definition.getTimeDeadband()), Collections.singletonList(definition));
+        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribeToGroups(map);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
         final SourceDataTagQuality quality = handleQualityMap.get(definition.getClientHandle());
         return quality != null && quality.isValid();
@@ -92,12 +105,11 @@ public class TagControllerImpl implements TagController {
      */
     @Override
     public synchronized boolean removeTag(final ISourceDataTag dataTag) {
-        final boolean wasSubscribed = mapper.wasSubscribed(dataTag);
+        final SubscriptionGroup group = mapper.getGroup(dataTag.getTimeDeadband());
+        final boolean wasSubscribed = group != null && group.contains(dataTag);
         if (wasSubscribed) {
             log.info("Unsubscribing tag from server.");
-            try {
-                failoverProxy.unsubscribeDefinition(mapper.getDefinition(dataTag.getId()));
-            } catch (OPCUAException e) {
+            if (!controllerProxy.unsubscribeDefinition(mapper.getDefinition(dataTag.getId()))) {
                 return false;
             }
         }
@@ -141,7 +153,7 @@ public class TagControllerImpl implements TagController {
                 return;
             }
             try {
-                final var reading = failoverProxy.getActiveEndpoint().read(e.getValue().getNodeId());
+                final var reading = controllerProxy.getActiveEndpoint().read(e.getValue().getNodeId());
                 messageSender.onValueUpdate(e.getValue().getClientHandle(), reading.getValue(), reading.getKey());
             } catch (OPCUAException ex) {
                 notRefreshable.add(e.getKey());

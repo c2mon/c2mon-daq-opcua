@@ -2,11 +2,11 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.MessageSender;
-import cern.c2mon.daq.opcua.control.TagController;
+import cern.c2mon.daq.opcua.control.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.FailoverProxy;
-import cern.c2mon.daq.opcua.failover.NoFailover;
+import cern.c2mon.daq.opcua.failover.Controller;
+import cern.c2mon.daq.opcua.failover.ControllerProxy;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -43,10 +43,10 @@ public class SecurityIT {
 
 
     @Autowired AppConfigProperties config;
-    @Autowired FailoverProxy failoverProxy;
-    @Autowired TagController controller;
-    @Autowired FailoverProxy testFailoverProxy;
-    @Autowired NoFailover noFailover;
+    @Autowired ControllerProxy controllerProxy;
+    @Autowired DataTagHandler tagHandler;
+    @Autowired ControllerProxy testControllerProxy;
+    @Autowired Controller singleServerController;
     @Autowired TestListeners.Pulse listener;
 
     private String uri;
@@ -60,10 +60,10 @@ public class SecurityIT {
     @BeforeEach
     public void setUp() {
         uri = "opc.tcp://" + active.getContainerIpAddress() + ":" + active.getFirstMappedPort();
-        ReflectionTestUtils.setField(failoverProxy, "messageSender", listener);
-        ReflectionTestUtils.setField(controller, "messageSender", listener);
-        ReflectionTestUtils.setField(controller, "failoverProxy", testFailoverProxy);
-        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "messageSender", listener);
+        ReflectionTestUtils.setField(controllerProxy, "messageSender", listener);
+        ReflectionTestUtils.setField(tagHandler, "messageSender", listener);
+        ReflectionTestUtils.setField(tagHandler, "controllerProxy", testControllerProxy);
+        ReflectionTestUtils.setField(singleServerController.currentEndpoint(), "messageSender", listener);
         listener.reset();
     }
 
@@ -76,20 +76,20 @@ public class SecurityIT {
         cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
         final var f = listener.listen();
-        failoverProxy.stop();
+        controllerProxy.stop();
         try {
             f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
         } catch (TimeoutException | CompletionException | ExecutionException e) {
             // assure that server has time to disconnect, fails for test on failed connections
         }
-        controller = null;
+        tagHandler = null;
     }
 
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
         final var f = listener.getStateUpdate();
-        failoverProxy.connect(uri);
-        controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
+        controllerProxy.connect(uri);
+        tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
@@ -132,7 +132,7 @@ public class SecurityIT {
         trustCertificatesOnClient();
 
         final var state = listener.listen();
-        failoverProxy.connect(uri);
+        controllerProxy.connect(uri);
         assertEquals(MessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
@@ -147,18 +147,18 @@ public class SecurityIT {
     private CompletableFuture<MessageSender.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
         log.info("Initial connection attempt...");
         try {
-            failoverProxy.connect(uri);
+            controllerProxy.connect(uri);
         } catch (CommunicationException e) {
             // expected behavior: rejected by the server
         }
-        failoverProxy.stop();
+        controllerProxy.stop();
 
         log.info("Trust certificates server-side and reconnect...");
         trustCertificates();
         final var state = listener.listen();
 
-        failoverProxy.connect(uri);
-        controller.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
+        controllerProxy.connect(uri);
+        tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         return state;
     }
 

@@ -19,32 +19,28 @@ package cern.c2mon.daq.opcua.mapping;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TagSubscriptionMapperTest extends MappingBase {
+public class TagSubscriptionManagerTest extends MappingBase {
 
     @Test
     public void getGroupForTagDoesNotAddTagToGroup() {
-        SubscriptionGroup group = mapper.getGroup(tag);
+        SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
 
         assertFalse(group.contains(tag));
     }
 
     @Test
     public void toGroupCreatesProperDeadband() {
-        SubscriptionGroup group = mapper.getGroup(tag);
+        SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
 
         assertEquals(tag.getTimeDeadband(), group.getPublishInterval());
     }
 
     @Test
     public void secondExecutionOfTagToGroupShouldReturnPriorGroup() {
-        SubscriptionGroup group1 = mapper.getGroup(tag);
-        SubscriptionGroup group2 = mapper.getGroup(tag);
+        SubscriptionGroup group1 = mapper.getGroup(tag.getTimeDeadband());
+        SubscriptionGroup group2 = mapper.getGroup(tag.getTimeDeadband());
 
         assertEquals(group1, group2);
     }
@@ -71,54 +67,18 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void tagsWithSameDeadbandToGroupShouldReturnSameGroup() {
-        SubscriptionGroup group1 = mapper.getGroup(tag);
-        SubscriptionGroup group2 = mapper.getGroup(tagWithSameDeadband);
+        SubscriptionGroup group1 = mapper.getGroup(tag.getTimeDeadband());
+        SubscriptionGroup group2 = mapper.getGroup(tagWithSameDeadband.getTimeDeadband());
 
         assertEquals(group1, group2);
     }
 
     @Test
     public void tagsWithDifferentDeadbandsToGroupReturnDifferentGroup() {
-        SubscriptionGroup group1 = mapper.getGroup(tag);
-        SubscriptionGroup group2 = mapper.getGroup(tagWithDifferentDeadband);
+        SubscriptionGroup group1 = mapper.getGroup(tag.getTimeDeadband());
+        SubscriptionGroup group2 = mapper.getGroup(tagWithDifferentDeadband.getTimeDeadband());
 
         assertNotEquals(group1, group2);
-    }
-
-    @Test
-    public void mapToGroupsShouldReturnAsManyGroupsAsDistinctDeadbands() {
-        final List<ItemDefinition> definitions = Stream.of(tag, tagWithDifferentDeadband, tagWithSameDeadband).map(tag -> mapper.getOrCreateDefinition(tag)).collect(Collectors.toList());
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapToGroups(definitions);
-        assertEquals(2, pairs.size());
-    }
-
-    @Test
-    public void mapToGroupsShouldCombineTagsWithSameDeadbands() {
-        final List<ItemDefinition> expected = Arrays.asList(mapper.getOrCreateDefinition(tag), mapper.getOrCreateDefinition(tagWithSameDeadband));
-        final List<ItemDefinition> definitions = Stream.of(tag, tagWithDifferentDeadband, tagWithSameDeadband).map(tag -> mapper.getOrCreateDefinition(tag)).collect(Collectors.toList());
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapToGroups(definitions);
-        SubscriptionGroup groupWithTwoTags = mapper.getGroup(tag);
-        final List<ItemDefinition> actual = pairs.get(groupWithTwoTags);
-        assertEquals(expected, actual);
-    }
-
-    @Test
-    public void mapToGroupsShouldSeparateTagsWithDifferentDeadbands() {
-        final List<ItemDefinition> definitions = Stream.of(tag, tagWithDifferentDeadband, tagWithSameDeadband).map(tag -> mapper.getOrCreateDefinition(tag)).collect(Collectors.toList());
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapToGroups(definitions);
-
-        SubscriptionGroup group1 = mapper.getGroup(tag);
-        SubscriptionGroup group2 = mapper.getGroup(tagWithDifferentDeadband);
-
-        assertEquals(mapper.getOrCreateDefinition(tag), pairs.get(group1).get(0));
-        assertEquals(mapper.getOrCreateDefinition(tagWithDifferentDeadband), pairs.get(group2).get(0));
-    }
-
-    @Test
-    public void tagsToGroupsShouldNotAddTagsToGroups() {
-        final List<ItemDefinition> definitions = Stream.of(tag, tagWithDifferentDeadband, tagWithSameDeadband).map(tag -> mapper.getOrCreateDefinition(tag)).collect(Collectors.toList());
-        Map<SubscriptionGroup, List<ItemDefinition>> pairs = mapper.mapToGroups(definitions);
-        assertFalse(pairs.keySet().stream().anyMatch(group -> group.contains(tag)));
     }
 
     @Test
@@ -128,13 +88,13 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void removeTagFromEmptyGroupShouldReturnFalse() {
-        mapper.getGroup(tag);
+        mapper.getGroup(tag.getTimeDeadband());
         assertFalse(mapper.removeTag(tag));
     }
 
     @Test
     public void removeTagFromGroupShouldDeleteCorrespondingDefinition() {
-        SubscriptionGroup group = mapper.getGroup(tag);
+        SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
         mapper.addTagToGroup(tag.getId());
         mapper.removeTag(tag);
         assertFalse(group.contains(tag));
@@ -142,7 +102,7 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void removeExistingTagShouldReturnTrue() {
-        SubscriptionGroup group = mapper.getGroup(tag);
+        mapper.getOrCreateDefinition(tag);
         mapper.addTagToGroup(tag.getId());
         assertTrue(mapper.removeTag(tag));
     }
@@ -173,7 +133,8 @@ public class TagSubscriptionMapperTest extends MappingBase {
 
     @Test
     public void registerDefinitionInGroupShouldAddDefinitionToGroup() {
-        SubscriptionGroup group = mapper.getGroup(tag);
+        mapper.getOrCreateDefinition(tag);
+        SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
         mapper.addTagToGroup(tag.getId());
         assertTrue(group.contains(tag));
     }
@@ -182,16 +143,16 @@ public class TagSubscriptionMapperTest extends MappingBase {
     public void registerDefinitionTwiceShouldThrowError() {
         mapper.getOrCreateDefinition(tag);
         mapper.addTagToGroup(tag.getId());
-        final var size = mapper.getGroup(tag).size();
+        final var size = mapper.getGroup(tag.getTimeDeadband()).size();
         mapper.addTagToGroup(tag.getId());
-        assertEquals(size, mapper.getGroup(tag).size());
+        assertEquals(size, mapper.getGroup(tag.getTimeDeadband()).size());
     }
 
     @Test
     public void registerDefinitionsInGroupShouldAddAllDefinitionsToGroup() {
         mapper.getOrCreateDefinition(tag);
         mapper.getOrCreateDefinition(tagWithSameDeadband);
-        SubscriptionGroup group = mapper.getGroup(tag);
+        SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
 
         mapper.addTagToGroup(tag.getId());
         mapper.addTagToGroup(tagWithSameDeadband.getId());

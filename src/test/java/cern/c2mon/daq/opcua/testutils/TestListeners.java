@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.connection.MessageSender;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
@@ -38,7 +38,7 @@ public abstract class TestListeners {
         CompletableFuture<ValueUpdate> pulseTagUpdate = new CompletableFuture<>();
         CompletableFuture<ValueUpdate> tagValUpdate = new CompletableFuture<>();
 
-        public Pulse(TagSubscriptionMapper mapper) {
+        public Pulse(TagSubscriptionMapReader mapper) {
             super(mapper);
         }
 
@@ -76,7 +76,7 @@ public abstract class TestListeners {
         CompletableFuture<Void> alive = new CompletableFuture<>();
 
         @Autowired
-        protected final TagSubscriptionMapper mapper;
+        protected final TagSubscriptionMapReader mapper;
 
         public void reset() {
             tagUpdate = new CompletableFuture<>();

@@ -25,41 +25,31 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toMap;
 
 @NoArgsConstructor
 @Component("mapper")
 @Getter
-public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
+public class TagSubscriptionManager implements TagSubscriptionWriter, TagSubscriptionMapReader {
 
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
     private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
 
     @Override
-    public Map<SubscriptionGroup, List<ItemDefinition>> mapToGroups(Collection<ItemDefinition> definitions) {
-        return definitions
-                .stream()
-                .collect(groupingBy(ItemDefinition::getTimeDeadband))
-                .entrySet()
-                .stream()
-                .collect(toMap(e -> getOrCreateGroup(e.getKey()),Map.Entry::getValue));
+    public Collection<SubscriptionGroup> getGroups() {
+        return subscriptionGroups.values();
     }
-
-    @Override
-    public SubscriptionGroup getGroup(ISourceDataTag dataTag) {
-        getOrCreateDefinition(dataTag);
-        return getOrCreateGroup(dataTag.getTimeDeadband());
-    }
-
 
     @Override
     public SubscriptionGroup getGroup(int timeDeadband) {
-        return subscriptionGroups.get(timeDeadband);
+        if (groupExists(timeDeadband)) {
+            return subscriptionGroups.get(timeDeadband);
+        } else {
+            SubscriptionGroup group = new SubscriptionGroup(timeDeadband);
+            subscriptionGroups.put(timeDeadband, group);
+            return group;
+        }
     }
 
     @Override
@@ -83,12 +73,6 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     }
 
     @Override
-    public long getTagId(ItemDefinition definition) {
-        return tagIdDefinitionMap.inverse().get(definition);
-    }
-
-
-    @Override
     public Long getTagId(UInteger clientHandle) {
         return tagIdDefinitionMap.entrySet().stream()
                 .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
@@ -99,8 +83,10 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
 
     @Override
     public void addTagToGroup(Long tagId) {
-        final SubscriptionGroup group = getOrCreateGroup(tagIdDefinitionMap.get(tagId).getTimeDeadband());
-        group.add(tagId, tagIdDefinitionMap.get(tagId));
+        if (tagIdDefinitionMap.containsKey(tagId)) {
+            final SubscriptionGroup group = getGroup(tagIdDefinitionMap.get(tagId).getTimeDeadband());
+            group.add(tagId, tagIdDefinitionMap.get(tagId));
+        }
     }
 
 
@@ -122,22 +108,6 @@ public class TagSubscriptionMapperImpl implements TagSubscriptionMapper {
     public void clear() {
         tagIdDefinitionMap.clear();
         subscriptionGroups.clear();
-    }
-
-    @Override
-    public boolean wasSubscribed(ISourceDataTag tag) {
-        final SubscriptionGroup group = getGroup(tag.getTimeDeadband());
-        return group != null && group.contains(tag);
-    }
-
-    private SubscriptionGroup getOrCreateGroup(int timeDeadband) {
-        if (groupExists(timeDeadband)) {
-            return subscriptionGroups.get(timeDeadband);
-        } else {
-            SubscriptionGroup group = new SubscriptionGroup(timeDeadband);
-            subscriptionGroups.put(timeDeadband, group);
-            return group;
-        }
     }
 
     private boolean groupExists(int deadband) {

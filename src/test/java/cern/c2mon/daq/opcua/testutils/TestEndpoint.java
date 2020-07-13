@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -50,17 +51,15 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public void monitorEquipmentState(boolean shouldMonitor, SessionActivityListener listener) {}
+    public void manageSessionActivityListener(boolean add, SessionActivityListener listener) {
+
+    }
 
     @Override
     public void disconnect () {}
 
     @Override
-    public void deleteSubscription(int publishInterval) throws OPCUAException {
-    }
-
-    @Override
-    public Map<UInteger, SourceDataTagQuality> subscribeToGroup(int publishingInterval, Collection<ItemDefinition> definitions) throws CommunicationException {
+    public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) {
         BiConsumer<UaMonitoredItem, Integer> itemCreationCallback = (item, i) -> item.setValueConsumer(value -> {
             SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
             final Object updateValue = MiloMapper.toObject(value.getValue());
@@ -70,7 +69,11 @@ public class TestEndpoint implements Endpoint {
             messageSender.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
         });
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
-        return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> MiloMapper.getDataTagQuality(monitoredItem.getStatusCode())));
+
+        return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> {
+            final StatusCode statusCode = monitoredItem.getStatusCode();
+            return MiloMapper.getDataTagQuality(statusCode == null ? StatusCode.BAD : statusCode);
+        }));
     }
 
     @Override
@@ -79,17 +82,18 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public void recreateSubscription(UaSubscription subscription) throws OPCUAException {
+    public boolean deleteItemFromSubscription(UInteger clientHandle, int publishInterval) {
+        return true;
+    }
+
+    @Override
+    public void recreateSubscription(UaSubscription subscription) {
 
     }
 
     @Override
-    public void deleteItemFromSubscription(UInteger clientHandle, int publishInterval) throws OPCUAException {
-    }
+    public void recreateAllSubscriptions() {
 
-    @Override
-    public boolean isCurrent(UaSubscription subscription) {
-        return false;
     }
 
     @Override
@@ -109,7 +113,7 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException {
+    public ServerRedundancyTypeNode getServerRedundancyNode() {
         return serverRedundancyTypeNode;
     }
 

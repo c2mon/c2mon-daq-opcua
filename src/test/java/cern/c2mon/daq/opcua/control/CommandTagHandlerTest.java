@@ -5,8 +5,9 @@ import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.FailoverProxy;
-import cern.c2mon.daq.opcua.failover.NoFailover;
+import cern.c2mon.daq.opcua.failover.Controller;
+import cern.c2mon.daq.opcua.failover.ControllerImpl;
+import cern.c2mon.daq.opcua.failover.ControllerProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
@@ -23,9 +24,9 @@ import org.junit.jupiter.api.Test;
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CommandRunnerTest {
+public class CommandTagHandlerTest {
     TestEndpoint endpoint;
-    CommandRunner commandRunner;
+    CommandTagHandler commandTagHandler;
 
     SourceCommandTagValue value;
     SourceCommandTag tag;
@@ -48,22 +49,22 @@ public class CommandRunnerTest {
         value = new SourceCommandTagValue();
         value.setDataType(Integer.class.getName());
         value.setValue(1);
-        final FailoverProxy failoverProxy = TestUtils.getFailoverProxy(endpoint, null, l);
-        commandRunner = new CommandRunner(failoverProxy);
+        final ControllerProxy controllerProxy = TestUtils.getFailoverProxy(endpoint, l);
+        commandTagHandler = new CommandTagHandler(controllerProxy);
     }
 
     @Test
     public void runCommandWithInvalidValueShouldThrowConfigInEqException() {
         value.setDataType("invalid");
         assertThrows(EqCommandTagException.class,
-                () -> commandRunner.runCommand(tag, value),
+                () -> commandTagHandler.runCommand(tag, value),
                 ExceptionContext.COMMAND_VALUE_ERROR.getMessage());
     }
 
     @Test
     public void runMethodWithoutMethodAddressShouldReturnMethodValuesAsString() throws EqCommandTagException {
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
-        final String s = commandRunner.runCommand(tag, value);
+        final String s = commandTagHandler.runCommand(tag, value);
         assertEquals("1", s);
     }
 
@@ -71,7 +72,7 @@ public class CommandRunnerTest {
     public void runMethodWithMethodAddressShouldReturnMethodValuesAsString() throws EqCommandTagException {
         address.setOpcRedundantItemName("method");
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD);
-        final String s = commandRunner.runCommand(tag, value);
+        final String s = commandTagHandler.runCommand(tag, value);
         assertEquals("1", s);
     }
 
@@ -86,8 +87,8 @@ public class CommandRunnerTest {
                 .anyTimes();
         //no call to write
         replay(mockEp);
-        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(mockEp, null, l));
-        commandRunner.runCommand(tag, value);
+        commandTagHandler.setControllerProxy(TestUtils.getFailoverProxy(mockEp, l));
+        commandTagHandler.runCommand(tag, value);
         verify(mockEp);
     }
 
@@ -100,8 +101,8 @@ public class CommandRunnerTest {
         expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();
         expect(mockEp.write(def, 0)).andReturn(endpoint.write(def, 0)).once();
         replay(mockEp);
-        commandRunner.setFailoverProxy(TestUtils.getFailoverProxy(mockEp, null, l));
-        commandRunner.runCommand(tag, value);
+        commandTagHandler.setControllerProxy(TestUtils.getFailoverProxy(mockEp, l));
+        commandTagHandler.runCommand(tag, value);
         verify(mockEp);
     }
 
@@ -128,16 +129,16 @@ public class CommandRunnerTest {
 
     @Test
     public void badClientShouldThrowException() {
-        final NoFailover noFailover = new NoFailover(null, l, null, null, new ExceptionTestEndpoint(null));
-        final TestFailoverProxy proxy = new TestFailoverProxy(null, TestUtils.createDefaultConfig(), l, noFailover);
-        proxy.setFailoverMode(RedundancySupport.None, null, null, null);
-        commandRunner.setFailoverProxy(proxy);
+        Controller controller = new ControllerImpl(l, new ExceptionTestEndpoint(null));
+        final TestControllerProxy proxy = new TestControllerProxy(null, TestUtils.createDefaultConfig(), l, controller);
+        proxy.setFailoverMode(RedundancySupport.None);
+        commandTagHandler.setControllerProxy(proxy);
         verifyCommunicationException(ExceptionContext.WRITE);
     }
 
     private void verifyCommunicationException(ExceptionContext context) {
         final EqCommandTagException e = assertThrows(EqCommandTagException.class,
-                () -> commandRunner.runCommand(tag, value));
+                () -> commandTagHandler.runCommand(tag, value));
         assertTrue(e.getCause() instanceof CommunicationException);
         assertEquals(context.getMessage(), e.getCause().getMessage());
     }

@@ -16,7 +16,7 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class TagEventsTest extends TagControllerTestBase {
+public class TagEventsTest extends TagHandlerTestBase {
 
     CompletableFuture<Long> tagUpdate;
     CompletableFuture<Long> tagInvalid;

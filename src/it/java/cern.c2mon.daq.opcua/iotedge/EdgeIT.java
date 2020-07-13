@@ -1,12 +1,12 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.connection.MessageSender;
-import cern.c2mon.daq.opcua.control.CommandRunner;
-import cern.c2mon.daq.opcua.control.TagController;
+import cern.c2mon.daq.opcua.control.CommandTagHandler;
+import cern.c2mon.daq.opcua.control.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.failover.Controller;
-import cern.c2mon.daq.opcua.failover.FailoverProxy;
+import cern.c2mon.daq.opcua.failover.ControllerProxy;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -45,21 +45,21 @@ public class EdgeIT extends EdgeTestBase {
     private final ISourceDataTag alreadySubscribedTag = EdgeTagFactory.DipData.createDataTag();
 
     @Autowired TestListeners.Pulse pulseListener;
-    @Autowired FailoverProxy proxy;
-    @Autowired TagController tagController;
-    @Autowired CommandRunner commandRunner;
-    @Autowired Controller noFailover;
+    @Autowired ControllerProxy controllerProxy;
+    @Autowired DataTagHandler tagHandler;
+    @Autowired CommandTagHandler commandTagHandler;
+    @Autowired Controller singleServerController;
 
     @BeforeEach
     public void setupEndpoint() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         log.info("############ SET UP ############");
         pulseListener.setSourceID(tag.getId());
-        ReflectionTestUtils.setField(tagController, "messageSender", pulseListener);
-        ReflectionTestUtils.setField(proxy, "messageSender", pulseListener);
-        ReflectionTestUtils.setField(noFailover.currentEndpoint(), "messageSender", pulseListener);
+        ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
+        ReflectionTestUtils.setField(controllerProxy, "messageSender", pulseListener);
+        ReflectionTestUtils.setField(singleServerController.currentEndpoint(), "messageSender", pulseListener);
 
-        proxy.connect(active.getUri());
-        tagController.subscribeTags(Collections.singletonList(alreadySubscribedTag));
+        controllerProxy.connect(active.getUri());
+        tagHandler.subscribeTags(Collections.singletonList(alreadySubscribedTag));
         pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS); // that tag is subscribed
         pulseListener.reset();
         log.info("Client ready");
@@ -69,13 +69,13 @@ public class EdgeIT extends EdgeTestBase {
     @AfterEach
     public void cleanUp() {
         log.info("############ CLEAN UP ############");
-        proxy.stop();
+        controllerProxy.stop();
     }
 
     @Test
     public void connectToBadServerShouldThrowErrorAndSendFAIL() throws InterruptedException, ExecutionException, TimeoutException {
         final var stateUpdate = pulseListener.getStateUpdate();
-        assertThrows(OPCUAException.class, () -> proxy.connect("opc.tcp://somehost/somepath"));
+        assertThrows(OPCUAException.class, () -> controllerProxy.connect("opc.tcp://somehost/somepath"));
         assertEquals(MessageSender.EquipmentState.CONNECTION_FAILED, stateUpdate.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
@@ -83,7 +83,7 @@ public class EdgeIT extends EdgeTestBase {
     public void executeCommandWithParentShouldReturnProperResult() throws EqCommandTagException {
         final ISourceCommandTag methodTag = EdgeTagFactory.StartStepUp.createMethodTag(true);
         final SourceCommandTagValue value = new SourceCommandTagValue();
-        final String s = commandRunner.runCommand(methodTag, value);
+        final String s = commandTagHandler.runCommand(methodTag, value);
         assertTrue(s.isEmpty());
     }
 
@@ -91,7 +91,7 @@ public class EdgeIT extends EdgeTestBase {
     public void executeCommandShouldReturnProperResult() throws EqCommandTagException {
         final ISourceCommandTag methodTag = EdgeTagFactory.StartStepUp.createMethodTag(false);
         final SourceCommandTagValue value = new SourceCommandTagValue();
-        final String s = commandRunner.runCommand(methodTag, value);
+        final String s = commandTagHandler.runCommand(methodTag, value);
         assertTrue(s.isEmpty());
     }
 
@@ -112,7 +112,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
-        tagController.subscribeTags(Collections.singletonList(tag));
+        tagHandler.subscribeTags(Collections.singletonList(tag));
         cutConnection(pulseListener, active);
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
@@ -129,7 +129,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void subscribingProperDataTagShouldReturnValue() throws ConfigurationException {
-        tagController.subscribeTags(Collections.singletonList(tag));
+        tagHandler.subscribeTags(Collections.singletonList(tag));
         pulseListener.setSourceID(tag.getId());
         Object o = assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
         assertNotNull(o);
@@ -140,7 +140,7 @@ public class EdgeIT extends EdgeTestBase {
         final ISourceDataTag tag = EdgeTagFactory.Invalid.createDataTag();
         pulseListener.setSourceID(tag.getId());
         pulseListener.setThreshold(0);
-        tagController.subscribeTags(Collections.singletonList(tag));
+        tagHandler.subscribeTags(Collections.singletonList(tag));
         assertDoesNotThrow(() -> pulseListener.getTagInvalid().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
@@ -148,14 +148,14 @@ public class EdgeIT extends EdgeTestBase {
     public void subscribeWithDeadband() throws ConfigurationException {
         var tagWithDeadband = EdgeTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
         pulseListener.setSourceID(tagWithDeadband.getId());
-        tagController.subscribeTags(Collections.singletonList(tagWithDeadband));
+        tagHandler.subscribeTags(Collections.singletonList(tagWithDeadband));
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void refreshProperTag() throws InterruptedException {
         pulseListener.setSourceID(tag.getId());
-        tagController.refreshDataTag(tag);
+        tagHandler.refreshDataTag(tag);
         Thread.sleep(2000);
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }

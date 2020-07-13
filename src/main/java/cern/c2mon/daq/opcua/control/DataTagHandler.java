@@ -10,7 +10,7 @@ import java.util.Collection;
  * points as SourceDataTags, and the {@link cern.c2mon.daq.opcua.connection.Endpoint}'s mapping of points in the address space
  * using uint clientHandles.
  */
-public interface TagController {
+public interface DataTagHandler {
 
     /**
      * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
@@ -44,4 +44,6 @@ public interface TagController {
      * @param sourceDataTag the tag whose current value to read
      */
     void refreshDataTag(ISourceDataTag sourceDataTag);
+
+    void reset();
 }

@@ -15,7 +15,7 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 @Component("tagChanger")
 @RequiredArgsConstructor
 @Slf4j
-public class TagChanger implements IDataTagChanger {
+public class DataTagChanger implements IDataTagChanger {
 
     @FunctionalInterface
     public interface TriConsumer<A, B, C> {
@@ -33,7 +33,7 @@ public class TagChanger implements IDataTagChanger {
             report.setState(FAIL);
         }
     };
-    private final TagController controller;
+    private final DataTagHandler controller;
 
     @Override
     public void onAddDataTag(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
