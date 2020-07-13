@@ -39,9 +39,8 @@ public interface Endpoint {
 
     /**
      * Disconnect from the server.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    void disconnect() throws OPCUAException;
+    void disconnect();
 
     /**
      * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of

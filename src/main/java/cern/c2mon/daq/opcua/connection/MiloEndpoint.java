@@ -156,23 +156,27 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     /**
      * Disconnect from the server with a certain number of retries in case of connection error.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     @Override
-    public synchronized void disconnect() throws OPCUAException {
+    public synchronized void disconnect() {
         log.info("Disconnecting endpoint at {}", uri);
-        if (client != null) {
-            client.getSubscriptionManager().clearSubscriptions();
-            client.getSubscriptionManager().removeSubscriptionListener(this);
-            sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
-            retryDelegate.completeOrThrow(DISCONNECT, this::getDisconnectPeriod, client::disconnect);
-            client = null;
-        } else {
-            log.info("Client not connected, skipping disconnection attempt.");
+        try {
+            if (client != null) {
+                client.getSubscriptionManager().clearSubscriptions();
+                client.getSubscriptionManager().removeSubscriptionListener(this);
+                sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
+                retryDelegate.completeOrThrow(DISCONNECT, this::getDisconnectPeriod, client::disconnect);
+                client = null;
+            } else {
+                log.info("Client not connected, skipping disconnection attempt.");
+            }
+        } catch (OPCUAException ex) {
+            log.error("Error disconnecting from endpoint with uri {}: ", uri, ex);
+        } finally {
+            sessionActivityListeners.clear();
+            subscriptionMap.clear();
+            disconnectedOn.set(-1);
         }
-        sessionActivityListeners.clear();
-        subscriptionMap.clear();
-        disconnectedOn.set(-1);
     }
 
     /**

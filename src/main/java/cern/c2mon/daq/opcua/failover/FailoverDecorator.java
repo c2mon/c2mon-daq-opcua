@@ -27,6 +27,8 @@ public abstract class FailoverDecorator implements Controller {
             ItemDefinition.of(Identifiers.Server_ServiceLevel),
             ItemDefinition.of(Identifiers.ServerState));
     protected static final AtomicBoolean listening = new AtomicBoolean(true);
+    /** A flag indicating whether the controller was stopped. */
+    protected final AtomicBoolean stopped = new AtomicBoolean(true);
 
     private final ApplicationContext applicationContext;
     protected final RetryDelegate retryDelegate;
@@ -40,6 +42,7 @@ public abstract class FailoverDecorator implements Controller {
 
     @Override
     public void connect(String uri) throws OPCUAException {
+        stopped.set(false);
         singleServerController.connect(uri);
     }
 
@@ -62,14 +65,10 @@ public abstract class FailoverDecorator implements Controller {
 
     @Override
     public void stop() {
+        log.info("Disconnecting... ");
+        stopped.set(true);
         singleServerController.stop();
-        passiveEndpoints().forEach(e -> {
-            try {
-                e.disconnect();
-            } catch (OPCUAException ex) {
-                log.error("Error disconnecting from passive endpoint with uri {}: ", e.getUri(), ex);
-            }
-        });
+        passiveEndpoints().forEach(Endpoint::disconnect);
     }
 
     @Override

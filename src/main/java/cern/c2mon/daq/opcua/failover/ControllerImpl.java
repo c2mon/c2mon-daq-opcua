@@ -16,7 +16,6 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -26,14 +25,10 @@ import java.util.stream.Stream;
 public class ControllerImpl implements Controller {
 
 
-    /** A flag indicating whether the controller was stopped. */
-    protected final AtomicBoolean stopped = new AtomicBoolean(true);
-
     protected final MessageSender messageSender;
     protected Endpoint activeEndpoint;
 
     public void connect(String uri) throws OPCUAException {
-        stopped.set(false);
         currentEndpoint().initialize(uri);
     }
 
@@ -49,13 +44,7 @@ public class ControllerImpl implements Controller {
 
     @Override
     public void stop() {
-        log.info("Disconnecting... ");
-        stopped.set(true);
-        try {
-            currentEndpoint().disconnect();
-        } catch (OPCUAException ex) {
-            log.error("Error disconnecting from endpoint with uri {}: ", currentEndpoint().getUri(), ex);
-        }
+        currentEndpoint().disconnect();
     }
 
     @Override
@@ -69,11 +58,6 @@ public class ControllerImpl implements Controller {
     public boolean unsubscribe(ItemDefinition definition) {
         return currentEndpoint().deleteItemFromSubscription(definition.getClientHandle(), definition.getTimeDeadband());
     }
-
-    public boolean isStopped() {
-        return stopped.get();
-    }
-
     public static Stream<Entry<UInteger, SourceDataTagQuality>> subscribeOnEndpoint(Endpoint e, Map.Entry<SubscriptionGroup, List<ItemDefinition>> groupWithDefinitions) {
         try {
             return e.subscribe(groupWithDefinitions.getKey(), groupWithDefinitions.getValue()).entrySet().stream();
