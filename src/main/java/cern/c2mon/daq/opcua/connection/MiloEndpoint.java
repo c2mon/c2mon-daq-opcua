@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -193,12 +194,13 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             log.info("Subscribing definition {} with publishing interval {}.", definitions, group.getPublishInterval());
             return subscribeWithCallback(group.getPublishInterval(), definitions, (item, i) -> item.setValueConsumer(value -> {
                 log.info("Creating callback for definition {}.", definitions);
+                final Optional<Long> tagId = mapper.getTagId(item.getClientHandle());
                 SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
                 final Object updateValue = MiloMapper.toObject(value.getValue());
                 ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
                         new ValueUpdate(updateValue) :
                         new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-                messageSender.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
+                messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
             }));
         } catch (ConfigurationException e) {
             throw e;

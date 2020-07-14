@@ -1,12 +1,12 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MessageSender;
-import cern.c2mon.daq.opcua.control.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionWriter;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
+import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
@@ -22,7 +22,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import static cern.c2mon.daq.opcua.connection.MessageSender.EquipmentState.CONNECTION_FAILED;
+import static cern.c2mon.daq.opcua.tagHandling.MessageSender.EquipmentState.CONNECTION_FAILED;
 import static org.easymock.EasyMock.replay;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -37,8 +37,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Autowired DataTagHandler tagHandler;
     @Autowired MessageSender epMessageSender;
     @Autowired Endpoint miloEndpoint;
-    @Autowired
-    TagSubscriptionWriter mapper;
+    @Autowired TagSubscriptionMapReader mapper;
 
     OPCUAMessageHandler handler;
     TestUtils.CommfaultSenderCapture capture;
@@ -59,7 +58,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigButBadEndpointShouldThrowCommunicationError() {
-        ReflectionTestUtils.setField(tagHandler, "controllerProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(epMessageSender), epMessageSender));
+        ReflectionTestUtils.setField(tagHandler, "controllerProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(epMessageSender, mapper), epMessageSender));
         replay(messageSender);
         assertThrows(CommunicationException.class, () -> handler.connectToDataSource());
     }
@@ -67,7 +66,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigButBadEndpointShouldSendFAIL() {
-        ReflectionTestUtils.setField(tagHandler, "controllerProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(epMessageSender), epMessageSender));
+        ReflectionTestUtils.setField(tagHandler, "controllerProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(epMessageSender, mapper), epMessageSender));
         replay(messageSender);
         try {
             handler.connectToDataSource();

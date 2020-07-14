@@ -14,13 +14,14 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.tagHandling;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.AllArgsConstructor;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
+
+import java.util.Optional;
 
 public interface MessageSender {
 
@@ -41,11 +42,11 @@ public interface MessageSender {
      */
     void initialize(IEquipmentMessageSender sender);
 
-    void onTagInvalid(final UInteger clientHandle, final SourceDataTagQuality quality);
+    void onTagInvalid(Optional<Long>  tagId, final SourceDataTagQuality quality);
 
     void onAlive();
 
     void onEquipmentStateUpdate(EquipmentState state);
 
-    void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate);
+    void onValueUpdate(Optional<Long> tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate);
 }

@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.control;
+package cern.c2mon.daq.opcua.tagHandling;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -46,8 +46,8 @@ public abstract class TagHandlerTestBase {
     public void setUp() throws OPCUAException, InterruptedException {
         uri = ADDRESS_PROTOCOL_TCP + ADDRESS_BASE + true;
         mapper = new TagSubscriptionManager();
-        listener = new TestListeners.TestListener(mapper);
-        endpoint = new TestEndpoint(listener);
+        listener = new TestListeners.TestListener();
+        endpoint = new TestEndpoint(listener, mapper);
         proxy = TestUtils.getFailoverProxy(endpoint, listener);
         controller = new DataTagHandlerImpl(mapper, listener, proxy);
         mocker = new MiloMocker(endpoint, mapper);

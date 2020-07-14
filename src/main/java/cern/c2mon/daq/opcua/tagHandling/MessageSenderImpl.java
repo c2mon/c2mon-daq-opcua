@@ -1,19 +1,19 @@
-package cern.c2mon.daq.opcua.connection;
+package cern.c2mon.daq.opcua.tagHandling;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import static cern.c2mon.daq.opcua.connection.MessageSender.EquipmentState.CONNECTION_LOST;
-import static cern.c2mon.daq.opcua.connection.MessageSender.EquipmentState.OK;
+import java.util.Optional;
+
+import static cern.c2mon.daq.opcua.tagHandling.MessageSender.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.tagHandling.MessageSender.EquipmentState.OK;
 
 /**
  * A listener responsible to relay information regarding events on the DAQ to the IEquipmentMessageSender.
@@ -24,7 +24,6 @@ import static cern.c2mon.daq.opcua.connection.MessageSender.EquipmentState.OK;
 @Primary
 public class MessageSenderImpl implements MessageSender, SessionActivityListener {
 
-    private final TagSubscriptionMapReader mapper;
     private IEquipmentMessageSender sender;
 
     /**
@@ -37,27 +36,23 @@ public class MessageSenderImpl implements MessageSender, SessionActivityListener
     }
 
     @Override
-    public void onTagInvalid(UInteger clientHandle, final SourceDataTagQuality quality) {
-        final Long tagId = mapper.getTagId(clientHandle);
-        this.sender.update(tagId, quality);
+    public void onTagInvalid(Optional<Long> tagId, final SourceDataTagQuality quality) {
+        if (tagId.isPresent()) {
+            this.sender.update(tagId.get(), quality);
+        } else {
+            log.info("Attempting to set unknown Tag invalid");
+        }
 
     }
 
     @Override
-    public void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
-        if (quality.isValid()) {
-            try {
-                final Long tagId = mapper.getTagId(clientHandle);
-                if (tagId == null) {
-                    log.error("Received update for unknown clientHandle: {}", clientHandle);
-                } else {
-                    this.sender.update(tagId, valueUpdate, quality);
-                }
-            } catch (Exception e) {
-                log.error("Exceptionc caught for clientHandle {} with Mapper at state {}.", clientHandle, mapper.getTagIdDefinitionMap(), e);
-            }
+    public void onValueUpdate(Optional<Long> tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
+        if (quality.isValid() && tagId.isPresent()) {
+            this.sender.update(tagId.get(), valueUpdate, quality);
+        } else if (quality.isValid()) {
+            log.error("Received update for unknown clientHandle.");
         } else {
-            onTagInvalid(clientHandle, quality);
+            onTagInvalid(tagId, quality);
         }
     }
 

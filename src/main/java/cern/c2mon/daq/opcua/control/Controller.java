@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.failover;
+package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;

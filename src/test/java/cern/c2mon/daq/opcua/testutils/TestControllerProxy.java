@@ -3,12 +3,12 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.ColdFailover;
-import cern.c2mon.daq.opcua.failover.Controller;
-import cern.c2mon.daq.opcua.failover.ControllerProxyImpl;
-import cern.c2mon.daq.opcua.failover.NoFailover;
+import cern.c2mon.daq.opcua.control.ColdFailover;
+import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.ControllerProxyImpl;
+import cern.c2mon.daq.opcua.control.NoFailover;
 import lombok.Setter;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.context.ApplicationContext;
@@ -24,7 +24,7 @@ public class TestControllerProxy extends ControllerProxyImpl {
     }
 
     public TestControllerProxy(ApplicationContext appContext, AppConfigProperties config, MessageSender messageSender, Endpoint endpoint) {
-        super(appContext, config, messageSender, endpoint);
+        super(appContext, config, endpoint);
     }
 
     public void setFailoverMode(RedundancySupport mode) {

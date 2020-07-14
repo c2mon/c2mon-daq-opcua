@@ -1,14 +1,14 @@
-package cern.c2mon.daq.opcua.control;
+package cern.c2mon.daq.opcua.tagHandling;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.Controller;
-import cern.c2mon.daq.opcua.failover.ControllerProxy;
-import cern.c2mon.daq.opcua.failover.NoFailover;
+import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.ControllerProxy;
+import cern.c2mon.daq.opcua.control.NoFailover;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.SourceCommandTag;
@@ -31,11 +31,11 @@ public class CommandTagHandlerTest {
     SourceCommandTag tag;
     OPCHardwareAddressImpl address;
     OPCHardwareAddressImpl pulseAddress;
-    MessageSender l = new TestListeners.TestListener(null);
+    MessageSender l = new TestListeners.TestListener();
 
     @BeforeEach
     public void setUp() {
-        this.endpoint = new TestEndpoint(null);
+        this.endpoint = new TestEndpoint(l, new TagSubscriptionManager());
         tag = new SourceCommandTag(0L, "Power");
 
         address = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw");
@@ -129,7 +129,7 @@ public class CommandTagHandlerTest {
     @Test
     public void badClientShouldThrowException() throws OPCUAException {
         Controller controller = new NoFailover();
-        controller.initialize(new ExceptionTestEndpoint(null), new String[0]);
+        controller.initialize(new ExceptionTestEndpoint(l, new TagSubscriptionManager()), new String[0]);
         final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, l);
         proxy.setController(controller);
         commandTagHandler.setControllerProxy(proxy);

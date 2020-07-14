@@ -1,12 +1,10 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MessageSender;
+import cern.c2mon.daq.opcua.mapping.*;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.MiloMapper;
-import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -25,6 +23,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -38,6 +37,7 @@ import static org.easymock.EasyMock.createMock;
 @Component(value = "testEndpoint")
 public class TestEndpoint implements Endpoint {
     private final MessageSender messageSender;
+    private final TagSubscriptionMapReader mapper;
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
     NonTransparentRedundancyTypeNode serverRedundancyTypeNode = createMock(NonTransparentRedundancyTypeNode.class);
@@ -66,7 +66,8 @@ public class TestEndpoint implements Endpoint {
             ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
                     new ValueUpdate(updateValue) :
                     new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-            messageSender.onValueUpdate(item.getClientHandle(), tagQuality, valueUpdate);
+            final Optional<Long> tagId = mapper.getTagId(item.getClientHandle());
+            messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
         });
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
 

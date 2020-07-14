@@ -1,9 +1,9 @@
 package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.control.DataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.failover.ControllerProxy;
+import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
@@ -76,7 +76,6 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         value.setDataType("java.lang.Integer");
         ReflectionTestUtils.setField(tagHandler, "messageSender", endpointListener);
         ReflectionTestUtils.setField(ReflectionTestUtils.getField(proxy, "endpoint"), "messageSender", endpointListener);
-        ReflectionTestUtils.setField(proxy, "messageSender", endpointListener);
         mapEquipmentAddress();
         log.info("############### TEST ##############");
     }
@@ -130,8 +129,6 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         // Assert power is set to 1
         final ValueUpdate valueUpdate = endpointListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
         assertEquals(1, valueUpdate.getValue());
-
-
     }
 
 

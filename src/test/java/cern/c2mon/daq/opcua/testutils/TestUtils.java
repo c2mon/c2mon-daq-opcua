@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import com.google.common.collect.ImmutableMap;
 import org.easymock.Capture;

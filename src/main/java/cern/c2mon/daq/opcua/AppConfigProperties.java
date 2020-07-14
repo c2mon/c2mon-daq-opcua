@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua;
 
-import cern.c2mon.daq.opcua.failover.ControllerProxy;
+import cern.c2mon.daq.opcua.control.ControllerProxy;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

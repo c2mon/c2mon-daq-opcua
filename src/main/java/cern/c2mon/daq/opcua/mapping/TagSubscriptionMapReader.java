@@ -21,6 +21,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 
 
 public interface TagSubscriptionMapReader {
@@ -28,7 +29,7 @@ public interface TagSubscriptionMapReader {
     SubscriptionGroup getGroup (int timeDeadband);
     Collection<SubscriptionGroup> getGroups ();
     ItemDefinition getDefinition(Long tagId);
-    Long getTagId(UInteger clientHandle);
+    Optional<Long> getTagId(UInteger clientHandle);
     ItemDefinition getOrCreateDefinition(ISourceDataTag tag);
 }
 

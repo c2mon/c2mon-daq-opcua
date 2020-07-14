@@ -1,12 +1,12 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MessageSender;
-import cern.c2mon.daq.opcua.control.CommandTagHandler;
-import cern.c2mon.daq.opcua.control.DataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.CommandTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.ControllerProxy;
+import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -31,7 +31,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static cern.c2mon.daq.opcua.connection.MessageSender.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.tagHandling.MessageSender.EquipmentState.CONNECTION_LOST;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -56,7 +56,6 @@ public class EdgeIT extends EdgeTestBase {
         log.info("############ SET UP ############");
         pulseListener.setSourceID(tag.getId());
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
-        ReflectionTestUtils.setField(controllerProxy, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);
 
@@ -72,13 +71,6 @@ public class EdgeIT extends EdgeTestBase {
     public void cleanUp() {
         log.info("############ CLEAN UP ############");
         controllerProxy.stop();
-    }
-
-    @Test
-    public void connectToBadServerShouldThrowErrorAndSendFAIL() throws InterruptedException, ExecutionException, TimeoutException {
-        final var stateUpdate = pulseListener.getStateUpdate();
-        assertThrows(OPCUAException.class, () -> controllerProxy.connect("opc.tcp://somehost/somepath"));
-        assertEquals(MessageSender.EquipmentState.CONNECTION_FAILED, stateUpdate.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     @Test

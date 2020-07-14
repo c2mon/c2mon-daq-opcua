@@ -1,8 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.opcua.connection.MessageSender;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
@@ -11,10 +10,9 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -38,10 +36,6 @@ public abstract class TestListeners {
         CompletableFuture<ValueUpdate> pulseTagUpdate = new CompletableFuture<>();
         CompletableFuture<ValueUpdate> tagValUpdate = new CompletableFuture<>();
 
-        public Pulse(TagSubscriptionMapReader mapper) {
-            super(mapper);
-        }
-
         public void reset() {
             super.reset();
             pulseTagUpdate = new CompletableFuture<>();
@@ -51,10 +45,9 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
-            super.onValueUpdate(clientHandle, quality, valueUpdate);
-            final Long tagId = mapper.getTagId(clientHandle);
-            if (tagId != null && tagId.equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
+        public void onValueUpdate(Optional<Long> tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
+            super.onValueUpdate(tagId, quality, valueUpdate);
+            if (tagId.isPresent() && tagId.get().equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
                 if (tagValUpdate.isDone()) {
                     log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
                     pulseTagUpdate.complete(valueUpdate);
@@ -75,9 +68,6 @@ public abstract class TestListeners {
         CompletableFuture<EquipmentState> stateUpdate = new CompletableFuture<>();
         CompletableFuture<Void> alive = new CompletableFuture<>();
 
-        @Autowired
-        protected final TagSubscriptionMapReader mapper;
-
         public void reset() {
             tagUpdate = new CompletableFuture<>();
             tagInvalid = new CompletableFuture<>();
@@ -96,9 +86,13 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onTagInvalid(UInteger clientHandle, SourceDataTagQuality quality) {
-            log.info("data tag {} invalid with quality {}", mapper.getTagId(clientHandle), quality);
-            tagInvalid.complete(mapper.getTagId(clientHandle));
+        public void onTagInvalid(Optional<Long> tagId, SourceDataTagQuality quality) {
+            if (tagId.isPresent()) {
+                log.info("Received data tag {} invalid with quality {}", tagId.get(), quality);
+                tagInvalid.complete(tagId.get());
+            } else {
+                log.info("Attempting to invalidate tag with unknown ID");
+            }
         }
 
         @Override
@@ -120,17 +114,14 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onValueUpdate(UInteger clientHandle, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
-            if (quality.isValid()) {
-                final Long tagId = mapper.getTagId(clientHandle);
-                if (tagId == null) {
-                    log.error("received update for unknown clientHandle {} where mapper is in state {}.", clientHandle, mapper.getTagIdDefinitionMap());
-                } else {
-                    log.info("received data tag {}, client handle {}, value update {}, quality {}", tagId, clientHandle, valueUpdate, quality);
-                }
-                tagUpdate.complete(tagId);
+        public void onValueUpdate(Optional<Long> tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
+            if (quality.isValid() && tagId.isPresent()) {
+                log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
+                tagUpdate.complete(tagId.get());
+            } else if (quality.isValid()) {
+                log.error("received update for unknown tagId");
             } else {
-                onTagInvalid(clientHandle, quality);
+                onTagInvalid(tagId, quality);
             }
         }
 

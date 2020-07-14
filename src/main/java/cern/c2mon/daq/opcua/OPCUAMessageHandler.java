@@ -20,12 +20,13 @@ import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
-import cern.c2mon.daq.opcua.connection.MessageSender;
-import cern.c2mon.daq.opcua.control.AliveWriter;
-import cern.c2mon.daq.opcua.control.CommandTagHandler;
-import cern.c2mon.daq.opcua.control.DataTagChanger;
-import cern.c2mon.daq.opcua.control.DataTagHandler;
-import cern.c2mon.daq.opcua.failover.ControllerProxy;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.AliveWriter;
+import cern.c2mon.daq.opcua.tagHandling.CommandTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.DataTagChanger;
+import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
+import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -76,7 +77,12 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
         String[] addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         log.info("Connecting to the OPC UA data source at {}... ", addresses[0]);
-        controllerProxy.connect(addresses[0]);
+        try {
+            controllerProxy.connect(addresses[0]);
+        } catch (OPCUAException e) {
+            sender.confirmEquipmentStateIncorrect(MessageSender.EquipmentState.CONNECTION_FAILED.message);
+            throw e;
+        }
 
         aliveWriter.initialize(config, appConfigProperties.isAliveWriterEnabled());
         dataTagHandler.subscribeTags(config.getSourceDataTags().values());

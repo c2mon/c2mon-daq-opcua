@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.control;
+package cern.c2mon.daq.opcua.tagHandling;
 
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.shared.common.command.SourceCommandTag;

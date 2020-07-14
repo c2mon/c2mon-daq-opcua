@@ -15,13 +15,12 @@
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-package cern.c2mon.daq.opcua.control;
+package cern.c2mon.daq.opcua.tagHandling;
 
-import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.ControllerProxy;
+import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
@@ -135,13 +134,11 @@ public class DataTagHandlerImpl implements DataTagHandler {
     }
 
     private void completeSubscriptionAndReportSuccess(UInteger clientHandle, SourceDataTagQuality quality) {
-        if (quality.isValid()) {
-            final Long tagId = mapper.getTagId(clientHandle);
-            if (tagId != null) {
-                mapper.addTagToGroup(tagId);
-            }
+        final Optional<Long> tagId = mapper.getTagId(clientHandle);
+        if (quality.isValid() && tagId.isPresent()) {
+                mapper.addTagToGroup(tagId.get());
         } else {
-            messageSender.onTagInvalid(clientHandle, quality);
+            messageSender.onTagInvalid(tagId, quality);
         }
     }
 
@@ -154,7 +151,8 @@ public class DataTagHandlerImpl implements DataTagHandler {
             }
             try {
                 final var reading = controllerProxy.getController().read(e.getValue().getNodeId());
-                messageSender.onValueUpdate(e.getValue().getClientHandle(), reading.getValue(), reading.getKey());
+                final Optional<Long> tagId = mapper.getTagId(e.getValue().getClientHandle());
+                messageSender.onValueUpdate(tagId, reading.getValue(), reading.getKey());
             } catch (OPCUAException ex) {
                 notRefreshable.add(e.getKey());
             }

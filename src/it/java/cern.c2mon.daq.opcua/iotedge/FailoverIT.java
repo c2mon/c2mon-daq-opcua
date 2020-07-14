@@ -2,11 +2,11 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MessageSender;
-import cern.c2mon.daq.opcua.control.DataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.ColdFailover;
-import cern.c2mon.daq.opcua.failover.ControllerProxy;
+import cern.c2mon.daq.opcua.control.ColdFailover;
+import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -62,7 +62,6 @@ public class FailoverIT extends EdgeTestBase {
         config.setRedundancyMode(ColdFailover.class.getName());
         config.setRedundantServerUris(Collections.singletonList(fallback.getUri()));
         pulseListener.setSourceID(tag.getId());
-        ReflectionTestUtils.setField(controllerProxy, "messageSender", pulseListener);
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);

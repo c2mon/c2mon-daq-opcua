@@ -1,6 +1,8 @@
-package cern.c2mon.daq.opcua.control;
+package cern.c2mon.daq.opcua.tagHandling;
 
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -18,8 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AliveWriterTest {
-    TestListeners.TestListener listener = new TestListeners.TestListener(null);
-    AliveWriter aliveWriter = new AliveWriter(TestUtils.getFailoverProxy(new TestEndpoint(listener), listener), listener);
+    TestListeners.TestListener listener = new TestListeners.TestListener();
+    TagSubscriptionMapReader mapper = new TagSubscriptionManager();
+    AliveWriter aliveWriter = new AliveWriter(TestUtils.getFailoverProxy(new TestEndpoint(listener, mapper), listener), listener);
 
     @BeforeEach
     public void setUp() {
@@ -34,14 +37,14 @@ public class AliveWriterTest {
 
     @Test
     public void writeAliveShouldNotifyListenerWithGoodStatusCode() {
-        ReflectionTestUtils.setField(aliveWriter, "controllerProxy", TestUtils.getFailoverProxy(new TestEndpoint(listener), listener));
+        ReflectionTestUtils.setField(aliveWriter, "controllerProxy", TestUtils.getFailoverProxy(new TestEndpoint(listener, mapper), listener));
         aliveWriter.startWriter();
         assertDoesNotThrow(() -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void exceptionInWriteAliveShouldNotNotifyListener() {
-        ReflectionTestUtils.setField(aliveWriter, "controllerProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(listener), listener));
+        ReflectionTestUtils.setField(aliveWriter, "controllerProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(listener, mapper), listener));
         aliveWriter.startWriter();
         assertThrows(TimeoutException.class, () -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
     }

@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @NoArgsConstructor
@@ -73,12 +74,11 @@ public class TagSubscriptionManager implements TagSubscriptionWriter, TagSubscri
     }
 
     @Override
-    public Long getTagId(UInteger clientHandle) {
+    public Optional<Long> getTagId(UInteger clientHandle) {
         return tagIdDefinitionMap.entrySet().stream()
                 .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
                 .map(Map.Entry::getKey)
-                .findFirst()
-                .orElse(null);
+                .findFirst();
     }
 
     @Override

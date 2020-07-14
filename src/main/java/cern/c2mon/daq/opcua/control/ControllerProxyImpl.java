@@ -1,8 +1,7 @@
-package cern.c2mon.daq.opcua.failover;
+package cern.c2mon.daq.opcua.control;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.connection.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -34,7 +33,6 @@ import java.util.concurrent.CompletionException;
 public class ControllerProxyImpl implements ControllerProxy {
     protected final ApplicationContext appContext;
     protected final AppConfigProperties config;
-    protected final MessageSender messageSender;
     protected final Endpoint endpoint;
 
     @Getter
@@ -54,32 +52,27 @@ public class ControllerProxyImpl implements ControllerProxy {
      */
     @Override
     public void connect(String uri) throws OPCUAException {
-        try {
-            String[] redundantUris = new String[0];
-            endpoint.initialize(uri);
-            final boolean wasFailoverLoadedFromConfig = loadedFailoverFromConfigurationSuccessfully();
-            if (wasFailoverLoadedFromConfig && controller instanceof FailoverBase) {
-                redundantUris = loadRedundantUris(endpoint);
-            } else if (!wasFailoverLoadedFromConfig) {
-                final Map.Entry<RedundancySupport, String[]> redundancySupport = redundancySupport(endpoint, uri);
-                switch (redundancySupport.getKey()) {
-                    case HotAndMirrored:
-                    case Hot:
-                    case Warm:
-                    case Cold:
-                        controller = appContext.getBean(ColdFailover.class);
-                        break;
-                    default:
-                        controller = appContext.getBean(NoFailover.class);
-                }
-                redundantUris = redundancySupport.getValue();
+        String[] redundantUris = new String[0];
+        endpoint.initialize(uri);
+        final boolean wasFailoverLoadedFromConfig = loadedFailoverFromConfigurationSuccessfully();
+        if (wasFailoverLoadedFromConfig && controller instanceof FailoverBase) {
+            redundantUris = loadRedundantUris(endpoint);
+        } else if (!wasFailoverLoadedFromConfig) {
+            final Map.Entry<RedundancySupport, String[]> redundancySupport = redundancySupport(endpoint, uri);
+            switch (redundancySupport.getKey()) {
+                case HotAndMirrored:
+                case Hot:
+                case Warm:
+                case Cold:
+                    controller = appContext.getBean(ColdFailover.class);
+                    break;
+                default:
+                    controller = appContext.getBean(NoFailover.class);
             }
-            log.info("Using redundancy mode {}, redundant URIs {}.", controller.getClass().getName(), redundantUris);
-            controller.initialize(endpoint, redundantUris);
-        } catch (OPCUAException e) {
-            messageSender.onEquipmentStateUpdate(MessageSender.EquipmentState.CONNECTION_FAILED);
-            throw e;
+            redundantUris = redundancySupport.getValue();
         }
+        log.info("Using redundancy mode {}, redundant URIs {}.", controller.getClass().getName(), redundantUris);
+        controller.initialize(endpoint, redundantUris);
     }
 
     /**

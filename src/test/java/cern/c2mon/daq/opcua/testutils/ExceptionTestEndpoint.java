@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.connection.MessageSender;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
@@ -22,8 +22,8 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
 
-    public ExceptionTestEndpoint(MessageSender messageSender) {
-        super(messageSender);
+    public ExceptionTestEndpoint(MessageSender messageSender, TagSubscriptionMapReader mapper) {
+        super(messageSender, mapper);
     }
 
     @Override

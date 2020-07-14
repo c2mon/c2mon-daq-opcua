@@ -1,10 +1,10 @@
-package cern.c2mon.daq.opcua.control;
+package cern.c2mon.daq.opcua.tagHandling;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.failover.Controller;
-import cern.c2mon.daq.opcua.failover.NoFailover;
+import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.NoFailover;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestControllerProxy;
@@ -44,7 +44,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     @Test
     public void invalidOnAddDataTagShouldReportFail () throws OPCUAException {
         Controller controller = new NoFailover();
-        controller.initialize(new ExceptionTestEndpoint(null), new String[0]);
+        controller.initialize(new ExceptionTestEndpoint(null, mapper), new String[0]);
         final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, listener);
         proxy.setController(controller);
         final DataTagChanger testTagChanger = new DataTagChanger(new DataTagHandlerImpl(mapper, listener, proxy));
