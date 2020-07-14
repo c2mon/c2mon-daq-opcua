@@ -43,12 +43,13 @@ public abstract class FailoverBase extends ControllerBase {
     public void stop() {
         log.info("Disconnecting... ");
         stopped.set(true);
+        listening.set(false);
         super.stop();
     }
 
     public void triggerServerSwitch() {
         log.info("switchServer");
-        if (listening.getAndSet(false)) {
+        if (listening.getAndSet(false) && !stopped.get()) {
             currentEndpoint().manageSessionActivityListener(false, null);
             try {
                 retryDelegate.triggerServerSwitchRetry(this);

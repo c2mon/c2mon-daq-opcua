@@ -73,6 +73,12 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     }
 
     @Override
+    public void stop() {
+        reconnected.complete(null);
+        super.stop();
+    }
+
+    @Override
     protected Endpoint currentEndpoint() {
         return activeEndpoint;
     }

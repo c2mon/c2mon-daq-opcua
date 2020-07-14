@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
     @Autowired TestListeners.Pulse pulseListener;
     @Autowired DataTagHandler tagHandler;
@@ -74,14 +73,19 @@ public class FailoverIT extends EdgeTestBase {
     }
 
     @AfterEach
-    public void cleanUp() {
+    public void cleanUp() throws InterruptedException {
         log.info("############ CLEAN UP ############");
         controllerProxy.stop();
+        TimeUnit.MILLISECONDS.sleep(1000);
         if (resetConnection) {
-            log.info("Resetting active proxy {}", active.proxy);
-            active.proxy.setConnectionCut(false);
             log.info("Resetting fallback proxy {}", fallback.proxy);
             fallback.proxy.setConnectionCut(true);
+            log.info("Resetting active proxy {}", active.proxy);
+            try {
+                active.proxy.setConnectionCut(false);
+            } catch (Exception e) {
+                log.error("Error cutting connection.", e);
+            }
         } else {
             log.info("Skip resetting proxies");
         }
@@ -107,7 +111,7 @@ public class FailoverIT extends EdgeTestBase {
         resetConnection = true;
     }
 
-    @Ignore
+    @Test
     public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("longDisconnectShouldTriggerReconnectToAnyAvailableServer");
         cutConnection(pulseListener, active);
