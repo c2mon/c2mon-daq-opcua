@@ -65,6 +65,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Primary
 @Scope(value = "prototype")
 public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscriptionManager.SubscriptionListener {
+    private final static String hostRegex = "://[^/]*";
 
     private final SecurityModule securityModule;
     private final RetryDelegate retryDelegate;
@@ -92,7 +93,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private static List<EndpointDescription> updateEndpointUrls(String originalUri, List<EndpointDescription> originalEndpoints) {
         // Some hostnames contain characters not allowed in a URI, such as underscores in Windows machine hostnames.
         // Therefore, parsing is done using a regular expression rather than relying on java URI class methods.
-        final String hostRegex = "://[^/]*";
 
         final Matcher matcher = Pattern.compile(hostRegex).matcher(originalUri);
         if (matcher.find()) {

@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.control.FailoverMode;
 import cern.c2mon.daq.opcua.exceptions.*;
-import cern.c2mon.daq.opcua.control.FailoverBase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -49,7 +49,6 @@ public class RetryDelegate {
      *                        of type {@link CommunicationException} is all retries attempts have been exhausted without
      *                        a success.
      */
-
     @Retryable(value = {CommunicationException.class},
             maxAttemptsExpression = "#{@appConfigProperties.getMaxRetryAttempts()}",
             backoff = @Backoff(delayExpression = "#{@appConfigProperties.getRetryDelay()}"))
@@ -57,12 +56,13 @@ public class RetryDelegate {
         try {
             // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
             // but not the underlying action on the OpcUaClient
-            if(disconnectionTime.get() < 0L) {
+            if (disconnectionTime.get() < 0L) {
                 log.info("Endpoint was stopped, cease retries.");
                 return null;
             }
             return futureSupplier.get().get(config.getTimeout(), TimeUnit.MILLISECONDS);
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
+            log.debug("Execution {} failed with exception; ", context.name(), e);
             throw OPCUAException.of(context, e.getCause(), isLongDisconnection(disconnectionTime));
         } catch (Exception e) {
             log.info("An unexpected exception occurred during {}.", context.name(), e);
@@ -70,13 +70,19 @@ public class RetryDelegate {
         }
     }
 
+    /**
+     * Initiates a failover in between redundant servers. Failed failovers are retried until a connection could be
+     * established successfully.
+     * @param failover A controller
+     * @throws OPCUAException
+     */
     @Retryable(value = {OPCUAException.class},
             maxAttempts = Integer.MAX_VALUE,
             backoff = @Backoff(
                     delayExpression = "#{@appConfigProperties.getRetryDelay()}",
                     maxDelayExpression = "#{@appConfigProperties.getMaxFailoverDelay()}",
                     multiplier = 3))
-    public void triggerServerSwitchRetry(FailoverBase failover) throws OPCUAException {
+    public void triggerServerSwitchRetry(FailoverMode failover) throws OPCUAException {
         failover.switchServers();
     }
 

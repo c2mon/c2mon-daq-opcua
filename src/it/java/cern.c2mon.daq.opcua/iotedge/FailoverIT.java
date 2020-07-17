@@ -1,12 +1,14 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
-import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.ColdFailover;
 import cern.c2mon.daq.opcua.control.ControllerProxy;
+import cern.c2mon.daq.opcua.control.FailoverMode;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.MessageSender;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -47,6 +49,7 @@ public class FailoverIT extends EdgeTestBase {
     @Autowired ControllerProxy coldFailover;
     @Autowired ControllerProxy controllerProxy;
     @Autowired AppConfigProperties config;
+    @Autowired RetryDelegate retryDelegate;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
@@ -93,7 +96,7 @@ public class FailoverIT extends EdgeTestBase {
     }
 
     @Test
-    public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException {
+    public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("coldFailoverShouldReconnectClient");
         cutConnection(pulseListener, active);
         triggerServerSwitch();
@@ -102,7 +105,7 @@ public class FailoverIT extends EdgeTestBase {
     }
 
     @Test
-    public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
+    public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("coldFailoverShouldResumeSubscriptions");
         cutConnection(pulseListener, active);
         triggerServerSwitch();
@@ -122,7 +125,7 @@ public class FailoverIT extends EdgeTestBase {
     }
 
     @Test
-    public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
+    public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
         cutConnection(pulseListener, active);
         triggerServerSwitch();
@@ -156,7 +159,7 @@ public class FailoverIT extends EdgeTestBase {
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
     }
 
-    private void triggerServerSwitch() {
-        CompletableFuture.runAsync(() -> ((ColdFailover) coldFailover).triggerServerSwitch());
+    private void triggerServerSwitch() throws OPCUAException {
+        retryDelegate.triggerServerSwitchRetry((FailoverMode) coldFailover);
     }
 }

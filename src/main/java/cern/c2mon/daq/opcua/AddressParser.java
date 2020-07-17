@@ -133,8 +133,8 @@ public abstract class AddressParser {
             }
         } catch (ClassCastException | IllegalAccessException e) {
             log.debug("Error setting field {}.", name, e);
-        } catch (NoSuchFieldException ignored) {
-            log.debug("No field with name {} exists in class {}.", name, target.getClass().getName());
+        } catch (NoSuchFieldException e) {
+            log.debug("No field with name {} exists in class {}:", name, target.getClass().getName(), e);
         }
         return false;
     }
