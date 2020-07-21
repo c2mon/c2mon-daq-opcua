@@ -3,10 +3,9 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.MiloMapper;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -24,6 +23,7 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
+import org.eclipse.milo.opcua.sdk.client.subscriptions.OpcUaSubscriptionManager;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
@@ -70,7 +70,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private final SecurityModule securityModule;
     private final RetryDelegate retryDelegate;
     private final TagSubscriptionMapReader mapper;
-    private final MessageSender messageSender;
+    private final IMessageSender messageSender;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
     private final AtomicLong disconnectedOn = new AtomicLong(0);
@@ -132,7 +132,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             var endpoints = DiscoveryClient.getEndpoints(uri).join();
             endpoints = updateEndpointUrls(uri, endpoints);
             client = securityModule.createClientWithListeners(endpoints, sessionActivityListeners);
-            client.getSubscriptionManager().addSubscriptionListener(this);
+            final OpcUaSubscriptionManager subscriptionManager = client.getSubscriptionManager();
+            subscriptionManager.addSubscriptionListener(this);
+            subscriptionManager.resumeDelivery();
         } catch (CompletionException e) {
             log.error("Error on connection to uri {}: ", uri, e);
             throw of(CONNECT, e.getCause(), false);
@@ -165,7 +167,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         log.info("Disconnecting endpoint at {}", uri);
         try {
             if (client != null) {
-                client.getSubscriptionManager().clearSubscriptions();
                 client.getSubscriptionManager().removeSubscriptionListener(this);
                 sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
                 retryDelegate.completeOrThrow(DISCONNECT, this::getDisconnectPeriod, client::disconnect);
@@ -191,9 +192,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      */
     public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException {
         try {
-            log.info("Subscribing definition {} with publishing interval {}.", definitions, group.getPublishInterval());
+            log.info("Subscribing definitions with publishing interval {}.", group.getPublishInterval());
             return subscribeWithCallback(group.getPublishInterval(), definitions, (item, i) -> item.setValueConsumer(value -> {
-                log.info("Creating callback for definition {}.", definitions);
                 final Optional<Long> tagId = mapper.getTagId(item.getClientHandle());
                 SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
                 final Object updateValue = MiloMapper.toObject(value.getValue());
@@ -206,7 +206,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             throw e;
         } catch (OPCUAException e) {
             final String ids = Joiner.on(", ").join(definitions.stream().map(d -> mapper.getTagId(d.getClientHandle())).toArray());
-            log.error("Tags with IDs {} could not be subscribed on endpoint with uri {}. ", ids, getUri());
+            log.error("Tags with IDs {} could not be subscribed on endpoint with uri {}. ", ids, getUri(), e);
             return definitions.stream()
                     .map(definition -> Map.entry(definition.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)))
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -229,7 +229,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
         log.info("Attempt to recreate the subscription.");
         final Integer publishInterval = subscriptionMap.inverse().getOrDefault(subscription, -1);
-        final var group = mapper.getGroup(publishInterval);
+        final SubscriptionGroup group = mapper.getGroup(publishInterval);
         if (group == null || group.size() == 0) {
             throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
         }
@@ -248,13 +248,14 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     public void recreateAllSubscriptions() throws CommunicationException {
-        final boolean anySuccess = mapper.getGroups().stream().allMatch(group -> {
-            try {
-                return resubscribeGroupsAndReportSuccess(group);
-            } catch (ConfigurationException e) {
-                return false;
-            }
-        });
+        boolean anySuccess = true;
+        for (SubscriptionGroup group : mapper.getGroups()) {
+                try {
+                    anySuccess = anySuccess && resubscribeGroupsAndReportSuccess(group);
+                } catch (ConfigurationException e) {
+                    log.info( "Could not resubscribe group with time deadband {}.", group.getPublishInterval(), e);
+                }
+        }
         if (!anySuccess) {
             log.error("Could not recreate any subscriptions. Connect to next server... ");
             throw new CommunicationException(ExceptionContext.NO_REDUNDANT_SERVER);

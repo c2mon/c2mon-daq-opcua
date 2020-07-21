@@ -3,19 +3,21 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.ColdFailover;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.ControllerProxyImpl;
+import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.opcua.control.NoFailover;
 import lombok.Setter;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+
 @Component(value = "testFailoverProxy")
-public class TestControllerProxy extends ControllerProxyImpl {
+public class TestControllerProxy extends ControllerProxy {
     @Setter
     private String[] redundantUris = new String[0];
 
@@ -23,7 +25,7 @@ public class TestControllerProxy extends ControllerProxyImpl {
         this.controller = controller;
     }
 
-    public TestControllerProxy(ApplicationContext appContext, AppConfigProperties config, MessageSender messageSender, Endpoint endpoint) {
+    public TestControllerProxy(ApplicationContext appContext, AppConfigProperties config, IMessageSender messageSender, Endpoint endpoint) {
         super(appContext, config, endpoint);
     }
 
@@ -41,11 +43,11 @@ public class TestControllerProxy extends ControllerProxyImpl {
     }
 
     @Override
-    public void connect(String uri) throws OPCUAException {
+    public void connect(Collection<String> serverAddresses) throws OPCUAException {
         if (controller == null) {
             controller = new NoFailover();
         }
-        endpoint.initialize(uri);
+        endpoint.initialize(serverAddresses.iterator().next());
         controller.initialize(endpoint, redundantUris);
     }
 }

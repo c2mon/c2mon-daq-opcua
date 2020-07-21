@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import lombok.Getter;
@@ -47,7 +47,7 @@ public abstract class EdgeTestBase {
 
     }
 
-    protected static MessageSender.EquipmentState cutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
+    protected static IMessageSender.EquipmentState cutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
         log.info("Cutting connection.");
         final var connectionLost = listener.listen();
         img.proxy.setConnectionCut(true);
@@ -57,7 +57,7 @@ public abstract class EdgeTestBase {
         }).get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
     }
 
-    protected static MessageSender.EquipmentState uncutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
+    protected static IMessageSender.EquipmentState uncutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
         log.info("Reestablishing connection.");
         final var connectionRegained = listener.listen();
         img.proxy.setConnectionCut(false);

@@ -5,7 +5,7 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.ControllerProxy;
+import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.control.NoFailover;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
@@ -31,7 +31,7 @@ public class CommandTagHandlerTest {
     SourceCommandTag tag;
     OPCHardwareAddressImpl address;
     OPCHardwareAddressImpl pulseAddress;
-    MessageSender l = new TestListeners.TestListener();
+    IMessageSender l = new TestListeners.TestListener();
 
     @BeforeEach
     public void setUp() {
@@ -48,7 +48,7 @@ public class CommandTagHandlerTest {
         value = new SourceCommandTagValue();
         value.setDataType(Integer.class.getName());
         value.setValue(1);
-        final ControllerProxy controllerProxy = TestUtils.getFailoverProxy(endpoint, l);
+        final IControllerProxy controllerProxy = TestUtils.getFailoverProxy(endpoint, l);
         commandTagHandler = new CommandTagHandler(controllerProxy);
     }
 

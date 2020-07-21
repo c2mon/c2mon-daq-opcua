@@ -38,6 +38,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     private final ApplicationContext applicationContext;
 
     public void initialize(Endpoint endpoint, String[] redundantUris) throws OPCUAException {
+        listening.set(true);
         stopped.set(false);
     }
 
@@ -54,8 +55,9 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     }
 
     public void triggerServerSwitch() {
-        log.info("switchServer");
+        log.info("enter switchServer. Listening is {}, stopped is {}.", listening.get(), stopped.get());
         if (listening.getAndSet(false) && !stopped.get()) {
+            log.info("switchServer");
             currentEndpoint().manageSessionActivityListener(false, null);
             try {
                 retryDelegate.triggerServerSwitchRetry(this);

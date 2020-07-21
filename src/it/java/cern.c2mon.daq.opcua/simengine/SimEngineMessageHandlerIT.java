@@ -1,9 +1,9 @@
 package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.control.ControllerProxy;
+import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
@@ -54,9 +54,9 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     @Autowired ApplicationContext context;
     @Autowired TestListeners.Pulse endpointListener;
-    @Autowired DataTagHandler tagHandler;
+    @Autowired IDataTagHandler tagHandler;
     @Autowired
-    ControllerProxy proxy;
+    IControllerProxy proxy;
 
 
     private OPCUAMessageHandler handler;

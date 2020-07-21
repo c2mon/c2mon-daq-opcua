@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
 import static org.easymock.EasyMock.*;
@@ -19,7 +20,7 @@ import static org.easymock.EasyMock.*;
 public class ControllerProxyTest {
     AppConfigProperties config = TestUtils.createDefaultConfig();
     ApplicationContext applicationContext = createMock(ApplicationContext.class);
-    ControllerProxy proxy;
+    IControllerProxy proxy;
     TestEndpoint testEndpoint;
     NoFailover noFailover = createNiceMock(NoFailover.class);
     ColdFailover coldFailover = createNiceMock(ColdFailover.class);
@@ -27,7 +28,7 @@ public class ControllerProxyTest {
     @BeforeEach
     public void setUp() {
         testEndpoint = new TestEndpoint(new TestListeners.TestListener(), new TagSubscriptionManager());
-        proxy = new ControllerProxyImpl(applicationContext, config, testEndpoint);
+        proxy = new ControllerProxy(applicationContext, config, testEndpoint);
         expect(applicationContext.getBean(ColdFailover.class)).andReturn(coldFailover).anyTimes();
         expect(applicationContext.getBean(NoFailover.class)).andReturn(noFailover).anyTimes();
     }
@@ -39,7 +40,7 @@ public class ControllerProxyTest {
                 .once();
         mockFailoverInitialization(noFailover);
         replay(applicationContext, testEndpoint.getServerRedundancyTypeNode(), noFailover);
-        proxy.connect("test");
+        proxy.connect(Collections.singleton("test"));
         verify(noFailover);
     }
 
@@ -50,7 +51,7 @@ public class ControllerProxyTest {
                 .once();
         mockFailoverInitialization(noFailover);
         replay(applicationContext, testEndpoint.getServerRedundancyTypeNode(), noFailover);
-        proxy.connect("test");
+        proxy.connect(Collections.singleton("test"));
         verify(testEndpoint.getServerRedundancyTypeNode());
     }
 
@@ -60,7 +61,7 @@ public class ControllerProxyTest {
         mockServerUriCall();
         mockFailoverInitialization(coldFailover);
         replay(applicationContext, noFailover, coldFailover,testEndpoint.getServerRedundancyTypeNode());
-        proxy.connect("test");
+        proxy.connect(Collections.singleton("test"));
         verify(coldFailover);
     }
 
@@ -70,7 +71,7 @@ public class ControllerProxyTest {
         config.setRedundantServerUris(Arrays.asList("test1", "test2"));
         mockFailoverInitialization(coldFailover);
         replay(applicationContext, noFailover, coldFailover);
-        proxy.connect("test");
+        proxy.connect(Arrays.asList("test", "test2"));
         verify(coldFailover);
     }
 

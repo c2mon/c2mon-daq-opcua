@@ -28,9 +28,9 @@ import java.util.concurrent.TimeUnit;
 @Component("coldFailover")
 public class ColdFailover extends FailoverBase implements SessionActivityListener {
 
-    List<String> redundantAddresses = new ArrayList<>();
-    String currentUri;
-    Endpoint activeEndpoint;
+    private final List<String> redundantAddresses = new ArrayList<>();
+    private String currentUri;
+    private Endpoint activeEndpoint;
 
     @Value("#{@appConfigProperties.getConnectionMonitoringRate()}")
     private int monitoringRate;
@@ -41,7 +41,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     private CompletableFuture<Void> reconnected = new CompletableFuture<>();
 
     public ColdFailover(ApplicationContext applicationContext, RetryDelegate retryDelegate) {
-        super(applicationContext, retryDelegate);
+        super(retryDelegate, applicationContext);
     }
 
 

@@ -24,7 +24,7 @@ public class TagEventsTest extends TagHandlerTestBase {
     @BeforeEach
     public void setUp() throws OPCUAException, InterruptedException {
         super.setUp();
-        proxy.connect(uri);
+        proxy.connect(Collections.singleton(uri));
         tagUpdate = listener.getTagUpdate();
         tagInvalid = listener.getTagInvalid();
     }

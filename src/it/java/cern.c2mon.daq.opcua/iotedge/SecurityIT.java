@@ -2,11 +2,11 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
-import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
+import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.tagHandling.IDataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -43,8 +43,9 @@ public class SecurityIT {
 
 
     @Autowired AppConfigProperties config;
-    @Autowired ControllerProxy controllerProxy;
-    @Autowired DataTagHandler tagHandler;
+    @Autowired
+    IControllerProxy controllerProxy;
+    @Autowired IDataTagHandler tagHandler;
     @Autowired TestListeners.Pulse listener;
 
     private String uri;
@@ -87,9 +88,9 @@ public class SecurityIT {
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
         final var f = listener.getStateUpdate();
-        controllerProxy.connect(uri);
+        controllerProxy.connect(Collections.singleton(uri));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
-        assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        assertEquals(IMessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -97,7 +98,7 @@ public class SecurityIT {
         config.getCertificationPriority().remove("none");
         config.getCertificationPriority().remove("load");
         final var f = trustCertificatesOnServerAndConnect();
-        assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        assertEquals(IMessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -105,7 +106,7 @@ public class SecurityIT {
         config.getCertificationPriority().remove("none");
         config.getCertificationPriority().remove("generate");
         final var f = trustCertificatesOnServerAndConnect();
-        assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        assertEquals(IMessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -131,8 +132,8 @@ public class SecurityIT {
         trustCertificatesOnClient();
 
         final var state = listener.listen();
-        controllerProxy.connect(uri);
-        assertEquals(MessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        controllerProxy.connect(Collections.singleton(uri));
+        assertEquals(IMessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     private void trustCertificatesOnClient() throws IOException {
@@ -143,10 +144,10 @@ public class SecurityIT {
         }
     }
 
-    private CompletableFuture<MessageSender.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
+    private CompletableFuture<IMessageSender.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
         log.info("Initial connection attempt...");
         try {
-            controllerProxy.connect(uri);
+            controllerProxy.connect(Collections.singleton(uri));
         } catch (CommunicationException e) {
             // expected behavior: rejected by the server
         }
@@ -156,7 +157,7 @@ public class SecurityIT {
         trustCertificates();
         final var state = listener.listen();
 
-        controllerProxy.connect(uri);
+        controllerProxy.connect(Collections.singleton(uri));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         return state;
     }

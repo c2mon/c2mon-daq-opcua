@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -12,20 +11,27 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-public interface Controller {
+/**
+ * Classes implementing this interface present a specific kind handler for redundancy modes with the responsibility of
+ * monitoring the connection state to the active server and of handling failover when needed. Currently, only {@link
+ * ColdFailover} is supported of the OPC UA redundancy model. To add support for custom or vendor-specifc redundancy
+ * models, a class implementing FailoverMode should be created and references in {@link
+ * cern.c2mon.daq.opcua.AppConfigProperties}.
+ */
+public interface IControllerProxy {
 
     /**
-     * Execute the required steps to monitor the connection to the active server and to failover on demand to a backup
-     * server
-     * @param endpoint           the endpoint that is currently connected
-     * @param redundantAddresses the addresses of the servers in the redundant server set not including the active
-     *                           server URI
-     * @throws OPCUAException if an error ocurred when setting up connection monitoring
+     * Connect to the server at one of the given addresses, and setup redundancy and failover monitoring according to
+     * configuration and the information on the server
+     * @param serverAddresses the addresses of all servers in a redundant server set. Contains a single address of the
+     *                        server is not part of a redundant setup.
+     * @throws OPCUAException if connecting to the server(s) failed.
      */
-    void initialize(Endpoint endpoint, String[] redundantAddresses) throws OPCUAException;
+    void connect(Collection<String> serverAddresses) throws OPCUAException;
 
     /**
      * Disconnect from the OPC UA server and reset the controller to a neutral state.

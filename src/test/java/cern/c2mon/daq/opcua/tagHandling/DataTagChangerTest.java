@@ -1,10 +1,9 @@
 package cern.c2mon.daq.opcua.tagHandling;
 
-import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.NoFailover;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestControllerProxy;
@@ -16,21 +15,78 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DataTagChangerTest extends TagHandlerTestBase {
 
-    private IDataTagChanger tagChanger;
+    private DataTagChanger tagChanger;
     ChangeReport changeReport;
     ISourceDataTag tag;
 
     @BeforeEach
-    public void castToDataTagChanger() throws OPCUAException {
+    public void setUpTagChanger() {
         tag = EdgeTagFactory.DipData.createDataTag();
         tagChanger = new DataTagChanger(controller);
         changeReport = new ChangeReport();
+    }
+
+    private void setup(Collection<ISourceDataTag> oldTags) throws ConfigurationException {
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, oldTags);
+        mocker.replay();
+        controller.subscribeTags(oldTags);
+    }
+
+    @Test
+    public void updateEqConfigShouldRemoveTagsNotInNewConfig() throws ConfigurationException {
+        //setup
+        final Collection<ISourceDataTag> oldTags = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.PositiveTrendData.createDataTag(), tag);
+        final Collection<ISourceDataTag> newTag = Collections.singletonList(EdgeTagFactory.StartStepUp.createDataTag());
+        setup(oldTags);
+
+        //action
+        tagChanger.onUpdateEquipmentConfiguration(newTag, oldTags, changeReport);
+
+        final Set<Long> actual = mapper.getTagIdDefinitionMap().keySet();
+        final Collection<Long> expected = newTag.stream().map(ISourceDataTag::getId).collect(Collectors.toList());
+        Assertions.assertTrue(expected.containsAll(actual));
+        Assertions.assertTrue(actual.containsAll(expected));
+    }
+
+    @Test
+    public void updateEqConfigShouldAddTagsNotInOldConfig() throws ConfigurationException {
+        //setup
+        final Collection<ISourceDataTag> newTag = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.PositiveTrendData.createDataTag(), tag);
+        final Collection<ISourceDataTag> oldTags = Collections.singletonList(EdgeTagFactory.StartStepUp.createDataTag());
+        setup(oldTags);
+
+        //action
+        tagChanger.onUpdateEquipmentConfiguration(newTag, oldTags, changeReport);
+
+        final Set<Long> actual = mapper.getTagIdDefinitionMap().keySet();
+        final Collection<Long> expected = newTag.stream().map(ISourceDataTag::getId).collect(Collectors.toList());
+        Assertions.assertTrue(expected.containsAll(actual));
+        Assertions.assertTrue(actual.containsAll(expected));
+    }
+
+    @Test
+    public void updateEqConfigShouldReportAddedTagsInChangeReport() throws ConfigurationException {
+        //setup
+        final Collection<ISourceDataTag> newTag = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.PositiveTrendData.createDataTag(), tag);
+        final Collection<ISourceDataTag> oldTags = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.AlternatingBoolean.createDataTag());
+        setup(oldTags);
+
+        //action
+        tagChanger.onUpdateEquipmentConfiguration(newTag, oldTags, changeReport);
+
+        changeReport.getInfoMessage().contains("Added Tags ");
     }
 
     @Test
@@ -47,7 +103,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
         controller.initialize(new ExceptionTestEndpoint(null, mapper), new String[0]);
         final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, listener);
         proxy.setController(controller);
-        final DataTagChanger testTagChanger = new DataTagChanger(new DataTagHandlerImpl(mapper, listener, proxy));
+        final DataTagChanger testTagChanger = new DataTagChanger(new DataTagHandler(mapper, listener, proxy));
         testTagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
     }

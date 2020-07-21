@@ -5,8 +5,8 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
-import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.IDataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
@@ -18,11 +18,12 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import static cern.c2mon.daq.opcua.tagHandling.MessageSender.EquipmentState.CONNECTION_FAILED;
+import static cern.c2mon.daq.opcua.tagHandling.IMessageSender.EquipmentState.CONNECTION_FAILED;
 import static org.easymock.EasyMock.replay;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -30,12 +31,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @UseHandler(OPCUAMessageHandler.class)
 @SpringBootTest
 @TestPropertySource(locations = "classpath:opcua.properties")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @RunWith(SpringRunner.class)
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     @Autowired ApplicationContext context;
-    @Autowired DataTagHandler tagHandler;
-    @Autowired MessageSender epMessageSender;
+    @Autowired IDataTagHandler tagHandler;
+    @Autowired IMessageSender epMessageSender;
     @Autowired Endpoint miloEndpoint;
     @Autowired TagSubscriptionMapReader mapper;
 

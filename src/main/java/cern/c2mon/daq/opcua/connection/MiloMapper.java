@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.mapping;
+package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;

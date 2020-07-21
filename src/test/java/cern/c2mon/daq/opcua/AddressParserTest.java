@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,24 +23,24 @@ public class AddressParserTest {
 
     @Test
     public void parserShouldReturnStringArrayOfAddresses() throws ConfigurationException {
-        String[] expected = new String[] {"opc.tcp://test" , "opc.tcp://test2"};
+        Collection<String> expected = Arrays.asList("opc.tcp://test" , "opc.tcp://test2");
         String addressString = "URI=" + StringUtils.join(expected, ",");
-        final String[] actual = AddressParser.parse(addressString, config);
-        assertEquals(Arrays.toString(expected), Arrays.toString(actual));
+        final Collection<String> actual = AddressParser.parse(addressString, config);
+        assertEquals(StringUtils.join(expected, ","), StringUtils.join(actual, ","));
     }
     @Test
     public void parserWithAdditionalPropertiesShouldReturnStringArrayOfAddresses() throws ConfigurationException {
-        String[] expected = new String[] {"opc.tcp://test" , "opc.tcp://test2"};
+        Collection<String> expected = Arrays.asList("opc.tcp://test" , "opc.tcp://test2");
         String addressString = "URI=" + StringUtils.join(expected, ",") + ";testProperties";
-        final String[] actual = AddressParser.parse(addressString, config);
-        assertEquals(Arrays.toString(expected), Arrays.toString(actual));
+        final Collection<String> actual = AddressParser.parse(addressString, config);
+        assertEquals(StringUtils.join(expected, ","), StringUtils.join(actual, ","));
     }
 
     @Test
     public void parserShouldOnlyReturnAddressesWithOpcTcp() throws Exception {
-        String[] expected = new String[] {"opc.tcp://test"};
-        final String[] actual = AddressParser.parse("URI=http://abc," + expected[0] + ";testProperties", config);
-        assertEquals(Arrays.toString(expected), Arrays.toString(actual));
+        String expected = "opc.tcp://test";
+        final Collection<String> actual = AddressParser.parse("URI=http://abc," + expected + ";testProperties", config);
+        assertEquals(expected, StringUtils.join(actual, ","));
     }
 
     @Test

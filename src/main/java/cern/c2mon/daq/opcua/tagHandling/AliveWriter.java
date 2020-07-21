@@ -17,7 +17,7 @@
 package cern.c2mon.daq.opcua.tagHandling;
 
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.control.ControllerProxy;
+import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
@@ -47,12 +47,12 @@ public class AliveWriter {
     /**
      * The failover proxy for the endpoint to write to.
      */
-    private final ControllerProxy controllerProxy;
+    private final IControllerProxy controllerProxy;
 
     /**
      * The Endpoint listener which notifies the Server of a new alive.
      */
-    private final MessageSender messageSender;
+    private final IMessageSender messageSender;
 
     /**
      * The service to schedule periodically to write to the alive tag hardware address
@@ -136,7 +136,7 @@ public class AliveWriter {
             log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
         }
         try {
-            if (controllerProxy.getController().write(address, castedValue)) {
+            if (controllerProxy.write(address, castedValue)) {
                 log.info("Written successfully to alive, sending status tag.");
                 messageSender.onAlive();
             }

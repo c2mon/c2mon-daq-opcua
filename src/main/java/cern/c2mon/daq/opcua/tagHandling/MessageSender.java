@@ -1,52 +1,83 @@
-/******************************************************************************
- * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- * 
- * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
- * C2MON is free software: you can redistribute it and/or modify it under the
- * terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation, either version 3 of the license.
- * 
- * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
- * more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package cern.c2mon.daq.opcua.tagHandling;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
+import org.eclipse.milo.opcua.sdk.client.api.UaSession;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
-public interface MessageSender {
+import static cern.c2mon.daq.opcua.tagHandling.IMessageSender.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.tagHandling.IMessageSender.EquipmentState.OK;
 
-    /**
-     * A representation of equipment states and descriptions.
-     */
-    @AllArgsConstructor
-    enum EquipmentState {
-        OK("Successfully connected"),
-        CONNECTION_FAILED("Cannot establish connection to the server"),
-        CONNECTION_LOST("Connection to server has been lost. Reconnecting...");
-        public final String message;
-    }
+/**
+ * A listener responsible to relay information regarding events on the DAQ to the IEquipmentMessageSender.
+ */
+@Component(value = "endpointListener")
+@RequiredArgsConstructor
+@Slf4j
+@Primary
+public class MessageSender implements IMessageSender, SessionActivityListener {
+
+    private IEquipmentMessageSender sender;
 
     /**
      * Initialize the EndpointListener with the IEquipmentMessageSender instance
      * @param sender the sender to notify of events
      */
-    void initialize(IEquipmentMessageSender sender);
+    @Override
+    public void initialize (IEquipmentMessageSender sender) {
+        this.sender = sender;
+    }
 
-    void onTagInvalid(Optional<Long>  tagId, final SourceDataTagQuality quality);
+    @Override
+    public void onTagInvalid(Optional<Long> tagId, final SourceDataTagQuality quality) {
+        if (tagId.isPresent()) {
+            this.sender.update(tagId.get(), quality);
+        } else {
+            log.info("Attempting to set unknown Tag invalid");
+        }
 
-    void onAlive();
+    }
 
-    void onEquipmentStateUpdate(EquipmentState state);
+    @Override
+    public void onValueUpdate(Optional<Long> tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
+        if (quality.isValid() && tagId.isPresent()) {
+            this.sender.update(tagId.get(), valueUpdate, quality);
+        } else if (quality.isValid()) {
+            log.error("Received update for unknown clientHandle.");
+        } else {
+            onTagInvalid(tagId, quality);
+        }
+    }
 
-    void onValueUpdate(Optional<Long> tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate);
+    @Override
+    public void onAlive() {
+        log.info("Supervision alive!");
+        sender.sendSupervisionAlive();
+    }
+
+    @Override
+    public void onSessionActive(UaSession session) {
+        onEquipmentStateUpdate(OK);
+    }
+
+    @Override
+    public void onSessionInactive(UaSession session) {
+        onEquipmentStateUpdate(CONNECTION_LOST);
+    }
+
+    @Override
+    public void onEquipmentStateUpdate(EquipmentState state) {
+        if (state == EquipmentState.OK) {
+            sender.confirmEquipmentStateOK(state.message);
+        } else {
+            sender.confirmEquipmentStateIncorrect(state.message);
+        }
+    }
 }

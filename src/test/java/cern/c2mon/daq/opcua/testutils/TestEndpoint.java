@@ -1,8 +1,9 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.MiloMapper;
 import cern.c2mon.daq.opcua.mapping.*;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
@@ -36,7 +37,7 @@ import static org.easymock.EasyMock.createMock;
 @RequiredArgsConstructor
 @Component(value = "testEndpoint")
 public class TestEndpoint implements Endpoint {
-    private final MessageSender messageSender;
+    private final IMessageSender messageSender;
     private final TagSubscriptionMapReader mapper;
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);

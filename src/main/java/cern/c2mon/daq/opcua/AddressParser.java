@@ -28,6 +28,7 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 
 import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,7 @@ public abstract class AddressParser {
      * @return An array of Strings for containing the URI for a server, or all servers in a redundant server cluster
      * @throws ConfigurationException in case the address String is malformed or missing required properties
      */
-    public static String[] parse(final String address, AppConfigProperties config) throws ConfigurationException {
+    public static Collection<String> parse(final String address, AppConfigProperties config) throws ConfigurationException {
         Map<String, String> properties = parsePropertiesFromString(address);
         String uri = properties.remove(URI);
         if (StringUtil.isNullOrEmpty(uri)) {
@@ -73,11 +74,11 @@ public abstract class AddressParser {
         // Some hostnames contain characters not allowed in a URI, such as underscores in Windows machine hostnames.
         // Therefore, parsing is done using a regular expression rather than relying on java URI class methods.
         final Pattern opcUri = Pattern.compile("^(opc.tcp://)+(?:.[^./]+)+(?:/.*)?");
-        final String[] uris = Stream.of(uri.split(","))
+        final Collection<String> uris = Stream.of(uri.split(","))
                 .map(String::trim)
                 .filter(s -> opcUri.matcher(s).find())
-                .toArray(String[]::new);
-        if (uris.length <= 0) {
+                .collect(Collectors.toList());
+        if (uris.isEmpty()) {
             throw new ConfigurationException(ExceptionContext.URI_SYNTAX);
         }
         overrideConfig(properties, config);

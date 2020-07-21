@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
@@ -62,7 +62,7 @@ public abstract class TestListeners {
     @Getter
     @RequiredArgsConstructor
     @Component(value = "testListener")
-    public static class TestListener implements MessageSender, SessionActivityListener {
+    public static class TestListener implements IMessageSender, SessionActivityListener {
         CompletableFuture<Long> tagUpdate = new CompletableFuture<>();
         CompletableFuture<Long> tagInvalid = new CompletableFuture<>();
         CompletableFuture<EquipmentState> stateUpdate = new CompletableFuture<>();
@@ -116,10 +116,10 @@ public abstract class TestListeners {
         @Override
         public void onValueUpdate(Optional<Long> tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
             if (quality.isValid() && tagId.isPresent()) {
-                log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
+                log.info("received data tag {}, value update {}, quality {}", tagId.get(), valueUpdate, quality);
                 tagUpdate.complete(tagId.get());
             } else if (quality.isValid()) {
-                log.error("received update for unknown tagId");
+                log.error("received update for unknown tagId.");
             } else {
                 onTagInvalid(tagId, quality);
             }

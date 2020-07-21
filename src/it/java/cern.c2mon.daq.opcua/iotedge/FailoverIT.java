@@ -3,12 +3,10 @@ package cern.c2mon.daq.opcua.iotedge;
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.control.ColdFailover;
-import cern.c2mon.daq.opcua.control.ControllerProxy;
-import cern.c2mon.daq.opcua.control.FailoverMode;
+import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.IDataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -28,6 +26,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -45,9 +44,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
     @Autowired TestListeners.Pulse pulseListener;
-    @Autowired DataTagHandler tagHandler;
-    @Autowired ControllerProxy coldFailover;
-    @Autowired ControllerProxy controllerProxy;
+    @Autowired IDataTagHandler tagHandler;
+    @Autowired Controller coldFailover;
+    @Autowired IControllerProxy controllerProxy;
     @Autowired AppConfigProperties config;
     @Autowired RetryDelegate retryDelegate;
 
@@ -55,31 +54,34 @@ public class FailoverIT extends EdgeTestBase {
     private final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
     private boolean resetConnection;
 
+    private Thread serverSwitch;
 
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("############ SET UP ############");
         config.setRedundancyMode(ColdFailover.class.getName());
-        config.setRedundantServerUris(Collections.singletonList(fallback.getUri()));
         pulseListener.setSourceID(tag.getId());
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);
 
         mockColdFailover();
-        controllerProxy.connect(active.getUri());
+        controllerProxy.connect(Arrays.asList(active.getUri(), fallback.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(tag));
         pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         resetConnection = false;
+        serverSwitch = new Thread(() -> ((FailoverBase) coldFailover).triggerServerSwitch());
         log.info("############ TEST ############");
     }
 
     @AfterEach
     public void cleanUp() throws InterruptedException {
         log.info("############ CLEAN UP ############");
+//        serverSwitch.interrupt();
         controllerProxy.stop();
-        TimeUnit.MILLISECONDS.sleep(1000);
+        TimeUnit.MILLISECONDS.sleep(TestUtils.TIMEOUT_IT);
+
         if (resetConnection) {
             log.info("Resetting fallback proxy {}", fallback.proxy);
             fallback.proxy.setConnectionCut(true);
@@ -99,16 +101,17 @@ public class FailoverIT extends EdgeTestBase {
     public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("coldFailoverShouldReconnectClient");
         cutConnection(pulseListener, active);
-        triggerServerSwitch();
-        Assertions.assertEquals(MessageSender.EquipmentState.OK, uncutConnection(pulseListener, fallback));
+        serverSwitch.start();
+        TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
+        Assertions.assertEquals(IMessageSender.EquipmentState.OK, uncutConnection(pulseListener, fallback));
         resetConnection = true;
     }
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
-        log.info("coldFailoverShouldResumeSubscriptions");
+        log.info("coldFailoverShouldResumeSubscriptions" + config.getTimeout());
         cutConnection(pulseListener, active);
-        triggerServerSwitch();
+        serverSwitch.start();
         uncutConnection(pulseListener, fallback);
         assertTagUpdate();
         resetConnection = true;
@@ -118,7 +121,6 @@ public class FailoverIT extends EdgeTestBase {
     public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("longDisconnectShouldTriggerReconnectToAnyAvailableServer");
         cutConnection(pulseListener, active);
-        TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
         uncutConnection(pulseListener, fallback);
         assertTagUpdate();
         resetConnection = true;
@@ -128,7 +130,7 @@ public class FailoverIT extends EdgeTestBase {
     public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
         cutConnection(pulseListener, active);
-        triggerServerSwitch();
+        serverSwitch.start();
         TimeUnit.MILLISECONDS.sleep(TestUtils.TIMEOUT);
         uncutConnection(pulseListener, active);
         assertTagUpdate();
@@ -154,12 +156,9 @@ public class FailoverIT extends EdgeTestBase {
     }
 
     private void assertTagUpdate() {
+        log.info("Assert tag update for tag with ID {}.", tag.getId());
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
-    }
-
-    private void triggerServerSwitch() throws OPCUAException {
-        retryDelegate.triggerServerSwitchRetry((FailoverMode) coldFailover);
     }
 }

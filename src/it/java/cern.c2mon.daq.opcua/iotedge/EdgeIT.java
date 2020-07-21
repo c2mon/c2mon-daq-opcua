@@ -1,12 +1,12 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.IDataTagHandler;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.daq.opcua.tagHandling.CommandTagHandler;
-import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.control.ControllerProxy;
+import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -31,7 +31,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static cern.c2mon.daq.opcua.tagHandling.MessageSender.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.tagHandling.IMessageSender.EquipmentState.CONNECTION_LOST;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -45,11 +45,13 @@ public class EdgeIT extends EdgeTestBase {
     private final ISourceDataTag alreadySubscribedTag = EdgeTagFactory.DipData.createDataTag();
 
     @Autowired TestListeners.Pulse pulseListener;
-    @Autowired ControllerProxy controllerProxy;
-    @Autowired DataTagHandler tagHandler;
+    @Autowired
+    IControllerProxy controllerProxy;
+    @Autowired
+    IDataTagHandler tagHandler;
     @Autowired CommandTagHandler commandTagHandler;
     @Autowired
-    ControllerProxy singleServerController;
+    IControllerProxy singleServerController;
 
     @BeforeEach
     public void setupEndpoint() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
@@ -59,7 +61,7 @@ public class EdgeIT extends EdgeTestBase {
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);
 
-        controllerProxy.connect(active.getUri());
+        controllerProxy.connect(Collections.singleton(active.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(alreadySubscribedTag));
         pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS); // that tag is subscribed
         pulseListener.reset();
@@ -97,7 +99,7 @@ public class EdgeIT extends EdgeTestBase {
 
         final var connectionRegained = pulseListener.listen();
         active.image.start();
-        assertEquals(MessageSender.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
+        assertEquals(IMessageSender.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
 
         pulseListener.reset();
         pulseListener.setSourceID(alreadySubscribedTag.getId());

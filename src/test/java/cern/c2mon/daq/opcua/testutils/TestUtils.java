@@ -3,10 +3,12 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
+import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import com.google.common.collect.ImmutableMap;
 import org.easymock.Capture;
+
+import java.util.Collections;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,11 +61,11 @@ public abstract class TestUtils {
         }
     }
 
-    public static TestControllerProxy getFailoverProxy(Endpoint endpoint, MessageSender messageSender) {
+    public static TestControllerProxy getFailoverProxy(Endpoint endpoint, IMessageSender messageSender) {
         final AppConfigProperties config = createDefaultConfig();
         final TestControllerProxy proxy = new TestControllerProxy(null, config, messageSender, endpoint);
         try {
-            proxy.connect("test");
+            proxy.connect(Collections.singleton("test"));
         } catch (OPCUAException ignored) { }
         return proxy;
     }

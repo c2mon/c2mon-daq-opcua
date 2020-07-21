@@ -20,13 +20,9 @@ import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
+import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.tagHandling.MessageSender;
-import cern.c2mon.daq.opcua.tagHandling.AliveWriter;
-import cern.c2mon.daq.opcua.tagHandling.CommandTagHandler;
-import cern.c2mon.daq.opcua.tagHandling.DataTagChanger;
-import cern.c2mon.daq.opcua.tagHandling.DataTagHandler;
-import cern.c2mon.daq.opcua.control.ControllerProxy;
+import cern.c2mon.daq.opcua.tagHandling.*;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -36,7 +32,9 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 
+import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -49,8 +47,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
 
-    private ControllerProxy controllerProxy;
-    private DataTagHandler dataTagHandler;
+    private IControllerProxy controllerProxy;
+    private IDataTagHandler dataTagHandler;
+    private DataTagChanger dataTagChanger;
     private AliveWriter aliveWriter;
     private CommandTagHandler commandTagHandler;
     private AppConfigProperties appConfigProperties;
@@ -63,24 +62,25 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public synchronized void connectToDataSource() throws EqIOException {
-        controllerProxy = getContext().getBean("failoverProxy", ControllerProxy.class);
-        dataTagHandler = getContext().getBean(DataTagHandler.class);
+        controllerProxy = getContext().getBean("failoverProxy", IControllerProxy.class);
+        dataTagHandler = getContext().getBean(IDataTagHandler.class);
         aliveWriter = getContext().getBean(AliveWriter.class);
         commandTagHandler = getContext().getBean(CommandTagHandler.class);
         appConfigProperties = getContext().getBean(AppConfigProperties.class);
+        dataTagChanger = getContext().getBean(DataTagChanger.class);
 
         // getEquipmentConfiguration always fetches the most recent equipment configuration, even if changes have occurred to the configuration since start-up of the DAQ.
         IEquipmentConfiguration config = getEquipmentConfiguration();
         IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-        getContext().getBean(MessageSender.class).initialize(sender);
+        getContext().getBean(IMessageSender.class).initialize(sender);
 
-        String[] addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
-        log.info("Connecting to the OPC UA data source at {}... ", addresses[0]);
+        Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
+        log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
         try {
-            controllerProxy.connect(addresses[0]);
+            controllerProxy.connect(addresses);
         } catch (OPCUAException e) {
-            sender.confirmEquipmentStateIncorrect(MessageSender.EquipmentState.CONNECTION_FAILED.message);
+            sender.confirmEquipmentStateIncorrect(IMessageSender.EquipmentState.CONNECTION_FAILED.message);
             throw e;
         }
 
@@ -89,7 +89,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         log.debug("connected");
 
         getEquipmentCommandHandler().setCommandRunner(this);
-        getEquipmentConfigurationHandler().setDataTagChanger(getContext().getBean(DataTagChanger.class));
+        getEquipmentConfigurationHandler().setDataTagChanger(dataTagChanger);
         getEquipmentConfigurationHandler().setCommandTagChanger(commandTagHandler);
         getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
     }
@@ -148,17 +148,14 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     }
 
     /**
-     * Makes sure the changes to the equipment are applied on OPC level.
-     * @param equipmentConfiguration    The new equipment configuration.
-     * @param oldEquipmentConfiguration A clone of the old equipment configuration.
-     * @param changeReport              Report object to fill.
+     * Apply changed to the equipment configuration
+     * @param newConfig    The new equipment configuration.
+     * @param oldConfig    A clone of the old equipment configuration.
+     * @param changeReport Report object to fill.
      */
     @Override
-    public synchronized void onUpdateEquipmentConfiguration(
-            final IEquipmentConfiguration equipmentConfiguration,
-            final IEquipmentConfiguration oldEquipmentConfiguration,
-            final ChangeReport changeReport) {
-        if (equipmentConfiguration.getAddress().equals(oldEquipmentConfiguration.getAddress())) {
+    public synchronized void onUpdateEquipmentConfiguration(final IEquipmentConfiguration newConfig, final IEquipmentConfiguration oldConfig, final ChangeReport changeReport) {
+        if (!newConfig.getAddress().equals(oldConfig.getAddress())) {
             try {
                 disconnectFromDataSource();
                 TimeUnit.MILLISECONDS.sleep(appConfigProperties.getRestartDelay());
@@ -170,11 +167,15 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
                 changeReport.appendError("Restart delay interrupted. DAQ will not connect.");
                 Thread.currentThread().interrupt();
             }
-        } else if ((equipmentConfiguration.getAliveTagId() != oldEquipmentConfiguration.getAliveTagId()
-                || equipmentConfiguration.getAliveTagInterval() != oldEquipmentConfiguration.getAliveTagInterval())
-                && aliveWriter != null) {
-            changeReport.appendInfo(aliveWriter.updateAndReport());
+        } else {
+            if ((newConfig.getAliveTagId() != oldConfig.getAliveTagId()
+                    || newConfig.getAliveTagInterval() != oldConfig.getAliveTagInterval())
+                    && aliveWriter != null) {
+                changeReport.appendInfo(aliveWriter.updateAndReport());
+            }
+            dataTagChanger.onUpdateEquipmentConfiguration(newConfig.getSourceDataTags().values(), oldConfig.getSourceDataTags().values(), changeReport);
         }
         changeReport.setState(CHANGE_STATE.SUCCESS);
     }
+
 }

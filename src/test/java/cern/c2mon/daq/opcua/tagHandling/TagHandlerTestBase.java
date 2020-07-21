@@ -30,7 +30,7 @@ public abstract class TagHandlerTestBase {
     TagSubscriptionManager mapper;
     TestEndpoint endpoint;
     TestListeners.TestListener listener;
-    DataTagHandler controller;
+    IDataTagHandler controller;
     MiloMocker mocker;
     TestControllerProxy proxy;
 
@@ -49,7 +49,7 @@ public abstract class TagHandlerTestBase {
         listener = new TestListeners.TestListener();
         endpoint = new TestEndpoint(listener, mapper);
         proxy = TestUtils.getFailoverProxy(endpoint, listener);
-        controller = new DataTagHandlerImpl(mapper, listener, proxy);
+        controller = new DataTagHandler(mapper, listener, proxy);
         mocker = new MiloMocker(endpoint, mapper);
     }
 
