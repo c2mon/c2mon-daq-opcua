@@ -1,0 +1,99 @@
+control.ColdFailover -right-|> control.FailoverBase
+
+title OPC UA DAQ Class Diagram: Control Component
+
+class control.ColdFailover {
+  - currentUri : String
+  - redundantAddresses : List<String>
+  - monitoringRate : int
+  - reconnected : CompletableFuture<Void>
+  - timeout : int
+  + ColdFailover()
+  + initialize()
+  + onSessionActive()
+  + onSessionInactive()
+  + stop()
+  + switchServers()
+  # currentEndpoint()
+  # passiveEndpoints()
+}
+
+interface control.Controller {
+  {abstract} + callMethod()
+  {abstract} + initialize()
+  {abstract} + read()
+  {abstract} + stop()
+  {abstract} + subscribe()
+  {abstract} + unsubscribe()
+  {abstract} + write()
+}
+
+abstract class control.ControllerBase {
+  + callMethod()
+  + read()
+  + stop()
+  + subscribe()
+  + unsubscribe()
+  + write()
+  {abstract} # currentEndpoint()
+  {abstract} # passiveEndpoints()
+}
+interface control.IControllerProxy {
+  {abstract} + connect()
+  {abstract} + stop()
+  {abstract} + stop()
+  {abstract} + callMethod()
+  {abstract} + read()
+  {abstract} + subscribe()
+  {abstract} + unsubscribe()
+  {abstract} + write()
+}
+class control.ControllerProxy {
+  # appContext : ApplicationContext
+  + ControllerProxy()
+  + connect()
+  + stop()
+  + callMethod()
+  + read()
+  + subscribe()
+  + unsubscribe()
+  + write()
+}
+abstract class control.FailoverBase {
+  {static} # SERVICE_LEVEL_HEALTH_LIMIT : UByte
+  {static} # connectionMonitoringNodes : List<ItemDefinition>
+  {static} # listening : AtomicBoolean
+  # stopped : AtomicBoolean
+  - applicationContext : ApplicationContext
+  + FailoverBase()
+  + initialize()
+  + stop()
+  + triggerServerSwitch()
+  # monitoringCallback()
+  # nextEndpoint()
+  # readServiceLevel()
+  # serverStateConsumer()
+  # serviceLevelConsumer()
+}
+interface control.FailoverMode {
+  {abstract} + switchServers()
+}
+class control.NoFailover {
+  + NoFailover()
+  + initialize()
+  # currentEndpoint()
+  # passiveEndpoints()
+}
+control.ColdFailover .right.|> "org.eclipse.milo.\nopcua.sdk.client.SessionActivityListener"
+control.ColdFailover -right-|> control.FailoverBase
+control.ColdFailover o-up- connection.Endpoint : activeEndpoint
+control.ControllerBase .up.|> control.Controller
+control.ControllerProxy .up.|> control.IControllerProxy
+control.ControllerProxy o-right- AppConfigProperties : config
+control.ControllerProxy o-right- control.Controller : controller
+control.ControllerProxy o-- connection.Endpoint : endpoint
+control.FailoverBase .up.|> control.FailoverMode
+control.FailoverBase -up-|> control.ControllerBase
+control.NoFailover -right-|> control.ControllerBase
+control.NoFailover o-right- connection.Endpoint : activeEndpoint
+

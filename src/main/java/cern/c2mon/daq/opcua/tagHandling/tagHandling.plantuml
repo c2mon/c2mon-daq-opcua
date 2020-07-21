@@ -1,0 +1,171 @@
+@startuml
+
+title __TAGHANDLING's Class Diagram__\n
+
+  namespace cern.c2mon.daq.opcua {
+    namespace tagHandling {
+      class cern.c2mon.daq.opcua.tagHandling.AliveWriter {
+          - address : NodeId
+          - enabled : boolean
+          - executor : ScheduledExecutorService
+          {static} - log : Logger
+          - writeAliveTask : ScheduledFuture<?>
+          - writeCounter : AtomicInteger
+          - writeTime : long
+          + AliveWriter()
+          + initialize()
+          + startWriter()
+          + stopWriter()
+          + updateAndReport()
+          - sendAlive()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace tagHandling {
+      class cern.c2mon.daq.opcua.tagHandling.CommandTagHandler {
+          {static} - log : Logger
+          + CommandTagHandler()
+          + onAddCommandTag()
+          + onRemoveCommandTag()
+          + onUpdateCommandTag()
+          + runCommand()
+          + setControllerProxy()
+          - executeMethod()
+          - executeWriteCommand()
+          - handleCommandResponseStatusCode()
+          - runClassicCommand()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace tagHandling {
+      class cern.c2mon.daq.opcua.tagHandling.DataTagChanger {
+          {static} - applyToReport : TriConsumer<Boolean, String, ChangeReport>
+          {static} - log : Logger
+          {static} - tagsToIdString : Function<Collection<ISourceDataTag>, String>
+          + DataTagChanger()
+          + onAddDataTag()
+          + onRemoveDataTag()
+          + onUpdateDataTag()
+          + onUpdateEquipmentConfiguration()
+          - addAndReport()
+          {static} - gatherIds()
+          - removeAndReport()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace tagHandling {
+      interface cern.c2mon.daq.opcua.tagHandling.DataTagChanger.TriConsumer {
+          {abstract} + apply()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace tagHandling {
+      class cern.c2mon.daq.opcua.tagHandling.DataTagHandler {
+          {static} - log : Logger
+          + DataTagHandler()
+          + refreshAllDataTags()
+          + refreshDataTag()
+          + removeTag()
+          + reset()
+          + subscribeTag()
+          + subscribeTags()
+          - completeSubscriptionAndReportSuccess()
+          - refresh()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace tagHandling {
+      interface cern.c2mon.daq.opcua.tagHandling.IDataTagHandler {
+          {abstract} + refreshAllDataTags()
+          {abstract} + refreshDataTag()
+          {abstract} + removeTag()
+          {abstract} + reset()
+          {abstract} + subscribeTag()
+          {abstract} + subscribeTags()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace tagHandling {
+      interface cern.c2mon.daq.opcua.tagHandling.IMessageSender {
+          {abstract} + initialize()
+          {abstract} + onAlive()
+          {abstract} + onEquipmentStateUpdate()
+          {abstract} + onTagInvalid()
+          {abstract} + onValueUpdate()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace tagHandling {
+      enum EquipmentState {
+        CONNECTION_FAILED
+        CONNECTION_LOST
+        OK
+        message
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace tagHandling {
+      class cern.c2mon.daq.opcua.tagHandling.MessageSender {
+          {static} - log : Logger
+          - sender : IEquipmentMessageSender
+          + MessageSender()
+          + initialize()
+          + onAlive()
+          + onEquipmentStateUpdate()
+          + onSessionActive()
+          + onSessionInactive()
+          + onTagInvalid()
+          + onValueUpdate()
+      }
+    }
+  }
+  
+
+  cern.c2mon.daq.opcua.tagHandling.AliveWriter o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy
+  cern.c2mon.daq.opcua.tagHandling.AliveWriter o-- cern.c2mon.daq.opcua.tagHandling.IMessageSender : messageSender
+  cern.c2mon.daq.opcua.tagHandling.CommandTagHandler .up.|> cern.c2mon.daq.common.conf.equipment.ICommandTagChanger
+  cern.c2mon.daq.opcua.tagHandling.CommandTagHandler o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy
+  cern.c2mon.daq.opcua.tagHandling.DataTagChanger .up.|> cern.c2mon.daq.common.conf.equipment.IDataTagChanger
+  cern.c2mon.daq.opcua.tagHandling.DataTagChanger o-- cern.c2mon.daq.opcua.tagHandling.IDataTagHandler : controller
+  cern.c2mon.daq.opcua.tagHandling.DataTagChanger +-down- cern.c2mon.daq.opcua.tagHandling.DataTagChanger.TriConsumer
+  cern.c2mon.daq.opcua.tagHandling.DataTagHandler .up.|> cern.c2mon.daq.opcua.tagHandling.IDataTagHandler
+  cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy
+  cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionManager : mapper
+  cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.tagHandling.IMessageSender : messageSender
+  cern.c2mon.daq.opcua.tagHandling.IMessageSender +-down- cern.c2mon.daq.opcua.tagHandling.IMessageSender.EquipmentState
+  cern.c2mon.daq.opcua.tagHandling.MessageSender .up.|> cern.c2mon.daq.opcua.tagHandling.IMessageSender
+  cern.c2mon.daq.opcua.tagHandling.MessageSender .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
+
+
+right footer
+
+
+PlantUML diagram generated by SketchIt! (https://bitbucket.org/pmesmeur/sketch.it)
+For more information about this tool, please contact philippe.mesmeur@gmail.com
+endfooter
+
+@enduml

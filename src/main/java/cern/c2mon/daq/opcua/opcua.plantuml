@@ -1,0 +1,322 @@
+@startuml
+
+title __OPCUA's Class Diagram__\n
+
+  namespace cern.c2mon.daq.opcua {
+    abstract class cern.c2mon.daq.opcua.AddressParser {
+        {static} - KEYSTORE : String
+        {static} - PKI : String
+        {static} - URI : String
+        {static} - converter : ConversionService
+        {static} - log : Logger
+        {static} + parse()
+        - AddressParser()
+        {static} - getSubConfig()
+        {static} - overrideConfig()
+        {static} - parsePropertiesFromString()
+        {static} - setFieldSuccessful()
+        {static} - setFields()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.AppConfigProperties {
+        - aliveWriterEnabled : boolean
+        - appName : String
+        - applicationUri : String
+        - certificationPriority : Map<String, Integer>
+        - connectionMonitoringRate : int
+        - countryCode : String
+        - localityName : String
+        - maxFailoverDelay : long
+        - maxRetryAttempts : int
+        - organization : String
+        - organizationalUnit : String
+        - pkiBaseDir : String
+        - productUri : String
+        - redundancyMode : String
+        - redundantServerUris : List<String>
+        - requestTimeout : int
+        - restartDelay : long
+        - retryDelay : long
+        - stateName : String
+        - timeout : long
+        - trustAllServers : boolean
+        + AppConfigProperties()
+        + AppConfigProperties()
+        {static} + builder()
+        + equals()
+        + getAppName()
+        + getApplicationUri()
+        + getCertificationPriority()
+        + getConnectionMonitoringRate()
+        + getCountryCode()
+        + getKeystore()
+        + getLocalityName()
+        + getMaxFailoverDelay()
+        + getMaxRetryAttempts()
+        + getOrganization()
+        + getOrganizationalUnit()
+        + getPkiBaseDir()
+        + getPkiConfig()
+        + getProductUri()
+        + getRedundancyMode()
+        + getRedundantServerUris()
+        + getRequestTimeout()
+        + getRestartDelay()
+        + getRetryDelay()
+        + getStateName()
+        + getTimeout()
+        + getUsrPwd()
+        + hashCode()
+        + isAliveWriterEnabled()
+        + isTrustAllServers()
+        + setAliveWriterEnabled()
+        + setAppName()
+        + setApplicationUri()
+        + setCertificationPriority()
+        + setConnectionMonitoringRate()
+        + setCountryCode()
+        + setKeystore()
+        + setLocalityName()
+        + setMaxFailoverDelay()
+        + setMaxRetryAttempts()
+        + setOrganization()
+        + setOrganizationalUnit()
+        + setPkiBaseDir()
+        + setPkiConfig()
+        + setProductUri()
+        + setRedundancyMode()
+        + setRedundantServerUris()
+        + setRequestTimeout()
+        + setRestartDelay()
+        + setRetryDelay()
+        + setStateName()
+        + setTimeout()
+        + setTrustAllServers()
+        + setUsrPwd()
+        + toString()
+        # canEqual()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder {
+        - aliveWriterEnabled : boolean
+        - appName : String
+        - applicationUri : String
+        - certificationPriority : Map<String, Integer>
+        - connectionMonitoringRate : int
+        - countryCode : String
+        - localityName : String
+        - maxFailoverDelay : long
+        - maxRetryAttempts : int
+        - organization : String
+        - organizationalUnit : String
+        - pkiBaseDir : String
+        - productUri : String
+        - redundancyMode : String
+        - redundantServerUris : List<String>
+        - requestTimeout : int
+        - restartDelay : long
+        - retryDelay : long
+        - stateName : String
+        - timeout : long
+        - trustAllServers : boolean
+        + aliveWriterEnabled()
+        + appName()
+        + applicationUri()
+        + build()
+        + certificationPriority()
+        + connectionMonitoringRate()
+        + countryCode()
+        + keystore()
+        + localityName()
+        + maxFailoverDelay()
+        + maxRetryAttempts()
+        + organization()
+        + organizationalUnit()
+        + pkiBaseDir()
+        + pkiConfig()
+        + productUri()
+        + redundancyMode()
+        + redundantServerUris()
+        + requestTimeout()
+        + restartDelay()
+        + retryDelay()
+        + stateName()
+        + timeout()
+        + toString()
+        + trustAllServers()
+        + usrPwd()
+        ~ AppConfigPropertiesBuilder()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig {
+        - alias : String
+        - path : String
+        - pwd : String
+        - type : String
+        + KeystoreConfig()
+        + KeystoreConfig()
+        {static} + builder()
+        + equals()
+        + getAlias()
+        + getPath()
+        + getPwd()
+        + getType()
+        + hashCode()
+        + setAlias()
+        + setPath()
+        + setPwd()
+        + setType()
+        + toString()
+        # canEqual()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig.KeystoreConfigBuilder {
+        - alias : String
+        - path : String
+        - pwd : String
+        - type : String
+        + alias()
+        + build()
+        + path()
+        + pwd()
+        + toString()
+        + type()
+        ~ KeystoreConfigBuilder()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig {
+        - crtPath : String
+        - pkPath : String
+        + PKIConfig()
+        + PKIConfig()
+        {static} + builder()
+        + equals()
+        + getCrtPath()
+        + getPkPath()
+        + hashCode()
+        + setCrtPath()
+        + setPkPath()
+        + toString()
+        # canEqual()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig.PKIConfigBuilder {
+        - crtPath : String
+        - pkPath : String
+        + build()
+        + crtPath()
+        + pkPath()
+        + toString()
+        ~ PKIConfigBuilder()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig {
+        - pwd : String
+        - usr : String
+        + UsrPwdConfig()
+        + UsrPwdConfig()
+        {static} + builder()
+        + equals()
+        + getPwd()
+        + getUsr()
+        + hashCode()
+        + setPwd()
+        + setUsr()
+        + toString()
+        # canEqual()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig.UsrPwdConfigBuilder {
+        - pwd : String
+        - usr : String
+        + build()
+        + pwd()
+        + toString()
+        + usr()
+        ~ UsrPwdConfigBuilder()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.OPCUAMessageHandler {
+        {static} - log : Logger
+        + connectToDataSource()
+        + disconnectFromDataSource()
+        + onUpdateEquipmentConfiguration()
+        + refreshAllDataTags()
+        + refreshDataTag()
+        + runCommand()
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    class cern.c2mon.daq.opcua.RetryDelegate {
+        {static} - log : Logger
+        + RetryDelegate()
+        + completeOrThrow()
+        + triggerRecreateSubscription()
+        + triggerServerSwitchRetry()
+        - isLongDisconnection()
+    }
+  }
+  
+
+  cern.c2mon.daq.opcua.AppConfigProperties o-- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig : keystore
+  cern.c2mon.daq.opcua.AppConfigProperties o-- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig : pkiConfig
+  cern.c2mon.daq.opcua.AppConfigProperties o-- cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig : usrPwd
+  cern.c2mon.daq.opcua.AppConfigProperties +-down- cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder
+  cern.c2mon.daq.opcua.AppConfigProperties +-down- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig
+  cern.c2mon.daq.opcua.AppConfigProperties +-down- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig
+  cern.c2mon.daq.opcua.AppConfigProperties +-down- cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig
+  cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder o-- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig : keystore
+  cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder o-- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig : pkiConfig
+  cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder o-- cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig : usrPwd
+  cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig +-down- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig.KeystoreConfigBuilder
+  cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig +-down- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig.PKIConfigBuilder
+  cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig +-down- cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig.UsrPwdConfigBuilder
+  cern.c2mon.daq.opcua.OPCUAMessageHandler .up.|> cern.c2mon.daq.common.ICommandRunner
+  cern.c2mon.daq.opcua.OPCUAMessageHandler .up.|> cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger
+  cern.c2mon.daq.opcua.OPCUAMessageHandler -up-|> cern.c2mon.daq.common.EquipmentMessageHandler
+  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.AliveWriter : aliveWriter
+  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.AppConfigProperties : appConfigProperties
+  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.CommandTagHandler : commandTagHandler
+  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy
+  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.DataTagChanger : dataTagChanger
+  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.IDataTagHandler : dataTagHandler
+  cern.c2mon.daq.opcua.RetryDelegate o-- cern.c2mon.daq.opcua.AppConfigProperties : config
+
+
+right footer
+
+
+PlantUML diagram generated by SketchIt! (https://bitbucket.org/pmesmeur/sketch.it)
+For more information about this tool, please contact philippe.mesmeur@gmail.com
+endfooter
+
+@enduml

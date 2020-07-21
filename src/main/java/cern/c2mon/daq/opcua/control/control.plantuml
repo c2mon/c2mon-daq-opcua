@@ -1,0 +1,167 @@
+@startuml
+
+title __CONTROL's Class Diagram__\n
+
+  namespace cern.c2mon.daq.opcua {
+    namespace control {
+      class cern.c2mon.daq.opcua.control.ColdFailover {
+          - currentUri : String
+          {static} - log : Logger
+          - monitoringRate : int
+          - reconnected : CompletableFuture<Void>
+          - redundantAddresses : List<String>
+          - timeout : int
+          + ColdFailover()
+          + initialize()
+          + onSessionActive()
+          + onSessionInactive()
+          + stop()
+          + switchServers()
+          # currentEndpoint()
+          # passiveEndpoints()
+          - connectToHealthiestServerFinished()
+          - disconnectAndProceed()
+          - monitorConnection()
+          - reconnectionSucceeded()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace control {
+      interface cern.c2mon.daq.opcua.control.Controller {
+          {abstract} + callMethod()
+          {abstract} + initialize()
+          {abstract} + read()
+          {abstract} + stop()
+          {abstract} + subscribe()
+          {abstract} + unsubscribe()
+          {abstract} + write()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace control {
+      abstract class cern.c2mon.daq.opcua.control.ControllerBase {
+          + callMethod()
+          + read()
+          + stop()
+          + subscribe()
+          + unsubscribe()
+          + write()
+          {abstract} # currentEndpoint()
+          {abstract} # passiveEndpoints()
+          {static} - subscribeAndCatch()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace control {
+      class cern.c2mon.daq.opcua.control.ControllerProxy {
+          # appContext : ApplicationContext
+          {static} - log : Logger
+          + ControllerProxy()
+          + callMethod()
+          + connect()
+          + read()
+          + stop()
+          + subscribe()
+          + unsubscribe()
+          + write()
+          - getRedundantUriArray()
+          - loadRedundantUrisFromConfig()
+          - loadedFailoverFromConfigurationSuccessfully()
+          - redundancySupport()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace control {
+      abstract class cern.c2mon.daq.opcua.control.FailoverBase {
+          {static} # SERVICE_LEVEL_HEALTH_LIMIT : UByte
+          {static} # connectionMonitoringNodes : List<ItemDefinition>
+          {static} # listening : AtomicBoolean
+          # stopped : AtomicBoolean
+          - applicationContext : ApplicationContext
+          {static} - log : Logger
+          + FailoverBase()
+          + initialize()
+          + stop()
+          + triggerServerSwitch()
+          # monitoringCallback()
+          # nextEndpoint()
+          # readServiceLevel()
+          # serverStateConsumer()
+          # serviceLevelConsumer()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace control {
+      interface cern.c2mon.daq.opcua.control.FailoverMode {
+          {abstract} + switchServers()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace control {
+      interface cern.c2mon.daq.opcua.control.IControllerProxy {
+          {abstract} + callMethod()
+          {abstract} + connect()
+          {abstract} + read()
+          {abstract} + stop()
+          {abstract} + subscribe()
+          {abstract} + unsubscribe()
+          {abstract} + write()
+      }
+    }
+  }
+  
+
+  namespace cern.c2mon.daq.opcua {
+    namespace control {
+      class cern.c2mon.daq.opcua.control.NoFailover {
+          {static} - log : Logger
+          + NoFailover()
+          + initialize()
+          # currentEndpoint()
+          # passiveEndpoints()
+      }
+    }
+  }
+  
+
+  cern.c2mon.daq.opcua.control.ColdFailover .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
+  cern.c2mon.daq.opcua.control.ColdFailover -up-|> cern.c2mon.daq.opcua.control.FailoverBase
+  cern.c2mon.daq.opcua.control.ColdFailover o-- cern.c2mon.daq.opcua.connection.Endpoint : activeEndpoint
+  cern.c2mon.daq.opcua.control.ControllerBase .up.|> cern.c2mon.daq.opcua.control.Controller
+  cern.c2mon.daq.opcua.control.ControllerProxy .up.|> cern.c2mon.daq.opcua.control.IControllerProxy
+  cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.AppConfigProperties : config
+  cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.control.Controller : controller
+  cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.connection.Endpoint : endpoint
+  cern.c2mon.daq.opcua.control.FailoverBase .up.|> cern.c2mon.daq.opcua.control.FailoverMode
+  cern.c2mon.daq.opcua.control.FailoverBase -up-|> cern.c2mon.daq.opcua.control.ControllerBase
+  cern.c2mon.daq.opcua.control.FailoverBase o-- cern.c2mon.daq.opcua.RetryDelegate : retryDelegate
+  cern.c2mon.daq.opcua.control.NoFailover -up-|> cern.c2mon.daq.opcua.control.ControllerBase
+  cern.c2mon.daq.opcua.control.NoFailover o-- cern.c2mon.daq.opcua.connection.Endpoint : activeEndpoint
+
+
+right footer
+
+
+PlantUML diagram generated by SketchIt! (https://bitbucket.org/pmesmeur/sketch.it)
+For more information about this tool, please contact philippe.mesmeur@gmail.com
+endfooter
+
+@enduml

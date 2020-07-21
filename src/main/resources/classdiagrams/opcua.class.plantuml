@@ -1,0 +1,87 @@
+title OPC UA DAQ Class Diagram
+
+abstract class AddressParser {
+  {static} - converter : ConversionService
+  {static} + parse()
+  - AddressParser()
+}
+
+class AppConfigProperties {
+  - aliveWriterEnabled : boolean
+  - appName : String
+  - applicationUri : String
+  - certificationPriority : Map<String, Integer>
+  - connectionMonitoringRate : int
+  - countryCode : String
+  - localityName : String
+  - maxFailoverDelay : long
+  - maxRetryAttempts : int
+  - organization : String
+  - organizationalUnit : String
+  - pkiBaseDir : String
+  - productUri : String
+  - redundancyMode : String
+  - redundantServerUris : List<String>
+  - requestTimeout : int
+  - restartDelay : long
+  - retryDelay : long
+  - stateName : String
+  - timeout : long
+  - trustAllServers : boolean
+  + AppConfigProperties()
+  + @Data()
+}
+
+class AppConfigProperties.KeystoreConfig {
+  - alias : String
+  - path : String
+  - pwd : String
+  - type : String
+  + KeystoreConfig()
+  + @Data()
+}
+
+class AppConfigProperties.PKIConfig {
+  - crtPath : String
+  - pkPath : String
+  + PKIConfig()
+  + PKIConfig()
+  + @Data()
+}
+
+class OPCUAMessageHandler {
+  {static} - log : Logger
+  + connectToDataSource()
+  + disconnectFromDataSource()
+  + onUpdateEquipmentConfiguration()
+  + refreshAllDataTags()
+  + refreshDataTag()
+  + runCommand()
+}
+
+class RetryDelegate {
+  {static} - log : Logger
+  + RetryDelegate()
+  + completeOrThrow()
+  + triggerRecreateSubscription()
+  + triggerServerSwitchRetry()
+  - isLongDisconnection()
+}
+
+AppConfigProperties o-- AppConfigProperties.KeystoreConfig : keystore
+AppConfigProperties o-- AppConfigProperties.PKIConfig : pkiConfig
+AppConfigProperties +-down- AppConfigProperties.KeystoreConfig
+AppConfigProperties +-- AppConfigProperties.PKIConfig
+OPCUAMessageHandler .up.|> cern.c2mon.daq.common.ICommandRunner
+OPCUAMessageHandler .up.|> cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger
+OPCUAMessageHandler -up-|> cern.c2mon.daq.common.EquipmentMessageHandler
+OPCUAMessageHandler o-left- tagHandling.AliveWriter : aliveWriter
+OPCUAMessageHandler o-left- AppConfigProperties : appConfigProperties
+OPCUAMessageHandler o-- tagHandling.CommandTagHandler : commandTagHandler
+OPCUAMessageHandler o-left- control.IControllerProxy : controllerProxy
+OPCUAMessageHandler o-- tagHandling.DataTagChanger : dataTagChanger
+OPCUAMessageHandler o-- tagHandling.IDataTagHandler : dataTagHandler
+RetryDelegate o-- AppConfigProperties : config
+
+AppConfigProperties.PKIConfig -[hidden]right- AppConfigProperties.KeystoreConfig
+AddressParser -[hidden]right- RetryDelegate

@@ -1,0 +1,97 @@
+title OPC UA DAQ Class Diagram: TagHandling Component 
+class tagHandling.AliveWriter {
+    - address : NodeId
+    - enabled : boolean
+    - executor : ScheduledExecutorService
+    - writeAliveTask : ScheduledFuture<?>
+    - writeCounter : AtomicInteger
+    - writeTime : long
+    + AliveWriter()
+    + initialize()
+    + startWriter()
+    + stopWriter()
+    + updateAndReport()
+    - sendAlive()
+}
+class tagHandling.CommandTagHandler {
+    + CommandTagHandler()
+    + onAddCommandTag()
+    + onRemoveCommandTag()
+    + onUpdateCommandTag()
+    + runCommand()
+    + setControllerProxy()
+    - executeMethod()
+    - executeWriteCommand()
+    - handleCommandResponseStatusCode()
+    - runClassicCommand()
+}
+class tagHandling.DataTagChanger {
+    {static} - applyToReport : TriConsumer<Boolean, String, ChangeReport>
+    {static} - tagsToIdString : Function<Collection<ISourceDataTag>, String>
+    + DataTagChanger()
+    + onAddDataTag()
+    + onRemoveDataTag()
+    + onUpdateDataTag()
+    + onUpdateEquipmentConfiguration()
+    - addAndReport()
+    {static} - gatherIds()
+    - removeAndReport()
+}
+class tagHandling.DataTagHandler {
+    + DataTagHandler()
+    + refreshAllDataTags()
+    + refreshDataTag()
+    + removeTag()
+    + reset()
+    + subscribeTag()
+    + subscribeTags()
+    - completeSubscriptionAndReportSuccess()
+    - refresh()
+}
+interface tagHandling.IDataTagHandler {
+    {abstract} + refreshAllDataTags()
+    {abstract} + refreshDataTag()
+    {abstract} + removeTag()
+    {abstract} + reset()
+    {abstract} + subscribeTag()
+    {abstract} + subscribeTags()
+}
+interface tagHandling.IMessageSender {
+    {abstract} + initialize()
+    {abstract} + onAlive()
+    {abstract} + onEquipmentStateUpdate()
+    {abstract} + onTagInvalid()
+    {abstract} + onValueUpdate()
+}
+enum tagHandling.IMessageSender.EquipmentState {
+  CONNECTION_FAILED
+  CONNECTION_LOST
+  OK
+  message
+}
+class tagHandling.MessageSender {
+    - sender : IEquipmentMessageSender
+    + MessageSender()
+    + initialize()
+    + onAlive()
+    + onEquipmentStateUpdate()
+    + onSessionActive()
+    + onSessionInactive()
+    + onTagInvalid()
+    + onValueUpdate()
+}
+tagHandling.AliveWriter o-- control.IControllerProxy : controllerProxy
+tagHandling.AliveWriter o-- tagHandling.IMessageSender : messageSender
+tagHandling.CommandTagHandler .up.|> cern.c2mon.daq.common.conf.equipment.ICommandTagChanger
+tagHandling.CommandTagHandler o-- control.IControllerProxy : controllerProxy
+tagHandling.DataTagChanger .up.|> cern.c2mon.daq.common.conf.equipment.IDataTagChanger
+tagHandling.DataTagChanger o-- tagHandling.IDataTagHandler : controller
+tagHandling.DataTagHandler .up.|> tagHandling.IDataTagHandler
+tagHandling.DataTagHandler o-up- control.IControllerProxy : controllerProxy
+tagHandling.DataTagHandler o-right- mapping.TagSubscriptionManager : mapper
+tagHandling.DataTagHandler o-right- tagHandling.IMessageSender : messageSender
+tagHandling.IMessageSender +-down- tagHandling.IMessageSender.EquipmentState
+tagHandling.MessageSender .up.|> tagHandling.IMessageSender
+tagHandling.MessageSender .right.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
+
+tagHandling.MessageSender -[hidden]left- tagHandling.IMessageSender.EquipmentState

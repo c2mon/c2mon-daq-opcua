@@ -1,0 +1,67 @@
+title OPC UA DAQ Class Diagram: Mapping Component
+
+class mapping.ItemDefinition {
+    {static} - clientHandles : AtomicInteger
+    - clientHandle : UInteger
+    - methodNodeId : NodeId
+    - nodeId : NodeId
+    - timeDeadband : int
+    - valueDeadband : float
+    - valueDeadbandType : short
+    {static} + of()
+    {static} + toNodeId()
+    + getClientHandle()
+    + getMethodNodeId()
+    + getNodeId()
+    + getTimeDeadband()
+    + getValueDeadband()
+    + getValueDeadbandType()
+    - ItemDefinition()
+}
+class mapping.SubscriptionGroup {
+    - publishInterval : int
+    - tagIds : Map<Long, ItemDefinition>
+    + SubscriptionGroup()
+    + add()
+    + contains()
+    + getPublishInterval()
+    + getTagIds()
+    + remove()
+    + reset()
+    + size()
+}
+class mapping.TagSubscriptionManager {
+    - subscriptionGroups : Map<Integer, SubscriptionGroup>
+    - tagIdDefinitionMap : BiMap<Long, ItemDefinition>
+    + TagSubscriptionManager()
+    + addTagToGroup()
+    + clear()
+    + getDefinition()
+    + getGroup()
+    + getGroups()
+    + getOrCreateDefinition()
+    + getSubscriptionGroups()
+    + getTagId()
+    + getTagIdDefinitionMap()
+    + removeTag()
+}
+interface mapping.TagSubscriptionMapReader {
+    {abstract} + getDefinition()
+    {abstract} + getGroup()
+    {abstract} + getGroups()
+    {abstract} + getOrCreateDefinition()
+    {abstract} + getTagId()
+    {abstract} + getTagIdDefinitionMap()
+}
+interface mapping.TagSubscriptionWriter {
+    {abstract} + addTagToGroup()
+    {abstract} + clear()
+    {abstract} + removeTag()
+}
+mapping.TagSubscriptionManager .up.|> mapping.TagSubscriptionMapReader
+mapping.TagSubscriptionManager .up.|> mapping.TagSubscriptionWriter
+mapping.TagSubscriptionManager "[publishInterval]" o-left- "*" mapping.SubscriptionGroup
+mapping.TagSubscriptionManager "[tagId]" o-- "*" mapping.ItemDefinition
+mapping.SubscriptionGroup "[tagId]" o-- "*" mapping.ItemDefinition
+
+mapping.TagSubscriptionWriter -[hidden]left- mapping.TagSubscriptionMapReader
