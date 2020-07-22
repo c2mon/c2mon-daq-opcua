@@ -181,6 +181,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             subscriptionMap.clear();
             disconnectedOn.set(-1);
         }
+        log.info("Completed disconnecting endpoint", uri);
     }
 
     /**
