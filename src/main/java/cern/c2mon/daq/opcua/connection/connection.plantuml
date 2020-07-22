@@ -104,7 +104,7 @@ title __CONNECTION's Class Diagram__\n
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.tagHandling.IMessageSender : messageSender
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.RetryDelegate : retryDelegate
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.connection.SecurityModule : securityModule
-  cern.c2mon.daq.opcua.connection.SecurityModule o-- cern.c2mon.daq.opcua.AppConfigProperties : config
+  cern.c2mon.daq.opcua.connection.SecurityModule o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
 
 
 right footer

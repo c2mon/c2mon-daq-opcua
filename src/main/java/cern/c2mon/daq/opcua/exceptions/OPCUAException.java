@@ -50,7 +50,7 @@ public abstract class OPCUAException extends EqIOException {
      * CommunicationException} if neither of the above is true.
      */
     public static OPCUAException of(ExceptionContext context, Throwable e, boolean disconnectionTooLong) {
-        final var uaConfigIssue = e instanceof UaException && CONFIG.contains(((UaException)e).getStatusCode().getValue());
+        final boolean uaConfigIssue = e instanceof UaException && CONFIG.contains(((UaException)e).getStatusCode().getValue());
         if (e instanceof UnknownHostException || uaConfigIssue) {
             return new ConfigurationException(context, e);
         } else if (disconnectionTooLong) {

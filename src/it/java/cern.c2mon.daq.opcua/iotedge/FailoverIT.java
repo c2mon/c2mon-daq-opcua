@@ -1,14 +1,14 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ColdFailover;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.FailoverBase;
 import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.tagHandling.IDataTagHandler;
-import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
+import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
+import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;

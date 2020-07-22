@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -20,7 +21,7 @@ import java.util.Map;
  * monitoring the connection state to the active server and of handling failover when needed. Currently, only {@link
  * ColdFailover} is supported of the OPC UA redundancy model. To add support for custom or vendor-specifc redundancy
  * models, a class implementing FailoverMode should be created and references in {@link
- * cern.c2mon.daq.opcua.AppConfigProperties}.
+ * AppConfigProperties}.
  */
 public interface IControllerProxy {
 

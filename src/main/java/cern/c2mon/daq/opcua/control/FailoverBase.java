@@ -9,10 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
 import org.springframework.context.ApplicationContext;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -27,13 +29,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequiredArgsConstructor
 public abstract class FailoverBase extends ControllerBase implements FailoverMode {
 
-    protected static final AtomicBoolean listening = new AtomicBoolean(true);
-    protected static UByte SERVICE_LEVEL_HEALTH_LIMIT = UByte.valueOf(200);
-    protected static List<ItemDefinition> connectionMonitoringNodes = List.of(
+    protected static UByte serviceLevelHealthLimit = UByte.valueOf(200);
+    protected static List<ItemDefinition> connectionMonitoringNodes = Arrays.asList(
             ItemDefinition.of(Identifiers.Server_ServiceLevel),
             ItemDefinition.of(Identifiers.ServerState));
-    /** A flag indicating whether the controller was stopped. */
     protected final AtomicBoolean stopped = new AtomicBoolean(true);
+    protected final AtomicBoolean listening = new AtomicBoolean(true);
     protected final RetryDelegate retryDelegate;
     private final ApplicationContext applicationContext;
 
@@ -69,8 +70,8 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
         }
     }
 
-    protected void monitoringCallback(UaMonitoredItem item, Integer integer) {
-        final var nodeId = item.getReadValueId().getNodeId();
+    protected void monitoringCallback(UaMonitoredItem item) {
+        final NodeId nodeId = item.getReadValueId().getNodeId();
         if (nodeId.equals(Identifiers.Server_ServiceLevel)) {
             item.setValueConsumer(this::serviceLevelConsumer);
         } else if (nodeId.equals(Identifiers.ServerState)) {
@@ -79,15 +80,15 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     }
 
     protected void serviceLevelConsumer(DataValue value) {
-        final var serviceLevel = (UByte) value.getValue().getValue();
-        if (serviceLevel.compareTo(SERVICE_LEVEL_HEALTH_LIMIT) < 0) {
+        final UByte serviceLevel = (UByte) value.getValue().getValue();
+        if (serviceLevel.compareTo(serviceLevelHealthLimit) < 0) {
             log.info("Service level is outside of the healthy range at {}. Switching server...", serviceLevel.intValue());
             triggerServerSwitch();
         }
     }
 
     protected void serverStateConsumer(DataValue value) {
-        final var state = (ServerState) value.getValue().getValue();
+        final ServerState state = (ServerState) value.getValue().getValue();
         if (!state.equals(ServerState.Running) && !state.equals(ServerState.Unknown)) {
             log.info("Server entered state {}. Switching server...", state);
             triggerServerSwitch();

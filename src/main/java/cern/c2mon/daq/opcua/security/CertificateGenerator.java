@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +42,7 @@ public class CertificateGenerator extends CertifierBase {
     @Override
     public boolean canCertify(EndpointDescription endpoint) {
         final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
-        if (sp.isEmpty() || !supportsAlgorithm(endpoint)) {
+        if (!sp.isPresent() || !supportsAlgorithm(endpoint)) {
             return false;
         }
         generateCertificate(sp.get());
@@ -58,7 +58,7 @@ public class CertificateGenerator extends CertifierBase {
     @Override
     public boolean supportsAlgorithm(EndpointDescription endpoint) {
         final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
-        if (sp.isEmpty()) {
+        if (!sp.isPresent()) {
             return false;
         }
         final String sigAlg = sp.get().getAsymmetricSignatureAlgorithm().getTransformation();

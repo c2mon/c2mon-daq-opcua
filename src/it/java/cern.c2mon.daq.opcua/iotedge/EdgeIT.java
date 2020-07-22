@@ -1,9 +1,9 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.tagHandling.IDataTagHandler;
-import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
-import cern.c2mon.daq.opcua.tagHandling.CommandTagHandler;
+import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
+import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.IControllerProxy;
@@ -27,11 +27,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static cern.c2mon.daq.opcua.tagHandling.IMessageSender.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.IMessageSender.EquipmentState.CONNECTION_LOST;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -93,11 +94,11 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
-        final var connectionLost = pulseListener.listen();
+        final CompletableFuture<IMessageSender.EquipmentState> connectionLost = pulseListener.listen();
         active.image.stop();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
 
-        final var connectionRegained = pulseListener.listen();
+        final CompletableFuture<IMessageSender.EquipmentState> connectionRegained = pulseListener.listen();
         active.image.start();
         assertEquals(IMessageSender.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
 
@@ -142,7 +143,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void subscribeWithDeadband() throws ConfigurationException {
-        var tagWithDeadband = EdgeTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
+        final ISourceDataTag tagWithDeadband = EdgeTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
         pulseListener.setSourceID(tagWithDeadband.getId());
         tagHandler.subscribeTags(Collections.singletonList(tagWithDeadband));
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));

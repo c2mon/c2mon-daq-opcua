@@ -1,9 +1,9 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
-import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
+import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import com.google.common.collect.ImmutableMap;
 import org.easymock.Capture;
@@ -21,7 +21,7 @@ public abstract class TestUtils {
     public final static int TIMEOUT_REDUNDANCY = 2;
 
     public static AppConfigProperties createDefaultConfig() {
-        final var certificationPriority = ImmutableMap.<String, Integer>builder()
+        final ImmutableMap<String, Integer> certificationPriority = ImmutableMap.<String, Integer>builder()
                 .put("none", 3).put("generate", 2).put("load", 1).build();
         return AppConfigProperties.builder()
                 .appName("c2mon-opcua-daq")

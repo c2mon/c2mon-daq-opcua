@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.tagHandling;
+package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;

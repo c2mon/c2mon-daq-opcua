@@ -1,5 +1,6 @@
-package cern.c2mon.daq.opcua.tagHandling;
+package cern.c2mon.daq.opcua.taghandling;
 
+import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -19,6 +20,7 @@ import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -86,7 +88,7 @@ public class CommandTagHandlerTest {
                 .anyTimes();
         //no call to write
         replay(mockEp);
-        commandTagHandler.setControllerProxy(TestUtils.getFailoverProxy(mockEp, l));
+        ReflectionTestUtils.setField(commandTagHandler, "controllerProxy", TestUtils.getFailoverProxy(mockEp, l));
         commandTagHandler.runCommand(tag, value);
         verify(mockEp);
     }
@@ -100,7 +102,7 @@ public class CommandTagHandlerTest {
         expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();
         expect(mockEp.write(def, 0)).andReturn(endpoint.write(def, 0)).once();
         replay(mockEp);
-        commandTagHandler.setControllerProxy(TestUtils.getFailoverProxy(mockEp, l));
+        ReflectionTestUtils.setField(commandTagHandler, "controllerProxy", TestUtils.getFailoverProxy(mockEp, l));
         commandTagHandler.runCommand(tag, value);
         verify(mockEp);
     }
@@ -132,7 +134,7 @@ public class CommandTagHandlerTest {
         controller.initialize(new ExceptionTestEndpoint(l, new TagSubscriptionManager()), new String[0]);
         final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, l);
         proxy.setController(controller);
-        commandTagHandler.setControllerProxy(proxy);
+        ReflectionTestUtils.setField(commandTagHandler, "controllerProxy", proxy);
         verifyCommunicationException(ExceptionContext.WRITE);
     }
 

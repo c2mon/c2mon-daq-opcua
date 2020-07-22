@@ -1,8 +1,10 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 
@@ -18,11 +20,13 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.AbstractMap;
 import java.util.Map;
 
 /**
  * A utility class to load private and public RSA keys as well certificates from PEM-encoded files
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PkiUtil {
 
     /**
@@ -55,7 +59,7 @@ public class PkiUtil {
                 X509Certificate certificate = (X509Certificate) keyStore.getCertificate(config.getAlias());
                 PublicKey publicKey = certificate.getPublicKey();
                 KeyPair keyPair = new KeyPair(publicKey, (PrivateKey) privateKey);
-                return Map.entry(certificate, keyPair);
+                return new AbstractMap.SimpleEntry<>(certificate, keyPair);
             }
         } catch (IOException | KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException | CertificateException e) {
             throw new ConfigurationException(ExceptionContext.SECURITY, e);

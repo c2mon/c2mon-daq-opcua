@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.tagHandling;
+package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
-import static cern.c2mon.daq.opcua.tagHandling.IMessageSender.EquipmentState.CONNECTION_LOST;
-import static cern.c2mon.daq.opcua.tagHandling.IMessageSender.EquipmentState.OK;
+import static cern.c2mon.daq.opcua.IMessageSender.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.IMessageSender.EquipmentState.OK;
 
 /**
  * A listener responsible to relay information regarding events on the DAQ to the IEquipmentMessageSender.

@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.iotedge.SecurityIT;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
@@ -102,7 +102,7 @@ class CertificateLoaderTest {
             OpcUaClientConfigBuilder actual = new OpcUaClientConfigBuilder();
             loader.certify(actual, e);
             if (!loader.canCertify(e)) {
-                final var message = assertThrows(NullPointerException.class, actual::build).getMessage();
+                final String message = assertThrows(NullPointerException.class, actual::build).getMessage();
                 assertTrue(message.contains("endpoint must be non-null"));
             }
         }

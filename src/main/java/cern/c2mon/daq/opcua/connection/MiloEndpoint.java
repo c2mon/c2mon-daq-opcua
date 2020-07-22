@@ -5,7 +5,7 @@ import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
-import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
+import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -42,7 +42,7 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -65,8 +65,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Primary
 @Scope(value = "prototype")
 public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscriptionManager.SubscriptionListener {
-    private final static String hostRegex = "://[^/]*";
-
+    private static final String HOST_REGEX = "://[^/]*";
     private final SecurityModule securityModule;
     private final RetryDelegate retryDelegate;
     private final TagSubscriptionMapReader mapper;
@@ -94,10 +93,10 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         // Some hostnames contain characters not allowed in a URI, such as underscores in Windows machine hostnames.
         // Therefore, parsing is done using a regular expression rather than relying on java URI class methods.
 
-        final Matcher matcher = Pattern.compile(hostRegex).matcher(originalUri);
+        final Matcher matcher = Pattern.compile(HOST_REGEX).matcher(originalUri);
         if (matcher.find()) {
             return originalEndpoints.stream().map(e -> new EndpointDescription(
-                    e.getEndpointUrl().replaceAll(hostRegex, matcher.group()),
+                    e.getEndpointUrl().replaceAll(HOST_REGEX, matcher.group()),
                     e.getServer(),
                     e.getServerCertificate(),
                     e.getSecurityMode(),
@@ -129,7 +128,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         sessionActivityListeners.add(this);
         disconnectedOn.set(0L);
         try {
-            var endpoints = DiscoveryClient.getEndpoints(uri).join();
+            List<EndpointDescription> endpoints = DiscoveryClient.getEndpoints(uri).join();
             endpoints = updateEndpointUrls(uri, endpoints);
             client = securityModule.createClientWithListeners(endpoints, sessionActivityListeners);
             final OpcUaSubscriptionManager subscriptionManager = client.getSubscriptionManager();
@@ -195,7 +194,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException {
         try {
             log.info("Subscribing definitions with publishing interval {}.", group.getPublishInterval());
-            return subscribeWithCallback(group.getPublishInterval(), definitions, (item, i) -> item.setValueConsumer(value -> {
+            return subscribeWithCallback(group.getPublishInterval(), definitions, item -> item.setValueConsumer(value -> {
                 final Optional<Long> tagId = mapper.getTagId(item.getClientHandle());
                 SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
                 final Object updateValue = MiloMapper.toObject(value.getValue());
@@ -210,7 +209,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             final String ids = Joiner.on(", ").join(definitions.stream().map(d -> mapper.getTagId(d.getClientHandle())).toArray());
             log.error("Tags with IDs {} could not be subscribed on endpoint with uri {}. ", ids, getUri(), e);
             return definitions.stream()
-                    .map(definition -> Map.entry(definition.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)))
+                    .map(definition ->  new AbstractMap.SimpleEntry<>(definition.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)))
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
         }
     }
@@ -252,11 +251,11 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     public void recreateAllSubscriptions() throws CommunicationException {
         boolean anySuccess = true;
         for (SubscriptionGroup group : mapper.getGroups()) {
-                try {
-                    anySuccess = anySuccess && resubscribeGroupsAndReportSuccess(group);
-                } catch (ConfigurationException e) {
-                    log.info( "Could not resubscribe group with time deadband {}.", group.getPublishInterval(), e);
-                }
+            try {
+                anySuccess = anySuccess && resubscribeGroupsAndReportSuccess(group);
+            } catch (ConfigurationException e) {
+                log.info("Could not resubscribe group with time deadband {}.", group.getPublishInterval(), e);
+            }
         }
         if (!anySuccess) {
             log.error("Could not recreate any subscriptions. Connect to next server... ");
@@ -267,12 +266,12 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     public Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
                                                                      Collection<ItemDefinition> definitions,
-                                                                     BiConsumer<UaMonitoredItem, Integer> itemCreationCallback) throws OPCUAException {
-        var subscription = getOrCreateSubscription(publishingInterval);
-        var requests = definitions.stream().map(this::toMonitoredItemCreateRequest).collect(toList());
+                                                                     Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
+        UaSubscription subscription = getOrCreateSubscription(publishingInterval);
+        List<MonitoredItemCreateRequest> requests = definitions.stream().map(this::toMonitoredItemCreateRequest).collect(toList());
         return retryDelegate
                 .completeOrThrow(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
-                        () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, itemCreationCallback))
+                        () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, (item, i) -> itemCreationCallback.accept(item)))
                 .stream()
                 .collect(toMap(UaMonitoredItem::getClientHandle, item -> MiloMapper.getDataTagQuality(item.getStatusCode())));
     }
@@ -314,7 +313,10 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
         final DataValue value = retryDelegate.completeOrThrow(READ, this::getDisconnectPeriod,
                 () -> client.readValue(0, TimestampsToReturn.Both, nodeId));
-        return Map.entry(
+        if (value.getSourceTime() == null || value.getStatusCode() == null) {
+            throw new ConfigurationException(READ);
+        }
+        return new AbstractMap.SimpleEntry<>(
                 new ValueUpdate(MiloMapper.toObject(value.getValue()), value.getSourceTime().getJavaTime()),
                 MiloMapper.getDataTagQuality(value.getStatusCode()));
     }
@@ -399,12 +401,12 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     private Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object arg) throws OPCUAException {
-        final var variants = arg == null ? null : new Variant[]{new Variant(arg)};
+        final Variant[] variants = arg == null ? null : new Variant[]{new Variant(arg)};
         final CallMethodResult result = retryDelegate.completeOrThrow(METHOD, this::getDisconnectPeriod,
                 () -> client.call(new CallMethodRequest(objectId, methodId, variants)));
         final StatusCode statusCode = result.getStatusCode();
         log.info("Calling method {} on object {} returned status code {}.", methodId, objectId, statusCode);
-        return Map.entry(statusCode.isGood(), MiloMapper.toObject(result.getOutputArguments()));
+        return new AbstractMap.SimpleEntry<>(statusCode.isGood(), MiloMapper.toObject(result.getOutputArguments()));
     }
 
     /**
@@ -484,7 +486,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
     private UaSubscription getOrCreateSubscription(int timeDeadband) throws OPCUAException {
-        var subscription = subscriptionMap.get(timeDeadband);
+        UaSubscription subscription = subscriptionMap.get(timeDeadband);
         if (subscription != null && !client.getSubscriptionManager().getSubscriptions().contains(subscription)) {
             subscription = null;
         }

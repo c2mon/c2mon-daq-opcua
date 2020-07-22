@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import com.google.common.collect.ImmutableSet;
 import io.netty.util.internal.StringUtil;
@@ -14,6 +14,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -71,7 +73,7 @@ public class CertificateLoader extends CertifierBase {
         if (isKeystoreConfigured()) {
             log.info("Loading from pfx");
             try {
-                final var entry = PkiUtil.loadFromPfx(keystoreConfig);
+                final Map.Entry<X509Certificate, KeyPair> entry = PkiUtil.loadFromPfx(keystoreConfig);
                 certificate = entry.getKey();
                 keyPair = entry.getValue();
             } catch (ConfigurationException e) {

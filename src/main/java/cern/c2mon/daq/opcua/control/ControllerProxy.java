@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
@@ -74,7 +74,7 @@ public class ControllerProxy implements IControllerProxy {
                 log.info("Could not connect to redundant URI {}. Attempt next...", currentUri, e);
             }
         }
-        String[] redundantUris = modifiableUris.toArray(String[]::new);
+        String[] redundantUris = modifiableUris.toArray(new String[0]);
 
         final boolean wasFailoverLoadedFromConfig = loadedFailoverFromConfigurationSuccessfully();
         if (wasFailoverLoadedFromConfig && controller instanceof FailoverMode) {
@@ -174,7 +174,7 @@ public class ControllerProxy implements IControllerProxy {
         } catch (CompletionException e) {
             log.error("An exception occurred when reading the server's redundancy information. Proceeding without setting up redundancy.", e);
         }
-        return Map.entry(mode, redundantUriArray);
+        return new AbstractMap.SimpleEntry<>(mode, redundantUriArray);
     }
 
     private String[] getRedundantUriArray(ServerRedundancyTypeNode redundancyNode) {
@@ -193,7 +193,7 @@ public class ControllerProxy implements IControllerProxy {
         final Collection<String> redundantServerUris = config.getRedundantServerUris();
         if (redundantServerUris != null && !redundantServerUris.isEmpty()) {
             log.info("Loaded redundant uris from configuration: {}.", redundantServerUris);
-            return redundantServerUris.toArray(String[]::new);
+            return redundantServerUris.toArray(new String[0]);
         }
         return new String[0];
     }

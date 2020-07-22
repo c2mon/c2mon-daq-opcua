@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.config;
 
 import cern.c2mon.daq.opcua.control.IControllerProxy;
 import lombok.AllArgsConstructor;

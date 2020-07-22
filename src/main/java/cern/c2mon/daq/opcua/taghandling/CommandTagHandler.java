@@ -1,12 +1,12 @@
-package cern.c2mon.daq.opcua.tagHandling;
+package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.common.conf.equipment.ICommandTagChanger;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -17,15 +17,15 @@ import cern.c2mon.shared.common.type.TypeConverter;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import com.google.common.base.Joiner;
-import lombok.AllArgsConstructor;
-import lombok.Setter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -34,29 +34,29 @@ import java.util.concurrent.TimeUnit;
  */
 @Component("commandRunner")
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CommandTagHandler implements ICommandTagChanger {
 
-    /**
-     * The failover proxy to the current endpoint
-     */
-    @Setter
-    private IControllerProxy controllerProxy;
+    private final IControllerProxy controllerProxy;
+    @Value("#{@appConfigProperties.getTimeout()}")
+    private int timeout;
 
     @Override
     public void onAddCommandTag(ISourceCommandTag sourceCommandTag, ChangeReport changeReport) {
-        changeReport.appendInfo("No action required.");
-        changeReport.setState(ChangeReport.CHANGE_STATE.SUCCESS);
+        handleCommandTagChanges(changeReport);
     }
 
     @Override
     public void onRemoveCommandTag(ISourceCommandTag sourceCommandTag, ChangeReport changeReport) {
-        changeReport.appendInfo("No action required.");
-        changeReport.setState(ChangeReport.CHANGE_STATE.SUCCESS);
+        handleCommandTagChanges(changeReport);
     }
 
     @Override
     public void onUpdateCommandTag(ISourceCommandTag sourceCommandTag, ISourceCommandTag oldSourceCommandTag, ChangeReport changeReport) {
+        handleCommandTagChanges(changeReport);
+    }
+
+    private void handleCommandTagChanges(ChangeReport changeReport) {
         changeReport.appendInfo("No action required.");
         changeReport.setState(ChangeReport.CHANGE_STATE.SUCCESS);
     }
@@ -64,7 +64,6 @@ public class CommandTagHandler implements ICommandTagChanger {
     /**
      * Execute the action corresponding to a command tag, either by writing to a nodeId or by calling a method node on
      * the server. Retries e.g in case of connection issues are handled in {@link cern.c2mon.daq.common.messaging.impl.RequestController}.
-     *
      * @param tag     The commandTag to execute
      * @param command the value of the command that shall be executed
      * @return A joined String of method results, if the command is of type METHOD and the server returns any output
@@ -80,7 +79,7 @@ public class CommandTagHandler implements ICommandTagChanger {
             }
         }
         try {
-            final var hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
+            final OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
             switch (hardwareAddress.getCommandType()) {
                 case METHOD:
                     return Joiner.on(", ").join(executeMethod(tag, arg));
@@ -88,8 +87,8 @@ public class CommandTagHandler implements ICommandTagChanger {
                     runClassicCommand(tag, arg, hardwareAddress.getCommandPulseLength());
                     break;
                 default:
-                // impossible
-                throw new EqCommandTagException(ExceptionContext.COMMAND_TYPE_UNKNOWN.getMessage());
+                    // impossible
+                    throw new EqCommandTagException(ExceptionContext.COMMAND_TYPE_UNKNOWN.getMessage());
             }
         } catch (ConfigurationException e) {
             throw new EqCommandTagException("Please check whether the configuration is correct.", e);
@@ -98,6 +97,8 @@ public class CommandTagHandler implements ICommandTagChanger {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Thread interrupted during command execution.");
+        } catch (Exception e) {
+            log.error("Exception", e);
         }
         return null;
     }
@@ -106,7 +107,6 @@ public class CommandTagHandler implements ICommandTagChanger {
      * Executes the method associated with the tag. If the tag contains both a primary and a redundant item name, it is
      * assumed that the primary item name refers to the object node containing the methodId, and that the redundant item
      * name refers to the method node.
-     *
      * @param tag the command tag associated with a method node.
      * @param arg the input arguments to pass to the method.
      * @return an array of the method's output arguments. If there are none, an empty array is returned.
@@ -123,40 +123,36 @@ public class CommandTagHandler implements ICommandTagChanger {
         return result.getValue();
     }
 
-    private void runClassicCommand(ISourceCommandTag tag, Object arg, int pulse) throws OPCUAException, InterruptedException, EqCommandTagException {
+
+    private void runClassicCommand(ISourceCommandTag tag, Object arg, int pulse) throws OPCUAException, InterruptedException {
         if (pulse == 0) {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
             executeWriteCommand(tag, arg);
         } else {
-            final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controllerProxy.read(ItemDefinition.toNodeId(tag));
-            handleCommandResponseStatusCode(read.getValue(), ExceptionContext.READ);
-            final Object original = read.getKey().getValue();
+            final Object original = readOriginal(tag);
             if (original != null && original.equals(arg)) {
                 log.info("Tag with ID {} is already set to {}. Skipping command with pulse.", tag.getId(), arg);
             } else {
-                final var f = CompletableFuture.runAsync(() -> {
-                    log.info("Resetting Tag with ID {} to {}.", tag.getId(), original);
-                    try {
-                        executeWriteCommand(tag, original);
-                    } catch (OPCUAException e) {
-                        throw new CompletionException(e);
-                    }
-                }, CompletableFuture.delayedExecutor(pulse, TimeUnit.SECONDS));
-                log.info("Setting Tag with ID {} to {} for {} seconds.", tag.getId(), arg, pulse);
-                executeWriteCommand(tag, arg);
-                try {
-                    f.join();
-                } catch (CompletionException e) {
-                    if (e.getCause() instanceof OPCUAException) {
-                        throw (OPCUAException) e.getCause();
-                    } else if (e.getCause() instanceof InterruptedException) {
-                        throw (InterruptedException) e.getCause();
-                    } else {
-                        throw new EqCommandTagException("An unexpected error occurred when resetting the command tag.", e.getCause());
-                    }
-                }
+                writeRewrite(tag, arg, original, pulse);
             }
         }
+    }
+
+    private void writeRewrite(ISourceCommandTag tag, Object arg, Object original, int pulse) throws OPCUAException {
+        Runnable rewrite = () -> {
+            log.info("Resetting Tag with ID {} to {}.", tag.getId(), original);
+            try {
+                executeWriteCommand(tag, original);
+            } catch (OPCUAException e) {
+                throw new CompletionException(e);
+            }
+        };
+        log.info("Setting Tag with ID {} to {} for {} seconds.", tag.getId(), arg, pulse);
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        executor.schedule(rewrite, pulse, TimeUnit.SECONDS);
+        executeWriteCommand(tag, arg);
+        awaitAndShutdown(executor, pulse);
+
     }
 
     private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException {
@@ -166,19 +162,39 @@ public class CommandTagHandler implements ICommandTagChanger {
     }
 
     /**
-     * {@link cern.c2mon.daq.common.messaging.impl.RequestController} assumes all command executions that do not throw
-     * an error to be successful. To ensure a reliable result, repeat the execution by throwing an error upon status
-     * codes that are invalid.
-     *
-     * @param quality the quality returned by upon the taken action
-     * @param context    The context of the action taken which resulted in the action code
-     * @throws CompletionException a wrapper for a CommunicationException, since this method is only called from within
-     *                             CompletableFutures and will be handled on join.
+     * Read the current value of the tag
+     * @param tag The {@link ISourceCommandTag} whose current value shall be read
+     * @return the current value of the {@link org.eclipse.milo.opcua.stack.core.types.builtin.NodeId} associated with
+     * the tag
+     * @throws OPCUAException if an exception occurred during the read operation, or if a bad quality reading was
+     *                        obtained. {@link cern.c2mon.daq.common.messaging.impl.RequestController} assumes all
+     *                        command executions that do not throw  an error to be successful. To ensure a reliable
+     *                        result, repeat the execution by throwing an error upon status  codes that are invalid.
      */
-    private void handleCommandResponseStatusCode(@Nullable SourceDataTagQuality quality, ExceptionContext context) throws CommunicationException {
-        log.info("Action completed with Status Code: {}", quality);
-        if (quality == null || !quality.isValid()) {
-            throw new CommunicationException(context);
+    private Object readOriginal(ISourceCommandTag tag) throws OPCUAException {
+        final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controllerProxy.read(ItemDefinition.toNodeId(tag));
+        log.info("Action completed with Status Code: {}", read.getValue());
+        if (read.getValue() == null || !read.getValue().isValid()) {
+            throw new CommunicationException(ExceptionContext.READ);
         }
+        return read.getKey().getValue();
+    }
+
+    private void awaitAndShutdown(ScheduledExecutorService executor, int pulse) {
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(pulse + timeout, TimeUnit.SECONDS)) {
+                log.error("Shutting down now");
+                executor.shutdownNow();
+                if (!executor.awaitTermination(pulse + timeout, TimeUnit.SECONDS)) {
+                    log.error("Server switch still running");
+                }
+            }
+        } catch (InterruptedException ie) {
+            log.error("Interrupted... ", ie);
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        log.info("Executor shut down");
     }
 }

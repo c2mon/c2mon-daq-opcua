@@ -60,7 +60,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         Collections.addAll(this.redundantAddresses, redundantAddresses);
         this.redundantAddresses.add(currentUri);
         // Only one server can be healthy at a time in cold redundancy
-        if (readServiceLevel(activeEndpoint).compareTo(SERVICE_LEVEL_HEALTH_LIMIT) < 0) {
+        if (readServiceLevel(activeEndpoint).compareTo(serviceLevelHealthLimit) < 0) {
             disconnectAndProceed();
             if (!connectToHealthiestServerFinished()) {
                 log.info("Controller stopped. Stopping initialization process.");
@@ -155,7 +155,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             try {
                 activeEndpoint.initialize(nextUri);
                 final UByte nextServiceLevel = readServiceLevel(activeEndpoint);
-                if (nextServiceLevel.compareTo(SERVICE_LEVEL_HEALTH_LIMIT) >= 0) {
+                if (nextServiceLevel.compareTo(serviceLevelHealthLimit) >= 0) {
                     log.info("Connected to healthy server at {} with service level: {}.", nextUri, nextServiceLevel);
                     currentUri = nextUri;
                     return true;

@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.tagHandling;
+package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.NoFailover;

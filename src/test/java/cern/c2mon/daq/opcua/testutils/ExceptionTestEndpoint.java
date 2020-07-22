@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
-import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
+import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;

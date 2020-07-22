@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua;
 
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.FailoverMode;
 import cern.c2mon.daq.opcua.exceptions.*;
@@ -14,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 /**
@@ -52,16 +54,20 @@ public class RetryDelegate {
     @Retryable(value = {CommunicationException.class},
             maxAttemptsExpression = "#{@appConfigProperties.getMaxRetryAttempts()}",
             backoff = @Backoff(delayExpression = "#{@appConfigProperties.getRetryDelay()}"))
-    public <T> T completeOrThrow(ExceptionContext context, Supplier<Long> disconnectionTime, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
+    public <T> T completeOrThrow(ExceptionContext context, LongSupplier disconnectionTime, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
         try {
             // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
             // but not the underlying action on the OpcUaClient
-            if (disconnectionTime.get() < 0L) {
+            if (disconnectionTime.getAsLong() < 0L) {
                 log.info("Endpoint was stopped, cease retries.");
                 return null;
             }
             return futureSupplier.get().get(config.getTimeout(), TimeUnit.MILLISECONDS);
-        } catch (ExecutionException | InterruptedException | TimeoutException e) {
+        } catch (InterruptedException e) {
+            log.debug("Execution {} failed with interrupted exception; ", context.name(), e);
+            Thread.currentThread().interrupt();
+            throw OPCUAException.of(context, e.getCause(), isLongDisconnection(disconnectionTime));
+        } catch (ExecutionException | TimeoutException e) {
             log.debug("Execution {} failed with exception; ", context.name(), e);
             throw OPCUAException.of(context, e.getCause(), isLongDisconnection(disconnectionTime));
         } catch (Exception e) {
@@ -98,7 +104,7 @@ public class RetryDelegate {
         endpoint.recreateSubscription(subscription);
     }
 
-    private boolean isLongDisconnection(Supplier<Long> disconnectionTime) {
-        return config.getMaxRetryAttempts() * (config.getRetryDelay() + config.getTimeout()) < disconnectionTime.get();
+    private boolean isLongDisconnection(LongSupplier disconnectionTime) {
+        return config.getMaxRetryAttempts() * (config.getRetryDelay() + config.getTimeout()) < disconnectionTime.getAsLong();
     }
 }

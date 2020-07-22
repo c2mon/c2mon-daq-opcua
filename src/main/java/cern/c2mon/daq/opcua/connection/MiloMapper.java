@@ -4,12 +4,17 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.type.TypeConverter;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.types.builtin.ExpandedNodeId;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.util.TypeUtil;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static cern.c2mon.shared.common.datatag.SourceDataTagQualityCode.*;
@@ -19,6 +24,7 @@ import static cern.c2mon.shared.common.datatag.SourceDataTagQualityCode.*;
  * is interpretable for C2MON.
  */
 @Slf4j
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public abstract class MiloMapper {
 
     /**
@@ -65,17 +71,17 @@ public abstract class MiloMapper {
      * @return the POJO extracted from the variant
      */
     public static Object toObject(Variant variant) {
-        final var dataType = variant.getDataType();
-        if (dataType.isEmpty()) {
+        final Optional<ExpandedNodeId> dataType = variant.getDataType();
+        if (!dataType.isPresent()) {
             log.info("The variant {} did not contain a data type and cannot be processed.", variant);
             return null;
         }
-        final var expandedNodeId = dataType.get();
-        if (!expandedNodeId.isLocal() || expandedNodeId.local().isEmpty()) {
-            log.error("The NodeID {} resides in another server. A Namespace Table must be provided to extract it.", expandedNodeId);
+        final Optional<NodeId> nodeId = dataType.get().local(null);
+        if (!nodeId.isPresent()) {
+            log.error("The NodeID {} resides in another server. A Namespace Table must be provided to extract it.", dataType.get().toString());
             return null;
         }
-        final Class<?> objectClass = TypeUtil.getBackingClass(expandedNodeId.local().get());
+        final Class<?> objectClass = TypeUtil.getBackingClass(nodeId.get());
         if (objectClass == null) {
             log.error("The backing object class was not recognized by the Milo OPC UA stack and cannot be processed.");
             return null;

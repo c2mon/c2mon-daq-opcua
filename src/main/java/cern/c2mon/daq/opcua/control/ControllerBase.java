@@ -13,6 +13,7 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
+import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -110,7 +111,7 @@ public abstract class ControllerBase implements Controller {
             return e.subscribe(groupWithDefinitions.getKey(), groupWithDefinitions.getValue()).entrySet().stream();
         } catch (ConfigurationException configurationException) {
             return groupWithDefinitions.getValue().stream()
-                    .map(d -> Map.entry(d.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)));
+                    .map(d -> new AbstractMap.SimpleEntry<>(d.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)));
         }
     }
 }

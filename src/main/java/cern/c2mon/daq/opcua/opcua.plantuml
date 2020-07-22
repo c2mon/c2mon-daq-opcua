@@ -3,7 +3,7 @@
 title __OPCUA's Class Diagram__\n
 
   namespace cern.c2mon.daq.opcua {
-    abstract class cern.c2mon.daq.opcua.AddressParser {
+    abstract class cern.c2mon.daq.opcua.config.AddressParser {
         {static} - KEYSTORE : String
         {static} - PKI : String
         {static} - URI : String
@@ -21,7 +21,7 @@ title __OPCUA's Class Diagram__\n
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.AppConfigProperties {
+    class cern.c2mon.daq.opcua.config.AppConfigProperties {
         - aliveWriterEnabled : boolean
         - appName : String
         - applicationUri : String
@@ -103,7 +103,7 @@ title __OPCUA's Class Diagram__\n
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder {
+    class cern.c2mon.daq.opcua.config.AppConfigProperties.AppConfigPropertiesBuilder {
         - aliveWriterEnabled : boolean
         - appName : String
         - applicationUri : String
@@ -157,7 +157,7 @@ title __OPCUA's Class Diagram__\n
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig {
+    class cern.c2mon.daq.opcua.config.AppConfigProperties.KeystoreConfig {
         - alias : String
         - path : String
         - pwd : String
@@ -182,7 +182,7 @@ title __OPCUA's Class Diagram__\n
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig.KeystoreConfigBuilder {
+    class cern.c2mon.daq.opcua.config.AppConfigProperties.KeystoreConfig.KeystoreConfigBuilder {
         - alias : String
         - path : String
         - pwd : String
@@ -199,7 +199,7 @@ title __OPCUA's Class Diagram__\n
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig {
+    class cern.c2mon.daq.opcua.config.AppConfigProperties.PKIConfig {
         - crtPath : String
         - pkPath : String
         + PKIConfig()
@@ -218,7 +218,7 @@ title __OPCUA's Class Diagram__\n
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig.PKIConfigBuilder {
+    class cern.c2mon.daq.opcua.config.AppConfigProperties.PKIConfig.PKIConfigBuilder {
         - crtPath : String
         - pkPath : String
         + build()
@@ -231,7 +231,7 @@ title __OPCUA's Class Diagram__\n
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig {
+    class cern.c2mon.daq.opcua.config.AppConfigProperties.UsrPwdConfig {
         - pwd : String
         - usr : String
         + UsrPwdConfig()
@@ -250,7 +250,7 @@ title __OPCUA's Class Diagram__\n
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig.UsrPwdConfigBuilder {
+    class cern.c2mon.daq.opcua.config.AppConfigProperties.UsrPwdConfig.UsrPwdConfigBuilder {
         - pwd : String
         - usr : String
         + build()
@@ -287,29 +287,29 @@ title __OPCUA's Class Diagram__\n
   }
   
 
-  cern.c2mon.daq.opcua.AppConfigProperties o-- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig : keystore
-  cern.c2mon.daq.opcua.AppConfigProperties o-- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig : pkiConfig
-  cern.c2mon.daq.opcua.AppConfigProperties o-- cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig : usrPwd
-  cern.c2mon.daq.opcua.AppConfigProperties +-down- cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder
-  cern.c2mon.daq.opcua.AppConfigProperties +-down- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig
-  cern.c2mon.daq.opcua.AppConfigProperties +-down- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig
-  cern.c2mon.daq.opcua.AppConfigProperties +-down- cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig
-  cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder o-- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig : keystore
-  cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder o-- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig : pkiConfig
-  cern.c2mon.daq.opcua.AppConfigProperties.AppConfigPropertiesBuilder o-- cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig : usrPwd
-  cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig +-down- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig.KeystoreConfigBuilder
-  cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig +-down- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig.PKIConfigBuilder
-  cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig +-down- cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig.UsrPwdConfigBuilder
+  cern.c2mon.daq.opcua.config.AppConfigProperties o-- cern.c2mon.daq.opcua.config.AppConfigProperties.KeystoreConfig : keystore
+  cern.c2mon.daq.opcua.config.AppConfigProperties o-- cern.c2mon.daq.opcua.config.AppConfigProperties.PKIConfig : pkiConfig
+  cern.c2mon.daq.opcua.config.AppConfigProperties o-- cern.c2mon.daq.opcua.config.AppConfigProperties.UsrPwdConfig : usrPwd
+  cern.c2mon.daq.opcua.config.AppConfigProperties +-down- cern.c2mon.daq.opcua.config.AppConfigProperties.AppConfigPropertiesBuilder
+  cern.c2mon.daq.opcua.config.AppConfigProperties +-down- cern.c2mon.daq.opcua.config.AppConfigProperties.KeystoreConfig
+  cern.c2mon.daq.opcua.config.AppConfigProperties +-down- cern.c2mon.daq.opcua.config.AppConfigProperties.PKIConfig
+  cern.c2mon.daq.opcua.config.AppConfigProperties +-down- cern.c2mon.daq.opcua.config.AppConfigProperties.UsrPwdConfig
+  cern.c2mon.daq.opcua.config.AppConfigProperties.AppConfigPropertiesBuilder o-- cern.c2mon.daq.opcua.config.AppConfigProperties.KeystoreConfig : keystore
+  cern.c2mon.daq.opcua.config.AppConfigProperties.AppConfigPropertiesBuilder o-- cern.c2mon.daq.opcua.config.AppConfigProperties.PKIConfig : pkiConfig
+  cern.c2mon.daq.opcua.config.AppConfigProperties.AppConfigPropertiesBuilder o-- cern.c2mon.daq.opcua.config.AppConfigProperties.UsrPwdConfig : usrPwd
+  cern.c2mon.daq.opcua.config.AppConfigProperties.KeystoreConfig +-down- cern.c2mon.daq.opcua.config.AppConfigProperties.KeystoreConfig.KeystoreConfigBuilder
+  cern.c2mon.daq.opcua.config.AppConfigProperties.PKIConfig +-down- cern.c2mon.daq.opcua.config.AppConfigProperties.PKIConfig.PKIConfigBuilder
+  cern.c2mon.daq.opcua.config.AppConfigProperties.UsrPwdConfig +-down- cern.c2mon.daq.opcua.config.AppConfigProperties.UsrPwdConfig.UsrPwdConfigBuilder
   cern.c2mon.daq.opcua.OPCUAMessageHandler .up.|> cern.c2mon.daq.common.ICommandRunner
   cern.c2mon.daq.opcua.OPCUAMessageHandler .up.|> cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger
   cern.c2mon.daq.opcua.OPCUAMessageHandler -up-|> cern.c2mon.daq.common.EquipmentMessageHandler
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.AliveWriter : aliveWriter
-  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.AppConfigProperties : appConfigProperties
+  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.config.AppConfigProperties : appConfigProperties
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.CommandTagHandler : commandTagHandler
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.DataTagChanger : dataTagChanger
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.IDataTagHandler : dataTagHandler
-  cern.c2mon.daq.opcua.RetryDelegate o-- cern.c2mon.daq.opcua.AppConfigProperties : config
+  cern.c2mon.daq.opcua.RetryDelegate o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
 
 
 right footer

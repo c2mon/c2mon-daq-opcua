@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
-import cern.c2mon.daq.opcua.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
@@ -54,7 +54,7 @@ class CertificateGeneratorTest {
             OpcUaClientConfigBuilder actual = new OpcUaClientConfigBuilder();
             generator.certify(actual, e);
             if (!generator.canCertify(e)) {
-                final var message = assertThrows(NullPointerException.class, actual::build).getMessage();
+                final String message = assertThrows(NullPointerException.class, actual::build).getMessage();
                 assertTrue(message.contains("endpoint must be non-null"));
             }
         }
@@ -109,7 +109,7 @@ class CertificateGeneratorTest {
             assertEquals(expected.getKeyPair().get().getPrivate().toString(), actual.getKeyPair().get().getPrivate().toString());
             assertEquals(expected.getKeyPair().get().getPublic().toString(), actual.getKeyPair().get().getPublic().toString());
         } else {
-            assertTrue(expected.getKeyPair().isEmpty() && actual.getKeyPair().isEmpty());
+            assertFalse(expected.getKeyPair().isPresent() || actual.getKeyPair().isPresent());
         }
         assertEquals(expected.getCertificateValidator().getClass(), actual.getCertificateValidator().getClass());
     }

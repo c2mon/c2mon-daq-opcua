@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.retry;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,9 +64,11 @@ public class RetryEndpointActionIT {
     }
 
     private void verifyExceptionOnRead(Exception e, int numTimes) {
+        final CompletableFuture<DataValue> f = new CompletableFuture<>();
+        f.completeExceptionally(e);
         final NodeId nodeId = new NodeId(1, 2);
         expect(client.readValue(0, TimestampsToReturn.Both, nodeId))
-                .andReturn(CompletableFuture.failedFuture(e))
+                .andReturn(f)
                 .times(numTimes);
         replay(client);
         try {

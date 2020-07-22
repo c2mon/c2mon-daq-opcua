@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua;
 
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;

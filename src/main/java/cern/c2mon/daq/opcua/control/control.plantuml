@@ -147,7 +147,7 @@ title __CONTROL's Class Diagram__\n
   cern.c2mon.daq.opcua.control.ColdFailover o-- cern.c2mon.daq.opcua.connection.Endpoint : activeEndpoint
   cern.c2mon.daq.opcua.control.ControllerBase .up.|> cern.c2mon.daq.opcua.control.Controller
   cern.c2mon.daq.opcua.control.ControllerProxy .up.|> cern.c2mon.daq.opcua.control.IControllerProxy
-  cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.AppConfigProperties : config
+  cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
   cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.control.Controller : controller
   cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.connection.Endpoint : endpoint
   cern.c2mon.daq.opcua.control.FailoverBase .up.|> cern.c2mon.daq.opcua.control.FailoverMode

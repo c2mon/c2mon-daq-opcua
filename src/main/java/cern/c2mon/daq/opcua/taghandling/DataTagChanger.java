@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua.tagHandling;
+package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -23,8 +24,8 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 @Slf4j
 public class DataTagChanger implements IDataTagChanger {
 
-    private final static TriConsumer<Boolean, String, ChangeReport> applyToReport = (success, message, report) -> {
-        final Function<String, String> prevMsg = s -> s == null ? "" : s;
+    private static final TriConsumer<Boolean, String, ChangeReport> applyToReport = (success, message, report) -> {
+        final UnaryOperator<String> prevMsg = s -> s == null ? "" : s;
         if (success) {
             report.appendInfo(prevMsg.apply(report.getInfoMessage()) + message);
             report.setState(SUCCESS);
@@ -35,16 +36,17 @@ public class DataTagChanger implements IDataTagChanger {
         }
     };
 
-    private static final Function<Collection<ISourceDataTag>, String> tagsToIdString = (tags) -> tags.stream().map(t -> t.getId().toString()).collect(Collectors.joining(", "));
+    private static final Function<Collection<ISourceDataTag>, String> tagsToIdString = tags -> tags.stream()
+            .map(t -> t.getId().toString()).collect(Collectors.joining(", "));
 
     private static void gatherIds(Stream<ISourceDataTag> tagStream, Predicate<ISourceDataTag> predicate, String successMsg, String failMsg, ChangeReport report) {
         final Map<Boolean, List<ISourceDataTag>> collect = tagStream.collect(Collectors.partitioningBy(predicate));
-        for (boolean success : collect.keySet()) {
-            final String tagIds = tagsToIdString.apply(collect.get(success));
+        collect.forEach((succeeded, itemDefinitions) -> {
+            final String tagIds = tagsToIdString.apply(itemDefinitions);
             if (!tagIds.isEmpty()) {
-                report.appendInfo((success ? successMsg : failMsg) + tagIds + ". ");
+                report.appendInfo((succeeded ? successMsg : failMsg) + tagIds + ". ");
             }
-        }
+        });
     }
     private final IDataTagHandler controller;
 

@@ -15,7 +15,7 @@
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.config;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -53,8 +53,8 @@ public abstract class AddressParser {
     /**
      * Parses the C2MON equipment address String specified in the configuration into an array of addresses. If more than
      * one address is given, the servers at these addresses are considered as part of a redundant server cluster.
-     * Optionally, any field in {@link AppConfigProperties} can by overridden by adding a key value pair. In this case, the field
-     * and key must match exactly.
+     * Optionally, any field in {@link AppConfigProperties} can by overridden by adding a key value pair. In this case,
+     * the field and key must match exactly.
      * @param address The address String in the following form, where brackets indicate optional values:
      *                [URI=]protocol1://host1[:port1]/[path1][,protocol2://host2[:port2]/[path2]]
      *                [;optionalConfigurationProperty=value] [;keystore.optionalKeystoreProperty=value]
@@ -105,7 +105,7 @@ public abstract class AddressParser {
     private static void overrideConfig(Map<String, String> properties, AppConfigProperties config) {
         final List<Map.Entry<String, String>> entries = setFields(getSubConfig(properties, KEYSTORE), config.getKeystore());
         entries.addAll(setFields(getSubConfig(properties, PKI), config.getPkiConfig()));
-        properties.keySet().removeIf(s -> s.startsWith(KEYSTORE) | s.startsWith(PKI));
+        properties.keySet().removeIf(s -> s.startsWith(KEYSTORE) || s.startsWith(PKI));
         entries.addAll(setFields(properties, config));
         if (!entries.isEmpty()) {
             log.info("Could not set fields {}. ", StringUtils.join(entries, ", "));
@@ -127,11 +127,10 @@ public abstract class AddressParser {
     private static boolean setFieldSuccessful(Object target, String name, String value) {
         try {
             final Field declaredField = target.getClass().getDeclaredField(name);
-            if (declaredField.trySetAccessible()) {
-                final Object val = converter.convert(value, declaredField.getType());
-                declaredField.set(target, val);
-                return true;
-            }
+            declaredField.setAccessible(true);
+            final Object val = converter.convert(value, declaredField.getType());
+            declaredField.set(target, val);
+            return true;
         } catch (ClassCastException | IllegalAccessException e) {
             log.debug("Error setting field {}.", name, e);
         } catch (NoSuchFieldException e) {

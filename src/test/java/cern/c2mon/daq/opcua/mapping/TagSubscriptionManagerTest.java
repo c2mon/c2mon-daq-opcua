@@ -145,7 +145,7 @@ public class TagSubscriptionManagerTest extends MappingBase {
     public void registerDefinitionTwiceShouldThrowError() {
         mapper.getOrCreateDefinition(tag);
         mapper.addTagToGroup(tag.getId());
-        final var size = mapper.getGroup(tag.getTimeDeadband()).size();
+        final int size = mapper.getGroup(tag.getTimeDeadband()).size();
         mapper.addTagToGroup(tag.getId());
         assertEquals(size, mapper.getGroup(tag.getTimeDeadband()).size());
     }

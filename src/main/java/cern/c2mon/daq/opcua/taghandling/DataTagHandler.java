@@ -15,8 +15,9 @@
  * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-package cern.c2mon.daq.opcua.tagHandling;
+package cern.c2mon.daq.opcua.taghandling;
 
+import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -26,6 +27,7 @@ import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -130,7 +132,9 @@ public class DataTagHandler implements IDataTagHandler {
      */
     @Override
     public synchronized void refreshDataTag(ISourceDataTag sourceDataTag) {
-        refresh(Map.of(sourceDataTag.getId(), mapper.getOrCreateDefinition(sourceDataTag)));
+        final Map<Long, ItemDefinition> objectObjectHashMap = new HashMap<>();
+        objectObjectHashMap.put(sourceDataTag.getId(), mapper.getOrCreateDefinition(sourceDataTag));
+        refresh(objectObjectHashMap);
     }
 
     private void completeSubscriptionAndReportSuccess(UInteger clientHandle, SourceDataTagQuality quality) {
@@ -143,14 +147,14 @@ public class DataTagHandler implements IDataTagHandler {
     }
 
     private synchronized void refresh(Map<Long, ItemDefinition> entries) {
-        final var notRefreshable = new ArrayList<Long>();
-        for (var e : entries.entrySet()) {
+        final ArrayList<Long> notRefreshable = new ArrayList<>();
+        for (Map.Entry<Long, ItemDefinition> e : entries.entrySet()) {
             if (Thread.currentThread().isInterrupted()) {
                 log.info("The thread was interrupted before all tags could be refreshed.");
                 return;
             }
             try {
-                final var reading = controllerProxy.read(e.getValue().getNodeId());
+                final Map.Entry<ValueUpdate, SourceDataTagQuality> reading = controllerProxy.read(e.getValue().getNodeId());
                 final Optional<Long> tagId = mapper.getTagId(e.getValue().getClientHandle());
                 messageSender.onValueUpdate(tagId, reading.getValue(), reading.getKey());
             } catch (OPCUAException ex) {

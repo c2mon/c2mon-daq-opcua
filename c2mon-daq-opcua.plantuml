@@ -3,13 +3,13 @@
 title __C2MON-DAQ-OPCUA's Class Diagram__\n
 
   namespace cern.c2mon.daq.opcua {
-    abstract class cern.c2mon.daq.opcua.AddressParser {
+    abstract class cern.c2mon.daq.opcua.config.AddressParser {
     }
   }
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.AppConfigProperties {
+    class cern.c2mon.daq.opcua.config.AppConfigProperties {
     }
   }
   
@@ -306,19 +306,19 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
   }
   
 
-  cern.c2mon.daq.opcua.AppConfigProperties o-- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig : keystore
-  cern.c2mon.daq.opcua.AppConfigProperties o-- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig : pkiConfig
-  cern.c2mon.daq.opcua.AppConfigProperties o-- cern.c2mon.daq.opcua.AppConfigProperties.UsrPwdConfig : usrPwd
+  cern.c2mon.daq.opcua.config.AppConfigProperties o-- cern.c2mon.daq.opcua.config.AppConfigProperties.KeystoreConfig : keystore
+  cern.c2mon.daq.opcua.config.AppConfigProperties o-- cern.c2mon.daq.opcua.config.AppConfigProperties.PKIConfig : pkiConfig
+  cern.c2mon.daq.opcua.config.AppConfigProperties o-- cern.c2mon.daq.opcua.config.AppConfigProperties.UsrPwdConfig : usrPwd
   cern.c2mon.daq.opcua.OPCUAMessageHandler .up.|> cern.c2mon.daq.common.ICommandRunner
   cern.c2mon.daq.opcua.OPCUAMessageHandler .up.|> cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger
   cern.c2mon.daq.opcua.OPCUAMessageHandler -up-|> cern.c2mon.daq.common.EquipmentMessageHandler
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.AliveWriter : aliveWriter
-  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.AppConfigProperties : appConfigProperties
+  cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.config.AppConfigProperties : appConfigProperties
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.CommandTagHandler : commandTagHandler
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.DataTagChanger : dataTagChanger
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.IDataTagHandler : dataTagHandler
-  cern.c2mon.daq.opcua.RetryDelegate o-- cern.c2mon.daq.opcua.AppConfigProperties : config
+  cern.c2mon.daq.opcua.RetryDelegate o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> cern.c2mon.daq.opcua.connection.Endpoint
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager.SubscriptionListener
@@ -326,13 +326,13 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.tagHandling.IMessageSender : messageSender
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.RetryDelegate : retryDelegate
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.connection.SecurityModule : securityModule
-  cern.c2mon.daq.opcua.connection.SecurityModule o-- cern.c2mon.daq.opcua.AppConfigProperties : config
+  cern.c2mon.daq.opcua.connection.SecurityModule o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
   cern.c2mon.daq.opcua.control.ColdFailover .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
   cern.c2mon.daq.opcua.control.ColdFailover -up-|> cern.c2mon.daq.opcua.control.FailoverBase
   cern.c2mon.daq.opcua.control.ColdFailover o-- cern.c2mon.daq.opcua.connection.Endpoint : activeEndpoint
   cern.c2mon.daq.opcua.control.ControllerBase .up.|> cern.c2mon.daq.opcua.control.Controller
   cern.c2mon.daq.opcua.control.ControllerProxy .up.|> cern.c2mon.daq.opcua.control.IControllerProxy
-  cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.AppConfigProperties : config
+  cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
   cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.control.Controller : controller
   cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.connection.Endpoint : endpoint
   cern.c2mon.daq.opcua.control.FailoverBase .up.|> cern.c2mon.daq.opcua.control.FailoverMode
@@ -347,10 +347,10 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
   cern.c2mon.daq.opcua.mapping.TagSubscriptionManager .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader
   cern.c2mon.daq.opcua.mapping.TagSubscriptionManager .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionWriter
   cern.c2mon.daq.opcua.security.CertificateGenerator -up-|> cern.c2mon.daq.opcua.security.CertifierBase
-  cern.c2mon.daq.opcua.security.CertificateGenerator o-- cern.c2mon.daq.opcua.AppConfigProperties : config
+  cern.c2mon.daq.opcua.security.CertificateGenerator o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
   cern.c2mon.daq.opcua.security.CertificateLoader -up-|> cern.c2mon.daq.opcua.security.CertifierBase
-  cern.c2mon.daq.opcua.security.CertificateLoader o-- cern.c2mon.daq.opcua.AppConfigProperties.KeystoreConfig : keystoreConfig
-  cern.c2mon.daq.opcua.security.CertificateLoader o-- cern.c2mon.daq.opcua.AppConfigProperties.PKIConfig : pkiConfig
+  cern.c2mon.daq.opcua.security.CertificateLoader o-- cern.c2mon.daq.opcua.config.AppConfigProperties.KeystoreConfig : keystoreConfig
+  cern.c2mon.daq.opcua.security.CertificateLoader o-- cern.c2mon.daq.opcua.config.AppConfigProperties.PKIConfig : pkiConfig
   cern.c2mon.daq.opcua.security.CertifierBase .up.|> cern.c2mon.daq.opcua.security.Certifier
   cern.c2mon.daq.opcua.security.NoSecurityCertifier .up.|> cern.c2mon.daq.opcua.security.Certifier
   cern.c2mon.daq.opcua.tagHandling.AliveWriter o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy

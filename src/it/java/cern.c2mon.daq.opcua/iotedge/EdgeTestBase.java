@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
+import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import lombok.Getter;
@@ -12,6 +12,7 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -49,7 +50,7 @@ public abstract class EdgeTestBase {
 
     protected static IMessageSender.EquipmentState cutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
         log.info("Cutting connection.");
-        final var connectionLost = listener.listen();
+        final CompletableFuture<IMessageSender.EquipmentState> connectionLost = listener.listen();
         img.proxy.setConnectionCut(true);
         return connectionLost.thenApply(c -> {
             log.info("Connection cut.");
@@ -59,7 +60,7 @@ public abstract class EdgeTestBase {
 
     protected static IMessageSender.EquipmentState uncutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
         log.info("Reestablishing connection.");
-        final var connectionRegained = listener.listen();
+        final CompletableFuture<IMessageSender.EquipmentState> connectionRegained = listener.listen();
         img.proxy.setConnectionCut(false);
         return connectionRegained.thenApply(c -> {
             log.info("Connection reestablished.");

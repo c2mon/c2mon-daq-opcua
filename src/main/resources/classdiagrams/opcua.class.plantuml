@@ -1,9 +1,7 @@
 title OPC UA DAQ Class Diagram
 
-abstract class AddressParser {
-  {static} - converter : ConversionService
+abstract class config.AddressParser {
   {static} + parse()
-  - AddressParser()
 }
 
 class OPCUAMessageHandler {
@@ -54,10 +52,10 @@ OPCUAMessageHandler .up.|> cern.c2mon.daq.common.ICommandRunner
 OPCUAMessageHandler .up.|> cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger
 OPCUAMessageHandler -up-|> cern.c2mon.daq.common.EquipmentMessageHandler
 OPCUAMessageHandler o-left- tagHandling.AliveWriter : aliveWriter
-OPCUAMessageHandler o-left- AppConfigProperties : appConfigProperties
+OPCUAMessageHandler o-left- config.AppConfigProperties : appConfigProperties
 OPCUAMessageHandler o-- tagHandling.CommandTagHandler : commandTagHandler
 OPCUAMessageHandler o-left- control.IControllerProxy : controllerProxy
 OPCUAMessageHandler o-- tagHandling.IDataTagChanger : dataTagChanger
 OPCUAMessageHandler o-- tagHandling.IDataTagHandler : dataTagHandler
 
-OPCUAMessageHandler ..> AddressParser
+OPCUAMessageHandler ..> config.AddressParser: parse()
