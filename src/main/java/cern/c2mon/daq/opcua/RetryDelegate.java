@@ -72,9 +72,10 @@ public class RetryDelegate {
 
     /**
      * Initiates a failover in between redundant servers. Failed failovers are retried until a connection could be
-     * established successfully.
-     * @param failover A controller
-     * @throws OPCUAException
+     * established successfully. The time in between retries starts at appConfigProperties.getRetryDelay(), and is
+     * increased by a factor of 3 every failed attempt up to a maximum of appConfigProperties.getMaxFailoverDelay()
+     * @param failover The controller on which to start the failover process
+     * @throws OPCUAException if switching servers failed more than Integer.MAX_VALUE times.
      */
     @Retryable(value = {OPCUAException.class},
             maxAttempts = Integer.MAX_VALUE,
@@ -83,6 +84,7 @@ public class RetryDelegate {
                     maxDelayExpression = "#{@appConfigProperties.getMaxFailoverDelay()}",
                     multiplier = 3))
     public void triggerServerSwitchRetry(FailoverMode failover) throws OPCUAException {
+        log.info("try switching servers");
         failover.switchServers();
     }
 

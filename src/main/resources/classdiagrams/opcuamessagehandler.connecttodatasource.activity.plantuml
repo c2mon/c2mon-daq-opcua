@@ -1,0 +1,55 @@
+title Connect To Data Source
+actor "DAQ Core" as Core
+box "OPCUAMessageHandler"
+participant OPCUAMessageHandler
+participant AddressStringParser
+end box
+participant EquipmentMessageSender
+participant AliveWriter
+participant DataTagHandler
+participant Control
+
+Core-> OPCUAMessageHandler ++ : connectToDataSource()
+  OPCUAMessageHandler -> OPCUAMessageHandler: fetch required objects from //context//
+  OPCUAMessageHandler -> EquipmentMessageSender ++ : initialize with //getMessageSender()//
+  return
+  
+  OPCUAMessageHandler -> AddressStringParser ++: parse equipment address in \n//getEquipmentConfiguration()//
+  return server addresses
+  
+  OPCUAMessageHandler -> Control ++ : connect using server addresses
+  
+  ref over Control
+    see ...
+  end ref
+  Control -> EquipmentMessageSender ++: confirm equipment state correct
+    EquipmentMessageSender -> Core: confirm equipment state correct
+  return
+  critical error?
+    OPCUAMessageHandler <- Control : throw OPCUAException
+    OPCUAMessageHandler -> EquipmentMessageSender ++: confirm equipment state incorrect
+      EquipmentMessageSender -> Core: confirm equipment state incorrect
+    return
+    Core <- OPCUAMessageHandler: throw as EqIOException
+    return
+  end
+
+  
+  OPCUAMessageHandler -> AliveWriter ++: intialize
+    ref over AliveWriter
+      see ...
+    end ref
+  return
+  
+  OPCUAMessageHandler -> DataTagHandler++: process DataTags
+    ref over DataTagHandler
+      see ...
+    end ref
+  return
+  
+  OPCUAMessageHandler -> Core ++: set //IDataTagChanger//, //ICommandTagHandler// \nand self as equipment configuration handlers
+  return
+  
+return
+  
+
