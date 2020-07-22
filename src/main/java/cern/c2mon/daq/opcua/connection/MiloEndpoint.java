@@ -167,6 +167,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         log.info("Disconnecting endpoint at {}", uri);
         try {
             if (client != null) {
+                client.getSubscriptionManager().clearSubscriptions();
                 client.getSubscriptionManager().removeSubscriptionListener(this);
                 sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
                 retryDelegate.completeOrThrow(DISCONNECT, this::getDisconnectPeriod, client::disconnect);
@@ -181,7 +182,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             subscriptionMap.clear();
             disconnectedOn.set(-1);
         }
-        log.info("Completed disconnecting endpoint", uri);
+        log.info("Completed disconnecting endpoint {}", uri);
     }
 
     /**

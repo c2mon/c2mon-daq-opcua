@@ -79,8 +79,8 @@ public class FailoverIT extends EdgeTestBase {
     public void cleanUp() throws InterruptedException {
         log.info("############ CLEAN UP ############");
         controllerProxy.stop();
-        shutdownAndAwaitTermination();
         TimeUnit.MILLISECONDS.sleep(TestUtils.TIMEOUT_IT);
+        shutdownAndAwaitTermination();
 
         if (resetConnection) {
             log.info("Resetting fallback proxy {}", fallback.proxy);
@@ -98,7 +98,7 @@ public class FailoverIT extends EdgeTestBase {
     }
 
     @Test
-    public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+    public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldReconnectClient");
         cutConnection(pulseListener, active);
         executor.submit(serverSwitch);
@@ -108,7 +108,7 @@ public class FailoverIT extends EdgeTestBase {
     }
 
     @Test
-    public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+    public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldResumeSubscriptions" + config.getTimeout());
         cutConnection(pulseListener, active);
         executor.submit(serverSwitch);
@@ -168,12 +168,14 @@ public class FailoverIT extends EdgeTestBase {
             if (!executor.awaitTermination(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
                 executor.shutdownNow();
                 if (!executor.awaitTermination(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
-                    System.err.println("Server switch still running");
+                    log.error("Server switch still running");
                 }
             }
         } catch (InterruptedException ie) {
+            log.error("Interrupted... ", ie);
             executor.shutdownNow();
             Thread.currentThread().interrupt();
         }
+        log.info("Executor shut down");
     }
 }
