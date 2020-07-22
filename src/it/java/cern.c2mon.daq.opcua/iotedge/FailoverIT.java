@@ -11,7 +11,6 @@ import cern.c2mon.daq.opcua.tagHandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.tagHandling.IMessageSender;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
-import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.extern.slf4j.Slf4j;
 import org.easymock.EasyMock;
@@ -32,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.*;
 
+import static cern.c2mon.daq.opcua.testutils.TestUtils.*;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.niceMock;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -64,11 +64,10 @@ public class FailoverIT extends EdgeTestBase {
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);
 
-        mockColdFailover()
-        ;
+        mockColdFailover();
         controllerProxy.connect(Arrays.asList(active.getUri(), fallback.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(tag));
-        pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        pulseListener.getTagValUpdate().get(TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         resetConnection = false;
         executor = Executors.newSingleThreadExecutor();
@@ -79,7 +78,7 @@ public class FailoverIT extends EdgeTestBase {
     public void cleanUp() throws InterruptedException {
         log.info("############ CLEAN UP ############");
         controllerProxy.stop();
-        TimeUnit.MILLISECONDS.sleep(TestUtils.TIMEOUT_IT);
+        TimeUnit.MILLISECONDS.sleep(TIMEOUT_IT);
         shutdownAndAwaitTermination();
 
         if (resetConnection) {
@@ -87,7 +86,8 @@ public class FailoverIT extends EdgeTestBase {
             fallback.proxy.setConnectionCut(true);
             log.info("Resetting active proxy {}", active.proxy);
             try {
-                active.proxy.setConnectionCut(false);
+                CompletableFuture.runAsync(() -> active.proxy.setConnectionCut(false))
+                        .get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
                 log.error("Error cutting connection.", e);
             }
@@ -131,7 +131,7 @@ public class FailoverIT extends EdgeTestBase {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
         cutConnection(pulseListener, active);
         executor.submit(serverSwitch);
-        TimeUnit.MILLISECONDS.sleep(TestUtils.TIMEOUT);
+        TimeUnit.MILLISECONDS.sleep(TIMEOUT);
         uncutConnection(pulseListener, active);
         assertTagUpdate();
     }
@@ -159,15 +159,15 @@ public class FailoverIT extends EdgeTestBase {
         log.info("Assert tag update for tag with ID {}.", tag.getId());
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
-        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
+        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
     }
 
     private void shutdownAndAwaitTermination() {
         executor.shutdown();
         try {
-            if (!executor.awaitTermination(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
+            if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
                 executor.shutdownNow();
-                if (!executor.awaitTermination(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
+                if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
                     log.error("Server switch still running");
                 }
             }

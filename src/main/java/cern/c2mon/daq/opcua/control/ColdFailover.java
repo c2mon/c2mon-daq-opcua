@@ -74,6 +74,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     @Override
     public void stop() {
+        log.info("Stopping ColdFailover");
         reconnected.complete(null);
         super.stop();
     }
