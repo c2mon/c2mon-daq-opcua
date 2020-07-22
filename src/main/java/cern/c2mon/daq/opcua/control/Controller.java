@@ -15,15 +15,18 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The {@link Controller} represents a one-to-many mapping to the {@link Endpoint}s and handles all actions directed at
+ * them.
+ */
 public interface Controller {
 
     /**
-     * Execute the required steps to monitor the connection to the active server and to failover on demand to a backup
-     * server
-     * @param endpoint           the endpoint that is currently connected
+     * Initialize supervision and connection monitoring to the active server.
+     * @param endpoint           the currently connected {@link Endpoint}
      * @param redundantAddresses the addresses of the servers in the redundant server set not including the active
      *                           server URI
-     * @throws OPCUAException if an error ocurred when setting up connection monitoring
+     * @throws OPCUAException if an error occurred when setting up connection monitoring
      */
     void initialize(Endpoint endpoint, String[] redundantAddresses) throws OPCUAException;
 

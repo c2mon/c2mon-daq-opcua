@@ -35,7 +35,7 @@ public class TestControllerProxy extends ControllerProxy {
             case Hot:
             case Warm:
             case Cold:
-                controller = new ColdFailover(appContext, new RetryDelegate(config));
+                controller = new ColdFailover(new RetryDelegate(config));
                 break;
             default:
                 controller = new NoFailover();

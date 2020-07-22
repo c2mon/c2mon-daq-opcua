@@ -19,8 +19,26 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * An abstract base  which offers functionality that is shared across all failover modes and the {@link NoFailover}
+ * {@link Controller}.
+ */
 public abstract class ControllerBase implements Controller {
 
+    private static Stream<Map.Entry<UInteger, SourceDataTagQuality>> subscribeAndCatch(Endpoint e, Map.Entry<SubscriptionGroup, List<ItemDefinition>> groupWithDefinitions) {
+        try {
+            return e.subscribe(groupWithDefinitions.getKey(), groupWithDefinitions.getValue()).entrySet().stream();
+        } catch (ConfigurationException configurationException) {
+            return groupWithDefinitions.getValue().stream()
+                    .map(d -> new AbstractMap.SimpleEntry<>(d.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)));
+        }
+    }
+
+    /**
+     * Fetch the endpoint to use for active operations such as writing to or reading from a {@link NodeId} or calling a
+     * method on the server.
+     * @return the active Endpoint
+     */
     protected abstract Endpoint currentEndpoint();
 
     /**
@@ -104,14 +122,5 @@ public abstract class ControllerBase implements Controller {
     @Override
     public boolean write(NodeId nodeId, Object value) throws OPCUAException {
         return currentEndpoint().write(nodeId, value);
-    }
-
-    private static Stream<Map.Entry<UInteger, SourceDataTagQuality>> subscribeAndCatch(Endpoint e, Map.Entry<SubscriptionGroup, List<ItemDefinition>> groupWithDefinitions) {
-        try {
-            return e.subscribe(groupWithDefinitions.getKey(), groupWithDefinitions.getValue()).entrySet().stream();
-        } catch (ConfigurationException configurationException) {
-            return groupWithDefinitions.getValue().stream()
-                    .map(d -> new AbstractMap.SimpleEntry<>(d.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)));
-        }
     }
 }

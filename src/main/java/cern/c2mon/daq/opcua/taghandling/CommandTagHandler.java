@@ -38,27 +38,45 @@ import java.util.concurrent.TimeUnit;
 public class CommandTagHandler implements ICommandTagChanger {
 
     private final IControllerProxy controllerProxy;
+
     @Value("#{@appConfigProperties.getTimeout()}")
     private int timeout;
 
+    /**
+     * Called by the Core on a configuration change. Since required information is always fetched from the up-to-date
+     * equipment configuration in {@link cern.c2mon.daq.opcua.OPCUAMessageHandler}, this method only needs to return
+     * success.
+     * @param sourceCommandTag the new {@link ISourceCommandTag} that was added to the equipment configuration
+     * @param changeReport     the ChangeReport wherein to report success.
+     */
     @Override
     public void onAddCommandTag(ISourceCommandTag sourceCommandTag, ChangeReport changeReport) {
         handleCommandTagChanges(changeReport);
     }
 
+    /**
+     * Called by the Core on a configuration change. Since required information is always fetched from the up-to-date
+     * equipment configuration in {@link cern.c2mon.daq.opcua.OPCUAMessageHandler}, this method only needs to return
+     * success.
+     * @param sourceCommandTag the @link ISourceCommandTag} that was removed from the equipment configuration
+     * @param changeReport     the ChangeReport wherein to report success.
+     */
     @Override
     public void onRemoveCommandTag(ISourceCommandTag sourceCommandTag, ChangeReport changeReport) {
         handleCommandTagChanges(changeReport);
     }
 
+    /**
+     * Called by the Core on a configuration change. Since required information is always fetched from the up-to-date
+     * equipment configuration in {@link cern.c2mon.daq.opcua.OPCUAMessageHandler}, this method only needs to return
+     * success.
+     * @param sourceCommandTag    the new {@link ISourceCommandTag} that was added to the equipment configuration
+     * @param oldSourceCommandTag the old @link ISourceCommandTag} that was removed from the equipment configuration
+     * @param changeReport        the ChangeReport wherein to report success.
+     */
     @Override
     public void onUpdateCommandTag(ISourceCommandTag sourceCommandTag, ISourceCommandTag oldSourceCommandTag, ChangeReport changeReport) {
         handleCommandTagChanges(changeReport);
-    }
-
-    private void handleCommandTagChanges(ChangeReport changeReport) {
-        changeReport.appendInfo("No action required.");
-        changeReport.setState(ChangeReport.CHANGE_STATE.SUCCESS);
     }
 
     /**
@@ -183,10 +201,11 @@ public class CommandTagHandler implements ICommandTagChanger {
     private void awaitAndShutdown(ScheduledExecutorService executor, int pulse) {
         executor.shutdown();
         try {
-            if (!executor.awaitTermination(pulse + timeout, TimeUnit.SECONDS)) {
+            long await = ((long) pulse) + timeout;
+            if (!executor.awaitTermination(await, TimeUnit.SECONDS)) {
                 log.error("Shutting down now");
                 executor.shutdownNow();
-                if (!executor.awaitTermination(pulse + timeout, TimeUnit.SECONDS)) {
+                if (!executor.awaitTermination(await, TimeUnit.SECONDS)) {
                     log.error("Server switch still running");
                 }
             }
@@ -196,5 +215,10 @@ public class CommandTagHandler implements ICommandTagChanger {
             Thread.currentThread().interrupt();
         }
         log.info("Executor shut down");
+    }
+
+    private void handleCommandTagChanges(ChangeReport changeReport) {
+        changeReport.appendInfo("No action required.");
+        changeReport.setState(ChangeReport.CHANGE_STATE.SUCCESS);
     }
 }

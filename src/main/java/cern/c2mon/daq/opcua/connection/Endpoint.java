@@ -21,8 +21,10 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * This class presents an interface in between an C2MON OPC UA DAQ and the OPC UA client stack. Details on the thrown
- * {@link OPCUAException}s are given in the JavaDoc of the concrete implementation classes.
+ * This class presents an interface in between an C2MON OPC UA DAQ and the OPC UA client stack. Handles all interaction
+ * with a single server including * the the consolidation of security settings, and maintains a mapping for
+ * server-specific identifiers. {@link OPCUAException}s are given in the JavaDoc of the concrete implementation
+ * classes.
  */
 public interface Endpoint {
 
@@ -33,8 +35,17 @@ public interface Endpoint {
      */
     void initialize(String uri) throws OPCUAException;
 
+    /**
+     * Adds or removes {@link SessionActivityListener}s from the client.
+     * @param add      whether to add or remove a listener.
+     * @param listener the listener to add or to remove.
+     */
     void manageSessionActivityListener(boolean add, SessionActivityListener listener);
 
+    /**
+     * Returns the address of the connected server.
+     * @return the address of the connected server.
+     */
     String getUri();
 
     /**
@@ -43,18 +54,43 @@ public interface Endpoint {
     void disconnect();
 
     /**
-     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
-     * connection error and notify the endpointListener of future value updates
-     * @param group       The subscriptionGroup to add the definitions to
+     * Add a list of item definitions as monitored items to a subscription and apply the default callback.
+     * @param group       The {@link SubscriptionGroup} to add the {@link ItemDefinition}s to
      * @param definitions the {@link ItemDefinition}s for which to create monitored items
-     * @return valid client handles
+     * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
+     * call.
+     * @throws ConfigurationException if the server returned an error code indicating a misconfiguration.
      */
     Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException;
 
+    /**
+     * Called when a subscription could not be automatically transferred in between sessions. In this case, the
+     * subscription is recreated from scratch. If the controller received the command to stop, the subscription is not
+     * recreated and the method exists silently.
+     * @param subscription the session which must be recreated.
+     * @throws OPCUAException of type {@link CommunicationException} if the subscription could not be recreated due to
+     *                        communication difficulty, and of type {@link ConfigurationException} if the subscription
+     *                        can not be mapped to current DataTags, and therefore cannot be recreated.
+     */
     void recreateSubscription(UaSubscription subscription) throws OPCUAException;
 
+    /**
+     * Recreate all subscriptions configured in {@link cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader}. This
+     * method is usually called by the {@link cern.c2mon.daq.opcua.control.Controller} after a failover.
+     * @throws CommunicationException if no subscription could be recreated.
+     */
     void recreateAllSubscriptions() throws CommunicationException;
 
+    /**
+     * Subscribes to a {@link NodeId} with the passed callback. Usually called by the {@link
+     * cern.c2mon.daq.opcua.control.Controller} to monitor the server health.
+     * @param publishingInterval   the
+     * @param definitions          the {@link ItemDefinition}s containing the {@link NodeId}s to subscribe to
+     * @param itemCreationCallback the callback to apply upon creation of the items in the subscription
+     * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
+     * call.
+     * @throws ConfigurationException if the server returned an error code indicating a misconfiguration.
+     */
     Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException;
 
     /**

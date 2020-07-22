@@ -1,14 +1,15 @@
 package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 
 import java.util.Collection;
 
 /**
- * The Controller acts as an interface in between The {@link cern.c2mon.daq.opcua.OPCUAMessageHandler}'s mapping of data
- * points as SourceDataTags, and the {@link cern.c2mon.daq.opcua.connection.Endpoint}'s mapping of points in the address space
- * using uint clientHandles.
+ * The {@link DataTagHandler} is responsible for managing the state of subscribed {@link ISourceDataTag}s in {@link
+ * TagSubscriptionManager}, and triggers the subscription to or removal of subscriptions of {@link ISourceDataTag}s from
+ * the server.
  */
 public interface IDataTagHandler {
 
@@ -45,5 +46,8 @@ public interface IDataTagHandler {
      */
     void refreshDataTag(ISourceDataTag sourceDataTag);
 
+    /**
+     * Resets the state of the the {@link IDataTagHandler} and of the subscribed {@link ISourceDataTag}s.
+     */
     void reset();
 }

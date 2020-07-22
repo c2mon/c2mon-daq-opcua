@@ -29,8 +29,8 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 @Slf4j
 @RequiredArgsConstructor
 public class CertificateLoader extends CertifierBase {
-    final AppConfigProperties.KeystoreConfig keystoreConfig;
-    final AppConfigProperties.PKIConfig pkiConfig;
+    private final AppConfigProperties.KeystoreConfig keystoreConfig;
+    private final AppConfigProperties.PKIConfig pkiConfig;
     private static final ImmutableSet<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_SecurityChecksFailed, Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown, Bad_CertificateInvalid).build();
 
     /**

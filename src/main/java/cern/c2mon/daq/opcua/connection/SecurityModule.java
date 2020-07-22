@@ -46,6 +46,13 @@ public class SecurityModule {
     private final Map<String, Certifier> key2Certifier;
     private OpcUaClientConfigBuilder builder;
 
+    /**
+     * Creates a new SecurityModule instance and assigns the {@link Certifier} a priority depending on the configuration
+     * @param config the up-to-date application properties containing information that shall be passed in initial connection to the server
+     * @param loader the {@link Certifier} responsible for loading a certificate and keypair from local storage
+     * @param generator the {@link Certifier} responsible for creating a new self-signed certificate and keypair
+     * @param noSecurity the {@link Certifier} responsible for establishing connection without security
+     */
     @Autowired
     public SecurityModule(AppConfigProperties config, Certifier loader, Certifier generator, Certifier noSecurity) {
         this.config = config;
@@ -158,8 +165,9 @@ public class SecurityModule {
         } else if (certifier.getSevereErrorCodes().contains(code)) {
             log.error("Cannot connect to this server with certifier {}. Proceed with another certifier.", certifier.getClass().getName());
             return false;
+        } else {
+            log.error("Attempting less secure endpoint: ", ex);
+            return true;
         }
-        log.error("Attempting less secure endpoint: ", ex);
-        return true;
     }
 }

@@ -42,9 +42,9 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 
 /**
- * The Controller acts as an interface in between The {@link cern.c2mon.daq.opcua.OPCUAMessageHandler}'s mapping of data
- * points as SourceDataTags, and the {@link cern.c2mon.daq.opcua.connection.Endpoint}'s mapping of points in the address space
- * using uint clientHandles.
+ * The {@link DataTagHandler} is responsible for managing the state of subscribed {@link ISourceDataTag}s in {@link
+ * TagSubscriptionManager}, and triggers the subscription to or removal of subscriptions of {@link ISourceDataTag}s from
+ * the server.
  */
 @Component("tagController")
 @Slf4j
@@ -55,11 +55,6 @@ public class DataTagHandler implements IDataTagHandler {
     private final TagSubscriptionManager mapper;
     private final IMessageSender messageSender;
     private final IControllerProxy controllerProxy;
-
-    @Override
-    public void reset() {
-        mapper.clear();
-    }
 
     /**
      * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
@@ -80,7 +75,6 @@ public class DataTagHandler implements IDataTagHandler {
         final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribe(groupsWithDefinitions);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
     }
-
 
     /**
      * Subscribes to the OPC UA node corresponding to one data tag on the server.
@@ -132,15 +126,24 @@ public class DataTagHandler implements IDataTagHandler {
      */
     @Override
     public synchronized void refreshDataTag(ISourceDataTag sourceDataTag) {
-        final Map<Long, ItemDefinition> objectObjectHashMap = new HashMap<>();
+        final Map<Long, ItemDefinition> objectObjectHashMap = new ConcurrentHashMap<>();
         objectObjectHashMap.put(sourceDataTag.getId(), mapper.getOrCreateDefinition(sourceDataTag));
         refresh(objectObjectHashMap);
+    }
+
+    /**
+     * Resets the state of the the {@link IDataTagHandler} and of the subscribed {@link ISourceDataTag}s in {@link
+     * TagSubscriptionManager}.
+     */
+    @Override
+    public void reset() {
+        mapper.clear();
     }
 
     private void completeSubscriptionAndReportSuccess(UInteger clientHandle, SourceDataTagQuality quality) {
         final Optional<Long> tagId = mapper.getTagId(clientHandle);
         if (quality.isValid() && tagId.isPresent()) {
-                mapper.addTagToGroup(tagId.get());
+            mapper.addTagToGroup(tagId.get());
         } else {
             messageSender.onTagInvalid(tagId, quality);
         }
@@ -165,6 +168,4 @@ public class DataTagHandler implements IDataTagHandler {
             log.error("An exception occurred when refreshing ISourceDataTags with IDs {}. ", notRefreshable);
         }
     }
-
-
 }

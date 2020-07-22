@@ -12,8 +12,8 @@ import java.util.Optional;
  * The abstract base class for a @{@link Certifier} using a certificate and keypair.
  */
 public abstract class CertifierBase implements Certifier {
-    KeyPair keyPair;
-    X509Certificate certificate;
+    protected KeyPair keyPair;
+    protected X509Certificate certificate;
 
     /**
      * Append the endpoint as well as a certificate and keypair matching the endpoint's security policy to the builder,

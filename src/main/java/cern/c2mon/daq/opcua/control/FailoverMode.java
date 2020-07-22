@@ -3,8 +3,8 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 
 /**
- * Implementing classes represent Controllers that are connected to a server in a non-transparent redundant server set.
- * They support the failover between servers in case of error.
+ * Implementing classes are {@link Controller}s that are connected to one or more servers in a non-transparent redundant
+ * server set. They support the failover between servers in case of error.
  */
 public interface FailoverMode {
     /**

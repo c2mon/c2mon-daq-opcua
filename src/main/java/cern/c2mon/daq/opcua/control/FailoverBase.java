@@ -12,41 +12,54 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
-import org.springframework.context.ApplicationContext;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * An abstract base class of a controller managing the connection to servers in a redundant server set and capable of
- * failing over in between these servers in case of error. It offers between redundancy-specific functionality that is
- * shared in between different failover modes. Concrete Failover modes should implement specific behavior on initial
- * connection by implementing the {@link Controller}'s initialize() method, and on failover by implementing  the {@link
- * FailoverMode}'s switchServers() method.
+ * An abstract base class of a controller that manages the connection to servers in a redundant server set and is
+ * capable of failing over in between these servers in case of error. It offers redundancy-specific functionality that
+ * is shared in between different failover modes of the OPC UA redundancy model. Concrete Failover modes should
+ * implement specific behavior on initial connection by implementing the {@link Controller}'s initialize() method, and
+ * on failover by implementing  the {@link FailoverMode}'s switchServers() method.
  */
 @Slf4j
 @RequiredArgsConstructor
 public abstract class FailoverBase extends ControllerBase implements FailoverMode {
 
-    protected static UByte serviceLevelHealthLimit = UByte.valueOf(200);
-    protected static List<ItemDefinition> connectionMonitoringNodes = Arrays.asList(
+    protected static final UByte serviceLevelHealthLimit = UByte.valueOf(200);
+    protected static final List<ItemDefinition> connectionMonitoringNodes = Arrays.asList(
             ItemDefinition.of(Identifiers.Server_ServiceLevel),
             ItemDefinition.of(Identifiers.ServerState));
+
+    /**
+     * Setting this flat to true ends ongoing failover procedures after the controller was stopped.
+     */
     protected final AtomicBoolean stopped = new AtomicBoolean(true);
+
+    /**
+     * This flag is used to ensure that only one failover procedure is in progress as a time. This is relevant since
+     * there are different ways of triggering a failover, which may occurr simultaneously.
+     */
     protected final AtomicBoolean listening = new AtomicBoolean(true);
     protected final RetryDelegate retryDelegate;
-    private final ApplicationContext applicationContext;
 
+    /**
+     * Initialize supervision and connection monitoring to the active server.
+     * @param endpoint      the currently connected {@link Endpoint}
+     * @param redundantUris the addresses of the servers in the redundant server set not including the active server
+     *                      URI
+     * @throws OPCUAException if an error occurred when setting up connection monitoring
+     */
     public void initialize(Endpoint endpoint, String[] redundantUris) throws OPCUAException {
         listening.set(true);
         stopped.set(false);
     }
 
-    protected Endpoint nextEndpoint() {
-        return applicationContext.getBean(Endpoint.class);
-    }
-
+    /**
+     * Disconnect from the OPC UA server and reset the controller to a neutral state.
+     */
     @Override
     public void stop() {
         log.info("Disconnecting... ");
@@ -55,7 +68,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
         super.stop();
     }
 
-    public void triggerServerSwitch() {
+    protected void triggerServerSwitch() {
         log.info("enter switchServer. Listening is {}, stopped is {}.", listening.get(), stopped.get());
         if (listening.getAndSet(false) && !stopped.get()) {
             log.info("switchServer");

@@ -97,6 +97,8 @@ public abstract class AddressParser {
                 properties.put(key, value);
             } else if (i == 0) {
                 properties.put(URI, keyValueString);
+            } else {
+                log.info("Cannot interpret value {}.", keyValueString);
             }
         }
         return properties;

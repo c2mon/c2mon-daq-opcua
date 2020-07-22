@@ -8,13 +8,24 @@ import org.springframework.stereotype.Component;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * A {@link Controller} maintaining connection to a non-redundant server, or servers in transparent redundancy.
+ * */
 @Slf4j
 @NoArgsConstructor
 @Component("singleServerController")
 public class NoFailover extends ControllerBase {
 
+    /**
+     * The {@link Endpoint} connected to the server
+     */
     protected Endpoint activeEndpoint;
 
+    /**
+     * Initialize supervision and connection monitoring to the active server.
+     * @param endpoint           the already connected {@link Endpoint}
+     * @param redundantAddresses usually empty
+     */
     @Override
     public void initialize(Endpoint endpoint, String[] redundantAddresses) {
         activeEndpoint = endpoint;

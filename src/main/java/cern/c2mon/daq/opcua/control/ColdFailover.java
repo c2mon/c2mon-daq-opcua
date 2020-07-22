@@ -10,7 +10,6 @@ import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -40,8 +39,12 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     private CompletableFuture<Void> reconnected = new CompletableFuture<>();
 
-    public ColdFailover(ApplicationContext applicationContext, RetryDelegate retryDelegate) {
-        super(retryDelegate, applicationContext);
+    /**
+     * Creates a new instance of ColdFailover
+     * @param retryDelegate the retryDelegate to use for the failover process
+     */
+    public ColdFailover(RetryDelegate retryDelegate) {
+        super(retryDelegate);
     }
 
 
@@ -72,21 +75,14 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         monitorConnection();
     }
 
+    /**
+     * Disconnect from the OPC UA server and reset the controller to a neutral state.
+     */
     @Override
     public void stop() {
         log.info("Stopping ColdFailover");
         reconnected.complete(null);
         super.stop();
-    }
-
-    @Override
-    protected Endpoint currentEndpoint() {
-        return activeEndpoint;
-    }
-
-    @Override
-    protected List<Endpoint> passiveEndpoints() {
-        return Collections.emptyList();
     }
 
     /**
@@ -111,6 +107,21 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         }
     }
 
+    /**
+     * Called by when a session activates. This interrupts the timeout process initiated in onSessionInactive(session).
+     * @param session the session that has activated.
+     */
+    @Override
+    public void onSessionActive(UaSession session) {
+        reconnected.complete(null);
+    }
+
+    /**
+     * The session becoming inactive means that the connection to the server has been lost. A timeout is started to see
+     * it the connection loss is only momentary, otherwise it is assumed that the active servers have switches and a
+     * failover process is initiated.
+     * @param session the session that has become inactive
+     */
     @Override
     public void onSessionInactive(UaSession session) {
         if (!stopped.get()) {
@@ -126,8 +137,13 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     }
 
     @Override
-    public void onSessionActive(UaSession session) {
-        reconnected.complete(null);
+    protected Endpoint currentEndpoint() {
+        return activeEndpoint;
+    }
+
+    @Override
+    protected List<Endpoint> passiveEndpoints() {
+        return Collections.emptyList();
     }
 
     private boolean reconnectionSucceeded() throws OPCUAException {
