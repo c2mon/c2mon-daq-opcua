@@ -1,14 +1,14 @@
 package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 
 import java.util.Collection;
 
 /**
  * The {@link DataTagHandler} is responsible for managing the state of subscribed {@link ISourceDataTag}s in {@link
- * TagSubscriptionManager}, and triggers the subscription to or removal of subscriptions of {@link ISourceDataTag}s from
+ * TagSubscriptionMapper}, and triggers the subscription to or removal of subscriptions of {@link ISourceDataTag}s from
  * the server.
  */
 public interface IDataTagHandler {

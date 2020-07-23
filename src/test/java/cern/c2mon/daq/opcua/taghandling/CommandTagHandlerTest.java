@@ -2,14 +2,14 @@ package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.control.NoFailover;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.SourceCommandTag;
@@ -37,7 +37,7 @@ public class CommandTagHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        this.endpoint = new TestEndpoint(l, new TagSubscriptionManager());
+        this.endpoint = new TestEndpoint(l, new TagSubscriptionMapper());
         tag = new SourceCommandTag(0L, "Power");
 
         address = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw");
@@ -83,8 +83,9 @@ public class CommandTagHandlerTest {
         tag.setHardwareAddress(pulseAddress);
         value.setValue(0);
         final Endpoint mockEp = EasyMock.niceMock(Endpoint.class);
+        final ItemDefinition definition = ItemDefinition.of(tag);
         expect(mockEp.read(anyObject()))
-                .andReturn(endpoint.read(ItemDefinition.toNodeId(tag)))
+                .andReturn(endpoint.read(definition.getNodeId()))
                 .anyTimes();
         //no call to write
         replay(mockEp);
@@ -96,7 +97,7 @@ public class CommandTagHandlerTest {
     @Test
     public void commandWithPulseShouldReadSetReset() throws EqCommandTagException, OPCUAException {
         tag.setHardwareAddress(pulseAddress);
-        final NodeId def = ItemDefinition.toNodeId(tag);
+        final NodeId def = ItemDefinition.of(tag).getNodeId();
         final Endpoint mockEp = EasyMock.niceMock(Endpoint.class);
         expect(mockEp.read(anyObject())).andReturn(endpoint.read(def)).anyTimes();
         expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();
@@ -131,7 +132,7 @@ public class CommandTagHandlerTest {
     @Test
     public void badClientShouldThrowException() throws OPCUAException {
         Controller controller = new NoFailover();
-        controller.initialize(new ExceptionTestEndpoint(l, new TagSubscriptionManager()), new String[0]);
+        controller.initialize(new ExceptionTestEndpoint(l, new TagSubscriptionMapper()), new String[0]);
         final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, l);
         proxy.setController(controller);
         ReflectionTestUtils.setField(commandTagHandler, "controllerProxy", proxy);

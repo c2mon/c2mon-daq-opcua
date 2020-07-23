@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.*;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -28,7 +28,7 @@ public class ControllerProxyTest {
 
     @BeforeEach
     public void setUp() {
-        testEndpoint = new TestEndpoint(new TestListeners.TestListener(), new TagSubscriptionManager());
+        testEndpoint = new TestEndpoint(new TestListeners.TestListener(), new TagSubscriptionMapper());
         proxy = new ControllerProxy(applicationContext, config, testEndpoint);
         expect(applicationContext.getBean(ColdFailover.class)).andReturn(coldFailover).anyTimes();
         expect(applicationContext.getBean(NoFailover.class)).andReturn(noFailover).anyTimes();

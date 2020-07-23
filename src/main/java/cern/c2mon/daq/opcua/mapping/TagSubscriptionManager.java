@@ -16,101 +16,32 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
-import org.springframework.stereotype.Component;
+/**
+ * The {@link TagSubscriptionManager} allows the management of the subscription status of {@link
+ * cern.c2mon.shared.common.datatag.ISourceDataTag}s via their associated {@link ItemDefinition}s and {@link
+ * SubscriptionGroup}s on top of functionality granted by {@link TagSubscriptionReader}.
+ */
+public interface TagSubscriptionManager extends TagSubscriptionReader {
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+    /**
+     * Registers the tagId as subscribed and adds the associated {@link ItemDefinition} to the appropriate {@link
+     * SubscriptionGroup}.
+     * @param tagId the tagId whose associated {@link ItemDefinition} to add to the appropriate {@link
+     *              SubscriptionGroup}
+     */
+    void addTagToGroup(long tagId);
 
-@NoArgsConstructor
-@Component("mapper")
-@Getter
-public class TagSubscriptionManager implements TagSubscriptionWriter, TagSubscriptionMapReader {
+    /**
+     * Registers the tagId as unsubscribed and removes the associated {@link ItemDefinition} from the corresponding
+     * {@link SubscriptionGroup}.
+     * @param tagId the tagId whose associated {@link ItemDefinition} to remove its {@link SubscriptionGroup}
+     * @return true if the tagId was previously associated with an {@link ItemDefinition} which was part of a {@link
+     * SubscriptionGroup}.
+     */
+    boolean removeTag(long tagId);
 
-    private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
-    private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
-
-    @Override
-    public Collection<SubscriptionGroup> getGroups() {
-        return subscriptionGroups.values();
-    }
-
-    @Override
-    public SubscriptionGroup getGroup(int timeDeadband) {
-        if (groupExists(timeDeadband)) {
-            return subscriptionGroups.get(timeDeadband);
-        } else {
-            SubscriptionGroup group = new SubscriptionGroup(timeDeadband);
-            subscriptionGroups.put(timeDeadband, group);
-            return group;
-        }
-    }
-
-    @Override
-    public ItemDefinition getOrCreateDefinition(ISourceDataTag tag) {
-        if (tagIdDefinitionMap.containsKey(tag.getId())) {
-            return tagIdDefinitionMap.get(tag.getId());
-        } else {
-            final ItemDefinition definition = ItemDefinition.of(tag);
-            tagIdDefinitionMap.put(tag.getId(), definition);
-            return definition;
-        }
-    }
-
-    @Override
-    public ItemDefinition getDefinition(Long tagId) {
-        if (tagIdDefinitionMap.containsKey(tagId)) {
-            return tagIdDefinitionMap.get(tagId);
-        } else {
-            throw new IllegalArgumentException("The tag id is unknown.");
-        }
-    }
-
-    @Override
-    public Optional<Long> getTagId(UInteger clientHandle) {
-        return tagIdDefinitionMap.entrySet().stream()
-                .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
-                .map(Map.Entry::getKey)
-                .findFirst();
-    }
-
-    @Override
-    public void addTagToGroup(Long tagId) {
-        if (tagIdDefinitionMap.containsKey(tagId)) {
-            final SubscriptionGroup group = getGroup(tagIdDefinitionMap.get(tagId).getTimeDeadband());
-            group.add(tagId, tagIdDefinitionMap.get(tagId));
-        }
-    }
-
-
-    @Override
-    public boolean removeTag(ISourceDataTag dataTag) {
-        ItemDefinition definition = tagIdDefinitionMap.remove(dataTag.getId());
-        if (definition == null) {
-            return false;
-        }
-        final SubscriptionGroup group = subscriptionGroups.get(dataTag.getTimeDeadband());
-        final boolean wasSubscribed = group != null && group.remove(dataTag);
-        if (group != null && group.size() < 1) {
-            group.reset();
-        }
-        return wasSubscribed;
-    }
-
-    @Override
-    public void clear() {
-        tagIdDefinitionMap.clear();
-        subscriptionGroups.clear();
-    }
-
-    private boolean groupExists(int deadband) {
-        return subscriptionGroups.get(deadband) != null;
-    }
+    /**
+     * Removes all managed {@link ItemDefinition}s and {@link SubscriptionGroup}s from the internal state.
+     */
+    void clear();
 }

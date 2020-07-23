@@ -180,7 +180,7 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
 
   namespace cern.c2mon.daq.opcua {
     namespace mapping {
-      class cern.c2mon.daq.opcua.mapping.TagSubscriptionManager {
+      class cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper {
       }
     }
   }
@@ -188,7 +188,7 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
 
   namespace cern.c2mon.daq.opcua {
     namespace mapping {
-      interface cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader {
+      interface cern.c2mon.daq.opcua.mapping.TagSubscriptionReader {
       }
     }
   }
@@ -196,7 +196,7 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
 
   namespace cern.c2mon.daq.opcua {
     namespace mapping {
-      interface cern.c2mon.daq.opcua.mapping.TagSubscriptionWriter {
+      interface cern.c2mon.daq.opcua.mapping.TagSubscriptionManager {
       }
     }
   }
@@ -322,7 +322,7 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> cern.c2mon.daq.opcua.connection.Endpoint
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager.SubscriptionListener
-  cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader : mapper
+  cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionReader : mapper
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.tagHandling.IMessageSender : messageSender
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.RetryDelegate : retryDelegate
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.connection.SecurityModule : securityModule
@@ -344,8 +344,8 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
   cern.c2mon.daq.opcua.exceptions.ConfigurationException -up-|> cern.c2mon.daq.opcua.exceptions.OPCUAException
   cern.c2mon.daq.opcua.exceptions.LongLostConnectionException -up-|> cern.c2mon.daq.opcua.exceptions.OPCUAException
   cern.c2mon.daq.opcua.exceptions.OPCUAException -up-|> cern.c2mon.daq.tools.equipmentexceptions.EqIOException
-  cern.c2mon.daq.opcua.mapping.TagSubscriptionManager .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader
-  cern.c2mon.daq.opcua.mapping.TagSubscriptionManager .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionWriter
+  cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionReader
+  cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionManager
   cern.c2mon.daq.opcua.security.CertificateGenerator -up-|> cern.c2mon.daq.opcua.security.CertifierBase
   cern.c2mon.daq.opcua.security.CertificateGenerator o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
   cern.c2mon.daq.opcua.security.CertificateLoader -up-|> cern.c2mon.daq.opcua.security.CertifierBase
@@ -361,7 +361,7 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
   cern.c2mon.daq.opcua.tagHandling.DataTagChanger o-- cern.c2mon.daq.opcua.tagHandling.IDataTagHandler : controller
   cern.c2mon.daq.opcua.tagHandling.DataTagHandler .up.|> cern.c2mon.daq.opcua.tagHandling.IDataTagHandler
   cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy
-  cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionManager : mapper
+  cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper : mapper
   cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.tagHandling.IMessageSender : messageSender
   cern.c2mon.daq.opcua.tagHandling.MessageSender .up.|> cern.c2mon.daq.opcua.tagHandling.IMessageSender
   cern.c2mon.daq.opcua.tagHandling.MessageSender .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener

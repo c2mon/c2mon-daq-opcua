@@ -54,7 +54,7 @@ title __MAPPING's Class Diagram__\n
 
   namespace cern.c2mon.daq.opcua {
     namespace mapping {
-      class cern.c2mon.daq.opcua.mapping.TagSubscriptionManager {
+      class cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper {
           - subscriptionGroups : Map<Integer, SubscriptionGroup>
           - tagIdDefinitionMap : BiMap<Long, ItemDefinition>
           + TagSubscriptionManager()
@@ -76,7 +76,7 @@ title __MAPPING's Class Diagram__\n
 
   namespace cern.c2mon.daq.opcua {
     namespace mapping {
-      interface cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader {
+      interface cern.c2mon.daq.opcua.mapping.TagSubscriptionReader {
           {abstract} + getDefinition()
           {abstract} + getGroup()
           {abstract} + getGroups()
@@ -90,7 +90,7 @@ title __MAPPING's Class Diagram__\n
 
   namespace cern.c2mon.daq.opcua {
     namespace mapping {
-      interface cern.c2mon.daq.opcua.mapping.TagSubscriptionWriter {
+      interface cern.c2mon.daq.opcua.mapping.TagSubscriptionManager {
           {abstract} + addTagToGroup()
           {abstract} + clear()
           {abstract} + removeTag()
@@ -99,8 +99,8 @@ title __MAPPING's Class Diagram__\n
   }
   
 
-  cern.c2mon.daq.opcua.mapping.TagSubscriptionManager .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader
-  cern.c2mon.daq.opcua.mapping.TagSubscriptionManager .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionWriter
+  cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionReader
+  cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper .up.|> cern.c2mon.daq.opcua.mapping.TagSubscriptionManager
 
 
 right footer

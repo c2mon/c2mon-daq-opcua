@@ -100,7 +100,7 @@ title __CONNECTION's Class Diagram__\n
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> cern.c2mon.daq.opcua.connection.Endpoint
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager.SubscriptionListener
-  cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader : mapper
+  cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionReader : mapper
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.tagHandling.IMessageSender : messageSender
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.RetryDelegate : retryDelegate
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.connection.SecurityModule : securityModule

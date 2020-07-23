@@ -48,13 +48,13 @@ public class DataTagChanger implements IDataTagChanger {
             }
         });
     }
-    private final IDataTagHandler controller;
+    private final IDataTagHandler tagHandler;
 
     public void onUpdateEquipmentConfiguration(Collection<ISourceDataTag> newTags, Collection<ISourceDataTag> oldTags, final ChangeReport changeReport) {
         final Stream<ISourceDataTag> toAdd = newTags.stream().filter(t -> !oldTags.contains(t));
         final Stream<ISourceDataTag> toRemove = oldTags.stream().filter(t -> !newTags.contains(t));
-        gatherIds(toRemove, controller::removeTag, "Could not remove Tags with Ids " , "Removed Tags " , changeReport);
-        gatherIds(toAdd, controller::subscribeTag, "Could not subscribe to Tags with Ids ", "Subscribed to Tags ", changeReport);
+        gatherIds(toRemove, tagHandler::removeTag, "Could not remove Tags with Ids " , "Removed Tags " , changeReport);
+        gatherIds(toAdd, tagHandler::subscribeTag, "Could not subscribe to Tags with Ids ", "Subscribed to Tags ", changeReport);
     }
 
     @Override
@@ -89,7 +89,7 @@ public class DataTagChanger implements IDataTagChanger {
     }
 
     private void addAndReport(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        final boolean success = controller.subscribeTag(sourceDataTag);
+        final boolean success = tagHandler.subscribeTag(sourceDataTag);
         String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId()
                 + (success ? " was subscribed." : " could not be subscribed.");
         applyToReport.apply(success, msg, changeReport);
@@ -97,7 +97,7 @@ public class DataTagChanger implements IDataTagChanger {
 
     private void removeAndReport(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
         String msg = "Tag " + sourceDataTag.getName() + " with ID " + sourceDataTag.getId()
-                + (controller.removeTag(sourceDataTag) ? " was unsubscribed." : " was not previously configured. No change required. ");
+                + (tagHandler.removeTag(sourceDataTag) ? " was unsubscribed." : " was not previously configured. No change required. ");
         applyToReport.apply(true, msg, changeReport);
     }
 

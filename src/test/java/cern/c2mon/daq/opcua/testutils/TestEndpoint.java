@@ -39,7 +39,7 @@ import static org.easymock.EasyMock.createMock;
 @Component(value = "testEndpoint")
 public class TestEndpoint implements Endpoint {
     private final IMessageSender messageSender;
-    private final TagSubscriptionMapReader mapper;
+    private final TagSubscriptionReader mapper;
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
     NonTransparentRedundancyTypeNode serverRedundancyTypeNode = createMock(NonTransparentRedundancyTypeNode.class);

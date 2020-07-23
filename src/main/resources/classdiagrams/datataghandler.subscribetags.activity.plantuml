@@ -1,0 +1,39 @@
+title Subscribe To All DataTags
+
+participant OPCUAMessageHandler
+participant EquipmentMessageSender
+participant DataTagHandler
+participant Control
+
+
+OPCUAMessageHandler -> DataTagHandler++: //subscribeTags()//
+
+    critical dataTags empty ?
+      [<- DataTagHandler : throw ConfigurationException
+    end
+    loop for all //DataTags//
+      DataTagHandler -> Manager ++: //getOrCreateDefinition()// for //DataTag//
+      return defintion
+    end
+    DataTagHandler -> DataTagHandler: collect by time deadband
+    loop for all time deadbands
+        DataTagHandler -> Manager ++: //getGroup()// for timeDeadband
+        return SubscriptionGroup
+    end
+    DataTagHandler -> Control ++ : //subscribe()// groups with \ncorresponding ItemDefintions
+    return Map of client handles and qualities
+    
+    loop over client handles and qualities
+      DataTagHandler -> Manager ++: //getTagId()// for client handle
+      return tag ID
+      alt tag ID exists in Manager and quality is good
+         DataTagHandler -> Manager ++: //addTagToGroup()//
+         return
+      else unknown tag ID or bad quality
+        EquipmentMessageSender <- DataTagHandler ++: //onTagInvalid()// with tag ID and quality
+          [<- EquipmentMessageSender: //update()// 
+        return
+        
+      end
+    end
+return

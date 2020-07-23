@@ -32,7 +32,7 @@ public class DataTagHandlerTest extends TagHandlerTestBase {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
         controller.subscribeTags(sourceTags.values());
-        sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag.getTimeDeadband()).contains(dataTag)));
+        sourceTags.values().forEach(dataTag -> Assertions.assertTrue(mapper.getGroup(dataTag.getTimeDeadband()).contains(dataTag.getId())));
     }
 
     @Test

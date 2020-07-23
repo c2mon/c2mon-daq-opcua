@@ -154,7 +154,7 @@ title __TAGHANDLING's Class Diagram__\n
   cern.c2mon.daq.opcua.tagHandling.DataTagChanger +-down- cern.c2mon.daq.opcua.tagHandling.DataTagChanger.TriConsumer
   cern.c2mon.daq.opcua.tagHandling.DataTagHandler .up.|> cern.c2mon.daq.opcua.tagHandling.IDataTagHandler
   cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy
-  cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionManager : mapper
+  cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper : mapper
   cern.c2mon.daq.opcua.tagHandling.DataTagHandler o-- cern.c2mon.daq.opcua.tagHandling.IMessageSender : messageSender
   cern.c2mon.daq.opcua.tagHandling.IMessageSender +-down- cern.c2mon.daq.opcua.tagHandling.IMessageSender.EquipmentState
   cern.c2mon.daq.opcua.tagHandling.MessageSender .up.|> cern.c2mon.daq.opcua.tagHandling.IMessageSender

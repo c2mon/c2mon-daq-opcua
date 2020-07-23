@@ -25,6 +25,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -37,13 +38,14 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 
 /**
  * The {@link DataTagHandler} is responsible for managing the state of subscribed {@link ISourceDataTag}s in {@link
- * TagSubscriptionManager}, and triggers the subscription to or removal of subscriptions of {@link ISourceDataTag}s from
+ * TagSubscriptionMapper}, and triggers the subscription to or removal of subscriptions of {@link ISourceDataTag}s from
  * the server.
  */
 @Component("tagController")
@@ -52,7 +54,7 @@ import static java.util.stream.Collectors.toMap;
 @Lazy
 public class DataTagHandler implements IDataTagHandler {
 
-    private final TagSubscriptionManager mapper;
+    private final TagSubscriptionManager manager;
     private final IMessageSender messageSender;
     private final IControllerProxy controllerProxy;
 
@@ -67,11 +69,10 @@ public class DataTagHandler implements IDataTagHandler {
             throw new ConfigurationException(ExceptionContext.DATATAGS_EMPTY);
         }
         final Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions = dataTags.stream()
-                .map(mapper::getOrCreateDefinition)
-                .collect(groupingBy(ItemDefinition::getTimeDeadband))
+                .collect(groupingBy(ISourceDataTag::getTimeDeadband))
                 .entrySet()
                 .stream()
-                .collect(toMap(e -> mapper.getGroup(e.getKey()), Map.Entry::getValue));
+                .collect(toMap(e -> manager.getGroup(e.getKey()), e -> e.getValue().stream().map(manager::getOrCreateDefinition).collect(Collectors.toList())));
         final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribe(groupsWithDefinitions);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
     }
@@ -83,9 +84,9 @@ public class DataTagHandler implements IDataTagHandler {
      */
     @Override
     public synchronized boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
-        ItemDefinition definition = mapper.getOrCreateDefinition(sourceDataTag);
+        ItemDefinition definition = manager.getOrCreateDefinition(sourceDataTag);
         final ConcurrentHashMap<SubscriptionGroup, List<ItemDefinition>> map = new ConcurrentHashMap<>();
-        map.put(mapper.getGroup(definition.getTimeDeadband()), Collections.singletonList(definition));
+        map.put(manager.getGroup(definition.getTimeDeadband()), Collections.singletonList(definition));
         final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribe(map);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
         final SourceDataTagQuality quality = handleQualityMap.get(definition.getClientHandle());
@@ -100,15 +101,19 @@ public class DataTagHandler implements IDataTagHandler {
      */
     @Override
     public synchronized boolean removeTag(final ISourceDataTag dataTag) {
-        final SubscriptionGroup group = mapper.getGroup(dataTag.getTimeDeadband());
-        final boolean wasSubscribed = group != null && group.contains(dataTag);
+        final SubscriptionGroup group = manager.getGroup(dataTag.getTimeDeadband());
+        final boolean wasSubscribed = group != null && group.contains(dataTag.getId());
         if (wasSubscribed) {
             log.info("Unsubscribing tag from server.");
-            if (!controllerProxy.unsubscribe(mapper.getDefinition(dataTag.getId()))) {
+            final ItemDefinition definition = manager.getDefinition(dataTag.getId());
+            if (definition == null) {
+                log.error("The tag with id {} is not currently subscribed on the server, skipping removal.", dataTag.getId());
+                return false;
+            } else if (!controllerProxy.unsubscribe(definition)) {
                 return false;
             }
         }
-        mapper.removeTag(dataTag);
+        manager.removeTag(dataTag.getId());
         return wasSubscribed;
     }
 
@@ -117,7 +122,7 @@ public class DataTagHandler implements IDataTagHandler {
      */
     @Override
     public synchronized void refreshAllDataTags() {
-        refresh(mapper.getTagIdDefinitionMap());
+        refresh(manager.getTagIdDefinitionMap());
     }
 
     /**
@@ -127,23 +132,23 @@ public class DataTagHandler implements IDataTagHandler {
     @Override
     public synchronized void refreshDataTag(ISourceDataTag sourceDataTag) {
         final Map<Long, ItemDefinition> objectObjectHashMap = new ConcurrentHashMap<>();
-        objectObjectHashMap.put(sourceDataTag.getId(), mapper.getOrCreateDefinition(sourceDataTag));
+        objectObjectHashMap.put(sourceDataTag.getId(), manager.getOrCreateDefinition(sourceDataTag));
         refresh(objectObjectHashMap);
     }
 
     /**
      * Resets the state of the the {@link IDataTagHandler} and of the subscribed {@link ISourceDataTag}s in {@link
-     * TagSubscriptionManager}.
+     * TagSubscriptionMapper}.
      */
     @Override
     public void reset() {
-        mapper.clear();
+        manager.clear();
     }
 
     private void completeSubscriptionAndReportSuccess(UInteger clientHandle, SourceDataTagQuality quality) {
-        final Optional<Long> tagId = mapper.getTagId(clientHandle);
+        final Optional<Long> tagId = manager.getTagId(clientHandle);
         if (quality.isValid() && tagId.isPresent()) {
-            mapper.addTagToGroup(tagId.get());
+            manager.addTagToGroup(tagId.get());
         } else {
             messageSender.onTagInvalid(tagId, quality);
         }
@@ -158,7 +163,7 @@ public class DataTagHandler implements IDataTagHandler {
             }
             try {
                 final Map.Entry<ValueUpdate, SourceDataTagQuality> reading = controllerProxy.read(e.getValue().getNodeId());
-                final Optional<Long> tagId = mapper.getTagId(e.getValue().getClientHandle());
+                final Optional<Long> tagId = manager.getTagId(e.getValue().getClientHandle());
                 messageSender.onValueUpdate(tagId, reading.getValue(), reading.getKey());
             } catch (OPCUAException ex) {
                 notRefreshable.add(e.getKey());

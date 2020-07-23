@@ -126,8 +126,9 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
         if (sourceDataTag == null) {
             log.error("SourceDataTag with ID {} is unknown", dataTagId);
+        } else {
+            dataTagHandler.refreshDataTag(sourceDataTag);
         }
-        dataTagHandler.refreshDataTag(sourceDataTag);
     }
 
     /**

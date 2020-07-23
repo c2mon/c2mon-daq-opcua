@@ -4,7 +4,7 @@ import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -38,7 +38,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Autowired IDataTagHandler tagHandler;
     @Autowired IMessageSender epMessageSender;
     @Autowired Endpoint miloEndpoint;
-    @Autowired TagSubscriptionMapReader mapper;
+    @Autowired
+    TagSubscriptionReader mapper;
 
     OPCUAMessageHandler handler;
     TestUtils.CommfaultSenderCapture capture;

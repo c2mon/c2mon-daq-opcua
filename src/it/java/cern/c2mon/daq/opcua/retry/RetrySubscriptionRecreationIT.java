@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.retry;
 
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -42,7 +42,7 @@ import static org.easymock.EasyMock.*;
 public class RetrySubscriptionRecreationIT {
 
     @Autowired
-    TagSubscriptionManager mapper;
+    TagSubscriptionMapper mapper;
     @Autowired UaSubscriptionManager.SubscriptionListener endpoint;
     @Value("${app.retryDelay}") int delay;
 

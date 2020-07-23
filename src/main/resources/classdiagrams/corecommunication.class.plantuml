@@ -39,12 +39,14 @@ interface IMessageSender {
     {abstract} + onTagInvalid()
     {abstract} + onValueUpdate()
 }
+
 enum IMessageSender.EquipmentState {
   CONNECTION_FAILED
   CONNECTION_LOST
   OK
   message
 }
+
 class MessageSender {
     - sender : IEquipmentMessageSender
     + MessageSender()
@@ -55,6 +57,13 @@ class MessageSender {
     + onSessionInactive()
     + onTagInvalid()
     + onValueUpdate()
+}
+
+interface cern.c2mon.daq.common.IEquipmentMessageSender {
+  {abstract} + sendSupervisionAlive()
+  {abstract} + update()
+  {abstract} + confirmEquipmentStateIncorrect()
+  {abstract} + confirmEquipmentStateOK()
 }
 
 interface org.eclipse.milo.opcua.sdk.client.SessionActivityListener {
@@ -70,27 +79,67 @@ interface cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger {
   onUpdateEquipmentConfiguration()
 }
 
-interface control.IControllerProxy {}
+interface control.IControllerProxy {
+  {abstract} + connect()
+  {abstract} + stop()
+  {abstract} + stop()
+  {abstract} + callMethod()
+  {abstract} + read()
+  {abstract} + subscribe()
+  {abstract} + unsubscribe()
+  {abstract} + write()
+}
 
-interface tagHandling.AliveWriter {}
-interface tagHandling.CommandTagHandler {}
-interface tagHandling.IDataTagChanger {}
-interface tagHandling.IDataTagHandler {}
+class taghandling.AliveWriter {
+    + initialize()
+    + startWriter()
+    + stopWriter()
+    + updateAndReport()
+}
 
+class taghandling.CommandTagHandler {
+    + CommandTagHandler()
+    + onAddCommandTag()
+    + onRemoveCommandTag()
+    + onUpdateCommandTag()
+    + runCommand()
+}
+interface cern.c2mon.daq.common.conf.equipment.ICommandTagChanger {
+    {abstract} + runCommand()
+}
+
+class taghandling.DataTagChanger {
+    + onAddDataTag()
+    + onRemoveDataTag()
+    + onUpdateDataTag()
+    + onUpdateEquipmentConfiguration()
+}
+
+interface taghandling.IDataTagHandler {
+    {abstract} + refreshAllDataTags()
+    {abstract} + refreshDataTag()
+    {abstract} + removeTag()
+    {abstract} + reset()
+    {abstract} + subscribeTag()
+    {abstract} + subscribeTags()
+}
 
 OPCUAMessageHandler .up.|> cern.c2mon.daq.common.ICommandRunner
 OPCUAMessageHandler .up.|> cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger
 OPCUAMessageHandler -up-|> cern.c2mon.daq.common.EquipmentMessageHandler
-OPCUAMessageHandler o-left- tagHandling.AliveWriter : aliveWriter
-OPCUAMessageHandler o-left- config.AppConfigProperties : appConfigProperties
-OPCUAMessageHandler o-- tagHandling.CommandTagHandler : commandTagHandler
+OPCUAMessageHandler o-- taghandling.AliveWriter : aliveWriter
+OPCUAMessageHandler o-right- config.AppConfigProperties : appConfigProperties
+OPCUAMessageHandler o-- taghandling.CommandTagHandler : commandTagHandler
 OPCUAMessageHandler o-- control.IControllerProxy : controllerProxy
-OPCUAMessageHandler o-- tagHandling.IDataTagChanger : dataTagChanger
-OPCUAMessageHandler o-- tagHandling.IDataTagHandler : dataTagHandler
+OPCUAMessageHandler o-- taghandling.DataTagChanger : dataTagChanger
+OPCUAMessageHandler o-- taghandling.IDataTagHandler : dataTagHandler
 
 IMessageSender +-- IMessageSender.EquipmentState
-MessageSender .up.|> IMessageSender
-MessageSender .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
+MessageSender o-up- cern.c2mon.daq.common.IEquipmentMessageSender
+MessageSender ..|> IMessageSender
+MessageSender ..|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
 
-OPCUAMessageHandler ..> config.AddressParser
-OPCUAMessageHandler .up.> IMessageSender
+OPCUAMessageHandler .right.> config.AddressParser
+OPCUAMessageHandler .right.> cern.c2mon.daq.common.conf.equipment.ICommandTagChanger
+OPCUAMessageHandler ..> IMessageSender
+

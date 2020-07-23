@@ -1,43 +1,26 @@
 title OPC UA DAQ Class Diagram: TagHandling Component 
-class tagHandling.AliveWriter {
-    - address : NodeId
-    - enabled : boolean
-    - executor : ScheduledExecutorService
-    - writeAliveTask : ScheduledFuture<?>
-    - writeCounter : AtomicInteger
-    - writeTime : long
+class taghandling.AliveWriter {
     + AliveWriter()
     + initialize()
     + startWriter()
     + stopWriter()
     + updateAndReport()
-    - sendAlive()
 }
-class tagHandling.CommandTagHandler {
+class taghandling.CommandTagHandler {
     + CommandTagHandler()
     + onAddCommandTag()
     + onRemoveCommandTag()
     + onUpdateCommandTag()
     + runCommand()
-    + setControllerProxy()
-    - executeMethod()
-    - executeWriteCommand()
-    - handleCommandResponseStatusCode()
-    - runClassicCommand()
 }
-class tagHandling.DataTagChanger {
-    {static} - applyToReport : TriConsumer<Boolean, String, ChangeReport>
-    {static} - tagsToIdString : Function<Collection<ISourceDataTag>, String>
+class taghandling.DataTagChanger {
     + DataTagChanger()
     + onAddDataTag()
     + onRemoveDataTag()
     + onUpdateDataTag()
     + onUpdateEquipmentConfiguration()
-    - addAndReport()
-    {static} - gatherIds()
-    - removeAndReport()
 }
-class tagHandling.DataTagHandler {
+class taghandling.DataTagHandler {
     + DataTagHandler()
     + refreshAllDataTags()
     + refreshDataTag()
@@ -45,10 +28,8 @@ class tagHandling.DataTagHandler {
     + reset()
     + subscribeTag()
     + subscribeTags()
-    - completeSubscriptionAndReportSuccess()
-    - refresh()
 }
-interface tagHandling.IDataTagHandler {
+interface taghandling.IDataTagHandler {
     {abstract} + refreshAllDataTags()
     {abstract} + refreshDataTag()
     {abstract} + removeTag()
@@ -56,42 +37,58 @@ interface tagHandling.IDataTagHandler {
     {abstract} + subscribeTag()
     {abstract} + subscribeTags()
 }
-interface tagHandling.IMessageSender {
+
+interface IMessageSender {
     {abstract} + initialize()
     {abstract} + onAlive()
     {abstract} + onEquipmentStateUpdate()
     {abstract} + onTagInvalid()
     {abstract} + onValueUpdate()
 }
-enum tagHandling.IMessageSender.EquipmentState {
-  CONNECTION_FAILED
-  CONNECTION_LOST
-  OK
-  message
-}
-class tagHandling.MessageSender {
-    - sender : IEquipmentMessageSender
-    + MessageSender()
-    + initialize()
-    + onAlive()
-    + onEquipmentStateUpdate()
-    + onSessionActive()
-    + onSessionInactive()
-    + onTagInvalid()
-    + onValueUpdate()
-}
-tagHandling.AliveWriter o-- control.IControllerProxy : controllerProxy
-tagHandling.AliveWriter o-- tagHandling.IMessageSender : messageSender
-tagHandling.CommandTagHandler .up.|> cern.c2mon.daq.common.conf.equipment.ICommandTagChanger
-tagHandling.CommandTagHandler o-- control.IControllerProxy : controllerProxy
-tagHandling.DataTagChanger .up.|> cern.c2mon.daq.common.conf.equipment.IDataTagChanger
-tagHandling.DataTagChanger o-- tagHandling.IDataTagHandler : controller
-tagHandling.DataTagHandler .up.|> tagHandling.IDataTagHandler
-tagHandling.DataTagHandler o-up- control.IControllerProxy : controllerProxy
-tagHandling.DataTagHandler o-right- mapping.TagSubscriptionManager : mapper
-tagHandling.DataTagHandler o-right- tagHandling.IMessageSender : messageSender
-tagHandling.IMessageSender +-down- tagHandling.IMessageSender.EquipmentState
-tagHandling.MessageSender .up.|> tagHandling.IMessageSender
-tagHandling.MessageSender .right.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
 
-tagHandling.MessageSender -[hidden]left- tagHandling.IMessageSender.EquipmentState
+interface control.IControllerProxy {
+  {abstract} + connect()
+  {abstract} + stop()
+  {abstract} + stop()
+  {abstract} + callMethod()
+  {abstract} + read()
+  {abstract} + subscribe()
+  {abstract} + unsubscribe()
+  {abstract} + write()
+}
+
+interface cern.c2mon.daq.common.conf.equipment.ICommandTagChanger {
+    {abstract} + onAddCommandTag()
+    {abstract} + onRemoveCommandTag()
+    {abstract} + onUpdateCommandTag()
+}
+
+interface cern.c2mon.daq.common.conf.equipment.IDataTagChanger {
+    {abstract} + onAddDataTag()
+    {abstract} + onRemoveDataTag()
+    {abstract} + onUpdateDataTag()
+}
+
+interface mapping.TagSubscriptionManager {
+    {abstract} + getTagIdDefinitionMap()
+    {abstract} + getGroup()
+    {abstract} + getGroups()
+    {abstract} + getDefinition()
+    {abstract} + getTagId()
+    {abstract} + getOrCreateDefinition()
+    {abstract} + addTagToGroup()
+    {abstract} + removeTag()
+    {abstract} + clear()
+}
+
+taghandling.AliveWriter o-- control.IControllerProxy : controllerProxy
+taghandling.AliveWriter o-- IMessageSender : messageSender
+taghandling.CommandTagHandler .up.|> cern.c2mon.daq.common.conf.equipment.ICommandTagChanger
+taghandling.CommandTagHandler o-- control.IControllerProxy : controllerProxy
+taghandling.DataTagChanger .up.|> cern.c2mon.daq.common.conf.equipment.IDataTagChanger
+taghandling.DataTagChanger o-- taghandling.IDataTagHandler : controllerProxy
+taghandling.DataTagHandler .up.|> taghandling.IDataTagHandler
+taghandling.DataTagHandler o-up- control.IControllerProxy : controllerProxy
+taghandling.DataTagHandler o-right- mapping.TagSubscriptionManager : mapper
+taghandling.DataTagHandler o-left- IMessageSender : messageSender
+taghandling.AliveWriter -[hidden]up- taghandling.CommandTagHandler

@@ -1,50 +1,58 @@
+
 title Connect To Data Source
+
 actor "DAQ Core" as Core
-box "OPCUAMessageHandler"
+box "OPCUAMessageHandler Component"
 participant OPCUAMessageHandler
-participant AddressStringParser
-end box
 participant EquipmentMessageSender
+end box
+participant AddressStringParser
+participant AppConfigProperties
 participant AliveWriter
 participant DataTagHandler
 participant Control
 
 Core-> OPCUAMessageHandler ++ : connectToDataSource()
-  OPCUAMessageHandler -> OPCUAMessageHandler: fetch required objects from //context//
-  OPCUAMessageHandler -> EquipmentMessageSender ++ : initialize with //getMessageSender()//
+  OPCUAMessageHandler -> OPCUAMessageHandler: fetch required objects from the Spring application \ncontext (retrieved with //getContext()//)
+  OPCUAMessageHandler -> EquipmentMessageSender ++ : //initialize()// with //getMessageSender()//
   return
   
-  OPCUAMessageHandler -> AddressStringParser ++: parse equipment address in \n//getEquipmentConfiguration()//
+  OPCUAMessageHandler -> AddressStringParser ++: //parse()// equipment address in //getEquipmentConfiguration()//
+    AddressStringParser --> AppConfigProperties ++: apply equipment address \nquery updates
+    return
   return server addresses
   
-  OPCUAMessageHandler -> Control ++ : connect using server addresses
+  OPCUAMessageHandler -> Control ++ : //connect()// through one of the server addresses
   
   ref over Control
     see ...
   end ref
-  Control -> EquipmentMessageSender ++: confirm equipment state correct
-    EquipmentMessageSender -> Core: confirm equipment state correct
+  Control -> EquipmentMessageSender ++: //onEquipmentStateUpdate(EquipmentState.OK)//
+    EquipmentMessageSender -> Core: //confirmEquipmentStateOk()//
   return
   critical error?
     OPCUAMessageHandler <- Control : throw OPCUAException
-    OPCUAMessageHandler -> EquipmentMessageSender ++: confirm equipment state incorrect
-      EquipmentMessageSender -> Core: confirm equipment state incorrect
+    OPCUAMessageHandler -> EquipmentMessageSender ++: //onEquipmentStateUpdate//\n//(EquipmentState.CONNECTION_FAILED)//
+      EquipmentMessageSender -> Core: //confirmEquipmentStateIncorrect()//
     return
     Core <- OPCUAMessageHandler: throw as EqIOException
     return
   end
 
   
-  OPCUAMessageHandler -> AliveWriter ++: intialize
+  OPCUAMessageHandler -> AliveWriter ++: //intialize()//
     ref over AliveWriter
       see ...
     end ref
   return
   
-  OPCUAMessageHandler -> DataTagHandler++: process DataTags
+  OPCUAMessageHandler -> DataTagHandler++: //subscribeTags()//
     ref over DataTagHandler
       see ...
     end ref
+    critical error?
+      Core <- DataTagHandler : throw OPCUAException as EqIOException
+    end
   return
   
   OPCUAMessageHandler -> Core ++: set //IDataTagChanger//, //ICommandTagHandler// \nand self as equipment configuration handlers

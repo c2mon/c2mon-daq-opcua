@@ -17,7 +17,7 @@ public class MappingBase {
     ISourceDataTag tagWithSameDeadband;
     ISourceDataTag tagWithDifferentDeadband;
 
-    TagSubscriptionManager mapper = new TagSubscriptionManager();
+    TagSubscriptionMapper mapper = new TagSubscriptionMapper();
 
 
     @BeforeEach

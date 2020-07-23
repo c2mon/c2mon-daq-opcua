@@ -1,12 +1,14 @@
 package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
+import cern.c2mon.shared.common.datatag.DataTagAddress;
+import cern.c2mon.shared.common.datatag.SourceDataTag;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,13 +23,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AliveWriterTest {
     TestListeners.TestListener listener = new TestListeners.TestListener();
-    TagSubscriptionMapReader mapper = new TagSubscriptionManager();
+    TagSubscriptionReader mapper = new TagSubscriptionMapper();
     AliveWriter aliveWriter = new AliveWriter(TestUtils.getFailoverProxy(new TestEndpoint(listener, mapper), listener), listener);
 
     @BeforeEach
     public void setUp() {
         ReflectionTestUtils.setField(aliveWriter, "writeTime", 1L);
-        ReflectionTestUtils.setField(aliveWriter, "address", ItemDefinition.toNodeId(new OPCHardwareAddressImpl("Test")));
+        final OPCHardwareAddressImpl hwAddress = new OPCHardwareAddressImpl("Test");
+        hwAddress.setCurrentOPCItemName("test");
+        DataTagAddress tagAddress = new DataTagAddress(hwAddress, 0, (short) 0, 0, 0, 2, true);
+        final SourceDataTag iSourceDataTag = new SourceDataTag((long) 1, "test", false, (short) 0, null, tagAddress);
+        ReflectionTestUtils.setField(aliveWriter, "address", ItemDefinition.of(iSourceDataTag).getNodeId());
     }
 
     @AfterEach

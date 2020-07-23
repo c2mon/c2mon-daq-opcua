@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
@@ -22,7 +22,7 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
 
-    public ExceptionTestEndpoint(IMessageSender messageSender, TagSubscriptionMapReader mapper) {
+    public ExceptionTestEndpoint(IMessageSender messageSender, TagSubscriptionReader mapper) {
         super(messageSender, mapper);
     }
 

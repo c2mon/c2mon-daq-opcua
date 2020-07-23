@@ -28,14 +28,12 @@ public class TagSubscriptionManagerTest extends MappingBase {
     @Test
     public void getGroupForTagDoesNotAddTagToGroup() {
         SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
-
-        assertFalse(group.contains(tag));
+        assertFalse(group.contains(tag.getId()));
     }
 
     @Test
     public void toGroupCreatesProperDeadband() {
         SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
-
         assertEquals(tag.getTimeDeadband(), group.getPublishInterval());
     }
 
@@ -43,7 +41,6 @@ public class TagSubscriptionManagerTest extends MappingBase {
     public void secondExecutionOfTagToGroupShouldReturnPriorGroup() {
         SubscriptionGroup group1 = mapper.getGroup(tag.getTimeDeadband());
         SubscriptionGroup group2 = mapper.getGroup(tag.getTimeDeadband());
-
         assertEquals(group1, group2);
     }
 
@@ -51,7 +48,6 @@ public class TagSubscriptionManagerTest extends MappingBase {
     public void secondExecutionOfTagToDefinitionShouldReturnPriorDefinition() {
         ItemDefinition definition1 = mapper.getOrCreateDefinition(tag);
         ItemDefinition definition2 = mapper.getOrCreateDefinition(tag);
-
         assertEquals(definition1, definition2);
     }
 
@@ -85,28 +81,28 @@ public class TagSubscriptionManagerTest extends MappingBase {
 
     @Test
     public void removeNewTagShouldReturnFalse() {
-        assertFalse(mapper.removeTag(tag));
+        assertFalse(mapper.removeTag(tag.getId()));
     }
 
     @Test
     public void removeTagFromEmptyGroupShouldReturnFalse() {
         mapper.getGroup(tag.getTimeDeadband());
-        assertFalse(mapper.removeTag(tag));
+        assertFalse(mapper.removeTag(tag.getId()));
     }
 
     @Test
     public void removeTagFromGroupShouldDeleteCorrespondingDefinition() {
         SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
         mapper.addTagToGroup(tag.getId());
-        mapper.removeTag(tag);
-        assertFalse(group.contains(tag));
+        mapper.removeTag(tag.getId());
+        assertFalse(group.contains(tag.getId()));
     }
 
     @Test
     public void removeExistingTagShouldReturnTrue() {
         mapper.getOrCreateDefinition(tag);
         mapper.addTagToGroup(tag.getId());
-        assertTrue(mapper.removeTag(tag));
+        assertTrue(mapper.removeTag(tag.getId()));
     }
 
     @Test
@@ -138,7 +134,7 @@ public class TagSubscriptionManagerTest extends MappingBase {
         mapper.getOrCreateDefinition(tag);
         SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
         mapper.addTagToGroup(tag.getId());
-        assertTrue(group.contains(tag));
+        assertTrue(group.contains(tag.getId()));
     }
 
     @Test
@@ -159,8 +155,8 @@ public class TagSubscriptionManagerTest extends MappingBase {
         mapper.addTagToGroup(tag.getId());
         mapper.addTagToGroup(tagWithSameDeadband.getId());
 
-        assertTrue(group.contains(tag));
-        assertTrue(group.contains(tagWithSameDeadband));
+        assertTrue(group.contains(tag.getId()));
+        assertTrue(group.contains(tagWithSameDeadband.getId()));
     }
 
     @Test

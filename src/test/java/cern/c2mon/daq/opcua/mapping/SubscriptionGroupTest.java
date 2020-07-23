@@ -28,8 +28,8 @@ public class SubscriptionGroupTest extends MappingBase {
     @Test
     public void removeDefinitionShouldRemoveDefinitionFromGroup() {
         group.add(tag.getId(), ItemDefinition.of(tag));
-        group.remove(tag);
+        group.remove(tag.getId());
 
-        assertFalse(group.contains(tag));
+        assertFalse(group.contains(tag.getId()));
     }
 }

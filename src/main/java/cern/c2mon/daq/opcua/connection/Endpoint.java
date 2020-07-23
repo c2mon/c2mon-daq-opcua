@@ -5,6 +5,7 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
@@ -75,7 +76,7 @@ public interface Endpoint {
     void recreateSubscription(UaSubscription subscription) throws OPCUAException;
 
     /**
-     * Recreate all subscriptions configured in {@link cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader}. This
+     * Recreate all subscriptions configured in {@link TagSubscriptionReader}. This
      * method is usually called by the {@link cern.c2mon.daq.opcua.control.Controller} after a failover.
      * @throws CommunicationException if no subscription could be recreated.
      */

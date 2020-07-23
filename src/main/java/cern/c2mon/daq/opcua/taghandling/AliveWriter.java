@@ -17,11 +17,10 @@
 package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.IMessageSender;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -92,8 +91,11 @@ public class AliveWriter {
             if (aliveTag != null) {
                 this.enabled = true;
                 this.writeTime = config.getAliveTagInterval() / 2;
-                this.address = ItemDefinition.toNodeId((OPCHardwareAddress) aliveTag.getHardwareAddress());
-                startWriter();
+                final ItemDefinition def = ItemDefinition.of(aliveTag);
+                if (def != null) {
+                    this.address = def.getNodeId();
+                    startWriter();
+                }
             } else {
                 log.error("The target tag is not defined, cannot start the Alive Writer.");
             }

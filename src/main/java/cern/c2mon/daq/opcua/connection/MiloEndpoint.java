@@ -5,7 +5,7 @@ import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -70,7 +70,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private static final String HOST_REGEX = "://[^/]*";
     private final SecurityModule securityModule;
     private final RetryDelegate retryDelegate;
-    private final TagSubscriptionMapReader mapper;
+    private final TagSubscriptionReader mapper;
     private final IMessageSender messageSender;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
@@ -266,7 +266,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Recreate all subscriptions configured in {@link cern.c2mon.daq.opcua.mapping.TagSubscriptionMapReader}. This
+     * Recreate all subscriptions configured in {@link TagSubscriptionReader}. This
      * method is usually called by the {@link cern.c2mon.daq.opcua.control.Controller} after a failover.
      * @throws CommunicationException if no subscription could be recreated.
      */

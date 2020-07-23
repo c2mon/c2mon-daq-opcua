@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.taghandling;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -27,7 +27,7 @@ public abstract class TagHandlerTestBase {
     protected static Map<Long, ISourceDataTag> sourceTags = generateSourceTags();
     protected static String uri;
 
-    TagSubscriptionManager mapper;
+    TagSubscriptionMapper mapper;
     TestEndpoint endpoint;
     TestListeners.TestListener listener;
     IDataTagHandler controller;
@@ -45,7 +45,7 @@ public abstract class TagHandlerTestBase {
     @BeforeEach
     public void setUp() throws OPCUAException, InterruptedException {
         uri = ADDRESS_PROTOCOL_TCP + ADDRESS_BASE + true;
-        mapper = new TagSubscriptionManager();
+        mapper = new TagSubscriptionMapper();
         listener = new TestListeners.TestListener();
         endpoint = new TestEndpoint(listener, mapper);
         proxy = TestUtils.getFailoverProxy(endpoint, listener);
@@ -66,6 +66,6 @@ public abstract class TagHandlerTestBase {
 
     protected boolean isSubscribed(ISourceDataTag tag) {
         final SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
-        return group != null && group.contains(tag);
+        return group != null && group.contains(tag.getId());
     }
 }
