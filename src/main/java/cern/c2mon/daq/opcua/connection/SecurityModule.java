@@ -98,7 +98,7 @@ public class SecurityModule {
             final Certifier certifier = key2Certifier.get(e.getKey());
             OpcUaClient client = connectIfPossible(mutableEndpoints, certifier, listeners);
             if (client != null) {
-                log.info("Connected successfully with certifier '{}'! ", e.getKey());
+                log.info("Connected successfully with Certifier '{}'! ", e.getKey());
                 return client;
             }
         }
@@ -156,14 +156,14 @@ public class SecurityModule {
         final Throwable cause = ex.getCause();
         log.error("Authentication error: ", cause);
         if (!(cause instanceof UaException)) {
-            log.error("Unexpected error in connection, abort connecting through certifier {}.", certifier.getClass().getName());
+            log.error("Unexpected error in connection, abort connecting through Certifier {}.", certifier.getClass().getName());
             return false;
         }
         final long code = ((UaException) cause).getStatusCode().getValue();
         if (OPCUAException.isSecurityIssue((UaException) cause)) {
             throw new ConfigurationException(ExceptionContext.SECURITY, cause);
         } else if (certifier.getSevereErrorCodes().contains(code)) {
-            log.error("Cannot connect to this server with certifier {}. Proceed with another certifier.", certifier.getClass().getName());
+            log.error("Cannot connect to this server with Certifier {}. Proceed with another Certifier.", certifier.getClass().getName());
             return false;
         } else {
             log.error("Attempting less secure endpoint: ", ex);

@@ -9,6 +9,7 @@ import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -34,8 +35,10 @@ public class MiloEndpointTest {
     }
 
     private void setUpDeleteSubscriptionMocks(Exception e) {
+        final CompletableFuture<StatusCode> failedFuture = new CompletableFuture<>();
+        failedFuture.completeExceptionally(e);
         expect(mockClient.writeValue(anyObject(), anyObject()))
-                .andReturn(CompletableFuture.failedFuture(e))
+                .andReturn(failedFuture)
                 .anyTimes();
         replay(mockClient);
     }

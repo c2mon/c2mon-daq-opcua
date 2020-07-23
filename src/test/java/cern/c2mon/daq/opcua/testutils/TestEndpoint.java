@@ -24,6 +24,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.stereotype.Component;
 
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -103,7 +104,7 @@ public class TestEndpoint implements Endpoint {
     @Override
     public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
         final SourceDataTagQuality quality = new SourceDataTagQuality(returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
-        return Map.entry(new ValueUpdate(0), quality);
+        return new AbstractMap.SimpleEntry<>(new ValueUpdate(0), quality);
     }
 
     @Override
@@ -113,7 +114,7 @@ public class TestEndpoint implements Endpoint {
 
     @Override
     public Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException {
-        return Map.entry(returnGoodStatusCodes, new Object[] {arg});
+        return new AbstractMap.SimpleEntry<>(returnGoodStatusCodes, new Object[] {arg});
     }
 
     @Override

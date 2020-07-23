@@ -75,7 +75,7 @@ public class DataTagChanger implements IDataTagChanger {
      * operation.
      * @param sourceDataTag    the Tag to add
      * @param oldSourceDataTag the Tag to remove
-     * @param changeReport     a report of the taken actions and the outpome of the operation.
+     * @param changeReport     a report of the taken actions and the outcome of the operation.
      */
     @Override
     public void onUpdateDataTag(final ISourceDataTag sourceDataTag, final ISourceDataTag oldSourceDataTag, final ChangeReport changeReport) {

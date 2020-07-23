@@ -47,8 +47,8 @@ public interface Controller {
      * Unsubscribe from the {@link NodeId} in the {@link ItemDefinition} on the OPC UA server or on all servers in a
      * redundant server set.
      * @param definition the {@link ItemDefinition} to unsubscribe from.
-     * @return whether the unsubscription was completed successfully at the currently active server. False if the {@link
-     * ItemDefinition} was not subscribed in the first place.
+     * @return whether the removal from subscription was completed successfully at the currently active server. False if
+     * the {@link ItemDefinition} was not subscribed in the first place.
      */
     boolean unsubscribe(ItemDefinition definition);
 

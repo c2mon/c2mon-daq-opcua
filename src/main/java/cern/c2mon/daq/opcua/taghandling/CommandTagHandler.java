@@ -112,9 +112,6 @@ public class CommandTagHandler implements ICommandTagChanger {
             throw new EqCommandTagException("Please check whether the configuration is correct.", e);
         } catch (OPCUAException e) {
             throw new EqCommandTagException("A communication error occurred while running the command. ", e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("Thread interrupted during command execution.");
         } catch (Exception e) {
             log.error("Exception", e);
         }
@@ -142,7 +139,7 @@ public class CommandTagHandler implements ICommandTagChanger {
     }
 
 
-    private void runClassicCommand(ISourceCommandTag tag, Object arg, int pulse) throws OPCUAException, InterruptedException {
+    private void runClassicCommand(ISourceCommandTag tag, Object arg, int pulse) throws OPCUAException {
         if (pulse == 0) {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
             executeWriteCommand(tag, arg);
@@ -212,9 +209,6 @@ public class CommandTagHandler implements ICommandTagChanger {
             if (!executor.awaitTermination(await, TimeUnit.SECONDS)) {
                 log.error("Shutting down now");
                 executor.shutdownNow();
-                if (!executor.awaitTermination(await, TimeUnit.SECONDS)) {
-                    log.error("Server switch still running");
-                }
             }
         } catch (InterruptedException ie) {
             log.error("Interrupted... ", ie);

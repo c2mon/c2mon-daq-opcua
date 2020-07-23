@@ -66,7 +66,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * @throws EqIOException Throws an {@link EqIOException} if there is an IO problem during startup.
      */
     @Override
-    public synchronized void connectToDataSource() throws EqIOException {
+    public void connectToDataSource() throws EqIOException {
         controllerProxy = getContext().getBean("failoverProxy", IControllerProxy.class);
         dataTagHandler = getContext().getBean(IDataTagHandler.class);
         aliveWriter = getContext().getBean(AliveWriter.class);
@@ -80,17 +80,18 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
         getContext().getBean(IMessageSender.class).initialize(sender);
 
-        Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
-        log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
-        try {
-            controllerProxy.connect(addresses);
-        } catch (OPCUAException e) {
-            sender.confirmEquipmentStateIncorrect(IMessageSender.EquipmentState.CONNECTION_FAILED.message);
-            throw e;
+        synchronized (this) {
+            Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
+            log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
+            try {
+                controllerProxy.connect(addresses);
+            } catch (OPCUAException e) {
+                sender.confirmEquipmentStateIncorrect(IMessageSender.EquipmentState.CONNECTION_FAILED.message);
+                throw e;
+            }
+            dataTagHandler.subscribeTags(config.getSourceDataTags().values());
         }
-
         aliveWriter.initialize(config, appConfigProperties.isAliveWriterEnabled());
-        dataTagHandler.subscribeTags(config.getSourceDataTags().values());
         log.debug("connected");
 
         getEquipmentCommandHandler().setCommandRunner(this);
@@ -103,7 +104,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * Called when the core wants the OPC module to disconnect from the OPC server and discard all configuration.
      */
     @Override
-    public synchronized void disconnectFromDataSource() {
+    public void disconnectFromDataSource() {
         log.debug("disconnecting from OPC data source...");
         dataTagHandler.reset();
         controllerProxy.stop();
@@ -113,7 +114,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
     /** Triggers the refresh of all values directly from the OPC server. */
     @Override
-    public synchronized void refreshAllDataTags() {
+    public void refreshAllDataTags() {
         dataTagHandler.refreshAllDataTags();
     }
 
@@ -122,7 +123,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * @param dataTagId The id of the data tag to refresh.
      */
     @Override
-    public synchronized void refreshDataTag(final long dataTagId) {
+    public void refreshDataTag(final long dataTagId) {
         ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
         if (sourceDataTag == null) {
             log.error("SourceDataTag with ID {} is unknown", dataTagId);
@@ -160,12 +161,14 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * @param changeReport Report object to fill.
      */
     @Override
-    public synchronized void onUpdateEquipmentConfiguration(final IEquipmentConfiguration newConfig, final IEquipmentConfiguration oldConfig, final ChangeReport changeReport) {
+    public void onUpdateEquipmentConfiguration(final IEquipmentConfiguration newConfig, final IEquipmentConfiguration oldConfig, final ChangeReport changeReport) {
         if (!newConfig.getAddress().equals(oldConfig.getAddress())) {
             try {
-                disconnectFromDataSource();
-                TimeUnit.MILLISECONDS.sleep(appConfigProperties.getRestartDelay());
-                connectToDataSource();
+                synchronized (this) {
+                    disconnectFromDataSource();
+                    TimeUnit.MILLISECONDS.sleep(appConfigProperties.getRestartDelay());
+                    connectToDataSource();
+                }
                 changeReport.appendInfo("DAQ restarted.");
             } catch (EqIOException e) {
                 changeReport.appendError("Restart of DAQ failed.");
@@ -183,5 +186,4 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         }
         changeReport.setState(CHANGE_STATE.SUCCESS);
     }
-
 }

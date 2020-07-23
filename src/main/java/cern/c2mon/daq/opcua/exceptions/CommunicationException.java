@@ -8,7 +8,7 @@ package cern.c2mon.daq.opcua.exceptions;
 public class CommunicationException extends OPCUAException {
 
     /**
-     * Creates a new CommunicationException wrapping the throwable which caued an action to fail.
+     * Creates a new CommunicationException wrapping the throwable which caused an action to fail.
      * @param context The context the exception occurred in.
      * @param cause   the throwable to wrap as an OPCCommunicationException.
      */

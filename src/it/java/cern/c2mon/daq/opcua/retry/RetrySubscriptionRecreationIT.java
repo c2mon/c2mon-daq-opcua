@@ -4,7 +4,6 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
-import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -27,9 +26,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.UnknownHostException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static cern.c2mon.daq.opcua.testutils.EdgeTagFactory.AlternatingBoolean;
 import static cern.c2mon.daq.opcua.testutils.EdgeTagFactory.RandomUnsignedInt32;
@@ -49,7 +46,6 @@ public class RetrySubscriptionRecreationIT {
     private final OpcUaClient clientMock = createNiceMock(OpcUaClient.class);
     private final UaSubscription subscriptionMock = createNiceMock(UaSubscription.class);
     private final OpcUaSubscriptionManager managerMock = createNiceMock(OpcUaSubscriptionManager.class);
-    private final int numAttempts = 3;
 
     @BeforeEach
     public void setUp() {
@@ -63,14 +59,16 @@ public class RetrySubscriptionRecreationIT {
     }
 
     @Test
-    public void stopCallingOnInterruptedThread() throws InterruptedException, ExecutionException, TimeoutException {
+    public void stopCallingOnInterruptedThread() throws InterruptedException {
+        int numAttempts = 3;
         mockNAttempts(numAttempts, new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION));
         final Thread thread = new Thread(() -> endpoint.onSubscriptionTransferFailed(subscriptionMock, StatusCode.GOOD));
         thread.start();
-        // add small bugger
-        CompletableFuture.runAsync(thread::interrupt, CompletableFuture.delayedExecutor(Math.round(delay * (numAttempts + 1.5)), TimeUnit.MILLISECONDS))
-                .thenRun(() -> verify(subscriptionMock, clientMock, managerMock))
-                .get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+
+        // add buffer
+        TimeUnit.MILLISECONDS.sleep(Math.round(delay * (numAttempts + 1.5)));
+        thread.interrupt();
+        verify(subscriptionMock, clientMock, managerMock);
     }
 
     @Test
@@ -89,6 +87,8 @@ public class RetrySubscriptionRecreationIT {
     }
 
     private void mockNAttempts(int numAttempts, Exception e) {
+        final CompletableFuture<UaSubscription> failedFuture = new CompletableFuture<>();
+        failedFuture.completeExceptionally(e);
         expect(subscriptionMock.getSubscriptionId())
                 .andReturn(UInteger.valueOf(1))
                 .anyTimes();
@@ -99,7 +99,7 @@ public class RetrySubscriptionRecreationIT {
                 .andReturn(CompletableFuture.completedFuture(subscriptionMock))
                 .anyTimes();
         expect(managerMock.createSubscription(anyDouble()))
-                .andReturn(CompletableFuture.failedFuture(e))
+                .andReturn(failedFuture)
                 .times(numAttempts);
         replay(subscriptionMock, clientMock, managerMock);
     }

@@ -41,7 +41,7 @@ public abstract class OPCUAException extends EqIOException {
      * prospects of retrying the action.
      * @param context              The context that the  throwable e occurred in, used to form an informative error
      *                             message.
-     * @param e                    The throwable which caused the action on the erver to fail originally.
+     * @param e                    The throwable which caused the action on the server to fail originally.
      * @param disconnectionTooLong describes if the the client has been disconnected for so long time that retries are
      *                             unlikely to succeed in due time.
      * @return A concrete OPCUAException of type {@link ConfigurationException}, if the original error hints at an issue

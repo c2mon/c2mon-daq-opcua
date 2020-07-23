@@ -26,7 +26,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -43,7 +42,7 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
     private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
 
     /**
-     * Gets a {@link SubscriptionGroup} with a publish interval equal to the timeDeadband, or creates a new one if none
+     * Gets a {@link SubscriptionGroup} with a publish interval equal to the time Deadband, or creates a new one if none
      * yet exists.
      * @param timeDeadband to equal the publish interval of the group
      * @return the existing or newly created {@link SubscriptionGroup}
@@ -83,19 +82,19 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
     }
 
     /**
-     * Returns the tagId associated with the {@link ItemDefinition} identified by the clientHandle, or null if
-     * no tagId is associated with the clientHandle.
+     * Returns the tagId associated with the {@link ItemDefinition} identified by the clientHandle, or null if no tagId
+     * is associated with the clientHandle.
      * @param clientHandle the client handle identifying the {@link ItemDefinition} whose associated tagId is to be
      *                     returned
      * @return the tagId associated with the clientHandle
      */
     @Override
     public Long getTagId(UInteger clientHandle) {
-        final Optional<Long> first = tagIdDefinitionMap.entrySet().stream()
+        return tagIdDefinitionMap.entrySet().stream()
                 .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
                 .map(Map.Entry::getKey)
-                .findFirst();
-        return first.isPresent() ? first.get() : null;
+                .findFirst()
+                .orElse(null);
     }
 
     /**

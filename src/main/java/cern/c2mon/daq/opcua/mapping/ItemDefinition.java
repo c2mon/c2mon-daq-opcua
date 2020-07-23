@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * An {@link ItemDefinition} stores all values required to process an {@link ISourceDataTag} or an {@link
- * ISourceCommandTag} including the {@link NodeId} and deadband values. Every {@link ItemDefinition} is identified by a
+ * ISourceCommandTag} including the {@link NodeId} and Deadband values. Every {@link ItemDefinition} is identified by a
  * unique clientHandle which is used by the {@link TagSubscriptionMapper} to associate it with the tag.
  */
 @Getter
@@ -76,7 +76,7 @@ public class ItemDefinition {
 
     /**
      * Stores the relevant information contained in an {@link ISourceDataTag} into a corresponding {@link
-     * ItemDefinition} including the {@link NodeId}s and deadband values.
+     * ItemDefinition} including the {@link NodeId}s and Deadband values.
      * @param tag the {@link ISourceDataTag} for which an associated {@link ItemDefinition} shall be created
      * @return the newly created {@link ItemDefinition}
      */

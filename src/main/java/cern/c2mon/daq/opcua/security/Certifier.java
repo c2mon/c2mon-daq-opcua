@@ -26,9 +26,9 @@ public interface Certifier {
     void uncertify(OpcUaClientConfigBuilder builder);
 
     /**
-     * Checks whether the certifier supports an endpoint's security policy and the corresponding signature algorithm.
-     * This method only checks whether the algorithms match, but does not load or generate the certifiate and keypair.
-     * Loading or generating the ceritificate and keypair may still result in errors, for example due to bad
+     * Checks whether the Certifier supports an endpoint's security policy and the corresponding signature algorithm.
+     * This method only checks whether the algorithms match, but does not load or generate the certificate and keypair.
+     * Loading or generating the certificate and keypair may still result in errors, for example due to bad
      * configuration settings.
      *
      * @param endpoint the endpoint whose security policy to check to be supported.
@@ -46,7 +46,7 @@ public interface Certifier {
     boolean canCertify(EndpointDescription endpoint);
 
     /**
-     * If a connection using a Certifier fails for severe reasons, attemping to reconnect with this certifier is
+     * If a connection using a Certifier fails for severe reasons, attempting to reconnect with this Certifier is
      * fruitless also with other endpoints.
      *
      * @return a list of error codes which constitute a severe error.

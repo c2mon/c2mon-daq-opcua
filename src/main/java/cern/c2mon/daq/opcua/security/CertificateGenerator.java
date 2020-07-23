@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +30,24 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 public class CertificateGenerator extends CertifierBase {
     private static final String RSA_SHA256 = "SHA256withRSA";
     private static final String[] SUPPORTED_SIG_ALGS = {RSA_SHA256};
-    private static final ImmutableSet<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown).build();
+    private static final Set<Long> SEVERE_ERROR_CODES = Sets.newHashSet(Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown);
     private final AppConfigProperties config;
+
+    /**
+     * Checks whether an endpoint's security policy is supported by the CertificateGenerator. This method only checks
+     * whether the algorithms match. Loading or generating the certificate and keypair may still result in errors.
+     * @param endpoint the endpoint whose security policy to check to be supported.
+     * @return whether the endpoint's security policy is supported.
+     */
+    @Override
+    public boolean supportsAlgorithm(EndpointDescription endpoint) {
+        final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
+        if (!sp.isPresent()) {
+            return false;
+        }
+        final String sigAlg = sp.get().getAsymmetricSignatureAlgorithm().getTransformation();
+        return Arrays.stream(SUPPORTED_SIG_ALGS).anyMatch(s -> s.equalsIgnoreCase(sigAlg));
+    }
 
     /**
      * Generates a matching certificate and keypair if not yet present and returns whether the endpoint can therewith be
@@ -50,23 +66,7 @@ public class CertificateGenerator extends CertifierBase {
     }
 
     /**
-     * Checks whether an endpoint's security policy is supported by the CertificateGenerator. This method only checks
-     * whether the algorithms match. Loading or generating the ceritificate and keypair may still result in errors.
-     * @param endpoint the endpoint whose security policy to check to be supported.
-     * @return whether the endpoint's security policy is supported.
-     */
-    @Override
-    public boolean supportsAlgorithm(EndpointDescription endpoint) {
-        final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
-        if (!sp.isPresent()) {
-            return false;
-        }
-        final String sigAlg = sp.get().getAsymmetricSignatureAlgorithm().getTransformation();
-        return Arrays.stream(SUPPORTED_SIG_ALGS).anyMatch(s -> s.equalsIgnoreCase(sigAlg));
-    }
-
-    /**
-     * If a connection using a Certifier fails for severe reasons, attemping to reconnect with this certifier is
+     * If a connection using a Certifier fails for severe reasons, attempting to reconnect with this Certifier is
      * fruitless also with other endpoints.
      * @return a list of error codes which constitute a severe error.
      */

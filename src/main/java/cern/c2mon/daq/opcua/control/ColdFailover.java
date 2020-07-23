@@ -15,8 +15,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * In Cold Failover mode a client can only connect to one server at a time. When the client loses connectivity with the
@@ -37,7 +36,8 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     @Value("#{@appConfigProperties.getTimeout()}")
     private int timeout;
 
-    private CompletableFuture<Void> reconnected = new CompletableFuture<>();
+    private ScheduledExecutorService executor;
+    private ScheduledFuture<?> future;
 
     /**
      * Creates a new instance of ColdFailover
@@ -60,6 +60,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         super.initialize(endpoint, redundantAddresses);
         activeEndpoint = endpoint;
         this.currentUri = activeEndpoint.getUri();
+        executor = Executors.newSingleThreadScheduledExecutor();
         Collections.addAll(this.redundantAddresses, redundantAddresses);
         this.redundantAddresses.add(currentUri);
         // Only one server can be healthy at a time in cold redundancy
@@ -81,7 +82,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     @Override
     public void stop() {
         log.info("Stopping ColdFailover");
-        reconnected.complete(null);
+        executor.shutdown();
         super.stop();
     }
 
@@ -113,7 +114,9 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      */
     @Override
     public void onSessionActive(UaSession session) {
-        reconnected.complete(null);
+        if (future != null) {
+            future.cancel(false);
+        }
     }
 
     /**
@@ -126,13 +129,10 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     public void onSessionInactive(UaSession session) {
         if (!stopped.get()) {
             log.info("Starting timeout on inactive session.");
-            reconnected = new CompletableFuture<Void>()
-                    .orTimeout(timeout, TimeUnit.MILLISECONDS)
-                    .exceptionally(t -> {
-                        log.info("Trigger server switch due to long disconnection");
-                        triggerServerSwitch();
-                        return null;
-                    });
+            future = executor.schedule(() -> {
+                log.info("Trigger server switch due to long disconnection");
+                triggerServerSwitch();
+            }, timeout, TimeUnit.MILLISECONDS);
         }
     }
 

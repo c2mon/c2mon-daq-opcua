@@ -90,7 +90,7 @@ public interface Endpoint {
      * @param itemCreationCallback the callback to apply upon creation of the items in the subscription
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
      * call.
-     * @throws ConfigurationException if the server returned an error code indicating a misconfiguration.
+     * @throws OPCUAException if the definitions could not be subscribed.
      */
     Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException;
 

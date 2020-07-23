@@ -85,7 +85,7 @@ public class DataTagHandler implements IDataTagHandler {
     @Override
     public synchronized boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
         ItemDefinition definition = manager.getOrCreateDefinition(sourceDataTag);
-        final ConcurrentHashMap<SubscriptionGroup, List<ItemDefinition>> map = new ConcurrentHashMap<>();
+        final Map<SubscriptionGroup, List<ItemDefinition>> map = new ConcurrentHashMap<>();
         map.put(manager.getGroup(definition.getTimeDeadband()), Collections.singletonList(definition));
         final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribe(map);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
@@ -157,7 +157,7 @@ public class DataTagHandler implements IDataTagHandler {
     }
 
     private synchronized void refresh(Map<Long, ItemDefinition> entries) {
-        final ArrayList<Long> notRefreshable = new ArrayList<>();
+        final List<Long> notRefreshable = new ArrayList<>();
         for (Map.Entry<Long, ItemDefinition> e : entries.entrySet()) {
             if (Thread.currentThread().isInterrupted()) {
                 log.info("The thread was interrupted before all tags could be refreshed.");

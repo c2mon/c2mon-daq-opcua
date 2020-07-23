@@ -40,7 +40,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
 
     /**
      * This flag is used to ensure that only one failover procedure is in progress as a time. This is relevant since
-     * there are different ways of triggering a failover, which may occurr simultaneously.
+     * there are different ways of triggering a failover, which may occur simultaneously.
      */
     protected final AtomicBoolean listening = new AtomicBoolean(true);
     protected final RetryDelegate retryDelegate;

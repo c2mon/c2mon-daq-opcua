@@ -15,7 +15,7 @@ import java.util.Set;
 import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 
 /**
- * A certifier to configure an {@link OpcUaClientConfigBuilder} for a connection with an endpoint without encryption.
+ * A Certifier to configure an {@link OpcUaClientConfigBuilder} for a connection with an endpoint without encryption.
  */
 @Component("noSecurity")
 @Getter
@@ -67,7 +67,7 @@ public class NoSecurityCertifier implements Certifier {
     private static final ImmutableSet<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_SecurityChecksFailed, Bad_NoValidCertificates).build();
 
     /**
-     * If a connection using a Certifier fails for severe reasons, attemping to reconnect with this certifier is
+     * If a connection using a Certifier fails for severe reasons, attempting to reconnect with this Certifier is
      * fruitless also with other endpoints.
      *
      * @return a list of error codes which constitute a severe error.

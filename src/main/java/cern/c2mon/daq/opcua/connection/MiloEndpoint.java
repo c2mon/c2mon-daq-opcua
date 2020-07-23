@@ -54,7 +54,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 
 /**
  * An implementation of {@link Endpoint} relying on Eclipse Milo. Handles all interaction with a single server including
- * the the consolidation of security settings. Maintains a mapping in between the per-server time deadbands and
+ * the the consolidation of security settings. Maintains a mapping in between the per-server time Deadbands and
  * associated subscription IDs. Informs the {@link IMessageSender} of the state of connection and of new values. A
  * {@link CommunicationException} occurs when the method has been attempted as often and with a delay as configured
  * without success. A {@link LongLostConnectionException} is thrown when the connection has already been lost for the
@@ -150,7 +150,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      */
     @Override
     public void manageSessionActivityListener(boolean add, SessionActivityListener listener) {
-        if (listener == null) {
+        if (null == listener) {
             listener = (SessionActivityListener) messageSender;
         }
         if (add && !sessionActivityListeners.contains(listener)) {
@@ -283,7 +283,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             try {
                 anySuccess = anySuccess && resubscribeGroupsAndReportSuccess(group);
             } catch (ConfigurationException e) {
-                log.info("Could not resubscribe group with time deadband {}.", group.getPublishInterval(), e);
+                log.info("Could not resubscribe group with time Deadband {}.", group.getPublishInterval(), e);
             }
         }
         if (!anySuccess) {
@@ -301,7 +301,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @param itemCreationCallback the callback to apply upon creation of the items in the subscription
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
      * call.
-     * @throws ConfigurationException if the server returned an error code indicating a misconfiguration.
+     * @throws OPCUAException if the definitions could not be subscribed.
      */
     public Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
                                                                      Collection<ItemDefinition> definitions,
@@ -547,7 +547,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     private MonitoredItemCreateRequest toMonitoredItemCreateRequest(ItemDefinition definition) {
-        // If a static time deadband is configured, only one value per publishing cycle will be kept by the DAQ core.
+        // If a static time Deadband is configured, only one value per publishing cycle will be kept by the DAQ core.
         // Therefore queueSize can be 0 (only the newest value is held in between publishing cycles)
         UInteger queueSize = uint(0);
 
