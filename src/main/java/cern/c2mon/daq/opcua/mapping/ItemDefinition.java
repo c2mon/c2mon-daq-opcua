@@ -106,7 +106,7 @@ public class ItemDefinition {
         }
     }
 
-    protected static OPCHardwareAddress extractOpcAddress(HardwareAddress address) throws ConfigurationException {
+    private static OPCHardwareAddress extractOpcAddress(HardwareAddress address) throws ConfigurationException {
         if (!(address instanceof OPCHardwareAddress)) {
             throw new ConfigurationException(ExceptionContext.HARDWARE_ADDRESS_UNKNOWN);
         }

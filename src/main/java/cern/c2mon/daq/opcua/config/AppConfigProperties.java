@@ -5,9 +5,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.retry.backoff.ExponentialBackOffPolicy;
+import org.springframework.retry.policy.AlwaysRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -23,13 +28,13 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Slf4j
 public class AppConfigProperties {
 
     /**
      * The Java class name of the a custom redundancy failover mode, if one shall be used. If specified, the default
      * query on an OPC UA server for its redundancy support information and proceeding and resolving the appropriate
-     * failover mode. Must match exactly the Java class name of the class implementing {@link
-     * IControllerProxy}.
+     * failover mode. Must match exactly the Java class name of the class implementing {@link IControllerProxy}.
      */
     private String redundancyMode;
 
@@ -113,8 +118,42 @@ public class AppConfigProperties {
     private int requestTimeout;
 
     private KeystoreConfig keystore = new KeystoreConfig();
-    private UsrPwdConfig usrPwd = new UsrPwdConfig();
     private PKIConfig pkiConfig = new PKIConfig();
+
+    /**
+     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of 2 on every
+     * failed attempt up to a maximum of maxFailoverDelay.
+     * @return the retry template.
+     */
+    @Bean
+    public RetryTemplate exponentialDelayTemplate() {
+        AlwaysRetryPolicy retry = new AlwaysRetryPolicy();
+        ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
+        backoff.setMaxInterval(maxFailoverDelay);
+        backoff.setInitialInterval(retryDelay);
+        backoff.setMultiplier(2);
+        RetryTemplate template = new RetryTemplate();
+        template.setRetryPolicy(retry);
+        template.setBackOffPolicy(backoff);
+        return template;
+    }
+/*
+
+    @Bean
+    private RetryTemplate communicationExceptionTemplate() {
+        final SimpleRetryPolicy simpleRetry = new SimpleRetryPolicy();
+        simpleRetry.setMaxAttempts(maxRetryAttempts);
+        final ExceptionClassifierRetryPolicy exceptionPolicy = new ExceptionClassifierRetryPolicy();
+        exceptionPolicy.setExceptionClassifier((Classifier<Throwable, RetryPolicy>) classifiable ->
+                classifiable instanceof ConfigurationException  ?  new NeverRetryPolicy() : simpleRetry);
+        final FixedBackOffPolicy backoff = new FixedBackOffPolicy();
+        backoff.setBackOffPeriod(retryDelay);
+        RetryTemplate template = new RetryTemplate();
+        template.setRetryPolicy(exceptionPolicy);
+        template.setBackOffPolicy(backoff);
+        return template;
+    }
+*/
 
     /**
      * Settings required to load an existing certificate from a keystore file
@@ -144,19 +183,5 @@ public class AppConfigProperties {
     public static class PKIConfig {
         private String pkPath;
         private String crtPath;
-    }
-
-    /**
-     * Settings required for authentication with username and password
-     */
-    @Configuration
-    @ConfigurationProperties(prefix = "app.usr")
-    @Data
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class UsrPwdConfig {
-        private String usr;
-        private String pwd;
     }
 }

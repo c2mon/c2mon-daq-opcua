@@ -1,12 +1,9 @@
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.control.FailoverMode;
 import cern.c2mon.daq.opcua.exceptions.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -54,7 +51,7 @@ public class RetryDelegate {
     @Retryable(value = {CommunicationException.class},
             maxAttemptsExpression = "#{@appConfigProperties.getMaxRetryAttempts()}",
             backoff = @Backoff(delayExpression = "#{@appConfigProperties.getRetryDelay()}"))
-    public <T> T completeOrThrow(ExceptionContext context, LongSupplier disconnectionTime, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
+    <T> T completeOrThrow(ExceptionContext context, LongSupplier disconnectionTime, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
         try {
             // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
             // but not the underlying action on the OpcUaClient
@@ -74,34 +71,6 @@ public class RetryDelegate {
             log.info("An unexpected exception occurred during {}.", context.name(), e);
             throw OPCUAException.of(context, e, isLongDisconnection(disconnectionTime));
         }
-    }
-
-    /**
-     * Initiates a failover in between redundant servers. Failed failovers are retried until a connection could be
-     * established successfully. The time in between retries starts at appConfigProperties.getRetryDelay(), and is
-     * increased by a factor of 3 every failed attempt up to a maximum of appConfigProperties.getMaxFailoverDelay()
-     * @param failover The controller on which to start the failover process
-     * @throws OPCUAException if switching servers failed more than Integer.MAX_VALUE times.
-     */
-    @Retryable(value = {OPCUAException.class},
-            maxAttempts = Integer.MAX_VALUE,
-            backoff = @Backoff(
-                    delayExpression = "#{@appConfigProperties.getRetryDelay()}",
-                    maxDelayExpression = "#{@appConfigProperties.getMaxFailoverDelay()}",
-                    multiplier = 3))
-    public void triggerServerSwitchRetry(FailoverMode failover) throws OPCUAException {
-        log.info("try switching servers");
-        failover.switchServers();
-    }
-
-    @Retryable(value = CommunicationException.class,
-            maxAttempts = Integer.MAX_VALUE,
-            backoff = @Backoff(
-                    delayExpression = "#{@appConfigProperties.getRetryDelay()}",
-                    maxDelayExpression = "#{@appConfigProperties.getMaxFailoverDelay()}",
-                    multiplier = 3))
-    public void triggerRecreateSubscription(Endpoint endpoint, UaSubscription subscription) throws OPCUAException {
-        endpoint.recreateSubscription(subscription);
     }
 
     private boolean isLongDisconnection(LongSupplier disconnectionTime) {

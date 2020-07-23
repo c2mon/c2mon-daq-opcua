@@ -5,14 +5,13 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
-import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
@@ -64,16 +63,6 @@ public interface Endpoint {
      */
     Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException;
 
-    /**
-     * Called when a subscription could not be automatically transferred in between sessions. In this case, the
-     * subscription is recreated from scratch. If the controller received the command to stop, the subscription is not
-     * recreated and the method exists silently.
-     * @param subscription the session which must be recreated.
-     * @throws OPCUAException of type {@link CommunicationException} if the subscription could not be recreated due to
-     *                        communication difficulty, and of type {@link ConfigurationException} if the subscription
-     *                        can not be mapped to current DataTags, and therefore cannot be recreated.
-     */
-    void recreateSubscription(UaSubscription subscription) throws OPCUAException;
 
     /**
      * Recreate all subscriptions configured in {@link TagSubscriptionReader}. This

@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -30,7 +29,7 @@ public class MiloEndpointTest {
     @BeforeEach
     public void setUp() {
         AppConfigProperties config = AppConfigProperties.builder().maxRetryAttempts(3).timeout(300).retryDelay(1000).build();
-        endpoint = new MiloEndpoint(null, new RetryDelegate(config), null, null);
+        endpoint = new MiloEndpoint(null, new RetryDelegate(config), null, null, config.exponentialDelayTemplate());
         ReflectionTestUtils.setField(endpoint, "client", mockClient);
     }
 

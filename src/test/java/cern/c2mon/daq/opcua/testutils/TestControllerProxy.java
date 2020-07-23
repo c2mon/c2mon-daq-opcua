@@ -1,14 +1,13 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import cern.c2mon.daq.opcua.RetryDelegate;
-import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.IMessageSender;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ColdFailover;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.opcua.control.NoFailover;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.Setter;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.context.ApplicationContext;
@@ -35,7 +34,7 @@ public class TestControllerProxy extends ControllerProxy {
             case Hot:
             case Warm:
             case Cold:
-                controller = new ColdFailover(new RetryDelegate(config));
+                controller = new ColdFailover(config.exponentialDelayTemplate(), config);
                 break;
             default:
                 controller = new NoFailover();

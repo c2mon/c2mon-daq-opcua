@@ -21,7 +21,7 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
   
 
   namespace cern.c2mon.daq.opcua {
-    class cern.c2mon.daq.opcua.RetryDelegate {
+    class cern.c2mon.daq.opcua.connection.RetryDelegate {
     }
   }
   
@@ -318,13 +318,13 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.control.IControllerProxy : controllerProxy
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.DataTagChanger : dataTagChanger
   cern.c2mon.daq.opcua.OPCUAMessageHandler o-- cern.c2mon.daq.opcua.tagHandling.IDataTagHandler : dataTagHandler
-  cern.c2mon.daq.opcua.RetryDelegate o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
+  cern.c2mon.daq.opcua.connection.RetryDelegate o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> cern.c2mon.daq.opcua.connection.Endpoint
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
   cern.c2mon.daq.opcua.connection.MiloEndpoint .up.|> org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscriptionManager.SubscriptionListener
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.mapping.TagSubscriptionReader : mapper
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.tagHandling.IMessageSender : messageSender
-  cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.RetryDelegate : retryDelegate
+  cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.connection.RetryDelegate : retryDelegate
   cern.c2mon.daq.opcua.connection.MiloEndpoint o-- cern.c2mon.daq.opcua.connection.SecurityModule : securityModule
   cern.c2mon.daq.opcua.connection.SecurityModule o-- cern.c2mon.daq.opcua.config.AppConfigProperties : config
   cern.c2mon.daq.opcua.control.ColdFailover .up.|> org.eclipse.milo.opcua.sdk.client.SessionActivityListener
@@ -337,7 +337,7 @@ title __C2MON-DAQ-OPCUA's Class Diagram__\n
   cern.c2mon.daq.opcua.control.ControllerProxy o-- cern.c2mon.daq.opcua.connection.Endpoint : endpoint
   cern.c2mon.daq.opcua.control.FailoverBase .up.|> cern.c2mon.daq.opcua.control.FailoverMode
   cern.c2mon.daq.opcua.control.FailoverBase -up-|> cern.c2mon.daq.opcua.control.ControllerBase
-  cern.c2mon.daq.opcua.control.FailoverBase o-- cern.c2mon.daq.opcua.RetryDelegate : retryDelegate
+  cern.c2mon.daq.opcua.control.FailoverBase o-- cern.c2mon.daq.opcua.connection.RetryDelegate : retryDelegate
   cern.c2mon.daq.opcua.control.NoFailover -up-|> cern.c2mon.daq.opcua.control.ControllerBase
   cern.c2mon.daq.opcua.control.NoFailover o-- cern.c2mon.daq.opcua.connection.Endpoint : activeEndpoint
   cern.c2mon.daq.opcua.exceptions.CommunicationException -up-|> cern.c2mon.daq.opcua.exceptions.OPCUAException

@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 public class CertificateGenerator extends CertifierBase {
     private static final String RSA_SHA256 = "SHA256withRSA";
     private static final String[] SUPPORTED_SIG_ALGS = {RSA_SHA256};
-    private static final Set<Long> SEVERE_ERROR_CODES = Sets.newHashSet(Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown);
+    private static final Set<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown).build();
     private final AppConfigProperties config;
 
     /**

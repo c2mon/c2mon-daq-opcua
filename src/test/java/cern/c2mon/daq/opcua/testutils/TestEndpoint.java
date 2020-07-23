@@ -92,11 +92,6 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public void recreateSubscription(UaSubscription subscription) {
-
-    }
-
-    @Override
     public void recreateAllSubscriptions() {
 
     }

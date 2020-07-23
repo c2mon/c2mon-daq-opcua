@@ -115,13 +115,13 @@ public class AliveWriter {
         }
     }
 
-    public synchronized void startWriter() {
+    public void startWriter() {
         stopWriter();
         log.info("Starting OPCAliveWriter...");
         writeAliveTask = executor.scheduleAtFixedRate(this::sendAlive, writeTime, writeTime, TimeUnit.MILLISECONDS);
     }
 
-    public synchronized void stopWriter() {
+    public void stopWriter() {
         if (writeAliveTask != null) {
             log.info("Stopping OPCAliveWriter...");
             writeAliveTask.cancel(false);

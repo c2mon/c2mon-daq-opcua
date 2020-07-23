@@ -34,6 +34,7 @@ public interface IMessageSender {
         OK("Successfully connected"),
         CONNECTION_FAILED("Cannot establish connection to the server"),
         CONNECTION_LOST("Connection to server has been lost. Reconnecting...");
+        /** A description of the state of the equipment and connection */
         public final String message;
     }
 

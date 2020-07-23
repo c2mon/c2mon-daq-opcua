@@ -6,7 +6,6 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.security.Certifier;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import io.netty.util.internal.StringUtil;
 import lombok.Setter;
@@ -15,7 +14,6 @@ import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
-import org.eclipse.milo.opcua.sdk.client.api.identity.UsernameProvider;
 import org.eclipse.milo.opcua.stack.client.security.ClientCertificateValidator;
 import org.eclipse.milo.opcua.stack.client.security.DefaultClientCertificateValidator;
 import org.eclipse.milo.opcua.stack.core.UaException;
@@ -80,12 +78,6 @@ public class SecurityModule {
                 .setRequestTimeout(uint(config.getRequestTimeout()))
                 .setCertificateValidator(getValidator());
 
-        if (isUsrPwdConfigured(config.getUsrPwd())) {
-            log.info("Authenticating as user {}. ", config.getUsrPwd().getUsr());
-            UsernameProvider p = new UsernameProvider(config.getUsrPwd().getUsr(), config.getUsrPwd().getPwd());
-            builder.setIdentityProvider(p);
-        }
-
         // assure that endpoints is a mutable list
         List<EndpointDescription> mutableEndpoints = new ArrayList<>(endpoints);
 
@@ -119,10 +111,6 @@ public class SecurityModule {
             }
         }
         throw new ConfigurationException(ExceptionContext.PKI_ERROR);
-    }
-
-    private boolean isUsrPwdConfigured(AppConfigProperties.UsrPwdConfig upConfig) {
-        return upConfig != null && !Strings.isNullOrEmpty(upConfig.getUsr()) && !Strings.isNullOrEmpty(upConfig.getPwd());
     }
 
     private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier, Collection<SessionActivityListener> listeners) throws ConfigurationException {

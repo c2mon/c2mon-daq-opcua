@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.exceptions;
 
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
 import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
@@ -16,16 +16,16 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 public abstract class OPCUAException extends EqIOException {
 
     /** Status Codes returned by the server hinting at misconfigurations. */
-    private static final Collection<Long> CONFIG = Sets.newHashSet(Bad_NodeIdUnknown, Bad_ServerUriInvalid, Bad_FilterNotAllowed, Bad_ServerNameMissing, Bad_DiscoveryUrlMissing, Bad_DeadbandFilterInvalid, Bad_ConfigurationError, Bad_TcpEndpointUrlInvalid, Bad_MethodInvalid, Bad_ArgumentsMissing, Bad_WriteNotSupported, Bad_HistoryOperationUnsupported, Bad_HistoryOperationInvalid, Bad_NoDeleteRights, Bad_TargetNodeIdInvalid, Bad_SourceNodeIdInvalid, Bad_NodeIdRejected, Bad_FilterOperandInvalid);
+    private static final Collection<Long> CONFIG = ImmutableSet.<Long>builder().add(Bad_NodeIdUnknown, Bad_ServerUriInvalid, Bad_FilterNotAllowed, Bad_ServerNameMissing, Bad_DiscoveryUrlMissing, Bad_DeadbandFilterInvalid, Bad_ConfigurationError, Bad_TcpEndpointUrlInvalid, Bad_MethodInvalid, Bad_ArgumentsMissing, Bad_WriteNotSupported, Bad_HistoryOperationUnsupported, Bad_HistoryOperationInvalid, Bad_NoDeleteRights, Bad_TargetNodeIdInvalid, Bad_SourceNodeIdInvalid, Bad_NodeIdRejected, Bad_FilterOperandInvalid).build();
 
     /** Status Codes returned by the server hinting at misconfigurations of security settings. */
-    private static final Collection<Long> SECURITY_CONFIG = Sets.newHashSet(Bad_UserSignatureInvalid, Bad_UserAccessDenied, Bad_CertificateHostNameInvalid, Bad_ApplicationSignatureInvalid, Bad_CertificateIssuerUseNotAllowed, Bad_CertificateIssuerTimeInvalid, Bad_CertificateIssuerRevoked);
+    private static final Collection<Long> SECURITY_CONFIG = ImmutableSet.<Long>builder().add(Bad_UserSignatureInvalid, Bad_UserAccessDenied, Bad_CertificateHostNameInvalid, Bad_ApplicationSignatureInvalid, Bad_CertificateIssuerUseNotAllowed, Bad_CertificateIssuerTimeInvalid, Bad_CertificateIssuerRevoked).build();
 
     /** Status Codes indicating a node ID supplied by an incorrect hardware address */
-    private static final Collection<Long> NODE_CONFIG = Sets.newHashSet(Bad_NodeIdInvalid, Bad_NodeIdUnknown, Bad_ParentNodeIdInvalid, Bad_SourceNodeIdInvalid, Bad_TargetNodeIdInvalid);
+    private static final Collection<Long> NODE_CONFIG = ImmutableSet.<Long>builder().add(Bad_NodeIdInvalid, Bad_NodeIdUnknown, Bad_ParentNodeIdInvalid, Bad_SourceNodeIdInvalid, Bad_TargetNodeIdInvalid).build();
 
     /** Status Codes indicating a node ID supplied by an incorrect hardware address */
-    private static final Collection<Long> DATA_UNAVAILABLE = Sets.newHashSet(Bad_DataLost, Bad_DataUnavailable, Bad_NoData, Bad_NoDataAvailable);
+    private static final Collection<Long> DATA_UNAVAILABLE = ImmutableSet.<Long>builder().add(Bad_DataLost, Bad_DataUnavailable, Bad_NoData, Bad_NoDataAvailable).build();
 
     protected OPCUAException(final ExceptionContext context) {
         super(context.getMessage());

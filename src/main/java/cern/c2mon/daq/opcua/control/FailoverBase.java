@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.RetryDelegate;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
@@ -12,6 +12,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
+import org.springframework.retry.support.RetryTemplate;
 
 import java.util.Arrays;
 import java.util.List;
@@ -32,6 +33,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     protected static final List<ItemDefinition> connectionMonitoringNodes = Arrays.asList(
             ItemDefinition.of(Identifiers.Server_ServiceLevel),
             ItemDefinition.of(Identifiers.ServerState));
+    private final RetryTemplate exponentialDelayTemplate;
 
     /**
      * Setting this flat to true ends ongoing failover procedures after the controller was stopped.
@@ -43,7 +45,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
      * there are different ways of triggering a failover, which may occur simultaneously.
      */
     protected final AtomicBoolean listening = new AtomicBoolean(true);
-    protected final RetryDelegate retryDelegate;
+    protected final AppConfigProperties config;
 
     /**
      * Initialize supervision and connection monitoring to the active server.
@@ -71,15 +73,17 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     protected void triggerServerSwitch() {
         log.info("enter switchServer. Listening is {}, stopped is {}.", listening.get(), stopped.get());
         if (listening.getAndSet(false) && !stopped.get()) {
-            log.info("switchServer");
             currentEndpoint().manageSessionActivityListener(false, null);
             try {
-                retryDelegate.triggerServerSwitchRetry(this);
-                listening.set(true);
+                exponentialDelayTemplate.execute(retryContext -> {
+                    log.info("Server switch attempt nr {}.", retryContext.getRetryCount());
+                    switchServers();
+                    return null;
+                });
             } catch (OPCUAException e) {
-                //should not happen - only after Integer.MAX_VALUE failures
-                triggerServerSwitch();
+                log.error("Retry logic is not correctly configured! Retries ceased.", e);
             }
+            listening.set(true);
         }
     }
 

@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.IMessageSender;
-import cern.c2mon.daq.opcua.RetryDelegate;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
@@ -33,9 +32,10 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
+import org.springframework.retry.RetryCallback;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
-import org.springframework.retry.backoff.BackOffInterruptedException;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -75,6 +75,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
     private final AtomicLong disconnectedOn = new AtomicLong(0);
+    private final RetryTemplate exponentialDelayTemplate;
     private OpcUaClient client;
     @Getter
     private String uri;
@@ -173,7 +174,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * Disconnect from the server with a certain number of retries in case of connection error.
      */
     @Override
-    public synchronized void disconnect() {
+    public void disconnect() {
         log.info("Disconnecting endpoint at {}", uri);
         try {
             if (client != null) {
@@ -181,7 +182,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 client.getSubscriptionManager().removeSubscriptionListener(this);
                 sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
                 retryDelegate.completeOrThrow(DISCONNECT, this::getDisconnectPeriod, client::disconnect);
-                client = null;
             } else {
                 log.info("Client not connected, skipping disconnection attempt.");
             }
@@ -194,8 +194,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
         log.info("Completed disconnecting endpoint {}", uri);
     }
-
-
 
     /**
      * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
@@ -210,19 +208,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException {
         try {
             log.info("Subscribing definitions with publishing interval {}.", group.getPublishInterval());
-            return subscribeWithCallback(group.getPublishInterval(), definitions, item -> item.setValueConsumer(value -> {
-                final Long tagId = mapper.getTagId(item.getClientHandle());
-                if (tagId == null) {
-                    log.info("Receives a value update that could not be associated with a DataTag.");
-                } else {
-                    SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
-                    final Object updateValue = MiloMapper.toObject(value.getValue());
-                    ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
-                            new ValueUpdate(updateValue) :
-                            new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-                    messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
-                }
-            }));
+            return subscribeWithCallback(group.getPublishInterval(), definitions, this::defaultSubscriptionCallback);
         } catch (ConfigurationException e) {
             throw e;
         } catch (OPCUAException e) {
@@ -236,44 +222,11 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-    /**
-     * Called when a subscription could not be automatically transferred in between sessions. In this case, the
-     * subscription is recreated from scratch. If the controller received the command to stop, the subscription is not
-     * recreated and the method exists silently.
-     * @param subscription the session which must be recreated.
-     * @throws OPCUAException of type {@link CommunicationException} if the subscription could not be recreated due to
-     *                        communication difficulty, and of type {@link ConfigurationException} if the subscription
-     *                        can not be mapped to current DataTags, and therefore cannot be recreated.
-     */
-    @Override
-    public synchronized void recreateSubscription(UaSubscription subscription) throws OPCUAException {
-        if (disconnectedOn.get() < 0L || Thread.currentThread().isInterrupted()) {
-            log.info("Client was stopped, cease subscription recreation attempts.");
-            return;
-        }
-        log.info("Attempt to recreate the subscription.");
-        final Integer publishInterval = subscriptionMap.inverse().getOrDefault(subscription, -1);
-        final SubscriptionGroup group = mapper.getGroup(publishInterval);
-        if (group == null || group.size() == 0) {
-            throw new ConfigurationException(ExceptionContext.EMPTY_SUBSCRIPTION);
-        }
-        try {
-            deleteSubscription(publishInterval);
-        } catch (OPCUAException ignored) {
-            log.error("Could not delete subscription. Proceed with recreation.");
-        }
-        try {
-            if (!resubscribeGroupsAndReportSuccess(group)) {
-                throw new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION);
-            }
-        } finally {
-            subscriptionMap.putIfAbsent(publishInterval, subscription);
-        }
-    }
+
 
     /**
-     * Recreate all subscriptions configured in {@link TagSubscriptionReader}. This
-     * method is usually called by the {@link cern.c2mon.daq.opcua.control.Controller} after a failover.
+     * Recreate all subscriptions configured in {@link TagSubscriptionReader}. This method is usually called by the
+     * {@link cern.c2mon.daq.opcua.control.Controller} after a failover.
      * @throws CommunicationException if no subscription could be recreated.
      */
     @Override
@@ -337,7 +290,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 log.info("Item cannot be mapped to a subscription. Skipping deletion.");
             }
         } catch (OPCUAException ex) {
-            log.error("Tag with ID {} could not be completed successfully on endpoint {}.", mapper.getTagId(clientHandle), getUri());
+            log.error("Tag with ID {} could not be completed successfully on endpoint {}.", mapper.getTagId(clientHandle), getUri(), ex);
             return false;
         }
         return true;
@@ -508,42 +461,69 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Attempt recreating the subscription periodically unless the subscription's monitored items cannot be mapped to
+     * Attempt to recreate the subscription periodically unless the subscription's monitored items cannot be mapped to
      * DataTags due to a configuration mismatch. Recreation attempts are discontinued when the thread is interrupted or
      * recreation finishes successfully.
      * @param subscription the subscription to recreate on the client.
      */
     private void recreate(UaSubscription subscription) {
-        try {
-            retryDelegate.triggerRecreateSubscription(this, subscription);
-            log.info("Subscription successfully recreated!");
-        } catch (CommunicationException e) {
-            // only after Integer.MAX_VALUE retries have failed, should not happen
-            recreate(subscription);
-        } catch (BackOffInterruptedException ignored) {
-            log.error("Recreation process interrupted and discontinued.");
-        } catch (Exception e) {
-            log.error("Subscription recreation discontinued: ", e);
+        log.info("Attempt to recreate the subscription.");
+        final Integer publishInterval = subscriptionMap.inverse().getOrDefault(subscription, -1);
+        final SubscriptionGroup group = mapper.getGroup(publishInterval);
+        if (group != null && group.size() != 0) {
+            try {
+                deleteSubscription(publishInterval);
+            } catch (OPCUAException e) {
+                log.error("Could not delete subscription. Proceed with recreation.", e);
+            }
+            try {
+                exponentialDelayTemplate.execute(recreateWithRetry(group));
+            } catch (OPCUAException e) {
+                log.error("Retry logic is not correctly configured! Retries ceased.", e);
+            }
+        } else {
+            log.info("The subscription cannot be recreated, since it cannot be associated with any DataTags.");
         }
     }
 
-    /**
-     * Create and return a new subscription with a certain number of retries in case of connection error.
-     * @param timeDeadband The subscription's publishing interval in milliseconds. If 0, the Server will use the fastest
-     *                     supported interval.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     */
+    private RetryCallback<Object, OPCUAException> recreateWithRetry(SubscriptionGroup group) {
+        return retryContext -> {
+            log.info("Retry number {} to create subscription with publish interval {}.", retryContext.getRetryCount(), group.getPublishInterval());
+            if (disconnectedOn.get() < 0L || Thread.currentThread().isInterrupted()) {
+                log.info("Client was stopped, cease subscription recreation attempts.");
+            } else if (retryContext.getLastThrowable() != null && !(retryContext.getLastThrowable() instanceof CommunicationException)) {
+                log.error("Subscription recreation aborted due to an unexpected error: ", retryContext.getLastThrowable());
+            } else if (!resubscribeGroupsAndReportSuccess(group)) {
+                throw new CommunicationException(CREATE_SUBSCRIPTION);
+            }
+            return null;
+        };
+    }
+
     private UaSubscription getOrCreateSubscription(int timeDeadband) throws OPCUAException {
         UaSubscription subscription = subscriptionMap.get(timeDeadband);
-        if (subscription != null && !client.getSubscriptionManager().getSubscriptions().contains(subscription)) {
-            subscription = null;
-        }
-        if (subscription == null) {
+        if (subscription == null || !client.getSubscriptionManager().getSubscriptions().contains(subscription)) {
             subscription = retryDelegate.completeOrThrow(CREATE_SUBSCRIPTION, this::getDisconnectPeriod,
                     () -> client.getSubscriptionManager().createSubscription(timeDeadband));
             subscriptionMap.put(timeDeadband, subscription);
         }
         return subscription;
+    }
+
+    private void defaultSubscriptionCallback(UaMonitoredItem item) {
+        item.setValueConsumer(value -> {
+            final Long tagId = mapper.getTagId(item.getClientHandle());
+            if (tagId == null) {
+                log.info("Receives a value update that could not be associated with a DataTag.");
+            } else {
+                SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
+                final Object updateValue = MiloMapper.toObject(value.getValue());
+                ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
+                        new ValueUpdate(updateValue) :
+                        new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
+                messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
+            }
+        });
     }
 
     private MonitoredItemCreateRequest toMonitoredItemCreateRequest(ItemDefinition definition) {
@@ -569,7 +549,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         return new MonitoredItemCreateRequest(id, mode, mp);
     }
 
-    private synchronized long getDisconnectPeriod() {
+    private long getDisconnectPeriod() {
         final long l = disconnectedOn.get();
         return l > 0L ? System.currentTimeMillis() - l : l;
     }

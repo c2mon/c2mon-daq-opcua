@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.RetryDelegate;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -10,12 +10,16 @@ import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * In Cold Failover mode a client can only connect to one server at a time. When the client loses connectivity with the
@@ -41,10 +45,11 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     /**
      * Creates a new instance of ColdFailover
-     * @param retryDelegate the retryDelegate to use for the failover process
+     * @param retryTemplate the retryTemplate to use to trigger failovers
+     * @param config the application properties
      */
-    public ColdFailover(RetryDelegate retryDelegate) {
-        super(retryDelegate);
+    public ColdFailover(RetryTemplate retryTemplate, AppConfigProperties config) {
+        super(retryTemplate, config);
     }
 
 
@@ -93,10 +98,10 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      * @throws OPCUAException if the no server could be connected to
      */
     @Override
-    public synchronized void switchServers() throws OPCUAException {
+    public void switchServers() throws OPCUAException {
         if (!stopped.get()) {
+            log.info("Attempt to switch to next healthy server.");
             synchronized (this) {
-                log.info("Attempt to switch to next healthy server.");
                 disconnectAndProceed();
                 if (reconnectionSucceeded()) {
                     activeEndpoint.recreateAllSubscriptions();
@@ -194,7 +199,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         }
     }
 
-    private synchronized void monitorConnection() {
+    private void monitorConnection() {
         if (!stopped.get()) {
             activeEndpoint.manageSessionActivityListener(true, null);
             activeEndpoint.manageSessionActivityListener(true, this);

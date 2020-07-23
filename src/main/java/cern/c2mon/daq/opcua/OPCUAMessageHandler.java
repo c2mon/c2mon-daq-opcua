@@ -80,9 +80,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
         getContext().getBean(IMessageSender.class).initialize(sender);
 
-        synchronized (this) {
-            Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
-            log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
+        Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
+        log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
             try {
                 controllerProxy.connect(addresses);
             } catch (OPCUAException e) {
@@ -90,7 +89,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
                 throw e;
             }
             dataTagHandler.subscribeTags(config.getSourceDataTags().values());
-        }
         aliveWriter.initialize(config, appConfigProperties.isAliveWriterEnabled());
         log.debug("connected");
 

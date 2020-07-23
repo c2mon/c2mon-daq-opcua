@@ -64,17 +64,19 @@ public class DataTagHandler implements IDataTagHandler {
      * @throws ConfigurationException if the collection of tags was empty.
      */
     @Override
-    public synchronized void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
+    public void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
         if (dataTags.isEmpty()) {
             throw new ConfigurationException(ExceptionContext.DATATAGS_EMPTY);
         }
-        final Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions = dataTags.stream()
-                .collect(groupingBy(ISourceDataTag::getTimeDeadband))
-                .entrySet()
-                .stream()
-                .collect(toMap(e -> manager.getGroup(e.getKey()), e -> e.getValue().stream().map(manager::getOrCreateDefinition).collect(Collectors.toList())));
-        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribe(groupsWithDefinitions);
-        handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
+        synchronized (this) {
+            final Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions = dataTags.stream()
+                    .collect(groupingBy(ISourceDataTag::getTimeDeadband))
+                    .entrySet()
+                    .stream()
+                    .collect(toMap(e -> manager.getGroup(e.getKey()), e -> e.getValue().stream().map(manager::getOrCreateDefinition).collect(Collectors.toList())));
+            final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribe(groupsWithDefinitions);
+            handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
+        }
     }
 
     /**
@@ -83,7 +85,7 @@ public class DataTagHandler implements IDataTagHandler {
      * @return true if the Tag could be subscribed successfully.
      */
     @Override
-    public synchronized boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
+    public boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
         ItemDefinition definition = manager.getOrCreateDefinition(sourceDataTag);
         final Map<SubscriptionGroup, List<ItemDefinition>> map = new ConcurrentHashMap<>();
         map.put(manager.getGroup(definition.getTimeDeadband()), Collections.singletonList(definition));
@@ -100,7 +102,7 @@ public class DataTagHandler implements IDataTagHandler {
      * @return true if the tag was previously known.
      */
     @Override
-    public synchronized boolean removeTag(final ISourceDataTag dataTag) {
+    public boolean removeTag(final ISourceDataTag dataTag) {
         final SubscriptionGroup group = manager.getGroup(dataTag.getTimeDeadband());
         final boolean wasSubscribed = group != null && group.contains(dataTag.getId());
         if (wasSubscribed) {
@@ -121,7 +123,7 @@ public class DataTagHandler implements IDataTagHandler {
      * Reads the current values from the server for all subscribed data tags.
      */
     @Override
-    public synchronized void refreshAllDataTags() {
+    public void refreshAllDataTags() {
         refresh(manager.getTagIdDefinitionMap());
     }
 
@@ -130,7 +132,7 @@ public class DataTagHandler implements IDataTagHandler {
      * @param sourceDataTag the tag whose current value to read
      */
     @Override
-    public synchronized void refreshDataTag(ISourceDataTag sourceDataTag) {
+    public void refreshDataTag(ISourceDataTag sourceDataTag) {
         final Map<Long, ItemDefinition> objectObjectHashMap = new ConcurrentHashMap<>();
         objectObjectHashMap.put(sourceDataTag.getId(), manager.getOrCreateDefinition(sourceDataTag));
         refresh(objectObjectHashMap);
@@ -156,7 +158,7 @@ public class DataTagHandler implements IDataTagHandler {
         }
     }
 
-    private synchronized void refresh(Map<Long, ItemDefinition> entries) {
+    private void refresh(Map<Long, ItemDefinition> entries) {
         final List<Long> notRefreshable = new ArrayList<>();
         for (Map.Entry<Long, ItemDefinition> e : entries.entrySet()) {
             if (Thread.currentThread().isInterrupted()) {

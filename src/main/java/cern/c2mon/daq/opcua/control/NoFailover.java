@@ -19,7 +19,7 @@ public class NoFailover extends ControllerBase {
     /**
      * The {@link Endpoint} connected to the server
      */
-    protected Endpoint activeEndpoint;
+    private Endpoint activeEndpoint;
 
     /**
      * Initialize supervision and connection monitoring to the active server.
