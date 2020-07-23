@@ -48,7 +48,6 @@ enum IMessageSender.EquipmentState {
 }
 
 class MessageSender {
-    - sender : IEquipmentMessageSender
     + MessageSender()
     + initialize()
     + onAlive()

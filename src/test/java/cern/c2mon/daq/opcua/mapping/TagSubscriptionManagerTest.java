@@ -19,8 +19,6 @@ package cern.c2mon.daq.opcua.mapping;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TagSubscriptionManagerTest extends MappingBase {
@@ -161,13 +159,13 @@ public class TagSubscriptionManagerTest extends MappingBase {
 
     @Test
     public void getTagByRandomClientHandleShouldReturnNull() {
-        assertEquals(Optional.empty(), mapper.getTagId(UInteger.valueOf(2)));
+        assertNull(mapper.getTagId(UInteger.valueOf(2)));
     }
 
     @Test
     public void getTagByClientHandleShouldReturnProperTagId() {
         ItemDefinition definition = mapper.getOrCreateDefinition(tag);
-        Optional<Long> actual = mapper.getTagId(definition.getClientHandle());
-        assertEquals(tag.getId(), actual.get());
+        Long actual = mapper.getTagId(definition.getClientHandle());
+        assertEquals(tag.getId(), actual);
     }
 }

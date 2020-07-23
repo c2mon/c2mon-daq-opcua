@@ -1,11 +1,13 @@
 package cern.c2mon.daq.opcua.testutils;
 
+import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.MiloMapper;
-import cern.c2mon.daq.opcua.mapping.*;
-import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.mapping.ItemDefinition;
+import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
+import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -24,7 +26,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -68,7 +69,7 @@ public class TestEndpoint implements Endpoint {
             ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
                     new ValueUpdate(updateValue) :
                     new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-            final Optional<Long> tagId = mapper.getTagId(item.getClientHandle());
+            final Long tagId = mapper.getTagId(item.getClientHandle());
             messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
         });
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);

@@ -21,7 +21,6 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * The {@link TagSubscriptionReader} allows to map in between {@link ItemDefinition}s and {@link ISourceDataTag} IDs, as
@@ -62,13 +61,13 @@ public interface TagSubscriptionReader {
     ItemDefinition getDefinition(Long tagId);
 
     /**
-     * Returns an {@link Optional} tagId associated with the {@link ItemDefinition} identified by the clientHandle. If
-     * no tagId is associated with the clientHandle, an empty {@link Optional} is returned.
+     * Returns the tagId associated with the {@link ItemDefinition} identified by the clientHandle, or null if
+     * no tagId is associated with the clientHandle.
      * @param clientHandle the client handle identifying the {@link ItemDefinition} whose associated tagId is to be
      *                     returned
      * @return the tagId associated with the clientHandle
      */
-    Optional<Long> getTagId(UInteger clientHandle);
+    Long getTagId(UInteger clientHandle);
 
     /**
      * Returns the {@link ItemDefinition} associated with the tagId, or created a new one {@link ItemDefinition} if none

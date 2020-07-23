@@ -12,7 +12,6 @@ import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -45,9 +44,9 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onValueUpdate(Optional<Long> tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
+        public void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
             super.onValueUpdate(tagId, quality, valueUpdate);
-            if (tagId.isPresent() && tagId.get().equals(sourceID) && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
+            if (tagId == sourceID && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
                 if (tagValUpdate.isDone()) {
                     log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
                     pulseTagUpdate.complete(valueUpdate);
@@ -86,13 +85,9 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onTagInvalid(Optional<Long> tagId, SourceDataTagQuality quality) {
-            if (tagId.isPresent()) {
-                log.info("Received data tag {} invalid with quality {}", tagId.get(), quality);
-                tagInvalid.complete(tagId.get());
-            } else {
-                log.info("Attempting to invalidate tag with unknown ID");
-            }
+        public void onTagInvalid(long tagId, SourceDataTagQuality quality) {
+                log.info("Received data tag {} invalid with quality {}", tagId, quality);
+                tagInvalid.complete(tagId);
         }
 
         @Override
@@ -114,12 +109,10 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onValueUpdate(Optional<Long> tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
-            if (quality.isValid() && tagId.isPresent()) {
-                log.info("received data tag {}, value update {}, quality {}", tagId.get(), valueUpdate, quality);
-                tagUpdate.complete(tagId.get());
-            } else if (quality.isValid()) {
-                log.error("received update for unknown tagId.");
+        public void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
+            if (quality.isValid() ) {
+                log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
+                tagUpdate.complete(tagId);
             } else {
                 onTagInvalid(tagId, quality);
             }

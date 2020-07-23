@@ -9,7 +9,6 @@ import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import com.google.common.base.Joiner;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.Getter;
@@ -45,6 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.exceptions.CommunicationException.of;
 import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
@@ -211,18 +211,24 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         try {
             log.info("Subscribing definitions with publishing interval {}.", group.getPublishInterval());
             return subscribeWithCallback(group.getPublishInterval(), definitions, item -> item.setValueConsumer(value -> {
-                final Optional<Long> tagId = mapper.getTagId(item.getClientHandle());
-                SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
-                final Object updateValue = MiloMapper.toObject(value.getValue());
-                ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
-                        new ValueUpdate(updateValue) :
-                        new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-                messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
+                final Long tagId = mapper.getTagId(item.getClientHandle());
+                if (tagId == null) {
+                    log.info("Receives a value update that could not be associated with a DataTag.");
+                } else {
+                    SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
+                    final Object updateValue = MiloMapper.toObject(value.getValue());
+                    ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
+                            new ValueUpdate(updateValue) :
+                            new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
+                    messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
+                }
             }));
         } catch (ConfigurationException e) {
             throw e;
         } catch (OPCUAException e) {
-            final String ids = Joiner.on(", ").join(definitions.stream().map(d -> mapper.getTagId(d.getClientHandle())).toArray());
+            final String ids = definitions.stream()
+                    .map(d -> mapper.getTagId(d.getClientHandle()).toString())
+                    .collect(Collectors.joining(", "));
             log.error("Tags with IDs {} could not be subscribed on endpoint with uri {}. ", ids, getUri(), e);
             return definitions.stream()
                     .map(definition -> new AbstractMap.SimpleEntry<>(definition.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)))

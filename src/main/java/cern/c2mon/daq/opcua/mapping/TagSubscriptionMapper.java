@@ -83,18 +83,19 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
     }
 
     /**
-     * Returns an {@link Optional} tagId associated with the {@link ItemDefinition} identified by the clientHandle. If
-     * no tagId is associated with the clientHandle, an empty {@link Optional} is returned.
+     * Returns the tagId associated with the {@link ItemDefinition} identified by the clientHandle, or null if
+     * no tagId is associated with the clientHandle.
      * @param clientHandle the client handle identifying the {@link ItemDefinition} whose associated tagId is to be
      *                     returned
      * @return the tagId associated with the clientHandle
      */
     @Override
-    public Optional<Long> getTagId(UInteger clientHandle) {
-        return tagIdDefinitionMap.entrySet().stream()
+    public Long getTagId(UInteger clientHandle) {
+        final Optional<Long> first = tagIdDefinitionMap.entrySet().stream()
                 .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
                 .map(Map.Entry::getKey)
                 .findFirst();
+        return first.isPresent() ? first.get() : null;
     }
 
     /**

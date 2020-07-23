@@ -115,7 +115,7 @@ public class ItemDefinition {
 
     private static NodeId toRedundantNodeId(OPCHardwareAddress opcAddress) {
         String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
-        if (redundantOPCItemName == null || redundantOPCItemName.trim().equals("")) return null;
-        else return new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);
+        return (redundantOPCItemName == null || redundantOPCItemName.trim().isEmpty()) ?
+                null : new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);
     }
 }

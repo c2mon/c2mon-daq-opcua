@@ -146,11 +146,13 @@ public class DataTagHandler implements IDataTagHandler {
     }
 
     private void completeSubscriptionAndReportSuccess(UInteger clientHandle, SourceDataTagQuality quality) {
-        final Optional<Long> tagId = manager.getTagId(clientHandle);
-        if (quality.isValid() && tagId.isPresent()) {
-            manager.addTagToGroup(tagId.get());
-        } else {
+        final Long tagId = manager.getTagId(clientHandle);
+        if (quality.isValid() && tagId != null) {
+            manager.addTagToGroup(tagId);
+        } else if (tagId != null) {
             messageSender.onTagInvalid(tagId, quality);
+        } else {
+            log.error("Inconsistent state, Cannot associate the client handle with a DataTag ID.");
         }
     }
 
@@ -163,8 +165,7 @@ public class DataTagHandler implements IDataTagHandler {
             }
             try {
                 final Map.Entry<ValueUpdate, SourceDataTagQuality> reading = controllerProxy.read(e.getValue().getNodeId());
-                final Optional<Long> tagId = manager.getTagId(e.getValue().getClientHandle());
-                messageSender.onValueUpdate(tagId, reading.getValue(), reading.getKey());
+                messageSender.onValueUpdate(e.getKey(), reading.getValue(), reading.getKey());
             } catch (OPCUAException ex) {
                 notRefreshable.add(e.getKey());
             }
