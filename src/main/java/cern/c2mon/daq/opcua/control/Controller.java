@@ -40,6 +40,8 @@ public interface Controller {
      * the OPC UA server or on all servers in a redundant server set.
      * @param groupsWithDefinitions a Map of {@link SubscriptionGroup}s and the {@link ItemDefinition}s to subscribe to
      *                              the groups.
+     * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
+     * call.
      */
     Map<UInteger, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions);
 

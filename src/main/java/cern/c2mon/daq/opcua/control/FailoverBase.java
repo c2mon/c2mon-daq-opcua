@@ -121,6 +121,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
         try {
             return (UByte) endpoint.read(Identifiers.Server_ServiceLevel).getKey().getValue();
         } catch (OPCUAException e) {
+            log.debug("Error reading service level from endpoint {}. ", endpoint.getUri(), e);
             return UByte.valueOf(0);
         }
     }

@@ -137,23 +137,6 @@ public class AppConfigProperties {
         template.setBackOffPolicy(backoff);
         return template;
     }
-/*
-
-    @Bean
-    private RetryTemplate communicationExceptionTemplate() {
-        final SimpleRetryPolicy simpleRetry = new SimpleRetryPolicy();
-        simpleRetry.setMaxAttempts(maxRetryAttempts);
-        final ExceptionClassifierRetryPolicy exceptionPolicy = new ExceptionClassifierRetryPolicy();
-        exceptionPolicy.setExceptionClassifier((Classifier<Throwable, RetryPolicy>) classifiable ->
-                classifiable instanceof ConfigurationException  ?  new NeverRetryPolicy() : simpleRetry);
-        final FixedBackOffPolicy backoff = new FixedBackOffPolicy();
-        backoff.setBackOffPeriod(retryDelay);
-        RetryTemplate template = new RetryTemplate();
-        template.setRetryPolicy(exceptionPolicy);
-        template.setBackOffPolicy(backoff);
-        return template;
-    }
-*/
 
     /**
      * Settings required to load an existing certificate from a keystore file

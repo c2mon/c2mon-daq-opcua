@@ -103,7 +103,7 @@ public class AliveWriter {
     }
 
     /**
-     * Restarts the AliveWriter, if it was enabled on initialization.
+     * Restarts the AliveWriter if it was enabled on initialization.
      * @return a report describing the triggered restart, or the disabled state of the aliveWriter.
      */
     public String updateAndReport() {
@@ -115,12 +115,9 @@ public class AliveWriter {
         }
     }
 
-    public void startWriter() {
-        stopWriter();
-        log.info("Starting OPCAliveWriter...");
-        writeAliveTask = executor.scheduleAtFixedRate(this::sendAlive, writeTime, writeTime, TimeUnit.MILLISECONDS);
-    }
-
+    /**
+     * Stops the aliveWriter execution.
+     */
     public void stopWriter() {
         if (writeAliveTask != null) {
             log.info("Stopping OPCAliveWriter...");
@@ -129,6 +126,11 @@ public class AliveWriter {
         }
     }
 
+    private void startWriter() {
+        stopWriter();
+        log.info("Starting OPCAliveWriter...");
+        writeAliveTask = executor.scheduleAtFixedRate(this::sendAlive, writeTime, writeTime, TimeUnit.MILLISECONDS);
+    }
     /**
      * Writes once to the server and increase the write value.
      */

@@ -185,8 +185,9 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
                     maxServiceUri = nextUri;
                 }
                 activeEndpoint.disconnect();
-            } catch (OPCUAException ignored) {
+            } catch (OPCUAException e) {
                 log.info("Could not connect to server at {}. Proceeding with next server.", nextUri);
+                log.debug("Connection failed with exception: ", e);
             }
         }
         if (maxServiceUri != null) {

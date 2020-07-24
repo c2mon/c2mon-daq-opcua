@@ -45,10 +45,12 @@ public class SecurityModule {
     private OpcUaClientConfigBuilder builder;
 
     /**
-     * Creates a new SecurityModule instance and assigns the {@link Certifier} a priority depending on the configuration
-     * @param config the up-to-date application properties containing information that shall be passed in initial connection to the server
-     * @param loader the {@link Certifier} responsible for loading a certificate and keypair from local storage
-     * @param generator the {@link Certifier} responsible for creating a new self-signed certificate and keypair
+     * Creates a new SecurityModule instance and assigns the {@link Certifier} a priority depending on the
+     * configuration
+     * @param config     the up-to-date application properties containing information that shall be passed in initial
+     *                   connection to the server
+     * @param loader     the {@link Certifier} responsible for loading a certificate and keypair from local storage
+     * @param generator  the {@link Certifier} responsible for creating a new self-signed certificate and keypair
      * @param noSecurity the {@link Certifier} responsible for establishing connection without security
      */
     @Autowired
@@ -69,9 +71,15 @@ public class SecurityModule {
      * to attempt connection with appropriate endpoints. Connection with an insecure endpoint are attempted only if this
      * is not possible either and the option is allowed in the configuration.
      * @param endpoints A list of endpoints of which to connect to one.
+     * @param listeners the {@link SessionActivityListener}s to subscribe to the client before the initial connection
+     *                  request such that they are informed of the first session activation.
      * @return An {@link OpcUaClient} object that is connected to one of the endpoints.
+     * @throws OPCUAException of type {@link ConfigurationException} if the connection failed due to a configuration
+     *                        issue referring to security or general settings, and of type {@link
+     *                        CommunicationException} if the connection attempt failed for reasons unrelated to
+     *                        configuration, where a retry may be fruitful.
      */
-    public OpcUaClient createClientWithListeners(List<EndpointDescription> endpoints, Collection<SessionActivityListener> listeners) throws CommunicationException, ConfigurationException {
+    public OpcUaClient createClientWithListeners(List<EndpointDescription> endpoints, Collection<SessionActivityListener> listeners) throws OPCUAException {
         builder = OpcUaClientConfig.builder()
                 .setApplicationName(LocalizedText.english(config.getAppName()))
                 .setApplicationUri(config.getApplicationUri())

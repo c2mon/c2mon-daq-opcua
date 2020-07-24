@@ -10,6 +10,7 @@ import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
@@ -23,12 +24,14 @@ import java.util.stream.Stream;
  * An abstract base  which offers functionality that is shared across all failover modes and the {@link NoFailover}
  * {@link Controller}.
  */
+@Slf4j
 public abstract class ControllerBase implements Controller {
 
     private static Stream<Map.Entry<UInteger, SourceDataTagQuality>> subscribeAndCatch(Endpoint e, Map.Entry<SubscriptionGroup, List<ItemDefinition>> groupWithDefinitions) {
         try {
             return e.subscribe(groupWithDefinitions.getKey(), groupWithDefinitions.getValue()).entrySet().stream();
-        } catch (ConfigurationException configurationException) {
+        } catch (ConfigurationException ex) {
+            log.info("Could not subscribe the ItemDefinitions with time deadband {} to the endpoint at URI {}.", groupWithDefinitions.getKey().getPublishInterval(), e.getUri());
             return groupWithDefinitions.getValue().stream()
                     .map(d -> new AbstractMap.SimpleEntry<>(d.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)));
         }
@@ -77,8 +80,8 @@ public abstract class ControllerBase implements Controller {
      * Unsubscribe from the {@link NodeId} in the {@link ItemDefinition} on the OPC UA server or on all servers in a
      * redundant server set.
      * @param definition the {@link ItemDefinition} to unsubscribe from.
-     * @return whether the removal from subscription was completed successfully at the currently active server. False if the {@link
-     * ItemDefinition} was not subscribed in the first place.
+     * @return whether the removal from subscription was completed successfully at the currently active server. False if
+     * the {@link ItemDefinition} was not subscribed in the first place.
      */
     @Override
     public boolean unsubscribe(ItemDefinition definition) {
