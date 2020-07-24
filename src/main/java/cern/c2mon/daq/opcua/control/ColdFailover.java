@@ -46,10 +46,10 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     /**
      * Creates a new instance of ColdFailover
      * @param retryTemplate the retryTemplate to use to trigger failovers
-     * @param config the application properties
+     * @param config        the application properties
      */
     public ColdFailover(RetryTemplate retryTemplate, AppConfigProperties config) {
-        super(retryTemplate, config);
+        super(config, retryTemplate);
     }
 
 
@@ -61,7 +61,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      * @throws OPCUAException in case there is no healthy server to connect to in the redundant server set.
      */
     @Override
-    public void initialize(Endpoint endpoint, String[] redundantAddresses) throws OPCUAException {
+    public void initialize(Endpoint endpoint, String... redundantAddresses) throws OPCUAException {
         super.initialize(endpoint, redundantAddresses);
         activeEndpoint = endpoint;
         this.currentUri = activeEndpoint.getUri();

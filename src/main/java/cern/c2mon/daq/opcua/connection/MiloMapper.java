@@ -29,7 +29,6 @@ public abstract class MiloMapper {
 
     /**
      * Represents a {@link StatusCode} as a {@link SourceDataTagQualityCode}
-     *
      * @param statusCode the status code returned by the Eclipse Milo client
      * @return a quality code that can be associated with a C2MON {@link cern.c2mon.shared.common.datatag.ISourceDataTag}.
      */
@@ -49,13 +48,12 @@ public abstract class MiloMapper {
 
     /**
      * Extracts the actual object from the list of {@link Variant}s that are returned by the Milo client.
-     *
      * @param variants the variants wrap objects returned by the Milo client. They can be output arguments returned by a
      *                 call to an OPC UA method node, represent a {@link org.eclipse.milo.opcua.stack.core.types.builtin.DataValue}
      *                 update of a subscription, or other
      * @return the POJOs extracted from the Variants
      */
-    public static Object[] toObject(Variant[] variants) {
+    public static Object[] toObject(Variant... variants) {
         return Stream.of(variants)
                 .map(MiloMapper::toObject)
                 .filter(Objects::nonNull)
@@ -64,7 +62,6 @@ public abstract class MiloMapper {
 
     /**
      * Extracts the actual object from a {@link Variant} returned by the Milo client.
-     *
      * @param variant the variant wraps an object returned by the Milo client. It can an the output argument returned by
      *                a call to an OPC UA method node, represent a {@link org.eclipse.milo.opcua.stack.core.types.builtin.DataValue}
      *                update of a subscription, or other

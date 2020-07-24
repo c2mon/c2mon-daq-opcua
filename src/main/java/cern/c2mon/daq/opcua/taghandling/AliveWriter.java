@@ -119,10 +119,9 @@ public class AliveWriter {
      * Stops the aliveWriter execution.
      */
     public void stopWriter() {
-        if (writeAliveTask != null) {
+        if (writeAliveTask != null && (!writeAliveTask.isCancelled() || !writeAliveTask.isDone())) {
             log.info("Stopping OPCAliveWriter...");
             writeAliveTask.cancel(false);
-            writeAliveTask = null;
         }
     }
 

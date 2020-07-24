@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * A {@link Controller} maintaining connection to a non-redundant server, or servers in transparent redundancy.
- * */
+ */
 @Slf4j
 @NoArgsConstructor
 @Component("singleServerController")
@@ -27,7 +27,7 @@ public class NoFailover extends ControllerBase {
      * @param redundantAddresses usually empty
      */
     @Override
-    public void initialize(Endpoint endpoint, String[] redundantAddresses) {
+    public void initialize(Endpoint endpoint, String... redundantAddresses) {
         activeEndpoint = endpoint;
         activeEndpoint.manageSessionActivityListener(true, null);
     }

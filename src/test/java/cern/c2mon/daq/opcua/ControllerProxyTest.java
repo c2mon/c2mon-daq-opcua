@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.control.*;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -39,7 +39,7 @@ public class ControllerProxyTest {
         expect(testEndpoint.getServerRedundancyTypeNode().getRedundancySupport())
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
                 .once();
-        mockFailoverInitialization(noFailover);
+        mockFailoverInitialization(noFailover, false);
         replay(applicationContext, testEndpoint.getServerRedundancyTypeNode(), noFailover);
         proxy.connect(Collections.singleton("test"));
         verify(noFailover);
@@ -50,7 +50,7 @@ public class ControllerProxyTest {
         expect(testEndpoint.getServerRedundancyTypeNode().getRedundancySupport())
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
                 .once();
-        mockFailoverInitialization(noFailover);
+        mockFailoverInitialization(noFailover, false);
         replay(applicationContext, testEndpoint.getServerRedundancyTypeNode(), noFailover);
         proxy.connect(Collections.singleton("test"));
         verify(testEndpoint.getServerRedundancyTypeNode());
@@ -60,8 +60,8 @@ public class ControllerProxyTest {
     public void coldConfigNoUrisShouldQueryServerForUrisNotForMode() throws OPCUAException {
         config.setRedundancyMode(ColdFailover.class.getName());
         mockServerUriCall();
-        mockFailoverInitialization(coldFailover);
-        replay(applicationContext, noFailover, coldFailover,testEndpoint.getServerRedundancyTypeNode());
+        mockFailoverInitialization(coldFailover, false);
+        replay(applicationContext, noFailover, coldFailover, testEndpoint.getServerRedundancyTypeNode());
         proxy.connect(Collections.singleton("test"));
         verify(coldFailover);
     }
@@ -70,14 +70,18 @@ public class ControllerProxyTest {
     public void coldConfigWithUrisNoQueryServer() throws OPCUAException {
         config.setRedundancyMode(ColdFailover.class.getName());
         config.setRedundantServerUris(Arrays.asList("test1", "test2"));
-        mockFailoverInitialization(coldFailover);
+        mockFailoverInitialization(coldFailover, true);
         replay(applicationContext, noFailover, coldFailover);
         proxy.connect(Arrays.asList("test", "test2"));
         verify(coldFailover);
     }
 
-    private void mockFailoverInitialization(Controller mode) throws OPCUAException {
-        mode.initialize(anyObject(), anyObject());
+    private void mockFailoverInitialization(Controller mode, boolean expectRedundantAddress) throws OPCUAException {
+        if (expectRedundantAddress) {
+            mode.initialize(anyObject(), anyString());
+        } else {
+            mode.initialize(anyObject());
+        }
         expectLastCall().atLeastOnce();
     }
 

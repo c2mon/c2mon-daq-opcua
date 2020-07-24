@@ -14,7 +14,7 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
  * The abstract base class for a @{@link Certifier} using a certificate and keypair.
  */
 public abstract class CertifierBase implements Certifier {
-    protected static final long[] SEVERE_ERROR_CODES = new long[]{
+    static final long[] SEVERE_ERROR_CODES = new long[]{
             Bad_CertificateUseNotAllowed,
             Bad_CertificateUriInvalid,
             Bad_CertificateUntrusted,

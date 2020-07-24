@@ -28,7 +28,7 @@ public interface Controller {
      *                           server URI
      * @throws OPCUAException if an error occurred when setting up connection monitoring
      */
-    void initialize(Endpoint endpoint, String[] redundantAddresses) throws OPCUAException;
+    void initialize(Endpoint endpoint, String... redundantAddresses) throws OPCUAException;
 
     /**
      * Disconnect from the OPC UA server and reset the controller to a neutral state.

@@ -33,19 +33,17 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     protected static final List<ItemDefinition> connectionMonitoringNodes = Arrays.asList(
             ItemDefinition.of(Identifiers.Server_ServiceLevel),
             ItemDefinition.of(Identifiers.ServerState));
-    private final RetryTemplate exponentialDelayTemplate;
-
     /**
      * Setting this flat to true ends ongoing failover procedures after the controller was stopped.
      */
     protected final AtomicBoolean stopped = new AtomicBoolean(true);
-
     /**
      * This flag is used to ensure that only one failover procedure is in progress as a time. This is relevant since
      * there are different ways of triggering a failover, which may occur simultaneously.
      */
     protected final AtomicBoolean listening = new AtomicBoolean(true);
     protected final AppConfigProperties config;
+    private final RetryTemplate exponentialDelayTemplate;
 
     /**
      * Initialize supervision and connection monitoring to the active server.
@@ -54,7 +52,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
      *                      URI
      * @throws OPCUAException if an error occurred when setting up connection monitoring
      */
-    public void initialize(Endpoint endpoint, String[] redundantUris) throws OPCUAException {
+    public void initialize(Endpoint endpoint, String... redundantUris) throws OPCUAException {
         listening.set(true);
         stopped.set(false);
     }

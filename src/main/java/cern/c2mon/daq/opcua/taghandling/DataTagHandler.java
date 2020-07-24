@@ -36,7 +36,10 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -159,7 +162,6 @@ public class DataTagHandler implements IDataTagHandler {
     }
 
     private void refresh(Map<Long, ItemDefinition> entries) {
-        final List<Long> notRefreshable = new ArrayList<>();
         for (Map.Entry<Long, ItemDefinition> e : entries.entrySet()) {
             if (Thread.currentThread().isInterrupted()) {
                 log.info("The thread was interrupted before all tags could be refreshed.");
@@ -169,11 +171,8 @@ public class DataTagHandler implements IDataTagHandler {
                 final Map.Entry<ValueUpdate, SourceDataTagQuality> reading = controllerProxy.read(e.getValue().getNodeId());
                 messageSender.onValueUpdate(e.getKey(), reading.getValue(), reading.getKey());
             } catch (OPCUAException ex) {
-                notRefreshable.add(e.getKey());
+                log.debug("The DataTag with ID {} could not be refreshed.", e.getKey(), ex);
             }
-        }
-        if (!notRefreshable.isEmpty()) {
-            log.error("An exception occurred when refreshing ISourceDataTags with IDs {}. ", notRefreshable);
         }
     }
 }

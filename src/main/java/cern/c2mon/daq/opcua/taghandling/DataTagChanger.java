@@ -19,6 +19,10 @@ import java.util.stream.Stream;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 
+/**
+ * The {@link DataTagChanger} handles changes  at runtime to the {@link ISourceDataTag}s in  {@link
+ * cern.c2mon.shared.common.process.IEquipmentConfiguration}.
+ */
 @Component("tagChanger")
 @RequiredArgsConstructor
 @Slf4j
@@ -38,6 +42,7 @@ public class DataTagChanger implements IDataTagChanger {
 
     private static final Function<Collection<ISourceDataTag>, String> tagsToIdString = tags -> tags.stream()
             .map(t -> t.getId().toString()).collect(Collectors.joining(", "));
+    private final IDataTagHandler tagHandler;
 
     private static void gatherIds(Stream<ISourceDataTag> tagStream, Predicate<ISourceDataTag> predicate, String successMsg, String failMsg, ChangeReport report) {
         final Map<Boolean, List<ISourceDataTag>> collect = tagStream.collect(Collectors.partitioningBy(predicate));
@@ -48,21 +53,39 @@ public class DataTagChanger implements IDataTagChanger {
             }
         });
     }
-    private final IDataTagHandler tagHandler;
 
+    /**
+     * Add and remove the changes tags in a batch operation such the server goes from the state described in oldTags to
+     * the one in newTag
+     * @param newTags      all {@link ISourceDataTag}s in the new configuration
+     * @param oldTags      all {@link ISourceDataTag}s in the old configuration
+     * @param changeReport a report of the performed operations and their successes.
+     */
     public void onUpdateEquipmentConfiguration(Collection<ISourceDataTag> newTags, Collection<ISourceDataTag> oldTags, final ChangeReport changeReport) {
         final Stream<ISourceDataTag> toAdd = newTags.stream().filter(t -> !oldTags.contains(t));
         final Stream<ISourceDataTag> toRemove = oldTags.stream().filter(t -> !newTags.contains(t));
-        gatherIds(toRemove, tagHandler::removeTag, "Could not remove Tags with Ids " , "Removed Tags " , changeReport);
+        gatherIds(toRemove, tagHandler::removeTag, "Could not remove Tags with Ids ", "Removed Tags ", changeReport);
         gatherIds(toAdd, tagHandler::subscribeTag, "Could not subscribe to Tags with Ids ", "Subscribed to Tags ", changeReport);
     }
 
+    /**
+     * Subscribes to the {@link org.eclipse.milo.opcua.stack.core.types.builtin.NodeId} associated with the {@link
+     * ISourceDataTag} on the data source
+     * @param sourceDataTag the {@link ISourceDataTag} that was added to the configuration
+     * @param changeReport  a report of outcome of the operation
+     */
     @Override
     public void onAddDataTag(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
         log.info("Adding data tag {}", sourceDataTag);
         addAndReport(sourceDataTag, changeReport);
     }
 
+    /**
+     * Removes the subscription to the {@link org.eclipse.milo.opcua.stack.core.types.builtin.NodeId} associated with
+     * the {@link ISourceDataTag} from the data source.
+     * @param sourceDataTag the {@link ISourceDataTag} that was removed from the configuration
+     * @param changeReport  a report of the outcome of the operation
+     */
     @Override
     public void onRemoveDataTag(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
         log.info("Removing data tag {}", sourceDataTag);
@@ -102,7 +125,7 @@ public class DataTagChanger implements IDataTagChanger {
     }
 
     @FunctionalInterface
-    public interface TriConsumer<A, B, C> {
+    private interface TriConsumer<A, B, C> {
         void apply(A a, B b, C c);
     }
 }
