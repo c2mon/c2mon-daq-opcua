@@ -20,8 +20,7 @@ import java.util.Map;
  * Classes implementing this interface present a specific kind handler for redundancy modes with the responsibility of
  * monitoring the connection state to the active server and of handling failover when needed. Currently, only {@link
  * ColdFailover} is supported of the OPC UA redundancy model. To add support for custom or vendor-specific redundancy
- * models, a class implementing FailoverMode should be created and references in {@link
- * AppConfigProperties}.
+ * models, a class implementing FailoverMode should be created and references in {@link AppConfigProperties}.
  */
 public interface IControllerProxy {
 
@@ -44,6 +43,8 @@ public interface IControllerProxy {
      * the OPC UA server or on all servers in a redundant server set.
      * @param groupsWithDefinitions a Map of {@link SubscriptionGroup}s and the {@link ItemDefinition}s to subscribe to
      *                              the groups.
+     * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
+     * call.
      */
     Map<UInteger, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions);
 
@@ -51,8 +52,8 @@ public interface IControllerProxy {
      * Unsubscribe from the {@link NodeId} in the {@link ItemDefinition} on the OPC UA server or on all servers in a
      * redundant server set.
      * @param definition the {@link ItemDefinition} to unsubscribe from.
-     * @return whether the removal from subscription was completed successfully at the currently active server. False if the {@link
-     * ItemDefinition} was not subscribed in the first place.
+     * @return whether the removal from subscription was completed successfully at the currently active server. False if
+     * the {@link ItemDefinition} was not subscribed in the first place.
      */
     boolean unsubscribe(ItemDefinition definition);
 

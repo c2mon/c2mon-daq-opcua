@@ -77,7 +77,7 @@ public class AliveWriter {
     /**
      * Flag indicating whether the aliveWriter is enabled.
      */
-    private boolean enabled = false;
+    private boolean enabled;
 
     /**
      * Initializes the AliveWriter considering the given equipment Configuration. If no the writer is not enabled or no
@@ -131,6 +131,7 @@ public class AliveWriter {
         log.info("Starting OPCAliveWriter...");
         writeAliveTask = executor.scheduleAtFixedRate(this::sendAlive, writeTime, writeTime, TimeUnit.MILLISECONDS);
     }
+
     /**
      * Writes once to the server and increase the write value.
      */

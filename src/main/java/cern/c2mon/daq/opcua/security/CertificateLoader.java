@@ -2,24 +2,23 @@ package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import com.google.common.collect.ImmutableSet;
 import io.netty.util.internal.StringUtil;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Stream;
 
-import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_CertificateInvalid;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SecurityChecksFailed;
 
 /**
  * Loads a certificate and keypair from a keystore file configured in AppConfig, and configures a builder to use them.
@@ -31,22 +30,6 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 public class CertificateLoader extends CertifierBase {
     private final AppConfigProperties.KeystoreConfig keystoreConfig;
     private final AppConfigProperties.PKIConfig pkiConfig;
-    private static final ImmutableSet<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_SecurityChecksFailed, Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown, Bad_CertificateInvalid).build();
-
-    /**
-     * Loads a matching certificate and keypair if not yet present and returns whether they match the endpoint.
-     * @param endpoint the endpoint for which certificate and keypair are generated.
-     * @return whether certificate and keypair could be loaded and match the endpoint
-     */
-    @Override
-    public boolean canCertify(EndpointDescription endpoint) {
-        if (certificate == null || keyPair == null) {
-            keyPair = null;
-            certificate = null;
-            loadCertificateAndKeypair();
-        }
-        return existingCertificateMatchesEndpoint(endpoint);
-    }
 
     /**
      * Checks whether the Certifier supports an endpoint's security policy and the corresponding signature algorithm.
@@ -60,13 +43,29 @@ public class CertificateLoader extends CertifierBase {
     }
 
     /**
-     * If a connection using a Certifier fails for severe reasons, attempting to reconnect with this Certifier is
-     * fruitless also with other endpoints.
-     * @return a list of error codes which constitute a severe error.
+     * Loads a matching certificate and keypair if not yet present and returns whether they match the endpoint.
+     * @param endpoint the endpoint for which certificate and keypair are generated.
+     * @return whether certificate and keypair could be loaded and match the endpoint
      */
     @Override
-    public Set<Long> getSevereErrorCodes() {
-        return SEVERE_ERROR_CODES;
+    public boolean canCertify(EndpointDescription endpoint) {
+        if (certificate == null || keyPair == null) {
+            loadCertificateAndKeypair();
+        }
+        return SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri())
+                .filter(this::existingCertificateMatchesSecurityPolicy)
+                .isPresent();
+    }
+
+    /**
+     * If a connection using a Certifier fails for severe reasons, attempting to reconnect with this Certifier is
+     * fruitless also with other endpoints.
+     * @param code the error code to check for severity
+     * @return whether the error code is constitutes a severe error.
+     */
+    @Override
+    public boolean isSevereError(long code) {
+        return code == Bad_SecurityChecksFailed || code == Bad_CertificateInvalid || super.isSevereError(code);
     }
 
     private void loadCertificateAndKeypair() {
@@ -84,8 +83,10 @@ public class CertificateLoader extends CertifierBase {
             log.info("Loading from PEM files");
             try {
                 final PrivateKey privateKey = PkiUtil.loadPrivateKey(pkiConfig.getPkPath());
-                certificate = PkiUtil.loadCertificate(pkiConfig.getCrtPath());
-                keyPair = new KeyPair(certificate.getPublicKey(), privateKey);
+                X509Certificate tmpCert = PkiUtil.loadCertificate(pkiConfig.getCrtPath());
+                // ensure both certificate and keyPair are both either loaded or not
+                keyPair = new KeyPair(tmpCert.getPublicKey(), privateKey);
+                certificate = tmpCert;
             } catch (ConfigurationException e) {
                 log.error("An error occurred loading certificate and private key. ", e);
             }
@@ -95,13 +96,15 @@ public class CertificateLoader extends CertifierBase {
     private boolean isKeystoreConfigured() {
         return keystoreConfig != null &&
                 Stream.of(keystoreConfig.getType(), keystoreConfig.getPath(), keystoreConfig.getAlias()).noneMatch(StringUtil::isNullOrEmpty) &&
-                Files.exists(Paths.get(keystoreConfig.getPath()));
+                Paths.get(keystoreConfig.getPath()).toFile().exists();
     }
 
     private boolean isPkiConfigured() {
         boolean isConfigComplete = pkiConfig != null &&
                 !StringUtil.isNullOrEmpty(pkiConfig.getCrtPath()) &&
                 !StringUtil.isNullOrEmpty(pkiConfig.getPkPath());
-        return isConfigComplete && Files.exists(Paths.get(pkiConfig.getCrtPath())) && Files.exists(Paths.get(pkiConfig.getPkPath()));
+        return isConfigComplete &&
+                Paths.get(pkiConfig.getCrtPath()).toFile().exists() &&
+                Paths.get(pkiConfig.getPkPath()).toFile().exists();
     }
 }

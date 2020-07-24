@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.security;
 
-import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,9 +9,8 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.springframework.stereotype.Component;
 
-import java.util.Set;
-
-import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NoValidCertificates;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SecurityChecksFailed;
 
 /**
  * A Certifier to configure an {@link OpcUaClientConfigBuilder} for a connection with an endpoint without encryption.
@@ -24,7 +22,7 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 public class NoSecurityCertifier implements Certifier {
     /**
      * Append configures the builder to connect to the endpoint without security.
-     * @param builder the builder to configure for connection
+     * @param builder  the builder to configure for connection
      * @param endpoint the endpoint to which the connection shall be configured.
      */
     @Override
@@ -42,8 +40,21 @@ public class NoSecurityCertifier implements Certifier {
     }
 
     /**
-     * An endpoint can be certified if it's {@link org.eclipse.milo.opcua.stack.core.security.SecurityPolicy}
-     * and its {@link org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode} are None.
+     * An endpoint can be certified if it's {@link org.eclipse.milo.opcua.stack.core.security.SecurityPolicy} and its
+     * {@link org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode} are None. Behavior is equal to
+     * canCertify.
+     * @param endpoint the endpoint to check.
+     * @return whether it's possible to connect to the endpoint without security.
+     */
+    @Override
+    public boolean supportsAlgorithm(EndpointDescription endpoint) {
+        return endpoint.getSecurityMode().equals(MessageSecurityMode.None)
+                && endpoint.getSecurityPolicyUri().equalsIgnoreCase(SecurityPolicy.None.getUri());
+    }
+
+    /**
+     * An endpoint can be certified if it's {@link org.eclipse.milo.opcua.stack.core.security.SecurityPolicy} and its
+     * {@link org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode} are None.
      * @param endpoint the endpoint to check.
      * @return whether it's possible to connect to the endpoint without security.
      */
@@ -53,27 +64,12 @@ public class NoSecurityCertifier implements Certifier {
     }
 
     /**
-     * An endpoint can be certified if it's {@link org.eclipse.milo.opcua.stack.core.security.SecurityPolicy}
-     * and its {@link org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode} are None.
-     * Behavior is equal to canCertify.
-     * @param endpoint the endpoint to check.
-     * @return whether it's possible to connect to the endpoint without security.
+     * If a connection without configures security fails for any security-related reasons, reattempts are fruitless.
+     * @param code the error code to check for severity
+     * @return whether the error code is constitutes a severe error.
      */
     @Override
-    public boolean supportsAlgorithm(EndpointDescription endpoint) {
-        return endpoint.getSecurityMode().equals(MessageSecurityMode.None)
-                && endpoint.getSecurityPolicyUri().equalsIgnoreCase(SecurityPolicy.None.getUri());
-    }
-    private static final ImmutableSet<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_SecurityChecksFailed, Bad_NoValidCertificates).build();
-
-    /**
-     * If a connection using a Certifier fails for severe reasons, attempting to reconnect with this Certifier is
-     * fruitless also with other endpoints.
-     *
-     * @return a list of error codes which constitute a severe error.
-     */
-    @Override
-    public Set<Long> getSevereErrorCodes() {
-        return SEVERE_ERROR_CODES;
+    public boolean isSevereError(long code) {
+        return code == Bad_SecurityChecksFailed || code == Bad_NoValidCertificates;
     }
 }

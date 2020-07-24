@@ -31,7 +31,7 @@ public abstract class ControllerBase implements Controller {
         try {
             return e.subscribe(groupWithDefinitions.getKey(), groupWithDefinitions.getValue()).entrySet().stream();
         } catch (ConfigurationException ex) {
-            log.info("Could not subscribe the ItemDefinitions with time deadband {} to the endpoint at URI {}.", groupWithDefinitions.getKey().getPublishInterval(), e.getUri());
+            log.info("Could not subscribe the ItemDefinitions with time deadband {} to the endpoint at URI {}.", groupWithDefinitions.getKey().getPublishInterval(), e.getUri(), ex);
             return groupWithDefinitions.getValue().stream()
                     .map(d -> new AbstractMap.SimpleEntry<>(d.getClientHandle(), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE)));
         }

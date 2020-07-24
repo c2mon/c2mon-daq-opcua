@@ -158,7 +158,7 @@ public class SecurityModule {
         final long code = ((UaException) cause).getStatusCode().getValue();
         if (OPCUAException.isSecurityIssue((UaException) cause)) {
             throw new ConfigurationException(ExceptionContext.SECURITY, cause);
-        } else if (certifier.getSevereErrorCodes().contains(code)) {
+        } else if (certifier.isSevereError(code)) {
             log.error("Cannot connect to this server with Certifier {}. Proceed with another Certifier.", certifier.getClass().getName());
             return false;
         } else {

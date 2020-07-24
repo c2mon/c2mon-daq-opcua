@@ -1,22 +1,21 @@
 package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.security.SecurityAlgorithm;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateBuilder;
 import org.eclipse.milo.opcua.stack.core.util.SelfSignedCertificateGenerator;
 import org.springframework.stereotype.Component;
 
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.Set;
-
-import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 
 /**
  * For those endpoints with a supported security policy, the CertificateGenerator generates a new self-signed
@@ -28,10 +27,9 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 @Slf4j
 @RequiredArgsConstructor
 public class CertificateGenerator extends CertifierBase {
-    private static final String RSA_SHA256 = "SHA256withRSA";
-    private static final String[] SUPPORTED_SIG_ALGS = {RSA_SHA256};
-    private static final Set<Long> SEVERE_ERROR_CODES = ImmutableSet.<Long>builder().add(Bad_CertificateUseNotAllowed, Bad_CertificateUriInvalid, Bad_CertificateUntrusted, Bad_CertificateTimeInvalid, Bad_CertificateRevoked, Bad_CertificateRevocationUnknown, Bad_CertificateIssuerRevocationUnknown).build();
+    private static final String[] SUPPORTED_SIG_ALGS = {SecurityAlgorithm.RsaSha256.getTransformation()};
     private final AppConfigProperties config;
+
 
     /**
      * Checks whether an endpoint's security policy is supported by the CertificateGenerator. This method only checks
@@ -58,47 +56,37 @@ public class CertificateGenerator extends CertifierBase {
     @Override
     public boolean canCertify(EndpointDescription endpoint) {
         final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
-        if (!sp.isPresent() || !supportsAlgorithm(endpoint)) {
-            return false;
-        }
-        generateCertificate(sp.get());
-        return keyPair != null && certificate != null;
+        return (sp.isPresent() && supportsAlgorithm(endpoint)) && generateCertificateIfMissing(sp.get());
     }
 
-    /**
-     * If a connection using a Certifier fails for severe reasons, attempting to reconnect with this Certifier is
-     * fruitless also with other endpoints.
-     * @return a list of error codes which constitute a severe error.
-     */
-    @Override
-    public Set<Long> getSevereErrorCodes() {
-        return SEVERE_ERROR_CODES;
+    private boolean generateCertificateIfMissing(SecurityPolicy securityPolicy) {
+        return (existingCertificateMatchesSecurityPolicy(securityPolicy)) ||
+                (securityPolicy.getAsymmetricSignatureAlgorithm().equals(SecurityAlgorithm.RsaSha256) && generateRSASHA256());
     }
 
-    private void generateCertificate(SecurityPolicy securityPolicy) {
-        if (existingCertificateMatchesSecurityPolicy(securityPolicy)) {
-            return;
-        }
-        keyPair = null;
-        certificate = null;
-        if (securityPolicy.getAsymmetricSignatureAlgorithm().getTransformation().equalsIgnoreCase(RSA_SHA256)) {
+    private boolean generateRSASHA256() {
+        try {
             log.info("Generating self-signed certificate and keypair.");
-            try {
-                keyPair = SelfSignedCertificateGenerator.generateRsaKeyPair(2048);
-                SelfSignedCertificateBuilder builder = new SelfSignedCertificateBuilder(keyPair)
-                        .setCommonName(config.getAppName())
-                        .setOrganization(config.getOrganization())
-                        .setOrganizationalUnit(config.getOrganizationalUnit())
-                        .setLocalityName(config.getLocalityName())
-                        .setStateName(config.getStateName())
-                        .setCountryCode(config.getCountryCode())
-                        .setApplicationUri(config.getApplicationUri());
-                certificate = builder.build();
-            } catch (NoSuchAlgorithmException e) {
-                log.error("Could not generate RSA keypair");
-            } catch (Exception e) {
-                log.error("Could not generate certificate");
+            final KeyPair tmpKp = SelfSignedCertificateGenerator.generateRsaKeyPair(2048);
+            SelfSignedCertificateBuilder builder = new SelfSignedCertificateBuilder(tmpKp)
+                    .setCommonName(config.getAppName())
+                    .setOrganization(config.getOrganization())
+                    .setOrganizationalUnit(config.getOrganizationalUnit())
+                    .setLocalityName(config.getLocalityName())
+                    .setStateName(config.getStateName())
+                    .setCountryCode(config.getCountryCode())
+                    .setApplicationUri(config.getApplicationUri());
+            X509Certificate tmpCert = builder.build();
+            if (tmpCert != null) {
+                keyPair = tmpKp;
+                certificate = tmpCert;
+                return true;
             }
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Could not generate RSA keypair.", e);
+        } catch (Exception e) {
+            log.error("Could not generate certificate.", e);
         }
+        return false;
     }
 }

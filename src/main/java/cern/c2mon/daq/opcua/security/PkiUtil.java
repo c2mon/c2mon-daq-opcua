@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.*;
@@ -86,7 +87,9 @@ public class PkiUtil {
     }
 
     private static PemObject getPemObject(String filename) throws IOException {
-        try (PemReader pemReader = new PemReader(new InputStreamReader(new FileInputStream(filename)))) {
+        try (FileInputStream is = new FileInputStream(filename);
+             InputStreamReader isReader = new InputStreamReader(is, StandardCharsets.UTF_8);
+             PemReader pemReader = new PemReader(isReader)) {
             return pemReader.readPemObject();
         }
     }

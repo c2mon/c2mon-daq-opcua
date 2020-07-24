@@ -97,8 +97,8 @@ public class ControllerProxy implements IControllerProxy {
      * Unsubscribe from the {@link NodeId} in the {@link ItemDefinition} on the OPC UA server or on all servers in a
      * redundant server set.
      * @param definition the {@link ItemDefinition} to unsubscribe from.
-     * @return whether the removal from subscription was completed successfully at the currently active server. False if the {@link
-     * ItemDefinition} was not subscribed in the first place.
+     * @return whether the removal from subscription was completed successfully at the currently active server. False if
+     * the {@link ItemDefinition} was not subscribed in the first place.
      */
     @Override
     public boolean unsubscribe(ItemDefinition definition) {
@@ -145,7 +145,7 @@ public class ControllerProxy implements IControllerProxy {
 
     private String establishInitialConnection(Collection<String> serverAddresses) throws OPCUAException {
         String currentUri;
-        for (Iterator<String> iterator = serverAddresses.iterator(); iterator.hasNext();) {
+        for (Iterator<String> iterator = serverAddresses.iterator(); iterator.hasNext(); ) {
             currentUri = iterator.next();
             try {
                 endpoint.initialize(currentUri);
@@ -164,25 +164,24 @@ public class ControllerProxy implements IControllerProxy {
 
     private boolean loadFromConfig() {
         final String customRedundancyMode = config.getRedundancyMode();
-        if (customRedundancyMode == null || customRedundancyMode.isEmpty()) {
-            return false;
-        }
-        try {
-            final Class<?> redundancyMode = Class.forName(customRedundancyMode);
-            if (Controller.class.isAssignableFrom(redundancyMode)) {
-                controller = (Controller) appContext.getBean(redundancyMode);
-                return true;
+        if (customRedundancyMode != null && !customRedundancyMode.isEmpty()) {
+            try {
+                final Class<?> redundancyMode = Class.forName(customRedundancyMode);
+                if (Controller.class.isAssignableFrom(redundancyMode)) {
+                    controller = (Controller) appContext.getBean(redundancyMode);
+                    return true;
+                }
+                log.error("The configured redundancy mode {} must implement the FailoverProxy interface. Proceeding without.", config.getRedundancyMode());
+            } catch (ClassNotFoundException e) {
+                log.error("The configured redundancy mode {} could not be resolved. Proceeding without.", config.getRedundancyMode(), e);
+            } catch (BeansException e) {
+                log.error("The configured redundancy mode {} must be a Spring Bean. Proceeding without.", config.getRedundancyMode(), e);
             }
-            log.error("The configured redundancy mode {} must implement the FailoverProxy interface. Proceeding without.", config.getRedundancyMode());
-        } catch (ClassNotFoundException e) {
-            log.error("The configured redundancy mode {} could not be resolved. Proceeding without.", config.getRedundancyMode(), e);
-        } catch (BeansException e) {
-            log.error("The configured redundancy mode {} must be a Spring Bean. Proceeding without.", config.getRedundancyMode(), e);
         }
         return false;
     }
 
-    private String[] loadFromAddressSpace(String currentUri, String[] redundantUris) throws OPCUAException {
+    private String[] loadFromAddressSpace(String currentUri, String... redundantUris) throws OPCUAException {
         final Map.Entry<RedundancySupport, String[]> redundancySupport = redundancySupport(endpoint, currentUri, redundantUris);
         switch (redundancySupport.getKey()) {
             case HotAndMirrored:
