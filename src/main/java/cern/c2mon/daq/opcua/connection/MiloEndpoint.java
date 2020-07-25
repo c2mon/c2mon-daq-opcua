@@ -231,6 +231,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             try {
                 anySuccess = anySuccess && resubscribeGroupsAndReportSuccess(group);
             } catch (EndpointDisconnectedException e) {
+                log.debug("Failed with exception: ", e);
                 log.info("Session was closed, abort subscription recreation process.");
                 return;
             } catch (OPCUAException e) {
@@ -498,6 +499,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                         throw new CommunicationException(CREATE_SUBSCRIPTION);
                     }
                 } catch (EndpointDisconnectedException e) {
+                    log.debug("Failed with exception: ", e);
                     log.info("Session was closed, abort subscription recreation process.");
                 }
             }
