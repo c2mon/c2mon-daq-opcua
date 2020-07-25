@@ -22,9 +22,8 @@ import java.util.function.Consumer;
 
 /**
  * This class presents an interface in between an C2MON OPC UA DAQ and the OPC UA client stack. Handles all interaction
- * with a single server including * the the consolidation of security settings, and maintains a mapping for
- * server-specific identifiers. {@link OPCUAException}s are given in the JavaDoc of the concrete implementation
- * classes.
+ * with a single server including the consolidation of security settings, and maintains a mapping for server-specific
+ * identifiers.
  */
 public interface Endpoint {
 
@@ -65,16 +64,13 @@ public interface Endpoint {
 
 
     /**
-     * Recreate all subscriptions configured in {@link TagSubscriptionReader}. This
-     * method is usually called by the {@link cern.c2mon.daq.opcua.control.Controller} after a failover.
-     * @throws CommunicationException if no subscription could be recreated.
+     * Recreate all subscriptions configured in {@link TagSubscriptionReader}.
      */
     void recreateAllSubscriptions() throws CommunicationException;
 
     /**
-     * Subscribes to a {@link NodeId} with the passed callback. Usually called by the {@link
-     * cern.c2mon.daq.opcua.control.Controller} to monitor the server health.
-     * @param publishingInterval   the
+     * Subscribes to a {@link NodeId} with the itemCreationCallback.
+     * @param publishingInterval   the publishing interval of the subscription the definitions are added to.
      * @param definitions          the {@link ItemDefinition}s containing the {@link NodeId}s to subscribe to
      * @param itemCreationCallback the callback to apply upon creation of the items in the subscription
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service

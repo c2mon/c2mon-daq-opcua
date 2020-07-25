@@ -60,7 +60,7 @@ public class SecurityIT {
     public void setUp() {
         uri = "opc.tcp://" + active.getContainerIpAddress() + ":" + active.getFirstMappedPort();
         ReflectionTestUtils.setField(tagHandler, "messageSender", listener);
-        ReflectionTestUtils.setField(tagHandler, "controllerProxy", controllerProxy);
+        ReflectionTestUtils.setField(tagHandler, "controller", controllerProxy);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", listener);
 

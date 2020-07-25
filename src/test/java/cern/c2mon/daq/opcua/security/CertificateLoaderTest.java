@@ -29,21 +29,15 @@ class CertificateLoaderTest {
     @BeforeEach
     public void setUp() {
         String path = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
-        ksConfig = AppConfigProperties.KeystoreConfig.builder()
-                .type("PKCS12")
-                .path(path)
-                .pwd("password")
-                .alias("1")
-                .build();
-        pkiConfig = AppConfigProperties.PKIConfig.builder()
-                .crtPath(SecurityIT.class.getClassLoader().getResource("server.crt").getPath())
-                .pkPath(SecurityIT.class.getClassLoader().getResource("pkcs8server.key").getPath())
-                .build();
+        ksConfig = new AppConfigProperties.KeystoreConfig("PKCS12", path, "password", "1");
+        pkiConfig = new AppConfigProperties.PKIConfig(SecurityIT.class.getClassLoader().getResource("pkcs8server.key").getPath(),
+                SecurityIT.class.getClassLoader().getResource("server.crt").getPath());
         loader = new CertificateLoader(ksConfig, pkiConfig);
 
         policies = new ArrayList<>(Arrays.asList(SecurityPolicy.Basic256Sha256, SecurityPolicy.Basic128Rsa15, SecurityPolicy.Basic256, SecurityPolicy.None));
 
     }
+
     @Test
     void certifyShouldModifyBuilderIfSupported() {
         for (SecurityPolicy p : policies) {

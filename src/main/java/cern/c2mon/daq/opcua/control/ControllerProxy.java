@@ -30,7 +30,7 @@ import java.util.concurrent.CompletionException;
  */
 @Slf4j
 @RequiredArgsConstructor
-@Component(value = "failoverProxy")
+@Component(value = "controller")
 @Primary
 public class ControllerProxy implements IControllerProxy {
     protected final ApplicationContext appContext;
@@ -196,7 +196,7 @@ public class ControllerProxy implements IControllerProxy {
         return redundancySupport.getValue();
     }
 
-    private Map.Entry<RedundancySupport, String[]> redundancySupport(Endpoint endpoint, String uri, String[] redundantUris) throws OPCUAException {
+    private Map.Entry<RedundancySupport, String[]> redundancySupport(Endpoint endpoint, String uri, String... redundantUris) throws OPCUAException {
         endpoint.initialize(uri);
         RedundancySupport mode = RedundancySupport.None;
         String[] redundantUriArray = new String[0];

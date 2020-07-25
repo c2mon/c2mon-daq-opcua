@@ -51,7 +51,7 @@ import static java.util.stream.Collectors.toMap;
  * TagSubscriptionMapper}, and triggers the subscription to or removal of subscriptions of {@link ISourceDataTag}s from
  * the server.
  */
-@Component("tagController")
+@Component("dataTagHandler")
 @Slf4j
 @RequiredArgsConstructor
 @Lazy
@@ -59,13 +59,8 @@ public class DataTagHandler implements IDataTagHandler {
 
     private final TagSubscriptionManager manager;
     private final IMessageSender messageSender;
-    private final IControllerProxy controllerProxy;
+    private final IControllerProxy controller;
 
-    /**
-     * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
-     * @param dataTags the collection of ISourceDataTags to subscribe to.
-     * @throws ConfigurationException if the collection of tags was empty.
-     */
     @Override
     public void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
         if (dataTags.isEmpty()) {
@@ -77,33 +72,22 @@ public class DataTagHandler implements IDataTagHandler {
                     .entrySet()
                     .stream()
                     .collect(toMap(e -> manager.getGroup(e.getKey()), e -> e.getValue().stream().map(manager::getOrCreateDefinition).collect(Collectors.toList())));
-            final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribe(groupsWithDefinitions);
+            final Map<UInteger, SourceDataTagQuality> handleQualityMap = controller.subscribe(groupsWithDefinitions);
             handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
         }
     }
 
-    /**
-     * Subscribes to the OPC UA node corresponding to one data tag on the server.
-     * @param sourceDataTag the ISourceDataTag to subscribe to.
-     * @return true if the Tag could be subscribed successfully.
-     */
     @Override
     public boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
         ItemDefinition definition = manager.getOrCreateDefinition(sourceDataTag);
         final Map<SubscriptionGroup, List<ItemDefinition>> map = new ConcurrentHashMap<>();
         map.put(manager.getGroup(definition.getTimeDeadband()), Collections.singletonList(definition));
-        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controllerProxy.subscribe(map);
+        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controller.subscribe(map);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
         final SourceDataTagQuality quality = handleQualityMap.get(definition.getClientHandle());
         return quality != null && quality.isValid();
     }
 
-    /**
-     * Removes a Tag from the internal configuration and if already subscribed from the OPC UA subscription. It the
-     * subscription is then empty, it is deleted along with the monitored item.
-     * @param dataTag the tag to remove.
-     * @return true if the tag was previously known.
-     */
     @Override
     public boolean removeTag(final ISourceDataTag dataTag) {
         final SubscriptionGroup group = manager.getGroup(dataTag.getTimeDeadband());
@@ -114,7 +98,7 @@ public class DataTagHandler implements IDataTagHandler {
             if (definition == null) {
                 log.error("The tag with id {} is not currently subscribed on the server, skipping removal.", dataTag.getId());
                 return false;
-            } else if (!controllerProxy.unsubscribe(definition)) {
+            } else if (!controller.unsubscribe(definition)) {
                 return false;
             }
         }
@@ -122,18 +106,11 @@ public class DataTagHandler implements IDataTagHandler {
         return wasSubscribed;
     }
 
-    /**
-     * Reads the current values from the server for all subscribed data tags.
-     */
     @Override
     public void refreshAllDataTags() {
         refresh(manager.getTagIdDefinitionMap());
     }
 
-    /**
-     * Reads the sourceDataTag's current value from the server
-     * @param sourceDataTag the tag whose current value to read
-     */
     @Override
     public void refreshDataTag(ISourceDataTag sourceDataTag) {
         final Map<Long, ItemDefinition> objectObjectHashMap = new ConcurrentHashMap<>();
@@ -168,7 +145,7 @@ public class DataTagHandler implements IDataTagHandler {
                 return;
             }
             try {
-                final Map.Entry<ValueUpdate, SourceDataTagQuality> reading = controllerProxy.read(e.getValue().getNodeId());
+                final Map.Entry<ValueUpdate, SourceDataTagQuality> reading = controller.read(e.getValue().getNodeId());
                 messageSender.onValueUpdate(e.getKey(), reading.getValue(), reading.getKey());
             } catch (OPCUAException ex) {
                 log.debug("The DataTag with ID {} could not be refreshed.", e.getKey(), ex);

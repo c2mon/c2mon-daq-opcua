@@ -171,7 +171,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Disconnect from the server with a certain number of retries in case of connection error.
+     * Disconnect from the server with the number of retries configured in {@link cern.c2mon.daq.opcua.config.AppConfigProperties}
+     * in case of connection error.
      */
     @Override
     public void disconnect() {
@@ -196,8 +197,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Add a list of item definitions as monitored items to a subscription with a certain number of retries in case of
-     * connection fault and notify the {@link IMessageSender} of all future value updates
+     * Add a list of item definitions as monitored items to a subscription with the number of retries configured in
+     * {@link cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults and notify the {@link
+     * IMessageSender} of all future value updates
      * @param group       The {@link SubscriptionGroup} to add the {@link ItemDefinition}s to
      * @param definitions the {@link ItemDefinition}s for which to create monitored items
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
@@ -222,13 +224,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-
-
-    /**
-     * Recreate all subscriptions configured in {@link TagSubscriptionReader}. This method is usually called by the
-     * {@link cern.c2mon.daq.opcua.control.Controller} after a failover.
-     * @throws CommunicationException if no subscription could be recreated.
-     */
     @Override
     public void recreateAllSubscriptions() throws CommunicationException {
         boolean anySuccess = true;
@@ -247,9 +242,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Subscribes to a {@link NodeId} with the passed callback. Usually called by the {@link
-     * cern.c2mon.daq.opcua.control.Controller} to monitor the server health.
-     * @param publishingInterval   the
+     * Subscribes to a {@link NodeId} with the itemCreationCallback  with the number of retries configured in {@link
+     * cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults.
+     * @param publishingInterval   the publishing interval of the subscription the definitions are added to.
      * @param definitions          the {@link ItemDefinition}s containing the {@link NodeId}s to subscribe to
      * @param itemCreationCallback the callback to apply upon creation of the items in the subscription
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
@@ -269,8 +264,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Delete an item from an OPC UA subscription with a certain number of retries in case of connection. If the
-     * subscription contains only the one item, the whole subscription is deleted. error.
+     * Delete an item from an OPC UA subscription  with the number of retries configured in {@link
+     * cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults. If the subscription contains only
+     * the one item, the whole subscription is deleted.
      * @param clientHandle    the identifier of the monitored item to remove.
      * @param publishInterval the publishing interval subscription to remove the monitored item from.
      */
@@ -297,8 +293,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Read the current value from a node on the currently connected OPC UA server with a certain number of retries in
-     * case connection of error.
+     * Read the current value from a node on the currently connected OPC UA server  with the number of retries
+     * configured in {@link cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults.
      * @param nodeId the nodeId of the node whose value to read.
      * @return the {@link DataValue} containing the value read from the node.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
@@ -316,8 +312,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Write a value to a node on the currently connected OPC UA server with a certain number of retries in case of
-     * connection error.
+     * Write a value to a node on the currently connected OPC UA server with the number of retries configured in {@link
+     * cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults.
      * @param nodeId the nodeId of the node to write a value to.
      * @param value  the value to write to the node.
      * @return whether the write action finished successfully
@@ -333,9 +329,10 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     /**
-     * Call the method node associated with the definition with a certain number of retries in case of connection
-     * error.. It no method node is specified within the definition, it is assumed that the primary node is the method
-     * node, and the first object node ID encountered during browse is used as object node.
+     * Call the method node associated with the definition  with the number of retries configured in {@link
+     * cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults. It no method node is specified
+     * within the definition, it is assumed that the primary node is the method node, and the first object node ID
+     * encountered during browse is used as object node.
      * @param definition the definition containing the nodeId of Method which shall be called
      * @param arg        the input argument to pass to the methodId call.
      * @return whether the methodId was successful, and the output arguments of the called method (if applicable, else

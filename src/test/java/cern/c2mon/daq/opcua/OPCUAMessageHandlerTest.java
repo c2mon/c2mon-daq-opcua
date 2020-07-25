@@ -38,8 +38,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Autowired IDataTagHandler tagHandler;
     @Autowired IMessageSender epMessageSender;
     @Autowired Endpoint miloEndpoint;
-    @Autowired
-    TagSubscriptionReader mapper;
+    @Autowired TagSubscriptionReader mapper;
 
     OPCUAMessageHandler handler;
     TestUtils.CommfaultSenderCapture capture;
@@ -49,7 +48,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     protected void beforeTest() throws Exception {
         handler = (OPCUAMessageHandler) msgHandler;
         handler.setContext(context);
-        ReflectionTestUtils.setField(tagHandler, "controllerProxy", TestUtils.getFailoverProxy(miloEndpoint, epMessageSender));
+        ReflectionTestUtils.setField(tagHandler, "controller", TestUtils.getFailoverProxy(miloEndpoint, epMessageSender));
         capture = new TestUtils.CommfaultSenderCapture(messageSender);
     }
 
@@ -60,7 +59,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigButBadEndpointShouldThrowCommunicationError() {
-        ReflectionTestUtils.setField(tagHandler, "controllerProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(epMessageSender, mapper), epMessageSender));
+        ReflectionTestUtils.setField(tagHandler, "controller", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(epMessageSender, mapper), epMessageSender));
         replay(messageSender);
         assertThrows(CommunicationException.class, () -> handler.connectToDataSource());
     }
@@ -68,7 +67,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigButBadEndpointShouldSendFAIL() {
-        ReflectionTestUtils.setField(tagHandler, "controllerProxy", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(epMessageSender, mapper), epMessageSender));
+        ReflectionTestUtils.setField(tagHandler, "controller", TestUtils.getFailoverProxy(new ExceptionTestEndpoint(epMessageSender, mapper), epMessageSender));
         replay(messageSender);
         try {
             handler.connectToDataSource();

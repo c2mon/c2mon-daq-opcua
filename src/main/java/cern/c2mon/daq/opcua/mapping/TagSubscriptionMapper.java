@@ -41,12 +41,6 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
     private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
 
-    /**
-     * Gets a {@link SubscriptionGroup} with a publish interval equal to the time Deadband, or creates a new one if none
-     * yet exists.
-     * @param timeDeadband to equal the publish interval of the group
-     * @return the existing or newly created {@link SubscriptionGroup}
-     */
     @Override
     public SubscriptionGroup getGroup(int timeDeadband) {
         if (groupExists(timeDeadband)) {
@@ -58,36 +52,16 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
         }
     }
 
-    /**
-     * Returns all currently known {@link SubscriptionGroup}s. Usually called by the {@link
-     * cern.c2mon.daq.opcua.connection.Endpoint} to recreate the state on the previously active server after a
-     * failover.
-     * @return all currently known {@link SubscriptionGroup}s
-     */
     @Override
     public Collection<SubscriptionGroup> getGroups() {
         return subscriptionGroups.values();
     }
 
-    /**
-     * Returns the {@link ItemDefinition} associated with the tagId, or null if no {@link ItemDefinition} is associated
-     * with the tagId.
-     * @param tagId the tag ID whose associated {@link ItemDefinition} is to be returned
-     * @return the {@link ItemDefinition} to which the tagId is mapped, or null if no {@link ItemDefinition} is
-     * associated with the tagId
-     */
     @Override
     public ItemDefinition getDefinition(Long tagId) {
         return tagIdDefinitionMap.get(tagId);
     }
 
-    /**
-     * Returns the tagId associated with the {@link ItemDefinition} identified by the clientHandle, or null if no tagId
-     * is associated with the clientHandle.
-     * @param clientHandle the client handle identifying the {@link ItemDefinition} whose associated tagId is to be
-     *                     returned
-     * @return the tagId associated with the clientHandle
-     */
     @Override
     public Long getTagId(UInteger clientHandle) {
         return tagIdDefinitionMap.entrySet().stream()
@@ -97,14 +71,6 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
                 .orElse(null);
     }
 
-    /**
-     * Returns the {@link ItemDefinition} associated with the tagId, or created a new one {@link ItemDefinition} if none
-     * is yet associated with the tagId.
-     * @param tag the {@link ISourceDataTag} whose associated {@link ItemDefinition} is to be returned, or for whom a
-     *            new {@link ItemDefinition} shall be created
-     * @return the {@link ItemDefinition} to which the tagId is mapped, or the newly created {@link ItemDefinition} for
-     * the tag.
-     */
     @Override
     public ItemDefinition getOrCreateDefinition(ISourceDataTag tag) {
         if (tagIdDefinitionMap.containsKey(tag.getId())) {
@@ -116,12 +82,6 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
         }
     }
 
-    /**
-     * Registers the tagId as subscribed and adds the associated {@link ItemDefinition} to the appropriate {@link
-     * SubscriptionGroup}.
-     * @param tagId the tagId whose associated {@link ItemDefinition} to add to the appropriate {@link
-     *              SubscriptionGroup}
-     */
     @Override
     public void addTagToGroup(long tagId) {
         if (tagIdDefinitionMap.containsKey(tagId)) {
@@ -130,13 +90,6 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
         }
     }
 
-    /**
-     * Registers the tagId as unsubscribed and removes the associated {@link ItemDefinition} from the corresponding
-     * {@link SubscriptionGroup}.
-     * @param tagId the tagId whose associated {@link ItemDefinition} to remove its {@link SubscriptionGroup}
-     * @return true if the tagId was previously associated with an {@link ItemDefinition} which was part of a {@link
-     * SubscriptionGroup}.
-     */
     @Override
     public boolean removeTag(long tagId) {
         ItemDefinition definition = tagIdDefinitionMap.remove(tagId);
@@ -147,9 +100,6 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
         return group != null && group.remove(tagId);
     }
 
-    /**
-     * Removes all managed {@link ItemDefinition}s and {@link SubscriptionGroup}s from the internal state.
-     */
     @Override
     public void clear() {
         tagIdDefinitionMap.clear();

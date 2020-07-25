@@ -90,7 +90,7 @@ public class CommandTagHandlerTest {
                 .anyTimes();
         //no call to write
         replay(mockEp);
-        ReflectionTestUtils.setField(commandTagHandler, "controllerProxy", TestUtils.getFailoverProxy(mockEp, l));
+        ReflectionTestUtils.setField(commandTagHandler, "controller", TestUtils.getFailoverProxy(mockEp, l));
         commandTagHandler.runCommand(tag, value);
         verify(mockEp);
     }
@@ -104,7 +104,7 @@ public class CommandTagHandlerTest {
         expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();
         expect(mockEp.write(def, 0)).andReturn(endpoint.write(def, 0)).once();
         replay(mockEp);
-        ReflectionTestUtils.setField(commandTagHandler, "controllerProxy", TestUtils.getFailoverProxy(mockEp, l));
+        ReflectionTestUtils.setField(commandTagHandler, "controller", TestUtils.getFailoverProxy(mockEp, l));
         commandTagHandler.runCommand(tag, value);
         verify(mockEp);
     }
@@ -136,7 +136,7 @@ public class CommandTagHandlerTest {
         controller.initialize(new ExceptionTestEndpoint(l, new TagSubscriptionMapper()));
         final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, l);
         proxy.setController(controller);
-        ReflectionTestUtils.setField(commandTagHandler, "controllerProxy", proxy);
+        ReflectionTestUtils.setField(commandTagHandler, "controller", proxy);
         verifyCommunicationException(ExceptionContext.WRITE);
     }
 

@@ -33,12 +33,12 @@ import java.util.stream.Collectors;
  * The CommandRunner identifies appropriate actions to take upon receiving an {@link ISourceCommandTag}s and executes
  * them on the {@link Endpoint}.
  */
-@Component("commandRunner")
+@Component("commandTagHandler")
 @Slf4j
 @RequiredArgsConstructor
 public class CommandTagHandler implements ICommandTagChanger {
 
-    private final IControllerProxy controllerProxy;
+    private final IControllerProxy controller;
 
     @Value("#{@appConfigProperties.getTimeout()}")
     private int timeout;
@@ -130,7 +130,7 @@ public class CommandTagHandler implements ICommandTagChanger {
     private Object[] executeMethod(ISourceCommandTag tag, Object arg) throws OPCUAException {
         log.info("executeMethod of tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
         final ItemDefinition def = ItemDefinition.of(tag);
-        final Map.Entry<Boolean, Object[]> result = controllerProxy.callMethod(def, arg);
+        final Map.Entry<Boolean, Object[]> result = controller.callMethod(def, arg);
         log.info("executeMethod returned {}.", result.getValue());
         if (!result.getKey()) {
             throw new CommunicationException(ExceptionContext.METHOD_CODE);
@@ -174,7 +174,7 @@ public class CommandTagHandler implements ICommandTagChanger {
         final ItemDefinition def = ItemDefinition.of(tag);
         if (def == null) {
             throw new ConfigurationException(ExceptionContext.COMMAND_CLASSIC);
-        } else if (!controllerProxy.write(def.getNodeId(), arg)) {
+        } else if (!controller.write(def.getNodeId(), arg)) {
             throw new CommunicationException(ExceptionContext.COMMAND_CLASSIC);
         }
     }
@@ -194,7 +194,7 @@ public class CommandTagHandler implements ICommandTagChanger {
         if (definition == null) {
             throw new ConfigurationException(ExceptionContext.READ);
         }
-        final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controllerProxy.read(definition.getNodeId());
+        final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controller.read(definition.getNodeId());
         log.info("Action completed with Status Code: {}", read.getValue());
         if (read.getValue() == null || !read.getValue().isValid()) {
             throw new CommunicationException(ExceptionContext.READ);

@@ -52,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
 
-    private IControllerProxy controllerProxy;
+    private IControllerProxy controller;
     private IDataTagHandler dataTagHandler;
     private DataTagChanger dataTagChanger;
     private AliveWriter aliveWriter;
@@ -67,7 +67,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public void connectToDataSource() throws EqIOException {
-        controllerProxy = getContext().getBean("failoverProxy", IControllerProxy.class);
+        controller = getContext().getBean("controller", IControllerProxy.class);
         dataTagHandler = getContext().getBean(IDataTagHandler.class);
         aliveWriter = getContext().getBean(AliveWriter.class);
         commandTagHandler = getContext().getBean(CommandTagHandler.class);
@@ -83,7 +83,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
             try {
-                controllerProxy.connect(addresses);
+                controller.connect(addresses);
             } catch (OPCUAException e) {
                 sender.confirmEquipmentStateIncorrect(IMessageSender.EquipmentState.CONNECTION_FAILED.message);
                 throw e;
@@ -105,7 +105,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     public void disconnectFromDataSource() {
         log.debug("disconnecting from OPC data source...");
         dataTagHandler.reset();
-        controllerProxy.stop();
+        controller.stop();
         aliveWriter.stopWriter();
         log.debug("disconnected");
     }

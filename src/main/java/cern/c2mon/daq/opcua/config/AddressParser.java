@@ -29,9 +29,9 @@ import org.springframework.core.convert.support.DefaultConversionService;
 
 import java.lang.reflect.Field;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -86,7 +86,7 @@ public abstract class AddressParser {
     }
 
     private static Map<String, String> parsePropertiesFromString(final String address) {
-        Map<String, String> properties = new HashMap<>();
+        Map<String, String> properties = new ConcurrentHashMap<>();
         String[] keyValues = address.split(";");
         for (int i = 0; i < keyValues.length; i++) {
             String keyValueString = keyValues[i];

@@ -13,7 +13,7 @@ import java.util.List;
  */
 @Slf4j
 @NoArgsConstructor
-@Component("singleServerController")
+@Component("noFailover")
 public class NoFailover extends ControllerBase {
 
     /**

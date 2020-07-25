@@ -23,7 +23,7 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
  * The {@link DataTagChanger} handles changes  at runtime to the {@link ISourceDataTag}s in  {@link
  * cern.c2mon.shared.common.process.IEquipmentConfiguration}.
  */
-@Component("tagChanger")
+@Component("dataTagChanger")
 @RequiredArgsConstructor
 @Slf4j
 public class DataTagChanger implements IDataTagChanger {
@@ -42,6 +42,7 @@ public class DataTagChanger implements IDataTagChanger {
 
     private static final Function<Collection<ISourceDataTag>, String> tagsToIdString = tags -> tags.stream()
             .map(t -> t.getId().toString()).collect(Collectors.joining(", "));
+
     private final IDataTagHandler tagHandler;
 
     private static void gatherIds(Stream<ISourceDataTag> tagStream, Predicate<ISourceDataTag> predicate, String successMsg, String failMsg, ChangeReport report) {

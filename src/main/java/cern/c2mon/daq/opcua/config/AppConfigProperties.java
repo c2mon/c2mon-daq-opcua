@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +27,6 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Slf4j
 public class AppConfigProperties {
 
     /**
@@ -44,13 +42,13 @@ public class AppConfigProperties {
      */
     private List<String> redundantServerUris;
 
-
     /**
      * The publishing rate of the subscription for connection monitoring for redundant server sets in seconds.
      */
     private int connectionMonitoringRate = 3;
+
     /**
-     * The delay before restarting the DAQ after an equipment change.
+     * The delay before restarting the DAQ after an equipment change if the equipment addresses changed.
      */
     private long restartDelay = 2000L;
 
@@ -68,7 +66,7 @@ public class AppConfigProperties {
     private long maxFailoverDelay = 10000L;
 
     /**
-     * How often to retry connecting to an unavailable server when connectToDataSource() is called?
+     * The maximum amount of attempts to retry service calls
      */
     private int maxRetryAttempts = 1;
 
@@ -80,7 +78,7 @@ public class AppConfigProperties {
 
     /**
      * The AliveWriter ensures that the SubEquipments connected to the OPC UA server are still running and sends regular
-     * aliveTags to the C2MON Core
+     * aliveTags to the C2MON Core.
      */
     private boolean aliveWriterEnabled;
 
@@ -144,7 +142,6 @@ public class AppConfigProperties {
     @Configuration
     @ConfigurationProperties(prefix = "app.keystore")
     @Data
-    @Builder
     @AllArgsConstructor
     @NoArgsConstructor
     public static class KeystoreConfig {
@@ -160,7 +157,6 @@ public class AppConfigProperties {
     @Configuration
     @ConfigurationProperties(prefix = "app.pki")
     @Data
-    @Builder
     @AllArgsConstructor
     @NoArgsConstructor
     public static class PKIConfig {
