@@ -207,11 +207,11 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @throws ConfigurationException if the server returned an error code indicating a misconfiguration.
      */
     @Override
-    public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException {
+    public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException {
         try {
             log.info("Subscribing definitions with publishing interval {}.", group.getPublishInterval());
             return subscribeWithCallback(group.getPublishInterval(), definitions, this::defaultSubscriptionCallback);
-        } catch (ConfigurationException e) {
+        } catch (ConfigurationException | EndpointDisconnectedException e) {
             throw e;
         } catch (OPCUAException e) {
             final String ids = definitions.stream()
@@ -230,7 +230,10 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         for (SubscriptionGroup group : mapper.getGroups()) {
             try {
                 anySuccess = anySuccess && resubscribeGroupsAndReportSuccess(group);
-            } catch (ConfigurationException e) {
+            } catch (EndpointDisconnectedException e) {
+                log.info("Session was closed, abort subscription recreation process.");
+                return;
+            } catch (OPCUAException e) {
                 log.info("Could not resubscribe group with time Deadband {}.", group.getPublishInterval(), e);
             }
         }
@@ -256,8 +259,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                                                                      Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
         UaSubscription subscription = getOrCreateSubscription(publishingInterval);
         List<MonitoredItemCreateRequest> requests = definitions.stream().map(this::toMonitoredItemCreateRequest).collect(toList());
-        return retryDelegate
-                .completeOrThrow(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
+        return retryDelegate .completeOrThrow(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
                         () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, (item, i) -> itemCreationCallback.accept(item)))
                 .stream()
                 .collect(toMap(UaMonitoredItem::getClientHandle, item -> MiloMapper.getDataTagQuality(item.getStatusCode())));
@@ -443,7 +445,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-    private boolean resubscribeGroupsAndReportSuccess(SubscriptionGroup group) throws ConfigurationException {
+    private boolean resubscribeGroupsAndReportSuccess(SubscriptionGroup group) throws OPCUAException {
         final Map<UInteger, SourceDataTagQuality> handleQualityMap = subscribe(group, group.getTagIds().values());
         return handleQualityMap != null && handleQualityMap.values().stream().anyMatch(SourceDataTagQuality::isValid);
     }
@@ -490,8 +492,14 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 log.info("Client was stopped, cease subscription recreation attempts.");
             } else if (retryContext.getLastThrowable() != null && !(retryContext.getLastThrowable() instanceof CommunicationException)) {
                 log.error("Subscription recreation aborted due to an unexpected error: ", retryContext.getLastThrowable());
-            } else if (!resubscribeGroupsAndReportSuccess(group)) {
-                throw new CommunicationException(CREATE_SUBSCRIPTION);
+            } else {
+                try {
+                    if (!resubscribeGroupsAndReportSuccess(group)) {
+                        throw new CommunicationException(CREATE_SUBSCRIPTION);
+                    }
+                } catch (EndpointDisconnectedException e) {
+                    log.info("Session was closed, abort subscription recreation process.");
+                }
             }
             return null;
         };

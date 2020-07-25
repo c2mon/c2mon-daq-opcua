@@ -46,25 +46,21 @@ public class EdgeIT extends EdgeTestBase {
     private final ISourceDataTag alreadySubscribedTag = EdgeTagFactory.DipData.createDataTag();
 
     @Autowired TestListeners.Pulse pulseListener;
-    @Autowired
-    IControllerProxy controllerProxy;
-    @Autowired
-    IDataTagHandler tagHandler;
+    @Autowired IControllerProxy controller;
+    @Autowired IDataTagHandler tagHandler;
     @Autowired CommandTagHandler commandTagHandler;
-    @Autowired
-    IControllerProxy singleServerController;
 
     @BeforeEach
     public void setupEndpoint() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         log.info("############ SET UP ############");
         pulseListener.setSourceID(tag.getId());
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
-        final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
+        final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controller, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);
 
-        controllerProxy.connect(Collections.singleton(active.getUri()));
+        controller.connect(Collections.singleton(active.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(alreadySubscribedTag));
-        pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS); // that tag is subscribed
+        pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         log.info("Client ready");
         log.info("############ TEST ############");
@@ -73,7 +69,7 @@ public class EdgeIT extends EdgeTestBase {
     @AfterEach
     public void cleanUp() {
         log.info("############ CLEAN UP ############");
-        controllerProxy.stop();
+        controller.stop();
     }
 
     @Test

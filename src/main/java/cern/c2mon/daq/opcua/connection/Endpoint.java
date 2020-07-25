@@ -1,9 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
@@ -42,7 +39,7 @@ public interface Endpoint {
     void manageSessionActivityListener(boolean add, SessionActivityListener listener);
 
     /**
-     * Returns the address of the connected server.
+     * Get the address of the connected server.
      * @return the address of the connected server.
      */
     String getUri();
@@ -58,13 +55,14 @@ public interface Endpoint {
      * @param definitions the {@link ItemDefinition}s for which to create monitored items
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
      * call.
-     * @throws ConfigurationException if the server returned an error code indicating a misconfiguration.
+     * @throws OPCUAException if the server returned an error code indicating a misconfiguration or the session was closed.
      */
-    Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws ConfigurationException;
+    Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException;
 
 
     /**
      * Recreate all subscriptions configured in {@link TagSubscriptionReader}.
+     * @throws CommunicationException if not a single subscription could be recreated.
      */
     void recreateAllSubscriptions() throws CommunicationException;
 

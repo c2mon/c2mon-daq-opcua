@@ -49,7 +49,7 @@ public class FailoverIT extends EdgeTestBase {
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
-    private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(((ColdFailover) coldFailover), "triggerServerSwitch");
+    private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch");
     private boolean resetConnection;
 
     ExecutorService executor;
@@ -126,7 +126,7 @@ public class FailoverIT extends EdgeTestBase {
     }
 
     @Test
-    public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
+    public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
         cutConnection(pulseListener, active);
         executor.submit(serverSwitch);

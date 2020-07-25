@@ -27,6 +27,8 @@ public abstract class OPCUAException extends EqIOException {
     /** Status Codes indicating a node ID supplied by an incorrect hardware address */
     private static final Collection<Long> DATA_UNAVAILABLE = ImmutableSet.<Long>builder().add(Bad_DataLost, Bad_DataUnavailable, Bad_NoData, Bad_NoDataAvailable).build();
 
+    private static final Collection<Long> ENDPOINT_DISCONNECTED = ImmutableSet.<Long>builder().add(Bad_SessionClosed, Bad_SessionIdInvalid).build();
+
     protected OPCUAException(final ExceptionContext context) {
         super(context.getMessage());
     }
@@ -50,9 +52,10 @@ public abstract class OPCUAException extends EqIOException {
      * CommunicationException} if neither of the above is true.
      */
     public static OPCUAException of(ExceptionContext context, Throwable e, boolean disconnectionTooLong) {
-        final boolean uaConfigIssue = e instanceof UaException && CONFIG.contains(((UaException)e).getStatusCode().getValue());
-        if (e instanceof UnknownHostException || uaConfigIssue) {
+        if (isConfigIssue(e)) {
             return new ConfigurationException(context, e);
+        } else if (isEndpointDisconnectedIssue(e)) {
+            return new EndpointDisconnectedException(context, e);
         } else if (disconnectionTooLong) {
             return new LongLostConnectionException(context, e.getCause());
         }
@@ -85,4 +88,13 @@ public abstract class OPCUAException extends EqIOException {
     public static boolean isDataUnavailable(StatusCode code) {
         return DATA_UNAVAILABLE.contains(code.getValue());
     }
+
+    private static boolean isConfigIssue(Throwable e) {
+        return e instanceof UnknownHostException || e instanceof UaException && CONFIG.contains(((UaException)e).getStatusCode().getValue());
+    }
+
+    private static boolean isEndpointDisconnectedIssue(Throwable e) {
+        return e instanceof UaException && ENDPOINT_DISCONNECTED.contains(((UaException)e).getStatusCode().getValue());
+    }
+
 }

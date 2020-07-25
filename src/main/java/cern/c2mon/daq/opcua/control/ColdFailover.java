@@ -3,6 +3,7 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.EndpointDisconnectedException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.extern.slf4j.Slf4j;
@@ -93,7 +94,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     public void switchServers() throws OPCUAException {
         if (!stopped.get()) {
             log.info("Attempt to switch to next healthy server.");
-            synchronized (this) {
+            synchronized (stopped) {
                 disconnectAndProceed();
                 if (reconnectionSucceeded()) {
                     activeEndpoint.recreateAllSubscriptions();
@@ -199,6 +200,9 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             activeEndpoint.manageSessionActivityListener(true, this);
             try {
                 activeEndpoint.subscribeWithCallback(config.getConnectionMonitoringRate(), connectionMonitoringNodes, this::monitoringCallback);
+            } catch (EndpointDisconnectedException e) {
+                log.debug("Setting up connection monitoring failed with exception: ", e);
+                log.info("Session was closed, abort setting up connection monitoring.");
             } catch (OPCUAException e) {
                 log.info("An error occurred when setting up connection monitoring.", e);
             }

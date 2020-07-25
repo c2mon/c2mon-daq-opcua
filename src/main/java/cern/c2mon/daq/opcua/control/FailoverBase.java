@@ -87,9 +87,9 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
 
     protected void monitoringCallback(UaMonitoredItem item) {
         final NodeId nodeId = item.getReadValueId().getNodeId();
-        if (nodeId.equals(Identifiers.Server_ServiceLevel)) {
+        if (!stopped.get() && nodeId.equals(Identifiers.Server_ServiceLevel)) {
             item.setValueConsumer(this::serviceLevelConsumer);
-        } else if (nodeId.equals(Identifiers.ServerState)) {
+        } else if (!stopped.get() && nodeId.equals(Identifiers.ServerState)) {
             item.setValueConsumer(this::serverStateConsumer);
         }
     }

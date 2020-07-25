@@ -155,7 +155,8 @@ public class ControllerProxy implements IControllerProxy {
                     log.error("Could not connect to redundant URI {}, and no other server URIs remain.", currentUri);
                     throw e;
                 }
-                log.info("Could not connect to redundant URI {}. Attempt next...", currentUri, e);
+                log.debug("Connection failed with exception:", e);
+                log.info("Could not connect to redundant URI {}. Attempt next server...", currentUri);
             }
         }
         throw new ConfigurationException(ExceptionContext.NO_REDUNDANT_SERVER);
