@@ -88,7 +88,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      * Called periodically  when the client loses connectivity with the active Server until connection can be
      * reestablished. Attempt to create a connection a healthy redundant Server. Connection is attempted also to the
      * previously active server in case it starts back up and connection loss was temporary.
-     * @throws OPCUAException if the no server could be connected to
+     * @throws OPCUAException if the no connection could be established to any server
      */
     @Override
     public void switchServers() throws OPCUAException {

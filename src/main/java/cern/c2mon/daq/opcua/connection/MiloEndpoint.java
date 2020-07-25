@@ -204,7 +204,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @param definitions the {@link ItemDefinition}s for which to create monitored items
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
      * call.
-     * @throws ConfigurationException if the server returned an error code indicating a misconfiguration.
+     * @throws OPCUAException of type {@link ConfigurationException} or {@link EndpointDisconnectedException}.
      */
     @Override
     public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException {
@@ -259,8 +259,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                                                                      Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
         UaSubscription subscription = getOrCreateSubscription(publishingInterval);
         List<MonitoredItemCreateRequest> requests = definitions.stream().map(this::toMonitoredItemCreateRequest).collect(toList());
-        return retryDelegate .completeOrThrow(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
-                        () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, (item, i) -> itemCreationCallback.accept(item)))
+        return retryDelegate.completeOrThrow(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
+                () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, (item, i) -> itemCreationCallback.accept(item)))
                 .stream()
                 .collect(toMap(UaMonitoredItem::getClientHandle, item -> MiloMapper.getDataTagQuality(item.getStatusCode())));
     }

@@ -29,7 +29,7 @@ public abstract class ControllerBase implements Controller {
             return e.subscribe(groupWithDefinitions.getKey(), groupWithDefinitions.getValue()).entrySet().stream();
         } catch (EndpointDisconnectedException ex) {
             log.info("Session was closed on endpoint, abort subscription recreation process.", ex);
-        } catch (ConfigurationException ex) {
+        } catch (OPCUAException ex) {
             log.info("Could not subscribe the ItemDefinitions with time deadband {} to the endpoint at URI {}.", groupWithDefinitions.getKey().getPublishInterval(), e.getUri(), ex);
         }
         return groupWithDefinitions.getValue().stream()

@@ -27,7 +27,7 @@ public abstract class OPCUAException extends EqIOException {
     /** Status Codes indicating a node ID supplied by an incorrect hardware address */
     private static final Collection<Long> DATA_UNAVAILABLE = ImmutableSet.<Long>builder().add(Bad_DataLost, Bad_DataUnavailable, Bad_NoData, Bad_NoDataAvailable).build();
 
-    private static final Collection<Long> ENDPOINT_DISCONNECTED = ImmutableSet.<Long>builder().add(Bad_SessionClosed, Bad_SessionIdInvalid).build();
+    private static final Collection<Long> ENDPOINT_DISCONNECTED = ImmutableSet.<Long>builder().add(Bad_SessionClosed, Bad_SessionIdInvalid, Bad_SecureChannelIdInvalid, Bad_SecureChannelClosed).build();
 
     protected OPCUAException(final ExceptionContext context) {
         super(context.getMessage());
