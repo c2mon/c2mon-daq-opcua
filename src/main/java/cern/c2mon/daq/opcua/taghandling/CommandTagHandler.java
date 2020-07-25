@@ -16,17 +16,18 @@ import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.type.TypeConverter;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
-import com.google.common.base.Joiner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * The CommandRunner identifies appropriate actions to take upon receiving an {@link ISourceCommandTag}s and executes
@@ -100,7 +101,7 @@ public class CommandTagHandler implements ICommandTagChanger {
             final OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
             switch (hardwareAddress.getCommandType()) {
                 case METHOD:
-                    return Joiner.on(", ").join(executeMethod(tag, arg));
+                    return Arrays.stream(executeMethod(tag, arg)).map(Object::toString).collect(Collectors.joining(", "));
                 case CLASSIC:
                     runClassicCommand(tag, arg, hardwareAddress.getCommandPulseLength());
                     break;
@@ -126,7 +127,6 @@ public class CommandTagHandler implements ICommandTagChanger {
      * @param arg the input arguments to pass to the method.
      * @return an array of the method's output arguments. If there are none, an empty array is returned.
      */
-
     private Object[] executeMethod(ISourceCommandTag tag, Object arg) throws OPCUAException {
         log.info("executeMethod of tag with ID {} and name {} with argument {}.", tag.getId(), tag.getName(), arg);
         final ItemDefinition def = ItemDefinition.of(tag);

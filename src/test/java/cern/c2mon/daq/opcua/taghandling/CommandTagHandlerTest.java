@@ -38,6 +38,7 @@ public class CommandTagHandlerTest {
     @BeforeEach
     public void setUp() {
         this.endpoint = new TestEndpoint(l, new TagSubscriptionMapper());
+        endpoint.setReturnGoodStatusCodes(true);
         tag = new SourceCommandTag(0L, "Power");
 
         address = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw");
@@ -132,7 +133,7 @@ public class CommandTagHandlerTest {
     @Test
     public void badClientShouldThrowException() throws OPCUAException {
         Controller controller = new NoFailover();
-        controller.initialize(new ExceptionTestEndpoint(l, new TagSubscriptionMapper()), new String[0]);
+        controller.initialize(new ExceptionTestEndpoint(l, new TagSubscriptionMapper()));
         final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, l);
         proxy.setController(controller);
         ReflectionTestUtils.setField(commandTagHandler, "controllerProxy", proxy);
