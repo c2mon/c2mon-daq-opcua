@@ -52,9 +52,6 @@ public abstract class ControllerBase implements Controller {
      */
     protected abstract List<Endpoint> passiveEndpoints();
 
-    /**
-     * Disconnect from the OPC UA server and reset the controller to a neutral state.
-     */
     @Override
     public void stop() {
         passiveEndpoints().forEach(Endpoint::disconnect);
@@ -63,9 +60,11 @@ public abstract class ControllerBase implements Controller {
 
     /**
      * Subscribes the {@link NodeId}s in the {@link ItemDefinition}s to the corresponding {@link SubscriptionGroup} on
-     * the OPC UA server or on all servers in a redundant server set.
+     * all servers in a redundant server set.
      * @param groupsWithDefinitions a Map of {@link SubscriptionGroup}s and the {@link ItemDefinition}s to subscribe to
      *                              the groups.
+     * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
+     * call on the active server.
      */
     @Override
     public Map<UInteger, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions) {
@@ -90,7 +89,7 @@ public abstract class ControllerBase implements Controller {
     }
 
     /**
-     * Read the current value from a node on the currently connected OPC UA server
+     * Read the current value from a node on the currently active OPC UA server.
      * @param nodeId the nodeId of the node whose value to read.
      * @return the {@link ValueUpdate} and associated {@link SourceDataTagQualityCode} of the reading
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
@@ -101,9 +100,9 @@ public abstract class ControllerBase implements Controller {
     }
 
     /**
-     * Call the method node associated with the definition. It no method node is specified within the definition, it is
-     * assumed that the primary node is the method node, and the first object node ID encountered during browse is used
-     * as object node.
+     * Call the method node associated with the definition within the address space of the currently active server. It
+     * no method node is specified within the definition, it is assumed that the primary node is the method node, and
+     * the first object node ID encountered during browse is used as object node.
      * @param definition the definition containing the nodeId of Method which shall be called
      * @param arg        the input argument to pass to the methodId call.
      * @return whether the methodId was successful, and the output arguments of the called method (if applicable, else
@@ -116,7 +115,7 @@ public abstract class ControllerBase implements Controller {
     }
 
     /**
-     * Write a value to a node on the currently connected OPC UA server.
+     * Write a value to a node on the currently active OPC UA server.
      * @param nodeId the nodeId of the node to write a value to.
      * @param value  the value to write to the node.
      * @return whether the write command finished successfully

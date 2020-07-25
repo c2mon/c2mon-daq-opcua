@@ -55,7 +55,7 @@ public interface Controller {
     boolean unsubscribe(ItemDefinition definition);
 
     /**
-     * Read the current value from a node on the currently connected OPC UA server
+     * Read the current value from a node on the associated OPC UA server
      * @param nodeId the nodeId of the node whose value to read.
      * @return the {@link ValueUpdate} and associated {@link SourceDataTagQualityCode} of the reading
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.

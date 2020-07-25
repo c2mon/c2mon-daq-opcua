@@ -9,11 +9,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -30,16 +30,9 @@ import java.util.concurrent.TimeUnit;
 @Component("coldFailover")
 public class ColdFailover extends FailoverBase implements SessionActivityListener {
 
-    private final List<String> redundantAddresses = new ArrayList<>();
+    private List<String> redundantServers = new ArrayList<>();
     private String currentUri;
     private Endpoint activeEndpoint;
-
-    @Value("#{@appConfigProperties.getConnectionMonitoringRate()}")
-    private int monitoringRate;
-
-    @Value("#{@appConfigProperties.getTimeout()}")
-    private int timeout;
-
     private ScheduledExecutorService executor;
     private ScheduledFuture<?> future;
 
@@ -66,8 +59,9 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         activeEndpoint = endpoint;
         this.currentUri = activeEndpoint.getUri();
         executor = Executors.newSingleThreadScheduledExecutor();
-        Collections.addAll(this.redundantAddresses, redundantAddresses);
-        this.redundantAddresses.add(currentUri);
+        this.redundantServers = new ArrayList<>(Arrays.asList(redundantAddresses));
+        this.redundantServers.add(currentUri);
+        log.info("Initialized endpoint {} with redundant addresses {}.", endpoint.getUri(), this.redundantServers);
         // Only one server can be healthy at a time in cold redundancy
         if (readServiceLevel(activeEndpoint).compareTo(serviceLevelHealthLimit) < 0) {
             disconnectAndProceed();
@@ -81,13 +75,11 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         monitorConnection();
     }
 
-    /**
-     * Disconnect from the OPC UA server and reset the controller to a neutral state.
-     */
     @Override
     public void stop() {
         log.info("Stopping ColdFailover");
         executor.shutdown();
+        redundantServers.clear();
         super.stop();
     }
 
@@ -114,7 +106,8 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     }
 
     /**
-     * Called by when a session activates. This interrupts the timeout process initiated in onSessionInactive(session).
+     * Called when a session activates. This interrupts an active timeout to failover initiated in
+     * onSessionInactive(session).
      * @param session the session that has activated.
      */
     @Override
@@ -137,7 +130,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             future = executor.schedule(() -> {
                 log.info("Trigger server switch due to long disconnection");
                 triggerServerSwitch();
-            }, timeout, TimeUnit.MILLISECONDS);
+            }, config.getTimeout(), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -154,8 +147,8 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     private boolean reconnectionSucceeded() throws OPCUAException {
         try {
             //move current URI to end of list of servers to try
-            redundantAddresses.remove(currentUri);
-            redundantAddresses.add(currentUri);
+            redundantServers.remove(currentUri);
+            redundantServers.add(currentUri);
             return connectToHealthiestServerFinished();
         } catch (OPCUAException e) {
             log.info("Server not yet available.");
@@ -165,10 +158,10 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     }
 
     private boolean connectToHealthiestServerFinished() throws OPCUAException {
-        log.info("Current uri: {}, redundantAddressList, {}.", currentUri, redundantAddresses);
+        log.info("Current uri: {}, redundantAddressList, {}.", currentUri, redundantServers);
         UByte maxServiceLevel = UByte.valueOf(0);
         String maxServiceUri = null;
-        for (final String nextUri : redundantAddresses) {
+        for (final String nextUri : redundantServers) {
             if (stopped.get()) {
                 return false;
             }
@@ -205,7 +198,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             activeEndpoint.manageSessionActivityListener(true, null);
             activeEndpoint.manageSessionActivityListener(true, this);
             try {
-                activeEndpoint.subscribeWithCallback(monitoringRate, connectionMonitoringNodes, this::monitoringCallback);
+                activeEndpoint.subscribeWithCallback(config.getConnectionMonitoringRate(), connectionMonitoringNodes, this::monitoringCallback);
             } catch (OPCUAException e) {
                 log.info("An error occurred when setting up connection monitoring.", e);
             }
