@@ -133,7 +133,7 @@ public class SecurityIT {
 
         final CompletableFuture<IMessageSender.EquipmentState> state = listener.listen();
         controllerProxy.connect(Collections.singleton(uri));
-        assertEquals(IMessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        assertEquals(IMessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     private void trustCertificatesOnClient() throws IOException {

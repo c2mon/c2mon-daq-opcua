@@ -33,8 +33,6 @@ import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
 import org.springframework.retry.RetryCallback;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
@@ -92,7 +90,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @return a list of endpoints with the original url as as endpointUrl, but other identical to the
      * originalEndpoints.
      */
-    private static List<EndpointDescription> updateEndpointUrls(String originalUri, List<EndpointDescription> originalEndpoints) {
+    private static Collection<EndpointDescription> updateEndpointUrls(String originalUri, Collection<EndpointDescription> originalEndpoints) {
         // Some hostnames contain characters not allowed in a URI, such as underscores in Windows machine hostnames.
         // Therefore, parsing is done using a regular expression rather than relying on java URI class methods.
 
@@ -123,17 +121,17 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      *                        endpoints with the given authentication configuration settings.
      */
     @Override
-    @Retryable(value = {CommunicationException.class},
-            maxAttemptsExpression = "${app.maxRetryAttempts}",
-            backoff = @Backoff(delayExpression = "${app.retryDelay}"))
     public void initialize(String uri) throws OPCUAException {
         this.uri = uri;
         sessionActivityListeners.add(this);
         disconnectedOn.set(0L);
         try {
-            List<EndpointDescription> endpoints = DiscoveryClient.getEndpoints(uri).join();
-            endpoints = updateEndpointUrls(uri, endpoints);
-            client = securityModule.createClientWithListeners(endpoints, sessionActivityListeners);
+            final Collection<EndpointDescription> endpoints = retryDelegate.completeOrThrow(CONNECT,
+                    this::getDisconnectPeriod,
+                    () -> DiscoveryClient.getEndpoints(uri));
+            final Collection<EndpointDescription> updatedEndpoints = updateEndpointUrls(uri, endpoints);
+            client = retryDelegate.completeOrThrow(CONNECT, this::getDisconnectPeriod,
+                    () -> securityModule.createClientWithListeners(updatedEndpoints, sessionActivityListeners));
             final OpcUaSubscriptionManager subscriptionManager = client.getSubscriptionManager();
             subscriptionManager.addSubscriptionListener(this);
             subscriptionManager.resumeDelivery();

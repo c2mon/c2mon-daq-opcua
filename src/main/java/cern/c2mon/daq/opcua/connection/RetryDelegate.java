@@ -19,8 +19,8 @@ import java.util.function.Supplier;
  * The RetryDelegate executes a given method a number of times in case of failure until the method completes
  * successfully with a delay as given in the application configuration. It simultaneously keeps track of how long the
  * client has been disconnected from the server. If that period is longer than the total period likely needed to
- * complete all retries, a method is only executed once before it fails. One RetryDelegate is created for each {@link
- * Endpoint}. Retry logic is implemented using Spring Retry, which is AOP-based. Therefore, a method annotated with
+ * complete all retries, a method is only executed once before it fails. Retry logic is implemented using Spring Retry,
+ * which is AOP-based, meaning that Retry annotations methods do not retry if called from within the same class.
  */
 @Component(value = "retryDelegate")
 @RequiredArgsConstructor

@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
@@ -73,36 +74,44 @@ public class SecurityModule {
      * @param endpoints A list of endpoints of which to connect to one.
      * @param listeners the {@link SessionActivityListener}s to subscribe to the client before the initial connection
      *                  request such that they are informed of the first session activation.
-     * @return An {@link OpcUaClient} object that is connected to one of the endpoints.
-     * @throws OPCUAException of type {@link ConfigurationException} if the connection failed due to a configuration
-     *                        issue referring to security or general settings, and of type {@link
-     *                        CommunicationException} if the connection attempt failed for reasons unrelated to
-     *                        configuration, where a retry may be fruitful.
+     * @return An {@link CompletableFuture} containing the {@link OpcUaClient} object that is connected to one of the
+     * endpoints, or an exception that caused a failure in establishing a secure channel. That exception may be type
+     * {@link ConfigurationException} if the connection failed due to a configuration issue, and of type {@link
+     * CommunicationException} if the connection attempt failed for reasons unrelated to configuration, where a retry
+     * may be fruitful.
      */
-    public OpcUaClient createClientWithListeners(List<EndpointDescription> endpoints, Collection<SessionActivityListener> listeners) throws OPCUAException {
-        builder = OpcUaClientConfig.builder()
-                .setApplicationName(LocalizedText.english(config.getAppName()))
-                .setApplicationUri(config.getApplicationUri())
-                .setRequestTimeout(uint(config.getRequestTimeout()))
-                .setCertificateValidator(getValidator());
+    public CompletableFuture<OpcUaClient> createClientWithListeners(Collection<EndpointDescription> endpoints, Collection<SessionActivityListener> listeners) {
+        final CompletableFuture<OpcUaClient> clientFuture = new CompletableFuture<>();
+        try {
+            builder = OpcUaClientConfig.builder()
+                    .setApplicationName(LocalizedText.english(config.getAppName()))
+                    .setApplicationUri(config.getApplicationUri())
+                    .setRequestTimeout(uint(config.getRequestTimeout()))
+                    .setCertificateValidator(getValidator());
 
-        // assure that endpoints is a mutable list
-        List<EndpointDescription> mutableEndpoints = new ArrayList<>(endpoints);
+            // assure that endpoints is a mutable list
+            List<EndpointDescription> mutableEndpoints = new ArrayList<>(endpoints);
 
-        // prefer more secure endpoints
-        mutableEndpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
+            // prefer more secure endpoints
+            mutableEndpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
 
-        List<Map.Entry<String, Integer>> toSort = new ArrayList<>(config.getCertificationPriority().entrySet());
-        toSort.sort(Map.Entry.comparingByValue());
-        for (Map.Entry<String, Integer> e : toSort) {
-            final Certifier certifier = key2Certifier.get(e.getKey());
-            OpcUaClient client = connectIfPossible(mutableEndpoints, certifier, listeners);
-            if (client != null) {
-                log.info("Connected successfully with Certifier '{}'! ", e.getKey());
-                return client;
+            List<Map.Entry<String, Integer>> toSort = new ArrayList<>(config.getCertificationPriority().entrySet());
+            toSort.sort(Map.Entry.comparingByValue());
+            for (Map.Entry<String, Integer> e : toSort) {
+                final Certifier certifier = key2Certifier.get(e.getKey());
+                OpcUaClient client = connectIfPossible(mutableEndpoints, certifier, listeners);
+                if (client != null) {
+                    log.info("Connected successfully with Certifier '{}'! ", e.getKey());
+                    clientFuture.complete(client);
+                }
             }
+        } catch (ConfigurationException e) {
+            clientFuture.completeExceptionally(e);
         }
-        throw new CommunicationException(ExceptionContext.AUTH_ERROR);
+        if (!clientFuture.isDone()) {
+            clientFuture.completeExceptionally(new CommunicationException(ExceptionContext.AUTH_ERROR));
+        }
+        return clientFuture;
     }
 
     private ClientCertificateValidator getValidator() throws ConfigurationException {
