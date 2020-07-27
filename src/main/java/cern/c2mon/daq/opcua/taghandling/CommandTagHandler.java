@@ -112,7 +112,7 @@ public class CommandTagHandler implements ICommandTagChanger {
         } catch (ConfigurationException e) {
             throw new EqCommandTagException("Please check whether the configuration is correct.", e);
         } catch (OPCUAException e) {
-            throw new EqCommandTagException("A communication error occurred while running the command. ", e);
+            throw new EqCommandTagException("A communication error occurred while running the command on tag " + command.getId().toString() + ".", e);
         } catch (Exception e) {
             log.error("Exception", e);
         }

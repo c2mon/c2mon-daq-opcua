@@ -20,7 +20,7 @@ import static cern.c2mon.daq.opcua.IMessageSender.EquipmentState.OK;
 @NoArgsConstructor
 @Slf4j
 @Primary
-public class MessageSender implements IMessageSender, SessionActivityListener {
+public class OPCUAMessageSender implements IMessageSender, SessionActivityListener {
 
     private IEquipmentMessageSender sender;
 

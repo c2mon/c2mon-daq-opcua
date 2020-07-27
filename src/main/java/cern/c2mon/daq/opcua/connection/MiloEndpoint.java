@@ -224,10 +224,10 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     @Override
     public void recreateAllSubscriptions() throws CommunicationException {
-        boolean anySuccess = true;
+        boolean anySuccess = false;
         for (SubscriptionGroup group : mapper.getGroups()) {
             try {
-                anySuccess = anySuccess && resubscribeGroupsAndReportSuccess(group);
+                anySuccess = anySuccess || group.size() > 0 && resubscribeGroupsAndReportSuccess(group);
             } catch (EndpointDisconnectedException e) {
                 log.debug("Failed with exception: ", e);
                 log.info("Session was closed, abort subscription recreation process.");
