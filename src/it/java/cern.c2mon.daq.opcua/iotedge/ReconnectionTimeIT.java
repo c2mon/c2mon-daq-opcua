@@ -36,24 +36,28 @@ import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_TOXI;
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class ReconnectionRecorderIT extends EdgeTestBase {
-    @Autowired TestListeners.Pulse pulseListener;
-    @Autowired IDataTagHandler tagHandler;
-    @Autowired Controller coldFailover;
-    @Autowired IControllerProxy controllerProxy;
-    @Autowired AppConfigProperties config;
-
-    private final Random random = new Random();
-    private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);;
+public class ReconnectionTimeIT extends EdgeTestBase {
     private static final Collection<ConnectionRecord> connectionRecords = new ArrayList<>();
-    private AtomicReference<EdgeImage> current = new AtomicReference<>(active);
-    private AtomicReference<EdgeImage> backup = new AtomicReference<>(fallback);
-    private boolean resetConnection;
+    private static double avgWithoutSwitch = -1.0;
+    private static double avgWithExplSwitch = -1.0;
+    private static double avgWithImplSwitch = -1.0;
+    private static boolean resetConnection = false;
+    private final Random random = new Random();
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    private final AtomicReference<EdgeImage> current = new AtomicReference<>(active);
+    private final AtomicReference<EdgeImage> backup = new AtomicReference<>(fallback);
+    @Autowired
+    TestListeners.Pulse pulseListener;
+    @Autowired
+    IDataTagHandler tagHandler;
+    @Autowired
+    Controller coldFailover;
+    @Autowired
+    IControllerProxy controllerProxy;
+    @Autowired
+    AppConfigProperties config;
     private long interruptDelayMilli = 2000L;
     private int testDurationMin = 5;
-    private double avgWithoutSwitch = -1.0;
-    private double avgWithExplSwitch = -1.0;
-    private double avgWithImplSwitch = -1.0;
 
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
@@ -68,7 +72,6 @@ public class ReconnectionRecorderIT extends EdgeTestBase {
             tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.RandomUnsignedInt32.createDataTag()));
             pulseListener.getTagUpdate().get(TIMEOUT_TOXI, TimeUnit.SECONDS);
             pulseListener.reset();
-            resetConnection = false;
             pulseListener.setLogging(false);
 
             log.info("############ RUN TEST BENCH ############");
@@ -78,8 +81,8 @@ public class ReconnectionRecorderIT extends EdgeTestBase {
 
     @AfterEach
     public void cleanUp() throws InterruptedException {
+        log.info("############ CLEAN UP ############");
         if (connectionRecords.isEmpty()) {
-            log.info("############ CLEAN UP ############");
             controllerProxy.stop();
             TimeUnit.MILLISECONDS.sleep(TIMEOUT_IT);
             shutdownAndAwaitTermination(executor);
@@ -105,42 +108,48 @@ public class ReconnectionRecorderIT extends EdgeTestBase {
     @Test
     public void mttrWithoutFailoverShouldBeLessThan1s() {
         log.info("mttrWithoutFailoverShouldBeLessThan1s");
-        Assertions.assertTrue(avgWithoutSwitch < 1000);
+        Assertions.assertTrue(avgWithoutSwitch >= 0 && avgWithoutSwitch < 1000);
     }
 
     @Test
     public void mttrWithExplicitFailoverShouldBeLessThan4s() {
         log.info("mttrWithExplicitFailoverShouldBeLessThan4s");
-        Assertions.assertTrue(avgWithExplSwitch < 4000);
+        Assertions.assertTrue(avgWithExplSwitch >= 0 && avgWithExplSwitch < 4000);
     }
 
 
     @Test
     public void mttrWithTimoutFailoverShouldBeLessThan15s() {
         log.info("mttrWithTimoutFailoverShouldBeLessThan15s");
-        Assertions.assertTrue(avgWithImplSwitch < 15000);
+        Assertions.assertTrue(avgWithImplSwitch >= 0 && avgWithImplSwitch < 15000);
     }
 
 
-    private List<ConnectionRecord> recordConnectionTimes() throws InterruptedException, ExecutionException, TimeoutException {
+    private List<ConnectionRecord> recordConnectionTimes() {
         List<ConnectionRecord> connectionRecords = new ArrayList<>();
         final ScheduledFuture<?> recordFuture = executor.scheduleWithFixedDelay(() -> connectionRecords.add(recordDisconnectionTime()), 0L, interruptDelayMilli, TimeUnit.MILLISECONDS);
-        executor.schedule(() -> recordFuture.cancel(true), testDurationMin -1, TimeUnit.MINUTES).get(testDurationMin, TimeUnit.MINUTES);
+        try {
+            executor.schedule(() -> recordFuture.cancel(true), testDurationMin, TimeUnit.MINUTES).get(testDurationMin * 2, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.info("Failed with exception: ", e);
+            recordFuture.cancel(true);
+        }
 
-        final double average = connectionRecords.stream().map(ConnectionRecord::getDiff).mapToDouble(r -> r).average().orElse(-1.0);;
+        final double average = connectionRecords.stream().map(ConnectionRecord::getDiff).mapToDouble(r -> r).average().orElse(-1.0);
         avgWithoutSwitch = avgForFilter(connectionRecords, r -> !r.isFailoverToRedundantServer());
         avgWithExplSwitch = avgForFilter(connectionRecords, r -> r.isFailoverToRedundantServer() && r.isExplicitFailover());
-        avgWithImplSwitch = avgForFilter(connectionRecords,r -> r.isFailoverToRedundantServer() && !r.isExplicitFailover());
+        avgWithImplSwitch = avgForFilter(connectionRecords, r -> r.isFailoverToRedundantServer() && !r.isExplicitFailover());
 
         log.info("Connection Records: \n{}\n{}\n" +
-                        "Average duration of reconnection: {}, " +
-                        " Without server switch: {}," +
-                        " With server switch {}, " +
-                        " (explicit {}, implicit {})",
-                String.format("%1$14s", "Reestablished") + String.format(" %1$14s", "Reconnected") + String.format(" %1$4s", "Difference") + String.format(" %1$14s", "Redundant") + String.format(" %1$14s", "Explicit"),
+                        "Average duration of reconnection: {}\n" +
+                        "    Without server switch: {}\n" +
+                        "    With server switch {}\n" +
+                        "        explicit {}\n" +
+                        "        implicit {}",
+                String.format("%1$14s", "Reestablished") + String.format(" %1$14s", "Reconnected") + String.format(" %1$14s", "Difference") + String.format(" %1$14s", "Redundant") + String.format(" %1$14s", "Explicit"),
                 connectionRecords.stream().map(ConnectionRecord::toString).collect(Collectors.joining("\n")),
                 average, avgWithoutSwitch,
-                avgForFilter(connectionRecords,ConnectionRecord::isFailoverToRedundantServer),
+                avgForFilter(connectionRecords, ConnectionRecord::isFailoverToRedundantServer),
                 avgWithExplSwitch, avgWithImplSwitch);
         resetConnection = current.get() == fallback;
         return connectionRecords;
@@ -153,9 +162,9 @@ public class ReconnectionRecorderIT extends EdgeTestBase {
                 .orElse(-1.0);
     }
 
-    private ConnectionRecord failover(EdgeImage cut, EdgeImage uncut) {
+    private synchronized ConnectionRecord failover(EdgeImage cut, EdgeImage uncut) {
         long reestablished = -1L;
-        long reconnected = - 1L;
+        long reconnected = -1L;
         final boolean isFailover = cut != uncut;
         final boolean explicitFailover = isFailover && random.nextBoolean();
         try {
@@ -163,7 +172,7 @@ public class ReconnectionRecorderIT extends EdgeTestBase {
             if (explicitFailover) {
                 executor.submit(this::switchServer);
             }
-            TimeUnit.MILLISECONDS.sleep(random.ints(0,4000).findFirst().getAsInt());
+            TimeUnit.MILLISECONDS.sleep(random.ints(0, 4000).findFirst().orElse(0));
             reestablished = System.currentTimeMillis();
             uncut.proxy.setConnectionCut(false);
             pulseListener.reset();

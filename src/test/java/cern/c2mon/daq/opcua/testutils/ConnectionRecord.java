@@ -25,6 +25,6 @@ public class ConnectionRecord {
 
     @Override
     public String toString() {
-        return String.format("%1$14s", reestablishedInstant) + String.format(" %1$14s", reconnectInstant) + String.format(" %1$4s", diff) + " " + String.format(" %1$14s", explicitFailover) + " " + String.format(" %1$14s", failoverToRedundantServer);
+        return String.format("%1$14s", reestablishedInstant) + String.format(" %1$14s", reconnectInstant) + String.format(" %1$14s", diff) + " " + String.format(" %1$14s", failoverToRedundantServer) + " " + String.format(" %1$14s", explicitFailover);
     }
 }
