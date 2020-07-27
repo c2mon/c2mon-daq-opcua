@@ -23,9 +23,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -155,20 +152,17 @@ public class CommandTagHandler implements ICommandTagChanger {
     }
 
     private void writeRewrite(ISourceCommandTag tag, Object arg, Object original, int pulse) throws OPCUAException {
-        Runnable rewrite = () -> {
-            log.info("Resetting Tag with ID {} to {}.", tag.getId(), original);
-            try {
-                executeWriteCommand(tag, original);
-            } catch (OPCUAException e) {
-                throw new CompletionException(e);
-            }
-        };
         log.info("Setting Tag with ID {} to {} for {} seconds.", tag.getId(), arg, pulse);
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-        executor.schedule(rewrite, pulse, TimeUnit.SECONDS);
         executeWriteCommand(tag, arg);
-        awaitAndShutdown(executor, pulse);
-
+        try {
+            TimeUnit.SECONDS.sleep(pulse);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.debug("Failed with exception ", e);
+            log.info("Interrupted pulse, continue resetting the tag.");
+        }
+        log.info("Resetting Tag with ID {} to {}.", tag.getId(), original);
+        executeWriteCommand(tag, original);
     }
 
     private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException {
@@ -201,22 +195,6 @@ public class CommandTagHandler implements ICommandTagChanger {
             throw new CommunicationException(ExceptionContext.READ);
         }
         return read.getKey().getValue();
-    }
-
-    private void awaitAndShutdown(ScheduledExecutorService executor, int pulse) {
-        executor.shutdown();
-        try {
-            long await = ((long) pulse) + timeout;
-            if (!executor.awaitTermination(await, TimeUnit.SECONDS)) {
-                log.error("Shutting down now");
-                executor.shutdownNow();
-            }
-        } catch (InterruptedException ie) {
-            log.error("Interrupted... ", ie);
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-        log.info("Executor shut down");
     }
 
     private void handleCommandTagChanges(ChangeReport changeReport) {
