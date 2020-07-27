@@ -127,15 +127,21 @@ public class ReconnectionTimeIT extends EdgeTestBase {
 
     private List<ConnectionRecord> recordConnectionTimes() {
         List<ConnectionRecord> connectionRecords = new ArrayList<>();
-        final ScheduledFuture<?> recordFuture = executor.scheduleWithFixedDelay(() -> connectionRecords.add(recordDisconnectionTime()), 0L, interruptDelayMilli, TimeUnit.MILLISECONDS);
+        final ScheduledFuture<?> recordFuture = executor.scheduleWithFixedDelay(
+                () -> connectionRecords.add(recordDisconnectionTime()),
+                0L, interruptDelayMilli, TimeUnit.MILLISECONDS);
         try {
-            executor.schedule(() -> recordFuture.cancel(true), testDurationMin, TimeUnit.MINUTES).get(testDurationMin * 2, TimeUnit.MINUTES);
+            executor.schedule(() -> {
+                log.info("Cancelling... ");
+                recordFuture.cancel(true);
+            }, testDurationMin, TimeUnit.MINUTES)
+                    .get(testDurationMin * 2, TimeUnit.MINUTES);
         } catch (Exception e) {
             log.info("Failed with exception: ", e);
             recordFuture.cancel(true);
         }
 
-        final double average = connectionRecords.stream().map(ConnectionRecord::getDiff).mapToDouble(r -> r).average().orElse(-1.0);
+        final double average = avgForFilter(connectionRecords, r -> true);
         avgWithoutSwitch = avgForFilter(connectionRecords, r -> !r.isFailoverToRedundantServer());
         avgWithExplSwitch = avgForFilter(connectionRecords, r -> r.isFailoverToRedundantServer() && r.isExplicitFailover());
         avgWithImplSwitch = avgForFilter(connectionRecords, r -> r.isFailoverToRedundantServer() && !r.isExplicitFailover());
@@ -168,11 +174,13 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         final boolean isFailover = cut != uncut;
         final boolean explicitFailover = isFailover && random.nextBoolean();
         try {
+            log.info("Cut {}", cut == active ? "active" : "backup");
             cut.proxy.setConnectionCut(true);
             if (explicitFailover) {
                 executor.submit(this::switchServer);
             }
             TimeUnit.MILLISECONDS.sleep(random.ints(0, 4000).findFirst().orElse(0));
+            log.info("Uncut {}", uncut == active ? "active" : "backup");
             reestablished = System.currentTimeMillis();
             uncut.proxy.setConnectionCut(false);
             pulseListener.reset();
