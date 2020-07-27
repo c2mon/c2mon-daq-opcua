@@ -48,7 +48,6 @@ public class FailoverIT extends EdgeTestBase {
     @Autowired AppConfigProperties config;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
-    private final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
     private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch");
     private boolean resetConnection;
 
@@ -78,7 +77,7 @@ public class FailoverIT extends EdgeTestBase {
         log.info("############ CLEAN UP ############");
         controllerProxy.stop();
         TimeUnit.MILLISECONDS.sleep(TIMEOUT_IT);
-        shutdownAndAwaitTermination();
+        shutdownAndAwaitTermination(executor);
 
         if (resetConnection) {
             log.info("Resetting fallback proxy {}", fallback.proxy);
@@ -144,7 +143,8 @@ public class FailoverIT extends EdgeTestBase {
         assertTagUpdate();
     }
 
-    private void mockColdFailover() {
+    public static void mockColdFailover() {
+        final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
         expect(redundancyMock.getRedundancySupport())
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.Cold))
                 .anyTimes();
@@ -159,22 +159,5 @@ public class FailoverIT extends EdgeTestBase {
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
-    }
-
-    private void shutdownAndAwaitTermination() {
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
-                executor.shutdownNow();
-                if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
-                    log.error("Server switch still running");
-                }
-            }
-        } catch (InterruptedException ie) {
-            log.error("Interrupted... ", ie);
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-        log.info("Executor shut down");
     }
 }

@@ -1,1 +1,0 @@
-workqueue:workqueue_queue_work /sys/kernel/debug/tracing/set_event

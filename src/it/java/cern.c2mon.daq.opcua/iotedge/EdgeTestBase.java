@@ -12,10 +12,9 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+
+import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_IT;
 
 @Slf4j
 public abstract class EdgeTestBase {
@@ -85,5 +84,22 @@ public abstract class EdgeTestBase {
             uri = "opc.tcp://" + proxy.getContainerIpAddress() + ":" + proxy.getProxyPort();
             log.info("Edge server ready at {}. ", uri);
         }
+    }
+
+    public static void shutdownAndAwaitTermination(ExecutorService executor) {
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
+                executor.shutdownNow();
+                if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
+                    log.error("Server switch still running");
+                }
+            }
+        } catch (InterruptedException ie) {
+            log.error("Interrupted... ", ie);
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        log.info("Executor shut down");
     }
 }

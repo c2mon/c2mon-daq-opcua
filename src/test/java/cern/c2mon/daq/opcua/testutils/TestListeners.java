@@ -48,10 +48,14 @@ public abstract class TestListeners {
             super.onValueUpdate(tagId, quality, valueUpdate);
             if (tagId == sourceID && (tagValUpdate.isDone() || thresholdReached(valueUpdate, threshold))) {
                 if (tagValUpdate.isDone()) {
-                    log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
+                    if (logging) {
+                        log.info("completing pulseTagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
+                    }
                     pulseTagUpdate.complete(valueUpdate);
                 } else {
-                    log.info("completing tagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
+                    if (logging) {
+                        log.info("completing tagUpdate on tag with ID {} with value {}", sourceID, valueUpdate.getValue());
+                    }
                     tagValUpdate.complete(valueUpdate);
                 }
             }
@@ -66,6 +70,9 @@ public abstract class TestListeners {
         CompletableFuture<Long> tagInvalid = new CompletableFuture<>();
         CompletableFuture<EquipmentState> stateUpdate = new CompletableFuture<>();
         CompletableFuture<Void> alive = new CompletableFuture<>();
+
+        @Setter
+        boolean logging = true;
 
         public void reset() {
             tagUpdate = new CompletableFuture<>();
@@ -86,8 +93,10 @@ public abstract class TestListeners {
 
         @Override
         public void onTagInvalid(long tagId, SourceDataTagQuality quality) {
+            if (logging) {
                 log.info("Received data tag {} invalid with quality {}", tagId, quality);
-                tagInvalid.complete(tagId);
+            }
+            tagInvalid.complete(tagId);
         }
 
         @Override
@@ -102,7 +111,9 @@ public abstract class TestListeners {
 
         @Override
         public void onEquipmentStateUpdate(EquipmentState state) {
-            log.info("State update: {}", state);
+            if (logging) {
+                log.info("State update: {}", state);
+            }
             if (stateUpdate != null && !stateUpdate.isDone()) {
                 stateUpdate.complete(state);
             }
@@ -110,8 +121,10 @@ public abstract class TestListeners {
 
         @Override
         public void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
-            if (quality.isValid() ) {
-                log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
+            if (quality.isValid()) {
+                if (logging) {
+                    log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
+                }
                 tagUpdate.complete(tagId);
             } else {
                 onTagInvalid(tagId, quality);

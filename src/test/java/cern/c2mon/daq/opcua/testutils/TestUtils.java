@@ -5,10 +5,15 @@ import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.shared.common.process.EquipmentConfiguration;
 import com.google.common.collect.ImmutableMap;
 import org.easymock.Capture;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.testcontainers.containers.GenericContainer;
 
 import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,5 +73,18 @@ public abstract class TestUtils {
             proxy.connect(Collections.singleton("test"));
         } catch (OPCUAException ignored) { }
         return proxy;
+    }
+
+    // Work-around for non-fixed ports in testcontainers, since GenericMessageHandlerTest required ports to be included in the configuration
+    public static void mapEquipmentAddress(EquipmentConfiguration equipmentConfiguration, GenericContainer image) {
+        final String hostRegex = ":(.[^/][^;]*)";
+        final String equipmentAddress = equipmentConfiguration.getEquipmentAddress();
+
+        final Matcher matcher = Pattern.compile(hostRegex).matcher(equipmentAddress);
+        if (matcher.find()) {
+            final String port = matcher.group(1);
+            final String mappedAddress = equipmentAddress.replace(port + "", image.getMappedPort(Integer.parseInt(port)) + "");
+            ReflectionTestUtils.setField(equipmentConfiguration, "equipmentAddress", mappedAddress);
+        }
     }
 }

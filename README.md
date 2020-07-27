@@ -2,7 +2,7 @@
 
 The OPC-UA DAQ allows C2MON to collect data from OPC-UA servers:
 
-- OPC-UA implementations based on Prosys and Eclipse Milo (Eclipse Public License 1.0).
+- OPC-UA implementations based on Eclipse Milo (Eclipse Public License 1.0).
 
 
 # Downloading latest stable distribution tarball
@@ -29,12 +29,11 @@ In order to configure RESTful datatags you have first to declare a REST DAQ [Pro
 
 Please read therefore also the documentation about the [C2MON configuration API](http://c2mon.web.cern.ch/c2mon/docs/latest/user-guide/client-api/configuration/#configuration-api). 
 
-The `EquipmentMessageHandler` class to be specified during the Equipment creation is: `cern.c2mon.daq.it.OPCUAMessageHandler`
+The `EquipmentMessageHandler` class to be specified during the Equipment creation is: `cern.c2mon.daq.opcua.OPCUAMessageHandler`
 
 # Commands
 
-The OPC-UA DAQ does not support commands.
-
+The OPC-UA DAQ supports commands.
 
 # Useful Links
 
