@@ -168,43 +168,46 @@ public class ReconnectionTimeIT extends EdgeTestBase {
                 .orElse(-1.0);
     }
 
-    private synchronized ConnectionRecord failover(EdgeImage cut, EdgeImage uncut) {
+    private ConnectionRecord recordDisconnectionTime() {
+        log.info("New disconnect execution");
+        ConnectionRecord record;
+        synchronized (this) {
+            if (random.nextBoolean()) {
+                record = failover(current.get(), backup.get());
+                switchCurrentImg();
+            } else {
+                record = failover(current.get(), current.get());
+            }
+        }
+        return record;
+    }
+
+    private ConnectionRecord failover(EdgeImage cut, EdgeImage uncut) {
         long reestablished = -1L;
         long reconnected = -1L;
         final boolean isFailover = cut != uncut;
         final boolean explicitFailover = isFailover && random.nextBoolean();
+        log.info("Cut {}", cut == active ? "active" : "backup");
         try {
-            log.info("Cut {}", cut == active ? "active" : "backup");
             cut.proxy.setConnectionCut(true);
             if (explicitFailover) {
-                executor.submit(this::switchServer);
+                executor.submit(() -> ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch"));
             }
-            TimeUnit.MILLISECONDS.sleep(random.ints(0, 4000).findFirst().orElse(0));
+            TimeUnit.MILLISECONDS.sleep(random.ints(500, 4000).findFirst().orElse(0));
             log.info("Uncut {}", uncut == active ? "active" : "backup");
             reestablished = System.currentTimeMillis();
-            uncut.proxy.setConnectionCut(false);
-            pulseListener.reset();
-            CompletableFuture.anyOf(pulseListener.getTagUpdate(), pulseListener.getStateUpdate()).get();
-            reconnected = System.currentTimeMillis();
+            reconnected = uncutAndAwait(uncut);
         } catch (InterruptedException | ExecutionException e) {
             log.error("Error during failover from {} to {}: ", cut.uri, uncut.uri, e);
         }
         return ConnectionRecord.of(reestablished, reconnected, isFailover, explicitFailover);
     }
 
-    private void switchServer() {
-        ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch");
-    }
-
-    private ConnectionRecord recordDisconnectionTime() {
-        ConnectionRecord record;
-        if (random.nextBoolean()) {
-            record = failover(current.get(), backup.get());
-            switchCurrentImg();
-        } else {
-            record = failover(current.get(), current.get());
-        }
-        return record;
+    private long uncutAndAwait(EdgeImage uncut) throws ExecutionException, InterruptedException {
+        pulseListener.reset();
+        uncut.proxy.setConnectionCut(false);
+        CompletableFuture.anyOf(pulseListener.getTagUpdate(), pulseListener.getStateUpdate()).get();
+        return System.currentTimeMillis();
     }
 
     private void switchCurrentImg() {
