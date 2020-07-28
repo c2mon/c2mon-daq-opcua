@@ -79,10 +79,10 @@ public class ReconnectionTimeIT extends EdgeTestBase {
 
         if (current != active) {
             log.info("Resetting fallback proxy {}", fallback.proxy);
-            fallback.proxy.setConnectionCut(true);
+            doWithTimeout(fallback, true);
             log.info("Resetting active proxy {}", active.proxy);
             try {
-                CompletableFuture.runAsync(() -> active.proxy.setConnectionCut(false))
+                CompletableFuture.runAsync(() -> doWithTimeout(active, false))
                         .get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
                 log.error("Error cutting connection.", e);

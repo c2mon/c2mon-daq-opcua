@@ -1,6 +1,8 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.testutils.TestUtils;
+import eu.rekawek.toxiproxy.model.Toxic;
+import eu.rekawek.toxiproxy.model.ToxicDirection;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
@@ -10,6 +12,7 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
+import java.io.IOException;
 import java.util.concurrent.*;
 
 import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_IT;
@@ -33,7 +36,7 @@ public abstract class EdgeTestBase {
         toxiProxyContainer.start();
         active = new EdgeImage(toxiProxyContainer, network);
         fallback = new EdgeImage(toxiProxyContainer, network);
-        fallback.proxy.setConnectionCut(true);
+        doWithTimeout(fallback, true);
     }
 
     @AfterAll
@@ -47,12 +50,27 @@ public abstract class EdgeTestBase {
 
     protected static boolean doWithTimeout(EdgeImage img, boolean cut) {
         try {
-            CompletableFuture.runAsync(() -> img.proxy.setConnectionCut(cut)).get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    if (cut) {
+                        // if timeout is 0, data is be delayed until the toxic is removed
+                        img.proxy.toxics().timeout("TIMEOUT_UPSTREAM", ToxicDirection.UPSTREAM, 0);
+                        img.proxy.toxics().timeout("TIMEOUT_DOWNSTREAM", ToxicDirection.DOWNSTREAM, 0);
+                    } else {
+                        for (Toxic toxic : img.proxy.toxics().getAll()) {
+                            toxic.remove();
+                        }
+                    }
+                    return true;
+                } catch (IOException e) {
+                    log.error("Error {} connection.", cut ? "cutting" : "restoring", e);
+                    return false;
+                }
+            }).get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            log.error("Error cutting connection.", e);
-            return false;
+            log.error("Error {} connection.", cut ? "cutting" : "restoring", e);
         }
-        return true;
+        return false;
     }
 
     protected static <T> T doAndWait(CompletableFuture<T> future, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {

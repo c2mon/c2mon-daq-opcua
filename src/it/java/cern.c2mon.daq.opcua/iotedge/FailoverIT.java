@@ -58,7 +58,6 @@ public class FailoverIT extends EdgeTestBase {
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("############ SET UP ############");
         config.setRedundancyMode(ColdFailover.class.getName());
-        pulseListener.setSourceID(tag.getId());
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);
