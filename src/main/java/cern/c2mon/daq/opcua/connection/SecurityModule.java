@@ -8,7 +8,6 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.security.Certifier;
 import com.google.common.collect.ImmutableMap;
 import io.netty.util.internal.StringUtil;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;

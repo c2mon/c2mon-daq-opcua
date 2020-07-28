@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @TestPropertySource(locations = "classpath:opcua.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
+
     @Autowired TestListeners.Pulse pulseListener;
     @Autowired IDataTagHandler tagHandler;
     @Autowired Controller coldFailover;
@@ -49,10 +50,21 @@ public class FailoverIT extends EdgeTestBase {
     @Autowired AppConfigProperties config;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
-    private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(((FailoverBase)coldFailover), "triggerServerSwitch");
-    private boolean resetConnection;
+    private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(((FailoverBase) coldFailover), "triggerServerSwitch");
 
-    ExecutorService executor;
+    private boolean resetConnection;
+    private ExecutorService executor;
+
+    public static void mockColdFailover() {
+        final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
+        expect(redundancyMock.getRedundancySupport())
+                .andReturn(CompletableFuture.completedFuture(RedundancySupport.Cold))
+                .anyTimes();
+        expect(redundancyMock.getServerUriArray())
+                .andReturn(CompletableFuture.completedFuture(new String[]{fallback.getUri()}))
+                .anyTimes();
+        EasyMock.replay(redundancyMock);
+    }
 
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
@@ -65,10 +77,10 @@ public class FailoverIT extends EdgeTestBase {
         mockColdFailover();
         controllerProxy.connect(Arrays.asList(active.getUri(), fallback.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(tag));
-        pulseListener.getTagValUpdate().get(TIMEOUT_TOXI, TimeUnit.SECONDS);
+        pulseListener.getTagUpdate().get(TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         resetConnection = false;
-        executor = Executors.newSingleThreadExecutor();
+        executor = Executors.newScheduledThreadPool(2);
         log.info("############ TEST ############");
     }
 
@@ -136,17 +148,6 @@ public class FailoverIT extends EdgeTestBase {
         TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
         doAndWait(pulseListener.listen(), active, false);
         assertTagUpdate();
-    }
-
-    public static void mockColdFailover() {
-        final NonTransparentRedundancyTypeNode redundancyMock = niceMock(NonTransparentRedundancyTypeNode.class);
-        expect(redundancyMock.getRedundancySupport())
-                .andReturn(CompletableFuture.completedFuture(RedundancySupport.Cold))
-                .anyTimes();
-        expect(redundancyMock.getServerUriArray())
-                .andReturn(CompletableFuture.completedFuture(new String[]{fallback.getUri()}))
-                .anyTimes();
-        EasyMock.replay(redundancyMock);
     }
 
     private void assertTagUpdate() {

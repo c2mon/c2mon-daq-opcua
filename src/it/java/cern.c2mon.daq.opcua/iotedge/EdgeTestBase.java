@@ -1,8 +1,8 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.testutils.TestUtils;
-import eu.rekawek.toxiproxy.model.Toxic;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
@@ -20,7 +20,7 @@ import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_IT;
 @Slf4j
 public abstract class EdgeTestBase {
 
-    public static final int IOTEDGE  = 50000;
+    public static final int IOTEDGE = 50000;
     private static final Network network = Network.newNetwork();
     private static final ToxiproxyContainer toxiProxyContainer;
     public static EdgeImage active;
@@ -51,35 +51,83 @@ public abstract class EdgeTestBase {
     protected static boolean doWithTimeout(EdgeImage img, boolean cut) {
         try {
             return CompletableFuture.supplyAsync(() -> {
-                try {
-                    if (cut) {
-                        // if timeout is 0, data is be delayed until the toxic is removed
-                        img.proxy.toxics().timeout("TIMEOUT_UPSTREAM", ToxicDirection.UPSTREAM, 0);
-                        img.proxy.toxics().timeout("TIMEOUT_DOWNSTREAM", ToxicDirection.DOWNSTREAM, 0);
-                    } else {
-                        for (Toxic toxic : img.proxy.toxics().getAll()) {
-                            toxic.remove();
-                        }
-                    }
-                    return true;
-                } catch (IOException e) {
-                    log.error("Error {} connection.", cut ? "cutting" : "restoring", e);
-                    return false;
+                if (cut) {
+                    return addToxic(Toxic.Timeout, img);
+                } else {
+                    return removeToxic(Toxic.Timeout, img);
                 }
             }).get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             log.error("Error {} connection.", cut ? "cutting" : "restoring", e);
+            return false;
         }
-        return false;
+    }
+
+    protected static boolean addToxic(Toxic toxic, EdgeImage... imgs) {
+        boolean success = true;
+        for (EdgeImage img : imgs) {
+            for (ToxicDirection dir : ToxicDirection.values()) {
+                try {
+                    // if timeout is 0, data is be delayed until the toxic is removed
+                    if (toxic == Toxic.Timeout) {
+                        img.proxy.toxics().timeout(toxic.name() + "_" + dir.name(), dir, toxic.arg);
+                    } else if (toxic == Toxic.Latency) {
+                        img.proxy.toxics().latency(toxic.name() + "_" + dir.name(), dir, toxic.arg);
+                    }
+                } catch (IOException e) {
+                    log.error("Could not add toxic {}.", toxic.name() + "_" + dir.name(), e);
+                    success = false;
+                }
+            }
+        }
+        return success;
+    }
+
+    protected static boolean removeToxic(Toxic toxic, EdgeImage... imgs) {
+        boolean success = true;
+        for (EdgeImage img : imgs) {
+            for (ToxicDirection dir : ToxicDirection.values()) {
+                try {
+                    img.proxy.toxics().get(toxic.name() + "_" + dir.name()).remove();
+                } catch (IOException e) {
+                    log.error("Could not remove toxic {}.", toxic, e);
+                    success = false;
+                }
+            }
+        }
+        return success;
     }
 
     protected static <T> T doAndWait(CompletableFuture<T> future, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
         log.info(cut ? "Cutting connection." : "Reestablishing connection.");
-       doWithTimeout(img, cut);
+        doWithTimeout(img, cut);
         return future.thenApply(c -> {
             log.info(cut ? "Connection cut." : "Connection reestablished.");
             return c;
         }).get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
+    }
+
+    public static void shutdownAndAwaitTermination(ExecutorService executor) {
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
+                executor.shutdownNow();
+                if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
+                    log.error("Server switch still running");
+                }
+            }
+        } catch (InterruptedException ie) {
+            log.error("Interrupted... ", ie);
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        log.info("Executor shut down");
+    }
+
+    @AllArgsConstructor
+    enum Toxic {
+        Timeout(0), Latency(2000);
+        int arg;
     }
 
     public static class EdgeImage {
@@ -99,22 +147,5 @@ public abstract class EdgeTestBase {
             uri = "opc.tcp://" + proxy.getContainerIpAddress() + ":" + proxy.getProxyPort();
             log.info("Edge server ready at {}. ", uri);
         }
-    }
-
-    public static void shutdownAndAwaitTermination(ExecutorService executor) {
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
-                executor.shutdownNow();
-                if (!executor.awaitTermination(TIMEOUT_IT, TimeUnit.MILLISECONDS)) {
-                    log.error("Server switch still running");
-                }
-            }
-        } catch (InterruptedException ie) {
-            log.error("Interrupted... ", ie);
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-        log.info("Executor shut down");
     }
 }

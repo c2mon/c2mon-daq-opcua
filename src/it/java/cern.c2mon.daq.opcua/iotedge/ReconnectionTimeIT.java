@@ -37,6 +37,7 @@ import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_TOXI;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class ReconnectionTimeIT extends EdgeTestBase {
 
+    private static int instancesPerTest = 10;
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
     @Autowired
     TestListeners.Pulse pulseListener;
@@ -48,7 +49,6 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     IControllerProxy controllerProxy;
     @Autowired
     AppConfigProperties config;
-
     private EdgeImage current;
 
     @BeforeEach
@@ -96,14 +96,23 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     @Test
     public void mttrWithoutFailoverShouldBeLessThan1s() {
         log.info("mttrWithoutFailoverShouldBeLessThan1s");
-        final double average = findAverageTime(new CountDownLatch(10), false);
+        final double average = findAverageTime(new CountDownLatch(instancesPerTest), false);
         Assertions.assertTrue(average >= 0 && average < 1000);
+    }
+
+    @Test
+    public void mttrWithLatencyShouldBeLessThan2s() {
+        log.info("mttrWithLatencyShouldBeLessThan2s");
+        addToxic(Toxic.Latency, active, fallback);
+        final double average = findAverageTime(new CountDownLatch(instancesPerTest), false);
+        Assertions.assertTrue(average >= 0 && average < 2000);
+        removeToxic(Toxic.Latency, active, fallback);
     }
 
     @Test
     public void mttrWithFailoverShouldBeLessThan6s() {
         log.info("mttrWithFailoverShouldBeLessThan6s");
-        final double average = findAverageTime(new CountDownLatch(10), true);
+        final double average = findAverageTime(new CountDownLatch(instancesPerTest), true);
         Assertions.assertTrue(average >= 0 && average < 6000);
     }
 
