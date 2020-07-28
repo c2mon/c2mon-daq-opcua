@@ -152,7 +152,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             redundantServers.add(currentUri);
             return connectToHealthiestServerFinished();
         } catch (OPCUAException e) {
-            log.info("Server not yet available.", e);
+            log.info("No server currently available.");
             disconnectAndProceed();
             throw e;
         }
@@ -180,8 +180,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
                 }
                 activeEndpoint.disconnect();
             } catch (OPCUAException e) {
-                log.info("Could not connect to server at {}. Proceeding with next server.", nextUri);
-                log.debug("Connection failed with exception: ", e);
+                log.info("Could not connect to server at {}. Proceeding with next server. ", nextUri, e);
             }
         }
         if (maxServiceUri != null) {

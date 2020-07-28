@@ -25,7 +25,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -45,8 +44,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     private static boolean resetConnection = false;
     private final Random random = new Random();
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-    private final AtomicReference<EdgeImage> current = new AtomicReference<>(active);
-    private final AtomicReference<EdgeImage> backup = new AtomicReference<>(fallback);
+
     @Autowired
     TestListeners.Pulse pulseListener;
     @Autowired
@@ -59,11 +57,14 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     AppConfigProperties config;
     private long interruptDelayMilli = 2000L;
     private int testDurationMin = 5;
+    private EdgeImage current;
 
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("############ SET UP ############");
         if (connectionRecords.isEmpty()) {
+            current = active;
+
             config.setRedundancyMode(ColdFailover.class.getName());
             ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
             final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
@@ -158,7 +159,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
                 average, avgWithoutSwitch,
                 avgForFilter(connectionRecords, ConnectionRecord::isFailoverToRedundantServer),
                 avgWithExplSwitch, avgWithImplSwitch);
-        resetConnection = current.get() == fallback;
+        resetConnection = current == fallback;
         return connectionRecords;
     }
 
@@ -172,11 +173,15 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     private ConnectionRecord recordDisconnectionTime() {
         ConnectionRecord record;
         synchronized (this) {
+            final boolean currentActive = current == active;
             if (random.nextBoolean()) {
-                record = failover(current.get(), backup.get());
-                switchCurrentImg();
+                log.info(currentActive ? "Failover from active to backup." : "Failover from backup to active.");
+                final EdgeImage fallback = currentActive ? EdgeTestBase.fallback : active;
+                record = failover(current, fallback);
+                current = fallback;
             } else {
-                record = failover(current.get(), current.get());
+                log.info("Temporarily cut connection on {}", currentActive ? "active" : "backup");
+                record = failover(current, current);
             }
         }
         return record;
@@ -185,42 +190,43 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     private ConnectionRecord failover(EdgeImage cut, EdgeImage uncut) {
         long reestablished = -1L;
         long reconnected = -1L;
-        final boolean isFailover = cut != uncut;
-        final boolean explicitFailover = isFailover && random.nextBoolean();
+        final boolean explicitFailover = cut != uncut && random.nextBoolean();
+        cutAndLog(cut);
+
+        if (explicitFailover) {
+            log.info("Triggering server switch.");
+            executor.submit(() -> ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch"));
+        }
+
+        final int waitFor = random.ints(500, 4000).findFirst().orElse(0);
+        log.info("Wait for {} ms.", waitFor);
+
         try {
-            log.info("Cutting connection.");
-            cut.proxy.setConnectionCut(true);
-            if (explicitFailover) {
-                log.info("Triggering server switch.");
-                executor.submit(() -> ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch"));
-            }
-            final int waitFor = random.ints(500, 4000).findFirst().orElse(0);
-            log.info("Wait for {} ms.", waitFor);
             TimeUnit.MILLISECONDS.sleep(waitFor);
             reestablished = System.currentTimeMillis();
             reconnected = uncutAndAwait(uncut);
-            log.info("Connection reestablished.");
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            log.error("Error during failover from {} to {}: ", cut.uri, uncut.uri, e);
+            log.error("Error during failover: ", e);
         }
-        final ConnectionRecord record = ConnectionRecord.of(reestablished, reconnected, isFailover, explicitFailover);
-        log.info("From {}, to {}, \nrecord: {}",
-                cut == active ? "active" : "backup",
-                uncut == active ? "active" : "backup", record);
+        final ConnectionRecord record = ConnectionRecord.of(reestablished, reconnected, cut != uncut, explicitFailover);
+        log.info("Record: {}", record);
         return record;
     }
 
-    private long uncutAndAwait(EdgeImage uncut) throws ExecutionException, InterruptedException, TimeoutException {
-        uncut.proxy.setConnectionCut(false);
-        pulseListener.reset();
-        pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
-        return System.currentTimeMillis();
+    private void cutAndLog(EdgeImage cut) {
+        log.info("Cutting proxy to {}.", cut == active ? "active" : "fallback");
+        cut.proxy.setConnectionCut(true);
+        log.info("Proxy cut.");
     }
 
-    private void switchCurrentImg() {
-        EdgeImage tmp = current.get();
-        current.set(backup.get());
-        backup.set(tmp);
+    private long uncutAndAwait(EdgeImage uncut) throws ExecutionException, InterruptedException, TimeoutException {
+        log.info("Uncutting proxy to {}.", uncut == active ? "active" : "fallback");
+        uncut.proxy.setConnectionCut(false);
+        log.info("Proxy uncut.");
+        pulseListener.reset();
+        pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
+        log.info("Connection reestablished.");
+        return System.currentTimeMillis();
     }
 
 }
