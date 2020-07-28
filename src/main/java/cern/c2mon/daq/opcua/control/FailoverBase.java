@@ -69,7 +69,6 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     }
 
     protected void triggerServerSwitch() {
-        log.info("enter switchServer. Listening is {}, stopped is {}.", listening.get(), stopped.get());
         if (listening.getAndSet(false) && !stopped.get()) {
             currentEndpoint().manageSessionActivityListener(false, null);
             try {

@@ -5,6 +5,7 @@ import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ColdFailover;
 import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.FailoverBase;
 import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
@@ -16,7 +17,6 @@ import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +34,7 @@ import static cern.c2mon.daq.opcua.testutils.TestUtils.*;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.niceMock;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
 @SpringBootTest
@@ -48,7 +49,7 @@ public class FailoverIT extends EdgeTestBase {
     @Autowired AppConfigProperties config;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
-    private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch");
+    private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(((FailoverBase)coldFailover), "triggerServerSwitch");
     private boolean resetConnection;
 
     ExecutorService executor;
@@ -81,14 +82,9 @@ public class FailoverIT extends EdgeTestBase {
 
         if (resetConnection) {
             log.info("Resetting fallback proxy {}", fallback.proxy);
-            fallback.proxy.setConnectionCut(true);
+            doWithTimeout(fallback, true);
             log.info("Resetting active proxy {}", active.proxy);
-            try {
-                CompletableFuture.runAsync(() -> active.proxy.setConnectionCut(false))
-                        .get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
-            } catch (Exception e) {
-                log.error("Error cutting connection.", e);
-            }
+            doWithTimeout(active, false);
         } else {
             log.info("Skip resetting proxies");
         }
@@ -98,19 +94,19 @@ public class FailoverIT extends EdgeTestBase {
     @Test
     public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldReconnectClient");
-        cutConnection(pulseListener, active);
+        doAndWait(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
         TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
-        Assertions.assertEquals(IMessageSender.EquipmentState.OK, uncutConnection(pulseListener, fallback));
+        assertEquals(IMessageSender.EquipmentState.OK, doAndWait(pulseListener.listen(), fallback, false));
         resetConnection = true;
     }
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldResumeSubscriptions" + config.getTimeout());
-        cutConnection(pulseListener, active);
+        doAndWait(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
-        uncutConnection(pulseListener, fallback);
+        doAndWait(pulseListener.listen(), fallback, false);
         assertTagUpdate();
         resetConnection = true;
     }
@@ -118,8 +114,8 @@ public class FailoverIT extends EdgeTestBase {
     @Test
     public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("longDisconnectShouldTriggerReconnectToAnyAvailableServer");
-        cutConnection(pulseListener, active);
-        uncutConnection(pulseListener, fallback);
+        doAndWait(pulseListener.listen(), active, true);
+        doAndWait(pulseListener.listen(), fallback, false);
         assertTagUpdate();
         resetConnection = true;
     }
@@ -127,19 +123,19 @@ public class FailoverIT extends EdgeTestBase {
     @Test
     public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
-        cutConnection(pulseListener, active);
+        doAndWait(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
         TimeUnit.MILLISECONDS.sleep(TIMEOUT);
-        uncutConnection(pulseListener, active);
+        doAndWait(pulseListener.listen(), active, false);
         assertTagUpdate();
     }
 
     @Test
     public void reconnectAfterLongDisconnectShouldCancelReconnection() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
-        cutConnection(pulseListener, active);
+        doAndWait(pulseListener.listen(), active, true);
         TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
-        uncutConnection(pulseListener, active);
+        doAndWait(pulseListener.listen(), active, false);
         assertTagUpdate();
     }
 

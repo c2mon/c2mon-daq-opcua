@@ -106,18 +106,18 @@ public class EdgeIT extends EdgeTestBase {
     @Test
     public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
         tagHandler.subscribeTags(Collections.singletonList(tag));
-        cutConnection(pulseListener, active);
+        doAndWait(pulseListener.listen(), active, true);
         pulseListener.reset();
         pulseListener.setSourceID(tag.getId());
-        uncutConnection(pulseListener, active);
+        doAndWait(pulseListener.listen(), active, false);
 
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     @Test
     public void connectionCutServerShouldSendLOST() throws InterruptedException, ExecutionException, TimeoutException {
-        assertEquals(CONNECTION_LOST, cutConnection(pulseListener, active));
-        uncutConnection(pulseListener, active); //cleanup
+        assertEquals(CONNECTION_LOST, doAndWait(pulseListener.listen(), active, true));
+        doAndWait(pulseListener.listen(), active, false); //cleanup
     }
 
     @Test

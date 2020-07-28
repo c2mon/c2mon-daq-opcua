@@ -37,7 +37,6 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
  * list of endpoints.
  */
 @Component("securityModule")
-@Setter
 @Slf4j
 public class SecurityModule {
 

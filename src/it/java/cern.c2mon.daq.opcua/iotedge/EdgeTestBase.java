@@ -1,7 +1,5 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.IMessageSender;
-import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -47,22 +45,21 @@ public abstract class EdgeTestBase {
 
     }
 
-    protected static IMessageSender.EquipmentState cutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
-        log.info("Cutting connection.");
-        final CompletableFuture<IMessageSender.EquipmentState> connectionLost = listener.listen();
-        img.proxy.setConnectionCut(true);
-        return connectionLost.thenApply(c -> {
-            log.info("Connection cut.");
-            return c;
-        }).get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
+    protected static boolean doWithTimeout(EdgeImage img, boolean cut) {
+        try {
+            CompletableFuture.runAsync(() -> img.proxy.setConnectionCut(cut)).get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.error("Error cutting connection.", e);
+            return false;
+        }
+        return true;
     }
 
-    protected static IMessageSender.EquipmentState uncutConnection(TestListeners.TestListener listener, EdgeImage img) throws InterruptedException, ExecutionException, TimeoutException {
-        log.info("Reestablishing connection.");
-        final CompletableFuture<IMessageSender.EquipmentState> connectionRegained = listener.listen();
-        img.proxy.setConnectionCut(false);
-        return connectionRegained.thenApply(c -> {
-            log.info("Connection reestablished.");
+    protected static <T> T doAndWait(CompletableFuture<T> future, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
+        log.info(cut ? "Cutting connection." : "Reestablishing connection.");
+       doWithTimeout(img, cut);
+        return future.thenApply(c -> {
+            log.info(cut ? "Connection cut." : "Connection reestablished.");
             return c;
         }).get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
     }

@@ -175,22 +175,23 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     @Override
     public void disconnect() {
         log.info("Disconnecting endpoint at {}", uri);
-        try {
-            if (client != null) {
+
+        if (client != null) {
+            try {
                 client.getSubscriptionManager().clearSubscriptions();
                 client.getSubscriptionManager().removeSubscriptionListener(this);
                 sessionActivityListeners.forEach(l -> client.removeSessionActivityListener(l));
                 retryDelegate.completeOrThrow(DISCONNECT, this::getDisconnectPeriod, client::disconnect);
-            } else {
-                log.info("Client not connected, skipping disconnection attempt.");
+            } catch (OPCUAException ex) {
+                log.debug("Disconnection failed with exception: ", ex);
+                log.error("Error disconnecting from endpoint with uri {}: ", uri);
             }
-        } catch (OPCUAException ex) {
-            log.error("Error disconnecting from endpoint with uri {}: ", uri, ex);
-        } finally {
-            sessionActivityListeners.clear();
-            subscriptionMap.clear();
-            disconnectedOn.set(-1);
+        } else {
+            log.info("Client not connected, skipping disconnection attempt.");
         }
+        sessionActivityListeners.clear();
+        subscriptionMap.clear();
+        disconnectedOn.set(-1);
         log.info("Completed disconnecting endpoint {}", uri);
     }
 
