@@ -152,7 +152,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             redundantServers.add(currentUri);
             return connectToHealthiestServerFinished();
         } catch (OPCUAException e) {
-            log.info("Server not yet available.");
+            log.info("Server not yet available.", e);
             disconnectAndProceed();
             throw e;
         }

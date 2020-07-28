@@ -16,18 +16,56 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
 public abstract class OPCUAException extends EqIOException {
 
     /** Status Codes returned by the server hinting at misconfigurations. */
-    private static final Collection<Long> CONFIG = ImmutableSet.<Long>builder().add(Bad_NodeIdUnknown, Bad_ServerUriInvalid, Bad_FilterNotAllowed, Bad_ServerNameMissing, Bad_DiscoveryUrlMissing, Bad_DeadbandFilterInvalid, Bad_ConfigurationError, Bad_TcpEndpointUrlInvalid, Bad_MethodInvalid, Bad_ArgumentsMissing, Bad_WriteNotSupported, Bad_HistoryOperationUnsupported, Bad_HistoryOperationInvalid, Bad_NoDeleteRights, Bad_TargetNodeIdInvalid, Bad_SourceNodeIdInvalid, Bad_NodeIdRejected, Bad_FilterOperandInvalid).build();
+    private static final Collection<Long> CONFIG = ImmutableSet.<Long>builder().add(
+            Bad_NodeIdUnknown,
+            Bad_ServerUriInvalid,
+            Bad_FilterNotAllowed,
+            Bad_ServerNameMissing,
+            Bad_DiscoveryUrlMissing,
+            Bad_DeadbandFilterInvalid,
+            Bad_ConfigurationError,
+            Bad_TcpEndpointUrlInvalid,
+            Bad_MethodInvalid,
+            Bad_ArgumentsMissing,
+            Bad_WriteNotSupported,
+            Bad_HistoryOperationUnsupported,
+            Bad_HistoryOperationInvalid,
+            Bad_NoDeleteRights,
+            Bad_TargetNodeIdInvalid,
+            Bad_SourceNodeIdInvalid,
+            Bad_NodeIdRejected,
+            Bad_FilterOperandInvalid).build();
 
     /** Status Codes returned by the server hinting at misconfigurations of security settings. */
-    private static final Collection<Long> SECURITY_CONFIG = ImmutableSet.<Long>builder().add(Bad_UserSignatureInvalid, Bad_UserAccessDenied, Bad_CertificateHostNameInvalid, Bad_ApplicationSignatureInvalid, Bad_CertificateIssuerUseNotAllowed, Bad_CertificateIssuerTimeInvalid, Bad_CertificateIssuerRevoked).build();
+    private static final Collection<Long> SECURITY_CONFIG = ImmutableSet.<Long>builder().add(
+            Bad_UserSignatureInvalid,
+            Bad_UserAccessDenied,
+            Bad_CertificateHostNameInvalid,
+            Bad_ApplicationSignatureInvalid,
+            Bad_CertificateIssuerUseNotAllowed,
+            Bad_CertificateIssuerTimeInvalid,
+            Bad_CertificateIssuerRevoked).build();
 
     /** Status Codes indicating a node ID supplied by an incorrect hardware address */
-    private static final Collection<Long> NODE_CONFIG = ImmutableSet.<Long>builder().add(Bad_NodeIdInvalid, Bad_NodeIdUnknown, Bad_ParentNodeIdInvalid, Bad_SourceNodeIdInvalid, Bad_TargetNodeIdInvalid).build();
+    private static final Collection<Long> NODE_CONFIG = ImmutableSet.<Long>builder().add(
+            Bad_NodeIdInvalid,
+            Bad_NodeIdUnknown,
+            Bad_ParentNodeIdInvalid,
+            Bad_SourceNodeIdInvalid,
+            Bad_TargetNodeIdInvalid).build();
 
     /** Status Codes indicating a node ID supplied by an incorrect hardware address */
-    private static final Collection<Long> DATA_UNAVAILABLE = ImmutableSet.<Long>builder().add(Bad_DataLost, Bad_DataUnavailable, Bad_NoData, Bad_NoDataAvailable).build();
+    private static final Collection<Long> DATA_UNAVAILABLE = ImmutableSet.<Long>builder().add(
+            Bad_DataLost,
+            Bad_DataUnavailable,
+            Bad_NoData,
+            Bad_NoDataAvailable).build();
 
-    private static final Collection<Long> ENDPOINT_DISCONNECTED = ImmutableSet.<Long>builder().add(Bad_SessionClosed, Bad_SessionIdInvalid, Bad_SecureChannelIdInvalid, Bad_SecureChannelClosed).build();
+    private static final Collection<Long> ENDPOINT_DISCONNECTED = ImmutableSet.<Long>builder().add(
+            Bad_SessionClosed,
+            Bad_SessionIdInvalid,
+            Bad_SecureChannelIdInvalid,
+            Bad_SecureChannelClosed).build();
 
     protected OPCUAException(final ExceptionContext context) {
         super(context.getMessage());
@@ -72,7 +110,8 @@ public abstract class OPCUAException extends EqIOException {
     }
 
     /**
-     * Check whether the {@link StatusCode} indicates a problem with the NodeId specified through the tag's {@link cern.c2mon.shared.common.datatag.address.OPCHardwareAddress}.
+     * Check whether the {@link StatusCode} indicates a problem with the NodeId specified through the tag's {@link
+     * cern.c2mon.shared.common.datatag.address.OPCHardwareAddress}.
      * @param code the code to check
      * @return true if the {@link StatusCode} indicates a problem with the NodeId.
      */
@@ -90,11 +129,11 @@ public abstract class OPCUAException extends EqIOException {
     }
 
     private static boolean isConfigIssue(Throwable e) {
-        return e instanceof UnknownHostException || e instanceof UaException && CONFIG.contains(((UaException)e).getStatusCode().getValue());
+        return e instanceof UnknownHostException || e instanceof UaException && CONFIG.contains(((UaException) e).getStatusCode().getValue());
     }
 
     private static boolean isEndpointDisconnectedIssue(Throwable e) {
-        return e instanceof UaException && ENDPOINT_DISCONNECTED.contains(((UaException)e).getStatusCode().getValue());
+        return e instanceof UaException && ENDPOINT_DISCONNECTED.contains(((UaException) e).getStatusCode().getValue());
     }
 
 }

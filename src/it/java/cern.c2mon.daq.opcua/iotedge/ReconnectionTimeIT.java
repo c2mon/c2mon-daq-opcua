@@ -10,6 +10,7 @@ import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.ConnectionRecord;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -169,7 +170,6 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     }
 
     private ConnectionRecord recordDisconnectionTime() {
-        log.info("New disconnect execution");
         ConnectionRecord record;
         synchronized (this) {
             if (random.nextBoolean()) {
@@ -187,26 +187,33 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         long reconnected = -1L;
         final boolean isFailover = cut != uncut;
         final boolean explicitFailover = isFailover && random.nextBoolean();
-        log.info("Cut {}", cut == active ? "active" : "backup");
         try {
+            log.info("Cutting connection.");
             cut.proxy.setConnectionCut(true);
             if (explicitFailover) {
+                log.info("Triggering server switch.");
                 executor.submit(() -> ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch"));
             }
-            TimeUnit.MILLISECONDS.sleep(random.ints(500, 4000).findFirst().orElse(0));
-            log.info("Uncut {}", uncut == active ? "active" : "backup");
+            final int waitFor = random.ints(500, 4000).findFirst().orElse(0);
+            log.info("Wait for {} ms.", waitFor);
+            TimeUnit.MILLISECONDS.sleep(waitFor);
             reestablished = System.currentTimeMillis();
             reconnected = uncutAndAwait(uncut);
-        } catch (InterruptedException | ExecutionException e) {
+            log.info("Connection reestablished.");
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
             log.error("Error during failover from {} to {}: ", cut.uri, uncut.uri, e);
         }
-        return ConnectionRecord.of(reestablished, reconnected, isFailover, explicitFailover);
+        final ConnectionRecord record = ConnectionRecord.of(reestablished, reconnected, isFailover, explicitFailover);
+        log.info("From {}, to {}, \nrecord: {}",
+                cut == active ? "active" : "backup",
+                uncut == active ? "active" : "backup", record);
+        return record;
     }
 
-    private long uncutAndAwait(EdgeImage uncut) throws ExecutionException, InterruptedException {
-        pulseListener.reset();
+    private long uncutAndAwait(EdgeImage uncut) throws ExecutionException, InterruptedException, TimeoutException {
         uncut.proxy.setConnectionCut(false);
-        CompletableFuture.anyOf(pulseListener.getTagUpdate(), pulseListener.getStateUpdate()).get();
+        pulseListener.reset();
+        pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
         return System.currentTimeMillis();
     }
 
