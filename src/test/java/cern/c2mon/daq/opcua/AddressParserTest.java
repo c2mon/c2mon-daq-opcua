@@ -30,6 +30,7 @@ public class AddressParserTest {
         final Collection<String> actual = AddressParser.parse(addressString, config);
         assertEquals(StringUtils.join(expected, ","), StringUtils.join(actual, ","));
     }
+
     @Test
     public void parserWithAdditionalPropertiesShouldReturnStringArrayOfAddresses() throws ConfigurationException {
         Collection<String> expected = Arrays.asList("opc.tcp://test" , "opc.tcp://test2");
@@ -39,9 +40,32 @@ public class AddressParserTest {
     }
 
     @Test
-    public void parserShouldOnlyReturnAddressesWithOpcTcp() throws Exception {
+    public void parserShouldReturnOpcTcp() throws Exception {
         String expected = "opc.tcp://test";
-        final Collection<String> actual = AddressParser.parse("URI=http://abc," + expected + ";testProperties", config);
+        final Collection<String> actual = AddressParser.parse(expected + ";testProperties", config);
+        assertEquals(expected, StringUtils.join(actual, ","));
+    }
+
+
+    @Test
+    public void parserShouldReturnHttp() throws Exception {
+        String expected = "http://test";
+        final Collection<String> actual = AddressParser.parse(expected + ";testProperties", config);
+        assertEquals(expected, StringUtils.join(actual, ","));
+    }
+
+    @Test
+    public void parserShouldReturnHttpAndOpcTcp() throws Exception {
+        String expectedHttp = "http://test";
+        String expectedOpc = "opc.tcp://test";
+        final Collection<String> actual = AddressParser.parse(expectedHttp + "," + expectedOpc + ";testProperties", config);
+        assertEquals(expectedHttp+","+expectedOpc, StringUtils.join(actual, ","));
+    }
+
+    @Test
+    public void parserShouldNotReturnAddressesOtherThanOpcTcpOrHttp() throws Exception {
+        String expected = "opc.tcp://test";
+        final Collection<String> actual = AddressParser.parse("URI=ptf://abc," + expected + ";testProperties", config);
         assertEquals(expected, StringUtils.join(actual, ","));
     }
 

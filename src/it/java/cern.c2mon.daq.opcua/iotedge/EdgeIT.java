@@ -63,7 +63,6 @@ public class EdgeIT extends EdgeTestBase {
         pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         log.info("Client ready");
-        log.info("############ TEST ############");
     }
 
     @AfterEach
@@ -74,6 +73,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void executeCommandWithParentShouldReturnProperResult() throws EqCommandTagException {
+        log.info("############ executeCommandWithParentShouldReturnProperResult ############");
         final ISourceCommandTag methodTag = EdgeTagFactory.StartStepUp.createMethodTag(true);
         final SourceCommandTagValue value = new SourceCommandTagValue();
         final String s = commandTagHandler.runCommand(methodTag, value);
@@ -82,6 +82,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void executeCommandShouldReturnProperResult() throws EqCommandTagException {
+        log.info("############ executeCommandShouldReturnProperResult ############");
         final ISourceCommandTag methodTag = EdgeTagFactory.StartStepUp.createMethodTag(false);
         final SourceCommandTagValue value = new SourceCommandTagValue();
         final String s = commandTagHandler.runCommand(methodTag, value);
@@ -90,6 +91,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
+        log.info("############ restartServerShouldReconnectAndResubscribe ############");
         final CompletableFuture<IMessageSender.EquipmentState> connectionLost = pulseListener.listen();
         active.image.stop();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
@@ -105,6 +107,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
+        log.info("############ regainedConnectionShouldContinueDeliveringSubscriptionValues ############");
         tagHandler.subscribeTags(Collections.singletonList(tag));
         doAndWait(pulseListener.listen(), active, true);
         pulseListener.reset();
@@ -116,12 +119,14 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void connectionCutServerShouldSendLOST() throws InterruptedException, ExecutionException, TimeoutException {
+        log.info("############ connectionCutServerShouldSendLOST ############");
         assertEquals(CONNECTION_LOST, doAndWait(pulseListener.listen(), active, true));
         doAndWait(pulseListener.listen(), active, false); //cleanup
     }
 
     @Test
     public void subscribingProperDataTagShouldReturnValue() throws ConfigurationException {
+        log.info("############ subscribingProperDataTagShouldReturnValue ############");
         tagHandler.subscribeTags(Collections.singletonList(tag));
         pulseListener.setSourceID(tag.getId());
         Object o = assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
@@ -130,6 +135,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void subscribingImproperDataTagShouldReturnOnTagInvalid() throws ConfigurationException {
+        log.info("############ subscribingImproperDataTagShouldReturnOnTagInvalid ############");
         final ISourceDataTag tag = EdgeTagFactory.Invalid.createDataTag();
         pulseListener.setSourceID(tag.getId());
         pulseListener.setThreshold(0);
@@ -139,6 +145,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void subscribeWithDeadband() throws ConfigurationException {
+        log.info("############ subscribeWithDeadband ############");
         final ISourceDataTag tagWithDeadband = EdgeTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
         pulseListener.setSourceID(tagWithDeadband.getId());
         tagHandler.subscribeTags(Collections.singletonList(tagWithDeadband));
@@ -147,6 +154,7 @@ public class EdgeIT extends EdgeTestBase {
 
     @Test
     public void refreshProperTag() throws InterruptedException {
+        log.info("############ refreshProperTag ############");
         pulseListener.setSourceID(tag.getId());
         tagHandler.refreshDataTag(tag);
         Thread.sleep(2000);

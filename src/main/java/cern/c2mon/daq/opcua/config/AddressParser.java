@@ -38,7 +38,7 @@ import java.util.stream.Stream;
 
 /**
  * An abstract class providing exclusively static methods to parse an address String for an EquipmentUnit defined in the
- * equipment configuration.
+ * equipment configuration. The AddressParser recognized the protocols opc.tcp:// (binary) and http:// (WebServices)
  */
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -73,7 +73,7 @@ public abstract class AddressParser {
         }
         // Some hostnames contain characters not allowed in a URI, such as underscores in Windows machine hostnames.
         // Therefore, parsing is done using a regular expression rather than relying on java URI class methods.
-        final Pattern opcUri = Pattern.compile("^(opc.tcp://)+(?:.[^./]+)+(?:/.*)?");
+        final Pattern opcUri = Pattern.compile("^((opc.tcp://)|(http://))+(?:.[^./]+)+(?:/.*)?");
         final Collection<String> uris = Stream.of(uri.split(","))
                 .map(String::trim)
                 .filter(s -> opcUri.matcher(s).find())
