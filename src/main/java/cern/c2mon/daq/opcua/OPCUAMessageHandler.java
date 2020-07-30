@@ -22,7 +22,7 @@ import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.config.AddressParser;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.taghandling.AliveWriter;
 import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
@@ -52,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
 
-    private IControllerProxy controller;
+    private Controller controller;
     private IDataTagHandler dataTagHandler;
     private DataTagChanger dataTagChanger;
     private AliveWriter aliveWriter;
@@ -67,7 +67,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public void connectToDataSource() throws EqIOException {
-        controller = getContext().getBean("controller", IControllerProxy.class);
+        controller = getContext().getBean("controller", Controller.class);
         dataTagHandler = getContext().getBean(IDataTagHandler.class);
         aliveWriter = getContext().getBean(AliveWriter.class);
         commandTagHandler = getContext().getBean(CommandTagHandler.class);

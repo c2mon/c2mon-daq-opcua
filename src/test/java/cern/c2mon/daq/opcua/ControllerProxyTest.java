@@ -21,7 +21,7 @@ import static org.easymock.EasyMock.*;
 public class ControllerProxyTest {
     AppConfigProperties config = TestUtils.createDefaultConfig();
     ApplicationContext applicationContext = createMock(ApplicationContext.class);
-    IControllerProxy proxy;
+    Controller proxy;
     TestEndpoint testEndpoint;
     NoFailover noFailover = createNiceMock(NoFailover.class);
     ColdFailover coldFailover = createNiceMock(ColdFailover.class);
@@ -76,7 +76,7 @@ public class ControllerProxyTest {
         verify(coldFailover);
     }
 
-    private void mockFailoverInitialization(Controller mode, boolean expectRedundantAddress) throws OPCUAException {
+    private void mockFailoverInitialization(ContreteController mode, boolean expectRedundantAddress) throws OPCUAException {
         if (expectRedundantAddress) {
             mode.initialize(anyObject(), anyString());
         } else {

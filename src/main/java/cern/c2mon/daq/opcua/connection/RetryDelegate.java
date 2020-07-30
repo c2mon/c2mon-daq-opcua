@@ -50,8 +50,10 @@ public class RetryDelegate {
      */
     @Retryable(value = {CommunicationException.class},
             maxAttemptsExpression = "#{@appConfigProperties.getMaxRetryAttempts()}",
-            backoff = @Backoff(delayExpression = "#{@appConfigProperties.getRetryDelay()}"))
-    <T> T completeOrThrow(ExceptionContext context, LongSupplier disconnectionTime, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
+            backoff = @Backoff(delayExpression = "#{@appConfigProperties.getRetryDelay()}",
+                    maxDelayExpression = "#{@appConfigProperties.getMaxRetryDelay()}",
+                    multiplier = 2))
+    <T> T completeOrRetry(ExceptionContext context, LongSupplier disconnectionTime, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
         try {
             // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
             // but not the underlying action on the OpcUaClient
@@ -59,7 +61,7 @@ public class RetryDelegate {
                 log.info("Endpoint was stopped, cease retries.");
                 return null;
             }
-            return futureSupplier.get().get(config.getTimeout(), TimeUnit.MILLISECONDS);
+            return futureSupplier.get().get(config.getRequestTimeout(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             log.debug("Execution {} failed with interrupted exception; ", context.name(), e);
             Thread.currentThread().interrupt();
@@ -74,6 +76,6 @@ public class RetryDelegate {
     }
 
     private boolean isLongDisconnection(LongSupplier disconnectionTime) {
-        return config.getMaxRetryAttempts() * (config.getRetryDelay() + config.getTimeout()) < disconnectionTime.getAsLong();
+        return config.getMaxRetryAttempts() * (config.getRetryDelay() + config.getRequestTimeout()) < disconnectionTime.getAsLong();
     }
 }

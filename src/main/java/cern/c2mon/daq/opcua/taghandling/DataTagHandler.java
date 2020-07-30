@@ -18,7 +18,7 @@
 package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.IMessageSender;
-import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -59,7 +59,7 @@ public class DataTagHandler implements IDataTagHandler {
 
     private final TagSubscriptionManager manager;
     private final IMessageSender messageSender;
-    private final IControllerProxy controller;
+    private final Controller controller;
 
     @Override
     public void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {

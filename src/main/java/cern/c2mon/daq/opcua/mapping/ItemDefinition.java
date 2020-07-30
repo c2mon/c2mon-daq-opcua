@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.control.ContreteController;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
@@ -66,7 +67,7 @@ public class ItemDefinition {
 
     /**
      * Creates a new {@link ItemDefinition} from a {@link NodeId}. Used by the {@link
-     * cern.c2mon.daq.opcua.control.Controller}s when subscribing to default Nodes to supervise the server health
+     * ContreteController}s when subscribing to default Nodes to supervise the server health
      * @param nodeId the {@link NodeId} for which to create an {@link ItemDefinition}
      * @return the newly created {@link ItemDefinition}
      */

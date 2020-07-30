@@ -73,8 +73,8 @@ class CertificateLoaderTest {
 
     @Test
     public void shouldLoadFromPkiIfNoPfxConfigured() throws ConfigurationException {
-        final X509Certificate certificate = PkiUtil.loadCertificate(pkiConfig.getCrtPath());
-        final PrivateKey privateKey = PkiUtil.loadPrivateKey(pkiConfig.getPkPath());
+        final X509Certificate certificate = PkiUtil.loadCertificate(pkiConfig.getCertificatePath());
+        final PrivateKey privateKey = PkiUtil.loadPrivateKey(pkiConfig.getPrivateKeyPath());
 
         final CertificateLoader pkiLoader = new CertificateLoader(null, pkiConfig);
         EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
@@ -104,10 +104,11 @@ class CertificateLoaderTest {
 
     @Test
     void canCertifyWithBadFilesReturnsFalse() {
-        loader.getKeystoreConfig().setPath("bad");
-        loader.getPkiConfig().setCrtPath("bad");
+        final AppConfigProperties.KeystoreConfig badKsConfig = new AppConfigProperties.KeystoreConfig("PKCS12", "bad", "password", "1");
+        final AppConfigProperties.PKIConfig badPkiConfig = new AppConfigProperties.PKIConfig("bad","bad");
+        final CertificateLoader badLoader = new CertificateLoader(badKsConfig, badPkiConfig);
         final EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
-        assertFalse(loader.canCertify(e));
+        assertFalse(badLoader.canCertify(e));
     }
 
     @Test

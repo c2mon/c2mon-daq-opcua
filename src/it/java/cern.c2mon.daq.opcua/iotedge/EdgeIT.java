@@ -6,7 +6,7 @@ import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -46,7 +46,8 @@ public class EdgeIT extends EdgeTestBase {
     private final ISourceDataTag alreadySubscribedTag = EdgeTagFactory.DipData.createDataTag();
 
     @Autowired TestListeners.Pulse pulseListener;
-    @Autowired IControllerProxy controller;
+    @Autowired
+    Controller controller;
     @Autowired IDataTagHandler tagHandler;
     @Autowired CommandTagHandler commandTagHandler;
 

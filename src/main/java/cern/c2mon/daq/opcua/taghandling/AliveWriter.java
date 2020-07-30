@@ -17,7 +17,7 @@
 package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.IMessageSender;
-import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -47,7 +47,7 @@ public class AliveWriter {
     /**
      * The failover proxy for the endpoint to write to.
      */
-    private final IControllerProxy controllerProxy;
+    private final Controller controllerProxy;
 
     /**
      * The Endpoint listener which notifies the Server of a new alive.

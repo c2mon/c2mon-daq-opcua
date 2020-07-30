@@ -2,8 +2,8 @@ package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.control.ContreteController;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.IControllerProxy;
 import cern.c2mon.daq.opcua.control.NoFailover;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -51,7 +51,7 @@ public class CommandTagHandlerTest {
         value = new SourceCommandTagValue();
         value.setDataType(Integer.class.getName());
         value.setValue(1);
-        final IControllerProxy controllerProxy = TestUtils.getFailoverProxy(endpoint, l);
+        final Controller controllerProxy = TestUtils.getFailoverProxy(endpoint, l);
         commandTagHandler = new CommandTagHandler(controllerProxy);
     }
 
@@ -132,7 +132,7 @@ public class CommandTagHandlerTest {
 
     @Test
     public void badClientShouldThrowException() throws OPCUAException {
-        Controller controller = new NoFailover();
+        ContreteController controller = new NoFailover();
         controller.initialize(new ExceptionTestEndpoint(l, new TagSubscriptionMapper()));
         final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, l);
         proxy.setController(controller);

@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.common.conf.equipment.ICommandTagChanger;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -35,9 +35,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CommandTagHandler implements ICommandTagChanger {
 
-    private final IControllerProxy controller;
+    private final Controller controller;
 
-    @Value("#{@appConfigProperties.getTimeout()}")
+    @Value("#{@appConfigProperties.getRequestTimeout()}")
     private int timeout;
 
     /**

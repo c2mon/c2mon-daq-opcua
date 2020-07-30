@@ -54,8 +54,8 @@ public class PkiUtil {
     public static Map.Entry<X509Certificate, KeyPair> loadFromPfx(AppConfigProperties.KeystoreConfig config) throws ConfigurationException {
         try (InputStream in = Files.newInputStream(Paths.get(config.getPath()))) {
             final KeyStore keyStore = KeyStore.getInstance(config.getType());
-            keyStore.load(in, config.getPwd().toCharArray());
-            Key privateKey = keyStore.getKey(config.getAlias(), config.getPwd().toCharArray());
+            keyStore.load(in, config.getPassword().toCharArray());
+            Key privateKey = keyStore.getKey(config.getAlias(), config.getPassword().toCharArray());
             if (privateKey instanceof PrivateKey) {
                 X509Certificate certificate = (X509Certificate) keyStore.getCertificate(config.getAlias());
                 PublicKey publicKey = certificate.getPublicKey();

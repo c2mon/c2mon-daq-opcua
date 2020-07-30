@@ -4,7 +4,7 @@ import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ColdFailover;
-import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.ContreteController;
 import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.opcua.control.NoFailover;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -20,7 +20,7 @@ public class TestControllerProxy extends ControllerProxy {
     @Setter
     private String[] redundantUris = new String[0];
 
-    public void setController(Controller controller) {
+    public void setController(ContreteController controller) {
         this.controller = controller;
     }
 

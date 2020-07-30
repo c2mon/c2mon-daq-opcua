@@ -4,9 +4,9 @@ import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ColdFailover;
-import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.ContreteController;
 import cern.c2mon.daq.opcua.control.FailoverBase;
-import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
@@ -45,8 +45,10 @@ public class FailoverIT extends EdgeTestBase {
 
     @Autowired TestListeners.Pulse pulseListener;
     @Autowired IDataTagHandler tagHandler;
-    @Autowired Controller coldFailover;
-    @Autowired IControllerProxy controllerProxy;
+    @Autowired
+    ContreteController coldFailover;
+    @Autowired
+    Controller controllerProxy;
     @Autowired AppConfigProperties config;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
@@ -107,14 +109,14 @@ public class FailoverIT extends EdgeTestBase {
         log.info("coldFailoverShouldReconnectClient");
         doAndWait(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
-        TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
+        TimeUnit.MILLISECONDS.sleep(config.getRequestTimeout() + 1000);
         assertEquals(IMessageSender.EquipmentState.OK, doAndWait(pulseListener.listen(), fallback, false));
         resetConnection = true;
     }
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
-        log.info("coldFailoverShouldResumeSubscriptions" + config.getTimeout());
+        log.info("coldFailoverShouldResumeSubscriptions" + config.getRequestTimeout());
         doAndWait(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
         doAndWait(pulseListener.listen(), fallback, false);
@@ -145,7 +147,7 @@ public class FailoverIT extends EdgeTestBase {
     public void reconnectAfterLongDisconnectShouldCancelReconnection() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
         doAndWait(pulseListener.listen(), active, true);
-        TimeUnit.MILLISECONDS.sleep(config.getTimeout() + 1000);
+        TimeUnit.MILLISECONDS.sleep(config.getRequestTimeout() + 1000);
         doAndWait(pulseListener.listen(), active, false);
         assertTagUpdate();
     }

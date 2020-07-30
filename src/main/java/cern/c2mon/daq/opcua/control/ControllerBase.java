@@ -19,10 +19,10 @@ import java.util.stream.Stream;
 
 /**
  * An abstract base  which offers functionality that is shared across all failover modes and the {@link NoFailover}
- * {@link Controller}.
+ * {@link ContreteController}.
  */
 @Slf4j
-public abstract class ControllerBase implements Controller {
+public abstract class ControllerBase implements ContreteController {
 
     private static Stream<Map.Entry<UInteger, SourceDataTagQuality>> subscribeAndCatch(Endpoint e, Map.Entry<SubscriptionGroup, List<ItemDefinition>> groupWithDefinitions) {
         try {

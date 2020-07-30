@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * An abstract base class of a controller that manages the connection to servers in a redundant server set and is
  * capable of failing over in between these servers in case of error. It offers redundancy-specific functionality that
  * is shared in between different failover modes of the OPC UA redundancy model. Concrete Failover modes should
- * implement specific behavior on initial connection by implementing the {@link Controller}'s initialize() method, and
+ * implement specific behavior on initial connection by implementing the {@link ContreteController}'s initialize() method, and
  * on failover by implementing  the {@link FailoverMode}'s switchServers() method.
  */
 @Slf4j

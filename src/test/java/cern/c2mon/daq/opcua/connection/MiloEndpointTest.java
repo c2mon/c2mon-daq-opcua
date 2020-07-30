@@ -28,7 +28,7 @@ public class MiloEndpointTest {
 
     @BeforeEach
     public void setUp() {
-        AppConfigProperties config = AppConfigProperties.builder().maxRetryAttempts(3).timeout(300).retryDelay(1000).build();
+        AppConfigProperties config = AppConfigProperties.builder().maxRetryAttempts(3).requestTimeout(300).retryDelay(1000).build();
         endpoint = new MiloEndpoint(null, new RetryDelegate(config), null, null, config.exponentialDelayTemplate());
         ReflectionTestUtils.setField(endpoint, "client", mockClient);
     }

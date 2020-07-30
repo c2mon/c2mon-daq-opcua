@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.control;
 
-import cern.c2mon.daq.opcua.config.AppConfigProperties;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -12,26 +12,23 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Classes implementing this interface present a specific kind handler for redundancy modes with the responsibility of
- * monitoring the connection state to the active server and of handling failover when needed. Currently, only {@link
- * ColdFailover} is supported of the OPC UA redundancy model. To add support for custom or vendor-specific redundancy
- * models, a class implementing FailoverMode should be created and references in {@link AppConfigProperties}.
+ * The {@link ContreteController} represents a one-to-many mapping to the {@link Endpoint}s and handles all actions directed at
+ * them.
  */
-public interface IControllerProxy {
+public interface ContreteController {
 
     /**
-     * Connect to the server at one of the given addresses, and setup redundancy and failover monitoring according to
-     * configuration and the information on the server
-     * @param serverAddresses the addresses of all servers in a redundant server set. Contains a single address of the
-     *                        server is not part of a redundant setup.
-     * @throws OPCUAException if connecting to the server(s) failed.
+     * Initialize supervision and connection monitoring to the active server.
+     * @param endpoint           the currently connected {@link Endpoint}
+     * @param redundantAddresses the addresses of the servers in the redundant server set not including the active
+     *                           server URI
+     * @throws OPCUAException if an error occurred when setting up connection monitoring
      */
-    void connect(Collection<String> serverAddresses) throws OPCUAException;
+    void initialize(Endpoint endpoint, String... redundantAddresses) throws OPCUAException;
 
     /**
      * Disconnect from the OPC UA server and reset the controller to a neutral state.
@@ -58,7 +55,7 @@ public interface IControllerProxy {
     boolean unsubscribe(ItemDefinition definition);
 
     /**
-     * Read the current value from a node on the currently connected OPC UA server
+     * Read the current value from a node on the associated OPC UA server
      * @param nodeId the nodeId of the node whose value to read.
      * @return the {@link ValueUpdate} and associated {@link SourceDataTagQualityCode} of the reading
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.

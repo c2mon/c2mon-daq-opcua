@@ -31,7 +31,7 @@ public abstract class TestUtils {
         return AppConfigProperties.builder()
                 .appName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
-                .productUri("urn:cern:ch:UA:C2MON")
+                .queueSize(0)
                 .organization("CERN")
                 .organizationalUnit("C2MON team")
                 .localityName("Geneva")

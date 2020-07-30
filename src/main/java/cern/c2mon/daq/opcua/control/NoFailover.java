@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A {@link Controller} maintaining connection to a non-redundant server, or servers in transparent redundancy.
+ * A {@link ContreteController} maintaining connection to a non-redundant server, or servers in transparent redundancy.
  */
 @Slf4j
 @NoArgsConstructor

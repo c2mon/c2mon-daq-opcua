@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.taghandling;
 
-import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.ContreteController;
 import cern.c2mon.daq.opcua.control.NoFailover;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -99,7 +99,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
 
     @Test
     public void invalidOnAddDataTagShouldReportFail () throws OPCUAException {
-        Controller controller = new NoFailover();
+        ContreteController controller = new NoFailover();
         controller.initialize(new ExceptionTestEndpoint(null, mapper), new String[0]);
         final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, listener);
         proxy.setController(controller);

@@ -25,21 +25,21 @@ import java.util.concurrent.CompletionException;
 
 /**
  * This class is responsible for fetching a server's redundancy support information and for delegating to the proper
- * {@link IControllerProxy} according to the application properties in {@link AppConfigProperties} and to server
+ * {@link Controller} according to the application properties in {@link AppConfigProperties} and to server
  * capabilities.
  */
 @Slf4j
 @RequiredArgsConstructor
 @Component(value = "controller")
 @Primary
-public class ControllerProxy implements IControllerProxy {
+public class ControllerProxy implements Controller {
     protected final ApplicationContext appContext;
     protected final AppConfigProperties config;
     protected final Endpoint endpoint;
-    protected Controller controller;
+    protected ContreteController controller;
 
     /**
-     * Delegated failover handling to an appropriate {@link IControllerProxy} according to the application configuration
+     * Delegated failover handling to an appropriate {@link Controller} according to the application configuration
      * or, secondarily, according to server capabilities. If no redundant Uris are preconfigured, they are read from the
      * server's ServerUriArray node. In case of errors in the configuration and when reading from the server's address
      * space, the FailoverProxy treats the server as not part of a redundant setup. Notify the {@link
@@ -168,8 +168,8 @@ public class ControllerProxy implements IControllerProxy {
         if (customRedundancyMode != null && !customRedundancyMode.isEmpty()) {
             try {
                 final Class<?> redundancyMode = Class.forName(customRedundancyMode);
-                if (Controller.class.isAssignableFrom(redundancyMode)) {
-                    controller = (Controller) appContext.getBean(redundancyMode);
+                if (ContreteController.class.isAssignableFrom(redundancyMode)) {
+                    controller = (ContreteController) appContext.getBean(redundancyMode);
                     return true;
                 }
                 log.error("The configured redundancy mode {} must implement the FailoverProxy interface. Proceeding without.", config.getRedundancyMode());

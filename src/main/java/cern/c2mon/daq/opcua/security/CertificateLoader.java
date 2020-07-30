@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.security;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import io.netty.util.internal.StringUtil;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
@@ -24,7 +23,6 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SecurityChecksFa
  * Loads a certificate and keypair from a keystore file configured in AppConfig, and configures a builder to use them.
  */
 @Component("loader")
-@Getter
 @Slf4j
 @RequiredArgsConstructor
 public class CertificateLoader extends CertifierBase {
@@ -82,8 +80,8 @@ public class CertificateLoader extends CertifierBase {
         if (keyPair == null || certificate == null && isPkiConfigured()) {
             log.info("Loading from PEM files");
             try {
-                final PrivateKey privateKey = PkiUtil.loadPrivateKey(pkiConfig.getPkPath());
-                X509Certificate tmpCert = PkiUtil.loadCertificate(pkiConfig.getCrtPath());
+                final PrivateKey privateKey = PkiUtil.loadPrivateKey(pkiConfig.getPrivateKeyPath());
+                X509Certificate tmpCert = PkiUtil.loadCertificate(pkiConfig.getCertificatePath());
                 // ensure both certificate and keyPair are both either loaded or not
                 keyPair = new KeyPair(tmpCert.getPublicKey(), privateKey);
                 certificate = tmpCert;
@@ -101,10 +99,10 @@ public class CertificateLoader extends CertifierBase {
 
     private boolean isPkiConfigured() {
         boolean isConfigComplete = pkiConfig != null &&
-                !StringUtil.isNullOrEmpty(pkiConfig.getCrtPath()) &&
-                !StringUtil.isNullOrEmpty(pkiConfig.getPkPath());
+                !StringUtil.isNullOrEmpty(pkiConfig.getCertificatePath()) &&
+                !StringUtil.isNullOrEmpty(pkiConfig.getPrivateKeyPath());
         return isConfigComplete &&
-                Paths.get(pkiConfig.getCrtPath()).toFile().exists() &&
-                Paths.get(pkiConfig.getPkPath()).toFile().exists();
+                Paths.get(pkiConfig.getCertificatePath()).toFile().exists() &&
+                Paths.get(pkiConfig.getPrivateKeyPath()).toFile().exists();
     }
 }

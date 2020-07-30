@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.config;
 
-import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.control.Controller;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,7 +32,7 @@ public class AppConfigProperties {
     /**
      * The Java class name of the a custom redundancy failover mode, if one shall be used. If specified, the default
      * query on an OPC UA server for its redundancy support information and proceeding and resolving the appropriate
-     * failover mode. Must match exactly the Java class name of the class implementing {@link IControllerProxy}.
+     * failover mode. Must match exactly the Java class name of the class implementing {@link Controller}.
      */
     private String redundancyMode;
 
@@ -53,17 +53,18 @@ public class AppConfigProperties {
     private long restartDelay = 2000L;
 
     /**
-     * The time to wait before retrying a failed attempt of individual methods executed on the OPC UA SDK, or of
-     * recreating a subscription which could not be transferred automatically to a new session in milliseconds.
+     * The delay before retrying a failed service call. The initial delay when retrying to recreate a subscription which
+     * could not be transferred automatically, or a failed failover. In these cases, the time in between retries is
+     * duplicated on every new failure, until reaching the maximum time of maxRetryDelay.
      */
     private long retryDelay = 50000L;
 
     /**
-     * If the redundant server is not yet available when the active server goes down, a retry is started after the
-     * retryDelay period. The time in between retries is duplicated on every new failure, until reaching the maximum
-     * time of maxFailoverDelay.
+     * The maximum delay when retrying to recreate a subscription which could not be transferred automatically, or a
+     * failed failover. The time in between retries is duplicated on every new failure, until reaching the maximum time
+     * of maxRetryDelay.
      */
-    private long maxFailoverDelay = 10000L;
+    private long maxRetryDelay = 10000L;
 
     /**
      * The maximum amount of attempts to retry service calls
@@ -72,9 +73,16 @@ public class AppConfigProperties {
 
     /**
      * The timeout indicating for how long the client is willing to wait for a server response on a single transaction
-     * in milliseconds. The maximum value is 5000 due to a static timeout in the Eclipse Milo package.
+     * in milliseconds.
      */
-    private long timeout;
+    private long requestTimeout;
+
+    /**
+     * The maximum number of values which can be queues in between publish intervals of the subscriptions. If more
+     * updates occur during the timeframe of the DataTags' timedeadband, these values are added to the queue. The
+     * fastest possible sampling rate for the server is used for each MonitoredItem.
+     */
+    private int queueSize;
 
     /**
      * The AliveWriter ensures that the SubEquipments connected to the OPC UA server are still running and sends regular
@@ -97,23 +105,22 @@ public class AppConfigProperties {
 
     /**
      * Connection with a {@link cern.c2mon.daq.opcua.security.Certifier} associated with the element will be attempted
-     * in order or magnitude of the value, starting with the highest value. If the value is not given then that
-     * Certifier will not be used. The entries map the the Certifies as follows: "none" : {@link
-     * cern.c2mon.daq.opcua.security.NoSecurityCertifier} "generate" : {@link cern.c2mon.daq.opcua.security.CertificateGenerator}
+     * in decreasing order of the associated value until successful. If the value is not given then that Certifier will
+     * not be used. The entries are:
+     * "none" : {@link cern.c2mon.daq.opcua.security.NoSecurityCertifier}
+     * "generate" : {@link cern.c2mon.daq.opcua.security.CertificateGenerator}
      * "load" : {@link cern.c2mon.daq.opcua.security.CertificateLoader}
      */
     private Map<String, Integer> certificationPriority;
 
     // Settings to create a certificate, and to request connection to the server
     private String appName;
-    private String productUri;
     private String applicationUri;
     private String organization;
     private String organizationalUnit;
     private String localityName;
     private String stateName;
     private String countryCode;
-    private int requestTimeout;
 
     private KeystoreConfig keystore = new KeystoreConfig();
     private PKIConfig pkiConfig = new PKIConfig();
@@ -127,7 +134,7 @@ public class AppConfigProperties {
     public RetryTemplate exponentialDelayTemplate() {
         AlwaysRetryPolicy retry = new AlwaysRetryPolicy();
         ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
-        backoff.setMaxInterval(maxFailoverDelay);
+        backoff.setMaxInterval(maxRetryDelay);
         backoff.setInitialInterval(retryDelay);
         backoff.setMultiplier(2);
         RetryTemplate template = new RetryTemplate();
@@ -147,7 +154,7 @@ public class AppConfigProperties {
     public static class KeystoreConfig {
         private String type = "PKCS12";
         private String path;
-        private String pwd = "";
+        private String password = "";
         private String alias;
     }
 
@@ -160,7 +167,7 @@ public class AppConfigProperties {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class PKIConfig {
-        private String pkPath;
-        private String crtPath;
+        private String privateKeyPath;
+        private String certificatePath;
     }
 }

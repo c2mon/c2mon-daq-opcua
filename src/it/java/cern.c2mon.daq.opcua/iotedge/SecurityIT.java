@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.control.IControllerProxy;
+import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
@@ -44,7 +44,7 @@ public class SecurityIT {
 
     @Autowired AppConfigProperties config;
     @Autowired
-    IControllerProxy controllerProxy;
+    Controller controllerProxy;
     @Autowired IDataTagHandler tagHandler;
     @Autowired TestListeners.Pulse listener;
 

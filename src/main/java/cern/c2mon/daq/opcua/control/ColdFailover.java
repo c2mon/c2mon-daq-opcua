@@ -131,7 +131,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             future = executor.schedule(() -> {
                 log.info("Trigger server switch due to long disconnection");
                 triggerServerSwitch();
-            }, config.getTimeout(), TimeUnit.MILLISECONDS);
+            }, config.getRequestTimeout(), TimeUnit.MILLISECONDS);
         }
     }
 

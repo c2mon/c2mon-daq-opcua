@@ -112,8 +112,8 @@ public class AddressParserTest {
     @Test
     public void parserWithMatchingPropertyShouldSetPKIConfig() throws Exception {
         final String expected = "xxx";
-        AddressParser.parse("URI=opc.tcp://test;restartDelay=1000;pki.crtPath="+expected, config);
-        assertEquals(expected, config.getPkiConfig().getCrtPath());
+        AddressParser.parse("URI=opc.tcp://test;restartDelay=1000;pki.certificatePath="+expected, config);
+        assertEquals(expected, config.getPkiConfig().getCertificatePath());
     }
 
     @Test
