@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.iotedge;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ColdFailover;
-import cern.c2mon.daq.opcua.control.ContreteController;
+import cern.c2mon.daq.opcua.control.ConcreteController;
 import cern.c2mon.daq.opcua.control.FailoverBase;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -44,7 +44,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     @Autowired
     IDataTagHandler tagHandler;
     @Autowired
-    ContreteController coldFailover;
+    ConcreteController coldFailover;
     @Autowired
     Controller controllerProxy;
     @Autowired

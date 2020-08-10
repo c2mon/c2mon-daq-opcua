@@ -26,10 +26,10 @@ public abstract class TestUtils {
     public final static int TIMEOUT_REDUNDANCY = 2;
 
     public static AppConfigProperties createDefaultConfig() {
-        final ImmutableMap<String, Integer> certificationPriority = ImmutableMap.<String, Integer>builder()
+        final ImmutableMap<String, Integer> certifierPriority = ImmutableMap.<String, Integer>builder()
                 .put("none", 3).put("generate", 2).put("load", 1).build();
         return AppConfigProperties.builder()
-                .appName("c2mon-opcua-daq")
+                .applicationName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")
                 .queueSize(0)
                 .organization("CERN")
@@ -38,7 +38,7 @@ public abstract class TestUtils {
                 .stateName("Geneva")
                 .countryCode("CH")
                 .requestTimeout(5000)
-                .certificationPriority(certificationPriority)
+                .certifierPriority(certifierPriority)
                 .trustAllServers(true)
                 .keystore(new AppConfigProperties.KeystoreConfig("PKCS12", "", "password", "1"))
                 .pkiConfig(new AppConfigProperties.PKIConfig("", ""))

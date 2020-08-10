@@ -76,7 +76,7 @@ public class ControllerProxyTest {
         verify(coldFailover);
     }
 
-    private void mockFailoverInitialization(ContreteController mode, boolean expectRedundantAddress) throws OPCUAException {
+    private void mockFailoverInitialization(ConcreteController mode, boolean expectRedundantAddress) throws OPCUAException {
         if (expectRedundantAddress) {
             mode.initialize(anyObject(), anyString());
         } else {

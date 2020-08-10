@@ -16,10 +16,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The {@link ContreteController} represents a one-to-many mapping to the {@link Endpoint}s and handles all actions directed at
+ * The {@link ConcreteController} represents a one-to-many mapping to the {@link Endpoint}s and handles all actions directed at
  * them.
  */
-public interface ContreteController {
+public interface ConcreteController {
 
     /**
      * Initialize supervision and connection monitoring to the active server.

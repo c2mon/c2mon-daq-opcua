@@ -135,11 +135,9 @@ public class AliveWriter {
      * Writes once to the server and increase the write value.
      */
     private void sendAlive() {
-        // We send an Integer since Long could cause problems to the OPC
+        // TODO: We send an Integer since Long could cause problems to the OPC
         Object castedValue = writeCounter.intValue();
-        if (log.isDebugEnabled()) {
-            log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
-        }
+        log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
         try {
             if (controllerProxy.write(address, castedValue)) {
                 log.info("Written successfully to alive, sending status tag.");
@@ -148,11 +146,7 @@ public class AliveWriter {
             writeCounter.incrementAndGet();
             writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
         } catch (OPCUAException e) {
-            if (log.isDebugEnabled()) {
-                log.error("Error while writing alive. Retrying...", e);
-            } else {
-                log.error("Error while writing alive. Retrying...");
-            }
+            log.error("Error while writing alive. Retrying...", e);
         }
     }
 }

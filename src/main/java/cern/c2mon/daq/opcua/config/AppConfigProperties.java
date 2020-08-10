@@ -55,16 +55,22 @@ public class AppConfigProperties {
     /**
      * The delay before retrying a failed service call. The initial delay when retrying to recreate a subscription which
      * could not be transferred automatically, or a failed failover. In these cases, the time in between retries is
-     * duplicated on every new failure, until reaching the maximum time of maxRetryDelay.
+     * multiplied by retryMultiplier on every new failure, until reaching the maximum time of maxRetryDelay.
      */
     private long retryDelay = 50000L;
 
     /**
      * The maximum delay when retrying to recreate a subscription which could not be transferred automatically, or a
-     * failed failover. The time in between retries is duplicated on every new failure, until reaching the maximum time
-     * of maxRetryDelay.
+     * failed failover. The time in between retries is multiplied by retryMultiplier on every new failure, until
+     * reaching the maximum time of maxRetryDelay.
      */
     private long maxRetryDelay = 10000L;
+
+    /**
+     * The multiplier on the delay time when retrying to recreate a subscription which could not be transferred
+     * automatically, or a failed failover.
+     */
+    private long retryMultiplier = 2;
 
     /**
      * The maximum amount of attempts to retry service calls
@@ -106,15 +112,13 @@ public class AppConfigProperties {
     /**
      * Connection with a {@link cern.c2mon.daq.opcua.security.Certifier} associated with the element will be attempted
      * in decreasing order of the associated value until successful. If the value is not given then that Certifier will
-     * not be used. The entries are:
-     * "none" : {@link cern.c2mon.daq.opcua.security.NoSecurityCertifier}
-     * "generate" : {@link cern.c2mon.daq.opcua.security.CertificateGenerator}
-     * "load" : {@link cern.c2mon.daq.opcua.security.CertificateLoader}
+     * not be used. The entries are: "none" : {@link cern.c2mon.daq.opcua.security.NoSecurityCertifier} "generate" :
+     * {@link cern.c2mon.daq.opcua.security.CertificateGenerator} "load" : {@link cern.c2mon.daq.opcua.security.CertificateLoader}
      */
-    private Map<String, Integer> certificationPriority;
+    private Map<String, Integer> certifierPriority;
 
     // Settings to create a certificate, and to request connection to the server
-    private String appName;
+    private String applicationName;
     private String applicationUri;
     private String organization;
     private String organizationalUnit;
@@ -136,7 +140,7 @@ public class AppConfigProperties {
         ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
         backoff.setMaxInterval(maxRetryDelay);
         backoff.setInitialInterval(retryDelay);
-        backoff.setMultiplier(2);
+        backoff.setMultiplier(retryMultiplier);
         RetryTemplate template = new RetryTemplate();
         template.setRetryPolicy(retry);
         template.setBackOffPolicy(backoff);

@@ -82,7 +82,7 @@ public class SecurityModule {
         final CompletableFuture<OpcUaClient> clientFuture = new CompletableFuture<>();
         try {
             builder = OpcUaClientConfig.builder()
-                    .setApplicationName(LocalizedText.english(config.getAppName()))
+                    .setApplicationName(LocalizedText.english(config.getApplicationName()))
                     .setApplicationUri(config.getApplicationUri())
                     .setRequestTimeout(uint(config.getRequestTimeout()))
                     .setCertificateValidator(getValidator());
@@ -93,7 +93,7 @@ public class SecurityModule {
             // prefer more secure endpoints
             mutableEndpoints.sort(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed());
 
-            List<Map.Entry<String, Integer>> toSort = new ArrayList<>(config.getCertificationPriority().entrySet());
+            List<Map.Entry<String, Integer>> toSort = new ArrayList<>(config.getCertifierPriority().entrySet());
             toSort.sort(Map.Entry.comparingByValue());
             for (Map.Entry<String, Integer> e : toSort) {
                 final Certifier certifier = key2Certifier.get(e.getKey());

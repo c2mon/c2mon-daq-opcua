@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -93,12 +92,6 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
             handler.runCommand(value);
         }
         super.cleanUp();
-    }
-
-    @Test
-    @UseConf("empty_datatags.xml")
-    public void emptyDatatagsShouldThrowError() {
-        assertThrows(ConfigurationException.class, handler::connectToDataSource);
     }
 
     @Test

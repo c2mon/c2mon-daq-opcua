@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.exceptions;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import com.google.common.collect.ImmutableSet;
 import org.eclipse.milo.opcua.stack.core.UaException;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 
 import java.net.UnknownHostException;
 import java.util.Collection;
@@ -34,7 +33,8 @@ public abstract class OPCUAException extends EqIOException {
             Bad_TargetNodeIdInvalid,
             Bad_SourceNodeIdInvalid,
             Bad_NodeIdRejected,
-            Bad_FilterOperandInvalid).build();
+            Bad_FilterOperandInvalid,
+            Bad_ServiceUnsupported).build();
 
     /** Status Codes returned by the server hinting at misconfigurations of security settings. */
     private static final Collection<Long> SECURITY_CONFIG = ImmutableSet.<Long>builder().add(
@@ -46,20 +46,6 @@ public abstract class OPCUAException extends EqIOException {
             Bad_CertificateIssuerTimeInvalid,
             Bad_CertificateIssuerRevoked).build();
 
-    /** Status Codes indicating a node ID supplied by an incorrect hardware address */
-    private static final Collection<Long> NODE_CONFIG = ImmutableSet.<Long>builder().add(
-            Bad_NodeIdInvalid,
-            Bad_NodeIdUnknown,
-            Bad_ParentNodeIdInvalid,
-            Bad_SourceNodeIdInvalid,
-            Bad_TargetNodeIdInvalid).build();
-
-    /** Status Codes indicating a node ID supplied by an incorrect hardware address */
-    private static final Collection<Long> DATA_UNAVAILABLE = ImmutableSet.<Long>builder().add(
-            Bad_DataLost,
-            Bad_DataUnavailable,
-            Bad_NoData,
-            Bad_NoDataAvailable).build();
 
     private static final Collection<Long> ENDPOINT_DISCONNECTED = ImmutableSet.<Long>builder().add(
             Bad_SessionClosed,
@@ -107,25 +93,6 @@ public abstract class OPCUAException extends EqIOException {
      */
     public static boolean isSecurityIssue(UaException e) {
         return SECURITY_CONFIG.contains(e.getStatusCode().getValue());
-    }
-
-    /**
-     * Check whether the {@link StatusCode} indicates a problem with the NodeId specified through the tag's {@link
-     * cern.c2mon.shared.common.datatag.address.OPCHardwareAddress}.
-     * @param code the code to check
-     * @return true if the {@link StatusCode} indicates a problem with the NodeId.
-     */
-    public static boolean isNodeIdConfigIssue(StatusCode code) {
-        return NODE_CONFIG.contains(code.getValue());
-    }
-
-    /**
-     * Check whether the {@link StatusCode} indicates missing or lost data values for a particular node.
-     * @param code the code to check
-     * @return true if the {@link StatusCode} indicates missing data.
-     */
-    public static boolean isDataUnavailable(StatusCode code) {
-        return DATA_UNAVAILABLE.contains(code.getValue());
     }
 
     private static boolean isConfigIssue(Throwable e) {

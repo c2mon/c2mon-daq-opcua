@@ -69,7 +69,7 @@ public class CertificateGenerator extends CertifierBase {
             log.info("Generating self-signed certificate and keypair.");
             final KeyPair tmpKp = SelfSignedCertificateGenerator.generateRsaKeyPair(2048);
             SelfSignedCertificateBuilder builder = new SelfSignedCertificateBuilder(tmpKp)
-                    .setCommonName(config.getAppName())
+                    .setCommonName(config.getApplicationName())
                     .setOrganization(config.getOrganization())
                     .setOrganizationalUnit(config.getOrganizationalUnit())
                     .setLocalityName(config.getLocalityName())

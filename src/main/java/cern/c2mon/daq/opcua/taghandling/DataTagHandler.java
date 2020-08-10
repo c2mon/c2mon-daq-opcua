@@ -19,8 +19,6 @@ package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.IMessageSender;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
@@ -62,10 +60,7 @@ public class DataTagHandler implements IDataTagHandler {
     private final Controller controller;
 
     @Override
-    public void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) throws ConfigurationException {
-        if (dataTags.isEmpty()) {
-            throw new ConfigurationException(ExceptionContext.DATATAGS_EMPTY);
-        }
+    public void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) {
         synchronized (this) {
             final Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions = dataTags.stream()
                     .collect(groupingBy(ISourceDataTag::getTimeDeadband))

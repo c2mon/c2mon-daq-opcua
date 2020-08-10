@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
-import cern.c2mon.daq.opcua.control.ContreteController;
+import cern.c2mon.daq.opcua.control.ConcreteController;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * An OPC UA subscription groups several data points on the server, here represented by {@link ItemDefinition}s. All
  * items within a subscription share a publish interval. The Client is notified of updates once per publish interval.
- * The {@link SubscriptionGroup} follows the same concept, and allows the {@link ContreteController}
+ * The {@link SubscriptionGroup} follows the same concept, and allows the {@link ConcreteController}
  * to maintain an application-level rather than server-level overview over currently subscribed items. It stores a
  * reference to {@link ISourceDataTag}s along with the subscribed {@link ItemDefinition}s for fast mapping.
  */

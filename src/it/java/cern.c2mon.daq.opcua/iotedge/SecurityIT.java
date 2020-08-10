@@ -70,9 +70,9 @@ public class SecurityIT {
     @AfterEach
     public void cleanUp() throws IOException, InterruptedException {
         config.setTrustAllServers(true);
-        config.getCertificationPriority().put("none", 1);
-        config.getCertificationPriority().put("generate", 2);
-        config.getCertificationPriority().put("load", 3);
+        config.getCertifierPriority().put("none", 1);
+        config.getCertifierPriority().put("generate", 2);
+        config.getCertifierPriority().put("load", 3);
         cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
         final CompletableFuture<IMessageSender.EquipmentState> f = listener.listen();
@@ -95,16 +95,16 @@ public class SecurityIT {
 
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
-        config.getCertificationPriority().remove("none");
-        config.getCertificationPriority().remove("load");
+        config.getCertifierPriority().remove("none");
+        config.getCertifierPriority().remove("load");
         final CompletableFuture<IMessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
         assertEquals(IMessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
-        config.getCertificationPriority().remove("none");
-        config.getCertificationPriority().remove("generate");
+        config.getCertifierPriority().remove("none");
+        config.getCertifierPriority().remove("generate");
         final CompletableFuture<IMessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
         assertEquals(IMessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
@@ -112,16 +112,16 @@ public class SecurityIT {
     @Test
     public void activeKeyChainValidatorShouldFail() {
         config.setTrustAllServers(false);
-        config.getCertificationPriority().remove("none");
-        config.getCertificationPriority().remove("generate");
+        config.getCertifierPriority().remove("none");
+        config.getCertifierPriority().remove("generate");
         assertThrows(CommunicationException.class, this::trustCertificatesOnServerAndConnect);
     }
 
     @Test
     public void serverCertificateInPkiFolderShouldSucceed() throws InterruptedException, OPCUAException, IOException, TimeoutException, ExecutionException {
         config.setTrustAllServers(false);
-        config.getCertificationPriority().remove("none");
-        config.getCertificationPriority().remove("generate");
+        config.getCertifierPriority().remove("none");
+        config.getCertifierPriority().remove("generate");
 
         try {
             trustCertificatesOnServerAndConnect();

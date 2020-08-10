@@ -82,13 +82,13 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
-            try {
-                controller.connect(addresses);
-            } catch (OPCUAException e) {
-                sender.confirmEquipmentStateIncorrect(IMessageSender.EquipmentState.CONNECTION_FAILED.message);
-                throw e;
-            }
-            dataTagHandler.subscribeTags(config.getSourceDataTags().values());
+        try {
+            controller.connect(addresses);
+        } catch (OPCUAException e) {
+            sender.confirmEquipmentStateIncorrect(IMessageSender.EquipmentState.CONNECTION_FAILED.message);
+            throw e;
+        }
+        dataTagHandler.subscribeTags(config.getSourceDataTags().values());
         aliveWriter.initialize(config, appConfigProperties.isAliveWriterEnabled());
         log.debug("connected");
 
@@ -146,9 +146,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         if (tag == null) {
             throw new EqCommandTagException("Command tag with id '" + id + "' unknown!");
         }
-        if (log.isDebugEnabled()) {
-            log.debug("running command {} with value {}", id, value.getValue());
-        }
+        log.debug("running command {} with value {}", id, value.getValue());
         return commandTagHandler.runCommand(tag, value);
     }
 

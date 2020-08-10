@@ -36,7 +36,7 @@ public class ControllerProxy implements Controller {
     protected final ApplicationContext appContext;
     protected final AppConfigProperties config;
     protected final Endpoint endpoint;
-    protected ContreteController controller;
+    protected ConcreteController controller;
 
     /**
      * Delegated failover handling to an appropriate {@link Controller} according to the application configuration
@@ -168,8 +168,8 @@ public class ControllerProxy implements Controller {
         if (customRedundancyMode != null && !customRedundancyMode.isEmpty()) {
             try {
                 final Class<?> redundancyMode = Class.forName(customRedundancyMode);
-                if (ContreteController.class.isAssignableFrom(redundancyMode)) {
-                    controller = (ContreteController) appContext.getBean(redundancyMode);
+                if (ConcreteController.class.isAssignableFrom(redundancyMode)) {
+                    controller = (ConcreteController) appContext.getBean(redundancyMode);
                     return true;
                 }
                 log.error("The configured redundancy mode {} must implement the FailoverProxy interface. Proceeding without.", config.getRedundancyMode());

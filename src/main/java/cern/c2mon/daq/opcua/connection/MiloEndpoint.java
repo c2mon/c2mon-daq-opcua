@@ -545,6 +545,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
 
         // If the samplingInterval is set to 0, the source will provide updates at the fastest possible rate.
+        //TODO: should this be configurable per DataTag?
         double samplingInterval = 0;
 
         DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue,

@@ -52,7 +52,7 @@ public class RetryDelegate {
             maxAttemptsExpression = "#{@appConfigProperties.getMaxRetryAttempts()}",
             backoff = @Backoff(delayExpression = "#{@appConfigProperties.getRetryDelay()}",
                     maxDelayExpression = "#{@appConfigProperties.getMaxRetryDelay()}",
-                    multiplier = 2))
+                    multiplierExpression = "#{@appConfigProperties.getRetryMultiplier()}"))
     <T> T completeOrRetry(ExceptionContext context, LongSupplier disconnectionTime, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
         try {
             // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
