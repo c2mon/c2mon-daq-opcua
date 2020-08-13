@@ -135,7 +135,6 @@ public class AliveWriter {
      * Writes once to the server and increase the write value.
      */
     private void sendAlive() {
-        // TODO: We send an Integer since Long could cause problems to the OPC
         Object castedValue = writeCounter.intValue();
         log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
         try {

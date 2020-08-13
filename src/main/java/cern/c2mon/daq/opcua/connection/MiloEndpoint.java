@@ -84,7 +84,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private String uri;
     @Setter
     private MonitoringMode mode = MonitoringMode.Reporting;
-    private boolean updateEquipmentStateOnSessionChanges = false;
+    private boolean updateEquipmentStateOnSessionChanges;
 
     @Value("#{@appConfigProperties.getQueueSize()}")
     private int queueSize;
@@ -559,7 +559,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     private MonitoredItemCreateRequest toMonitoredItemCreateRequest(ItemDefinition definition) {
         // If the samplingInterval is set to 0, the source will provide updates at the fastest possible rate.
-        //TODO: should this be configurable per DataTag?
         double samplingInterval = 0;
 
         DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue,

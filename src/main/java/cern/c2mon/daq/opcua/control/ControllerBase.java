@@ -9,7 +9,6 @@ import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.AbstractMap;
 import java.util.List;
