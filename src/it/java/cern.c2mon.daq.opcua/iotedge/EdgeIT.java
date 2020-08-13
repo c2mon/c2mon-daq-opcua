@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -32,7 +32,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static cern.c2mon.daq.opcua.IMessageSender.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_LOST;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -93,13 +93,13 @@ public class EdgeIT extends EdgeTestBase {
     @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ restartServerShouldReconnectAndResubscribe ############");
-        final CompletableFuture<IMessageSender.EquipmentState> connectionLost = pulseListener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> connectionLost = pulseListener.listen();
         active.image.stop();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
 
-        final CompletableFuture<IMessageSender.EquipmentState> connectionRegained = pulseListener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> connectionRegained = pulseListener.listen();
         active.image.start();
-        assertEquals(IMessageSender.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
+        assertEquals(MessageSender.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
 
         pulseListener.reset();
         pulseListener.setSourceID(alreadySubscribedTag.getId());

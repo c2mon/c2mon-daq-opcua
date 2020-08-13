@@ -36,6 +36,7 @@ public abstract class MiloMapper {
             Bad_SourceNodeIdInvalid,
             Bad_TargetNodeIdInvalid,
             Bad_BoundNotSupported,
+            Bad_BoundNotFound,
             Bad_ServiceUnsupported,
             Bad_NotSupported,
             Bad_ViewIdUnknown,
@@ -51,15 +52,24 @@ public abstract class MiloMapper {
             Bad_NoData,
             Bad_NotReadable,
             Bad_NotWritable,
-            Bad_NotFound).build();
+            Bad_NotFound,
+            Bad_IndexRangeNoData,
+            Uncertain_InitialValue,
+            Uncertain_NoCommunicationLastUsableValue,
+            Uncertain_NotAllNodesAvailable,
+            Uncertain_SubstituteValue).build();
 
     private static final Collection<Long> OUT_OF_BOUNDS = ImmutableSet.<Long>builder().add(
-            Bad_OutOfRange,
-            Bad_IndexRangeNoData,
-            Bad_BoundNotFound,
-            Bad_BoundNotSupported,
+            Bad_OutOfRange).build();
+
+    private static final Collection<Long> UNSUPPORTED_TYPE = ImmutableSet.<Long>builder().add(
             Bad_TypeMismatch,
             Bad_DataEncodingInvalid).build();
+
+    private static final Collection<Long> VALUE_CORRUPTED = ImmutableSet.<Long>builder().add(
+            Uncertain_SensorNotAccurate,
+            Uncertain_EngineeringUnitsExceeded).build();
+
 
     /**
      * Represents a {@link StatusCode} as a {@link SourceDataTagQualityCode}
@@ -76,8 +86,10 @@ public abstract class MiloMapper {
             tagCode = SourceDataTagQualityCode.DATA_UNAVAILABLE;
         } else if (INCORRECT_NATIVE_ADDRESS.contains(statusCode.getValue())) {
             tagCode = SourceDataTagQualityCode.INCORRECT_NATIVE_ADDRESS;
-        } else if (statusCode.isBad()) {
+        } else if (VALUE_CORRUPTED.contains(statusCode.getValue())) {
             tagCode = SourceDataTagQualityCode.VALUE_CORRUPTED;
+        } else if (UNSUPPORTED_TYPE.contains(statusCode.getValue())) {
+            tagCode = SourceDataTagQualityCode.UNSUPPORTED_TYPE;
         }
         return new SourceDataTagQuality(tagCode, statusCode.toString());
     }

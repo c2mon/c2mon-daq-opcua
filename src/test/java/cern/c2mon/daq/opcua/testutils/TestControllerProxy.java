@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ColdFailover;
@@ -24,7 +24,7 @@ public class TestControllerProxy extends ControllerProxy {
         this.controller = controller;
     }
 
-    public TestControllerProxy(ApplicationContext appContext, AppConfigProperties config, IMessageSender messageSender, Endpoint endpoint) {
+    public TestControllerProxy(ApplicationContext appContext, AppConfigProperties config, MessageSender messageSender, Endpoint endpoint) {
         super(appContext, config, endpoint);
     }
 

@@ -3,7 +3,7 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.shared.common.process.EquipmentConfiguration;
 import com.google.common.collect.ImmutableMap;
@@ -66,7 +66,7 @@ public abstract class TestUtils {
         }
     }
 
-    public static TestControllerProxy getFailoverProxy(Endpoint endpoint, IMessageSender messageSender) {
+    public static TestControllerProxy getFailoverProxy(Endpoint endpoint, MessageSender messageSender) {
         final AppConfigProperties config = createDefaultConfig();
         final TestControllerProxy proxy = new TestControllerProxy(null, config, messageSender, endpoint);
         try {

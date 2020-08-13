@@ -1,15 +1,13 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
-import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
@@ -65,7 +63,7 @@ public abstract class TestListeners {
     @Getter
     @RequiredArgsConstructor
     @Component(value = "testListener")
-    public static class TestListener implements IMessageSender, SessionActivityListener {
+    public static class TestListener implements MessageSender {
         CompletableFuture<Long> tagUpdate = new CompletableFuture<>();
         CompletableFuture<Long> tagInvalid = new CompletableFuture<>();
         CompletableFuture<EquipmentState> stateUpdate = new CompletableFuture<>();
@@ -97,16 +95,6 @@ public abstract class TestListeners {
                 log.info("Received data tag {} invalid with quality {}", tagId, quality);
             }
             tagInvalid.complete(tagId);
-        }
-
-        @Override
-        public void onSessionActive(UaSession session) {
-            onEquipmentStateUpdate(EquipmentState.OK);
-        }
-
-        @Override
-        public void onSessionInactive(UaSession session) {
-            onEquipmentStateUpdate(EquipmentState.CONNECTION_LOST);
         }
 
         @Override

@@ -16,7 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.taghandling;
 
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
@@ -52,7 +52,7 @@ public class AliveWriter {
     /**
      * The Endpoint listener which notifies the Server of a new alive.
      */
-    private final IMessageSender messageSender;
+    private final MessageSender messageSender;
 
     /**
      * The service to schedule periodically to write to the alive tag hardware address

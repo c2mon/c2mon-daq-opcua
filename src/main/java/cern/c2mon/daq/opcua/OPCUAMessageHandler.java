@@ -78,14 +78,14 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         IEquipmentConfiguration config = getEquipmentConfiguration();
         IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-        getContext().getBean(IMessageSender.class).initialize(sender);
+        getContext().getBean(MessageSender.class).initialize(sender);
 
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
         try {
             controller.connect(addresses);
         } catch (OPCUAException e) {
-            sender.confirmEquipmentStateIncorrect(IMessageSender.EquipmentState.CONNECTION_FAILED.message);
+            sender.confirmEquipmentStateIncorrect(MessageSender.EquipmentState.CONNECTION_FAILED.message);
             throw e;
         }
         dataTagHandler.subscribeTags(config.getSourceDataTags().values());

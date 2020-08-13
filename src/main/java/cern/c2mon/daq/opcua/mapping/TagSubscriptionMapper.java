@@ -21,7 +21,6 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
@@ -63,9 +62,9 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
     }
 
     @Override
-    public Long getTagId(UInteger clientHandle) {
+    public Long getTagId(int clientHandle) {
         return tagIdDefinitionMap.entrySet().stream()
-                .filter(e -> e.getValue().getClientHandle().equals(clientHandle))
+                .filter(e -> e.getValue().getClientHandle() == clientHandle)
                 .map(Map.Entry::getKey)
                 .findFirst()
                 .orElse(null);

@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.connection.MiloMapper;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
@@ -21,7 +21,6 @@ import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedun
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.springframework.stereotype.Component;
 
 import java.util.AbstractMap;
@@ -40,7 +39,7 @@ import static org.easymock.EasyMock.createMock;
 @RequiredArgsConstructor
 @Component(value = "testEndpoint")
 public class TestEndpoint implements Endpoint {
-    private final IMessageSender messageSender;
+    private final MessageSender messageSender;
     private final TagSubscriptionReader mapper;
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
@@ -60,17 +59,22 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
+    public void setUpdateEquipmentStateOnSessionChanges(boolean active) {
+
+    }
+
+    @Override
     public void disconnect () {}
 
     @Override
-    public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) {
+    public Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) {
         BiConsumer<UaMonitoredItem, Integer> itemCreationCallback = (item, i) -> item.setValueConsumer(value -> {
             SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
             final Object updateValue = MiloMapper.toObject(value.getValue());
             ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
                     new ValueUpdate(updateValue) :
                     new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-            final Long tagId = mapper.getTagId(item.getClientHandle());
+            final Long tagId = mapper.getTagId(item.getClientHandle().intValue());
             messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
         });
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
@@ -82,12 +86,12 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
+    public Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
         return null;
     }
 
     @Override
-    public boolean deleteItemFromSubscription(UInteger clientHandle, int publishInterval) {
+    public boolean deleteItemFromSubscription(int clientHandle, int publishInterval) {
         return true;
     }
 

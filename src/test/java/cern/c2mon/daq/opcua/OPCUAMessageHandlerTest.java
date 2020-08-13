@@ -22,7 +22,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import static cern.c2mon.daq.opcua.IMessageSender.EquipmentState.CONNECTION_FAILED;
+import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_FAILED;
 import static org.easymock.EasyMock.replay;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -36,7 +36,8 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
 
     @Autowired ApplicationContext context;
     @Autowired IDataTagHandler tagHandler;
-    @Autowired IMessageSender epMessageSender;
+    @Autowired
+    MessageSender epMessageSender;
     @Autowired Endpoint miloEndpoint;
     @Autowired TagSubscriptionReader mapper;
 

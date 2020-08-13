@@ -24,7 +24,7 @@ import lombok.AllArgsConstructor;
 /**
  * Handles communication with the DAQ Core's {@link IEquipmentMessageSender}
  */
-public interface IMessageSender {
+public interface MessageSender {
 
     /**
      * A representation of equipment states and descriptions.

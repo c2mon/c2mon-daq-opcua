@@ -27,7 +27,7 @@ public enum ExceptionContext {
     HARDWARE_ADDRESS_UNKNOWN("The hardware address is not of type OPCHardwareAddress and cannot be handled. "),
     DATATAGS_EMPTY("No data tags to subscribe."),
     SECURITY("Ensure your app security settings are valid."),
-    OBJINVALID("Could not resolve an object node for the command tag. Please specify the a redundant item name in the Tag's HardwareAddress to execute a method command."),
+    OBJ_INVALID("Could not resolve an object node for the command tag. Please specify the a redundant item name in the Tag's HardwareAddress to execute a method command."),
     EMPTY_SUBSCRIPTION("Cannot recreate a subscription without any monitored items."),
     SERVER_NODE("Could not get the server node."),
     NO_REDUNDANT_SERVER("No redundant server is available.");

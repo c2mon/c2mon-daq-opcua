@@ -17,7 +17,6 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
 import java.util.Map;
@@ -67,7 +66,7 @@ public interface TagSubscriptionReader {
      *                     returned
      * @return the tagId associated with the clientHandle
      */
-    Long getTagId(UInteger clientHandle);
+    Long getTagId(int clientHandle);
 
     /**
      * Returns the {@link ItemDefinition} associated with the tagId, or created a new one {@link ItemDefinition} if none

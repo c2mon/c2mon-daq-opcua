@@ -29,7 +29,7 @@ public class NoFailover extends ControllerBase {
     @Override
     public void initialize(Endpoint endpoint, String... redundantAddresses) {
         activeEndpoint = endpoint;
-        activeEndpoint.manageSessionActivityListener(true, null);
+        activeEndpoint.setUpdateEquipmentStateOnSessionChanges(true);
     }
 
     @Override

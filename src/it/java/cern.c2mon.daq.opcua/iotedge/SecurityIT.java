@@ -4,7 +4,7 @@ import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
@@ -75,7 +75,7 @@ public class SecurityIT {
         config.getCertifierPriority().put("load", 3);
         cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
-        final CompletableFuture<IMessageSender.EquipmentState> f = listener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> f = listener.listen();
         controllerProxy.stop();
         try {
             f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
@@ -87,26 +87,26 @@ public class SecurityIT {
 
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
-        final CompletableFuture<IMessageSender.EquipmentState> f = listener.getStateUpdate();
+        final CompletableFuture<MessageSender.EquipmentState> f = listener.getStateUpdate();
         controllerProxy.connect(Collections.singleton(uri));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
-        assertEquals(IMessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
         config.getCertifierPriority().remove("none");
         config.getCertifierPriority().remove("load");
-        final CompletableFuture<IMessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
-        assertEquals(IMessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        final CompletableFuture<MessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
+        assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
         config.getCertifierPriority().remove("none");
         config.getCertifierPriority().remove("generate");
-        final CompletableFuture<IMessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
-        assertEquals(IMessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
+        final CompletableFuture<MessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
+        assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -131,9 +131,9 @@ public class SecurityIT {
 
         trustCertificatesOnClient();
 
-        final CompletableFuture<IMessageSender.EquipmentState> state = listener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> state = listener.listen();
         controllerProxy.connect(Collections.singleton(uri));
-        assertEquals(IMessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        assertEquals(MessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     private void trustCertificatesOnClient() throws IOException {
@@ -144,7 +144,7 @@ public class SecurityIT {
         }
     }
 
-    private CompletableFuture<IMessageSender.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
+    private CompletableFuture<MessageSender.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
         log.info("Initial connection attempt...");
         try {
             controllerProxy.connect(Collections.singleton(uri));
@@ -155,7 +155,7 @@ public class SecurityIT {
 
         log.info("Trust certificates server-side and reconnect...");
         trustCertificates();
-        final CompletableFuture<IMessageSender.EquipmentState> state = listener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> state = listener.listen();
 
         controllerProxy.connect(Collections.singleton(uri));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));

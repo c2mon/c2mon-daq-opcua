@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -9,7 +9,6 @@ import lombok.Getter;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Map;
 
@@ -22,7 +21,7 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
 
-    public ExceptionTestEndpoint(IMessageSender messageSender, TagSubscriptionReader mapper) {
+    public ExceptionTestEndpoint(MessageSender messageSender, TagSubscriptionReader mapper) {
         super(messageSender, mapper);
     }
 
@@ -42,7 +41,7 @@ public class ExceptionTestEndpoint extends TestEndpoint {
     }
 
     @Override
-    public boolean deleteItemFromSubscription(UInteger clientHandle, int publishInterval) {
+    public boolean deleteItemFromSubscription(int clientHandle, int publishInterval) {
         return false;
     }
 }

@@ -43,6 +43,12 @@ public class AppConfigProperties {
     private List<String> redundantServerUris;
 
     /**
+     * The delay before triggering a failover after a Session deactivates. Set to -1 to forego the Session status as a
+     * trigger for a failover.
+     */
+    private long failoverDelay;
+
+    /**
      * The publishing rate of the subscription for connection monitoring for redundant server sets in seconds.
      */
     private int connectionMonitoringRate = 3;
@@ -85,8 +91,8 @@ public class AppConfigProperties {
 
     /**
      * The maximum number of values which can be queues in between publish intervals of the subscriptions. If more
-     * updates occur during the timeframe of the DataTags' timedeadband, these values are added to the queue. The
-     * fastest possible sampling rate for the server is used for each MonitoredItem.
+     * updates occur during the timeframe of the DataTags' timedeadband, these values are added to the queue. If the
+     * queueSize is 0, only the newest value is held in between publishing cycles.
      */
     private int queueSize;
 

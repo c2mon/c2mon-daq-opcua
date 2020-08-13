@@ -10,7 +10,6 @@ import com.google.common.collect.ImmutableMap;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
-import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.client.security.ClientCertificateValidator;
@@ -70,15 +69,13 @@ public class SecurityModule {
      * to attempt connection with appropriate endpoints. Connection with an insecure endpoint are attempted only if this
      * is not possible either and the option is allowed in the configuration.
      * @param endpoints A list of endpoints of which to connect to one.
-     * @param listeners the {@link SessionActivityListener}s to subscribe to the client before the initial connection
-     *                  request such that they are informed of the first session activation.
      * @return An {@link CompletableFuture} containing the {@link OpcUaClient} object that is connected to one of the
      * endpoints, or an exception that caused a failure in establishing a secure channel. That exception may be type
      * {@link ConfigurationException} if the connection failed due to a configuration issue, and of type {@link
      * CommunicationException} if the connection attempt failed for reasons unrelated to configuration, where a retry
      * may be fruitful.
      */
-    public CompletableFuture<OpcUaClient> createClientWithListeners(Collection<EndpointDescription> endpoints, Collection<SessionActivityListener> listeners) {
+    public CompletableFuture<OpcUaClient> createClient(Collection<EndpointDescription> endpoints) {
         final CompletableFuture<OpcUaClient> clientFuture = new CompletableFuture<>();
         try {
             builder = OpcUaClientConfig.builder()
@@ -97,7 +94,7 @@ public class SecurityModule {
             toSort.sort(Map.Entry.comparingByValue());
             for (Map.Entry<String, Integer> e : toSort) {
                 final Certifier certifier = key2Certifier.get(e.getKey());
-                OpcUaClient client = connectIfPossible(mutableEndpoints, certifier, listeners);
+                OpcUaClient client = connectIfPossible(mutableEndpoints, certifier);
                 if (client != null) {
                     log.info("Connected successfully with Certifier '{}'! ", e.getKey());
                     clientFuture.complete(client);
@@ -128,7 +125,7 @@ public class SecurityModule {
         throw new ConfigurationException(ExceptionContext.PKI_ERROR);
     }
 
-    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier, Collection<SessionActivityListener> listeners) throws ConfigurationException {
+    private OpcUaClient connectIfPossible(List<EndpointDescription> endpoints, Certifier certifier) throws ConfigurationException {
         final List<EndpointDescription> matchingEndpoints = endpoints.stream().filter(certifier::supportsAlgorithm).collect(Collectors.toList());
         for (EndpointDescription e : matchingEndpoints) {
             if (certifier.canCertify(e)) {
@@ -136,7 +133,6 @@ public class SecurityModule {
                 log.info("Attempt authentication with mode {} and algorithm {}. ", e.getSecurityMode(), e.getSecurityPolicyUri());
                 try {
                     OpcUaClient client = OpcUaClient.create(builder.build());
-                    listeners.forEach(client::addSessionActivityListener);
                     return (OpcUaClient) client.connect().join();
                 } catch (UaException ex) {
                     log.error("Unsupported transport in endpoint URI. Attempting less secure endpoint", ex);

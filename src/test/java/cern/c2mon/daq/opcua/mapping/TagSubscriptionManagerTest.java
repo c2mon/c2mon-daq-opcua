@@ -16,7 +16,6 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -159,7 +158,7 @@ public class TagSubscriptionManagerTest extends MappingBase {
 
     @Test
     public void getTagByRandomClientHandleShouldReturnNull() {
-        assertNull(mapper.getTagId(UInteger.valueOf(2)));
+        assertNull(mapper.getTagId(2));
     }
 
     @Test

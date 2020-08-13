@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
@@ -14,7 +15,6 @@ import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.Collection;
 import java.util.Map;
@@ -42,6 +42,12 @@ public interface Endpoint {
     void manageSessionActivityListener(boolean add, SessionActivityListener listener);
 
     /**
+     * If actived, the {@link MessageSender} will be informed of changes to a Session's activation status.
+     * @param active whether or not to inform the {@link MessageSender} of changes to a Session's activation status.
+     */
+    void setUpdateEquipmentStateOnSessionChanges(boolean active);
+
+    /**
      * Get the address of the connected server.
      * @return the address of the connected server.
      */
@@ -61,7 +67,7 @@ public interface Endpoint {
      * @throws OPCUAException if the server returned an error code indicating a misconfiguration, or the endpoint was
      *                        disconnected.
      */
-    Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException;
+    Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException;
 
 
     /**
@@ -79,7 +85,7 @@ public interface Endpoint {
      * call.
      * @throws OPCUAException if the definitions could not be subscribed.
      */
-    Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException;
+    Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException;
 
     /**
      * Delete a monitored item from an OPC UA subscription.
@@ -87,7 +93,7 @@ public interface Endpoint {
      * @param publishInterval the publishInterval of the subscription to remove the monitored item from.
      * @return whether the monitored item could be removed successfully
      */
-    boolean deleteItemFromSubscription(UInteger clientHandle, int publishInterval);
+    boolean deleteItemFromSubscription(int clientHandle, int publishInterval);
 
     /**
      * Read the current value from a node on the currently connected OPC UA server

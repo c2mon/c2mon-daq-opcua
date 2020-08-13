@@ -70,7 +70,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
 
     protected void triggerServerSwitch() {
         if (listening.getAndSet(false) && !stopped.get()) {
-            currentEndpoint().manageSessionActivityListener(false, null);
+            currentEndpoint().setUpdateEquipmentStateOnSessionChanges(false);
             try {
                 exponentialDelayTemplate.execute(retryContext -> {
                     log.info("Server switch attempt nr {}.", retryContext.getRetryCount());

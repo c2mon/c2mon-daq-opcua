@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.taghandling;
 
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ConcreteController;
 import cern.c2mon.daq.opcua.control.Controller;
@@ -33,7 +33,7 @@ public class CommandTagHandlerTest {
     SourceCommandTag tag;
     OPCHardwareAddressImpl address;
     OPCHardwareAddressImpl pulseAddress;
-    IMessageSender l = new TestListeners.TestListener();
+    MessageSender l = new TestListeners.TestListener();
 
     @BeforeEach
     public void setUp() {

@@ -10,7 +10,6 @@ import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,7 +45,7 @@ public class ItemDefinition {
      * The {@link ItemDefinition}'s unique identifier, equal to the client Handle of a monitoredItem returned by a Milo
      * subscription
      */
-    private final UInteger clientHandle;
+    private final int clientHandle;
 
     private ItemDefinition(NodeId nodeId, NodeId methodNodeId) {
         this(nodeId, methodNodeId, 0, 0, (short) 0);
@@ -59,7 +58,7 @@ public class ItemDefinition {
     private ItemDefinition(NodeId nodeId, NodeId methodNodeId, int timeDeadband, float valueDeadband, int valueDeadbandType) {
         this.nodeId = nodeId;
         this.methodNodeId = methodNodeId;
-        this.clientHandle = UInteger.valueOf(clientHandles.getAndIncrement());
+        this.clientHandle = clientHandles.getAndIncrement();
         this.timeDeadband = timeDeadband;
         this.valueDeadband = valueDeadband;
         this.valueDeadbandType = valueDeadbandType;

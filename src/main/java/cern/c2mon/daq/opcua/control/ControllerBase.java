@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 @Slf4j
 public abstract class ControllerBase implements ConcreteController {
 
-    private static Stream<Map.Entry<UInteger, SourceDataTagQuality>> subscribeAndCatch(Endpoint e, Map.Entry<SubscriptionGroup, List<ItemDefinition>> groupWithDefinitions) {
+    private static Stream<Map.Entry<Integer, SourceDataTagQuality>> subscribeAndCatch(Endpoint e, Map.Entry<SubscriptionGroup, List<ItemDefinition>> groupWithDefinitions) {
         try {
             return e.subscribe(groupWithDefinitions.getKey(), groupWithDefinitions.getValue()).entrySet().stream();
         } catch (EndpointDisconnectedException ex) {
@@ -67,7 +67,7 @@ public abstract class ControllerBase implements ConcreteController {
      * call on the active server.
      */
     @Override
-    public Map<UInteger, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions) {
+    public Map<Integer, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions) {
         passiveEndpoints().forEach(endpoint -> groupsWithDefinitions.entrySet()
                 .forEach(e -> subscribeAndCatch(endpoint, e)));
         return groupsWithDefinitions.entrySet().stream()

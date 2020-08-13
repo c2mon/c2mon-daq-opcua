@@ -54,8 +54,8 @@ public class MiloMocker {
 
     public void mockValueConsumerAndSubscribeTagAndReplay(StatusCode statusCode, ISourceDataTag tag) {
         UaMonitoredItem monitoredItem = client.getMonitoredItem();
-        UInteger clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
-        expect(monitoredItem.getClientHandle()).andReturn(clientHandle).anyTimes();
+        int clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
+        expect(monitoredItem.getClientHandle()).andReturn(UInteger.valueOf(clientHandle)).anyTimes();
 
         expect(monitoredItem.getStatusCode()).andReturn(StatusCode.GOOD).once(); // subscription callback
         expect(monitoredItem.getStatusCode()).andReturn(statusCode).once(); // item creation callback
@@ -73,8 +73,8 @@ public class MiloMocker {
     protected void mockClientHandle (UaMonitoredItem monitoredItem, Collection<ISourceDataTag> tags) {
         if(tags.size() == 0) return;
         for (ISourceDataTag tag : tags) {
-            UInteger clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
-            expect(monitoredItem.getClientHandle()).andReturn(clientHandle).once();
+            int clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
+            expect(monitoredItem.getClientHandle()).andReturn(UInteger.valueOf(clientHandle)).once();
         }
     }
 }

@@ -126,12 +126,12 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      */
     @Override
     public void onSessionInactive(UaSession session) {
-        if (!stopped.get()) {
+        if (!stopped.get() && config.getFailoverDelay() >= 0) {
             log.info("Starting timeout on inactive session.");
             future = executor.schedule(() -> {
                 log.info("Trigger server switch due to long disconnection");
                 triggerServerSwitch();
-            }, config.getRequestTimeout(), TimeUnit.MILLISECONDS);
+            }, config.getFailoverDelay(), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -195,7 +195,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     private void monitorConnection() {
         if (!stopped.get()) {
-            activeEndpoint.manageSessionActivityListener(true, null);
+            activeEndpoint.setUpdateEquipmentStateOnSessionChanges(true);
             activeEndpoint.manageSessionActivityListener(true, this);
             try {
                 activeEndpoint.subscribeWithCallback(config.getConnectionMonitoringRate(), connectionMonitoringNodes, this::monitoringCallback);

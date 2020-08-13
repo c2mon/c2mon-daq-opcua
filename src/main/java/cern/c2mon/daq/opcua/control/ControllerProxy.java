@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -89,7 +88,7 @@ public class ControllerProxy implements Controller {
      *                              the groups.
      */
     @Override
-    public Map<UInteger, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions) {
+    public Map<Integer, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions) {
         return controller.subscribe(groupsWithDefinitions);
     }
 
@@ -198,7 +197,6 @@ public class ControllerProxy implements Controller {
     }
 
     private Map.Entry<RedundancySupport, String[]> redundancySupport(Endpoint endpoint, String uri, String... redundantUris) throws OPCUAException {
-        endpoint.initialize(uri);
         RedundancySupport mode = RedundancySupport.None;
         String[] redundantUriArray = new String[0];
         try {

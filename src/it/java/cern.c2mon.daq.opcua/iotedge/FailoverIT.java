@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ColdFailover;
@@ -110,7 +110,7 @@ public class FailoverIT extends EdgeTestBase {
         doAndWait(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
         TimeUnit.MILLISECONDS.sleep(config.getRequestTimeout() + 1000);
-        assertEquals(IMessageSender.EquipmentState.OK, doAndWait(pulseListener.listen(), fallback, false));
+        assertEquals(MessageSender.EquipmentState.OK, doAndWait(pulseListener.listen(), fallback, false));
         resetConnection = true;
     }
 

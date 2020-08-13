@@ -1,6 +1,6 @@
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
@@ -45,6 +45,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_LOST;
+import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.OK;
 import static cern.c2mon.daq.opcua.exceptions.CommunicationException.of;
 import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
 import static java.util.stream.Collectors.toList;
@@ -54,7 +56,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 /**
  * An implementation of {@link Endpoint} relying on Eclipse Milo. Handles all interaction with a single server including
  * the the consolidation of security settings. Maintains a mapping in between the per-server time Deadbands and
- * associated subscription IDs. Informs the {@link IMessageSender} of the state of connection and of new values. A
+ * associated subscription IDs. Informs the {@link MessageSender} of the state of connection and of new values. A
  * {@link CommunicationException} occurs when the method has been attempted as often and with a delay as configured
  * without success. A {@link LongLostConnectionException} is thrown when the connection has already been lost for the
  * time needed to execute all configured attempts. In this case, no retries are executed. {@link
@@ -72,7 +74,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private final SecurityModule securityModule;
     private final RetryDelegate retryDelegate;
     private final TagSubscriptionReader mapper;
-    private final IMessageSender messageSender;
+    private final MessageSender messageSender;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
     private final AtomicLong disconnectedOn = new AtomicLong(0);
@@ -82,7 +84,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private String uri;
     @Setter
     private MonitoringMode mode = MonitoringMode.Reporting;
-
+    private boolean updateEquipmentStateOnSessionChanges = false;
 
     @Value("#{@appConfigProperties.getQueueSize()}")
     private int queueSize;
@@ -130,7 +132,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     @Override
     public void initialize(String uri) throws OPCUAException {
         this.uri = uri;
-        sessionActivityListeners.add(this);
         disconnectedOn.set(0L);
         try {
             final Collection<EndpointDescription> endpoints = retryDelegate.completeOrRetry(CONNECT,
@@ -138,7 +139,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                     () -> DiscoveryClient.getEndpoints(uri));
             final Collection<EndpointDescription> updatedEndpoints = updateEndpointUrls(uri, endpoints);
             client = retryDelegate.completeOrRetry(CONNECT, this::getDisconnectPeriod,
-                    () -> securityModule.createClientWithListeners(updatedEndpoints, sessionActivityListeners));
+                    () -> securityModule.createClient(updatedEndpoints));
+            client.addSessionActivityListener(this);
+            sessionActivityListeners.add(this);
             final OpcUaSubscriptionManager subscriptionManager = client.getSubscriptionManager();
             subscriptionManager.addSubscriptionListener(this);
             subscriptionManager.resumeDelivery();
@@ -148,17 +151,21 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
+    public void setUpdateEquipmentStateOnSessionChanges(boolean active) {
+        updateEquipmentStateOnSessionChanges = active;
+        if (active && disconnectedOn.get() <= 1L) {
+            messageSender.onEquipmentStateUpdate(OK);
+        }
+    }
+
     /**
      * Adds or removes {@link SessionActivityListener}s from the client.
      * @param add      whether to add or remove a listener. If the listener is already in the intended state, no action
      *                 is taken.
-     * @param listener the listener to add or remove.  If null, {@link IMessageSender} is used.
+     * @param listener the listener to add or remove.
      */
     @Override
     public void manageSessionActivityListener(boolean add, SessionActivityListener listener) {
-        if (null == listener) {
-            listener = (SessionActivityListener) messageSender;
-        }
         if (add && !sessionActivityListeners.contains(listener)) {
             sessionActivityListeners.add(listener);
             client.addSessionActivityListener(listener);
@@ -199,13 +206,14 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         sessionActivityListeners.clear();
         subscriptionMap.clear();
         disconnectedOn.set(-1);
+        updateEquipmentStateOnSessionChanges = false;
         log.info("Completed disconnecting endpoint {}", uri);
     }
 
     /**
      * Add a list of item definitions as monitored items to a subscription with the number of retries configured in
      * {@link cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults and notify the {@link
-     * IMessageSender} of all future value updates
+     * MessageSender} of all future value updates
      * @param group       The {@link SubscriptionGroup} to add the {@link ItemDefinition}s to
      * @param definitions the {@link ItemDefinition}s for which to create monitored items
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
@@ -213,7 +221,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @throws OPCUAException of type {@link ConfigurationException} or {@link EndpointDisconnectedException}.
      */
     @Override
-    public Map<UInteger, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException {
+    public Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException {
         try {
             log.info("Subscribing definitions with publishing interval {}.", group.getPublishInterval());
             return subscribeWithCallback(group.getPublishInterval(), definitions, this::defaultSubscriptionCallback);
@@ -261,7 +269,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * call.
      * @throws OPCUAException if the definitions could not be subscribed.
      */
-    public Map<UInteger, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
+    public Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
                                                                      Collection<ItemDefinition> definitions,
                                                                      Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
         UaSubscription subscription = getOrCreateSubscription(publishingInterval);
@@ -269,7 +277,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         return retryDelegate.completeOrRetry(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
                 () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, (item, i) -> itemCreationCallback.accept(item)))
                 .stream()
-                .collect(toMap(UaMonitoredItem::getClientHandle, item -> MiloMapper.getDataTagQuality(item.getStatusCode())));
+                .collect(toMap(i -> i.getClientHandle().intValue(), i -> MiloMapper.getDataTagQuality(i.getStatusCode())));
     }
 
     /**
@@ -280,14 +288,14 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @param publishInterval the publishing interval subscription to remove the monitored item from.
      */
     @Override
-    public boolean deleteItemFromSubscription(UInteger clientHandle, int publishInterval) {
+    public boolean deleteItemFromSubscription(int clientHandle, int publishInterval) {
         try {
             final UaSubscription subscription = subscriptionMap.get(publishInterval);
             if (subscription != null && subscription.getMonitoredItems().size() <= 1) {
                 deleteSubscription(publishInterval);
             } else if (subscription != null) {
                 List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
-                        .filter(i -> clientHandle.equals(i.getClientHandle()))
+                        .filter(i -> i.getClientHandle().intValue() == clientHandle)
                         .collect(toList());
                 retryDelegate.completeOrRetry(DELETE_MONITORED_ITEM, this::getDisconnectPeriod,
                         () -> subscription.deleteMonitoredItems(itemsToRemove));
@@ -372,6 +380,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      */
     @Override
     public void onSessionActive(UaSession session) {
+        if (updateEquipmentStateOnSessionChanges) {
+            messageSender.onEquipmentStateUpdate(OK);
+        }
         disconnectedOn.getAndUpdate(l -> Math.min(l, 0L));
     }
 
@@ -381,8 +392,15 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      */
     @Override
     public void onSessionInactive(UaSession session) {
+        log.info("Session deactivated");
+        if (updateEquipmentStateOnSessionChanges) {
+            messageSender.onEquipmentStateUpdate(CONNECTION_LOST);
+        }
         disconnectedOn.getAndUpdate(l -> l < 0 ? l : System.currentTimeMillis());
     }
+
+
+
 
     /**
      * When neither PublishRequests nor Service calls have been delivered to the server for a specific subscription for
@@ -436,7 +454,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 return objectNode.get();
             }
         }
-        throw new ConfigurationException(OBJINVALID);
+        throw new ConfigurationException(OBJ_INVALID);
     }
 
     /**
@@ -453,7 +471,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     private boolean resubscribeGroupsAndReportSuccess(SubscriptionGroup group) throws OPCUAException {
-        final Map<UInteger, SourceDataTagQuality> handleQualityMap = subscribe(group, group.getTagIds().values());
+        final Map<Integer, SourceDataTagQuality> handleQualityMap = subscribe(group, group.getTagIds().values());
         return handleQualityMap != null && handleQualityMap.values().stream().anyMatch(SourceDataTagQuality::isValid);
     }
 
@@ -525,7 +543,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     private void defaultSubscriptionCallback(UaMonitoredItem item) {
         item.setValueConsumer(value -> {
-            final Long tagId = mapper.getTagId(item.getClientHandle());
+            final Long tagId = mapper.getTagId(item.getClientHandle().intValue());
             if (tagId == null) {
                 log.info("Receives a value update that could not be associated with a DataTag.");
             } else {
@@ -540,10 +558,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     private MonitoredItemCreateRequest toMonitoredItemCreateRequest(ItemDefinition definition) {
-        // If a static time Deadband is configured, only one value per publishing cycle will be kept by the DAQ core.
-        // Therefore queueSize can be 0 (only the newest value is held in between publishing cycles)
-
-
         // If the samplingInterval is set to 0, the source will provide updates at the fastest possible rate.
         //TODO: should this be configurable per DataTag?
         double samplingInterval = 0;
@@ -551,7 +565,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue,
                 uint(definition.getValueDeadbandType()),
                 (double) definition.getValueDeadband());
-        MonitoringParameters mp = new MonitoringParameters(definition.getClientHandle(),
+        MonitoringParameters mp = new MonitoringParameters(UInteger.valueOf(definition.getClientHandle()),
                 samplingInterval,
                 ExtensionObject.encode(client.getSerializationContext(), filter),
                 uint(queueSize),

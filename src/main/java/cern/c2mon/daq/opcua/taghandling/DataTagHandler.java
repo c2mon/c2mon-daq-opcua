@@ -17,7 +17,7 @@
 
 package cern.c2mon.daq.opcua.taghandling;
 
-import cern.c2mon.daq.opcua.IMessageSender;
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
@@ -56,7 +56,7 @@ import static java.util.stream.Collectors.toMap;
 public class DataTagHandler implements IDataTagHandler {
 
     private final TagSubscriptionManager manager;
-    private final IMessageSender messageSender;
+    private final MessageSender messageSender;
     private final Controller controller;
 
     @Override
@@ -67,7 +67,7 @@ public class DataTagHandler implements IDataTagHandler {
                     .entrySet()
                     .stream()
                     .collect(toMap(e -> manager.getGroup(e.getKey()), e -> e.getValue().stream().map(manager::getOrCreateDefinition).collect(Collectors.toList())));
-            final Map<UInteger, SourceDataTagQuality> handleQualityMap = controller.subscribe(groupsWithDefinitions);
+            final Map<Integer, SourceDataTagQuality> handleQualityMap = controller.subscribe(groupsWithDefinitions);
             handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
         }
     }
@@ -77,7 +77,7 @@ public class DataTagHandler implements IDataTagHandler {
         ItemDefinition definition = manager.getOrCreateDefinition(sourceDataTag);
         final Map<SubscriptionGroup, List<ItemDefinition>> map = new ConcurrentHashMap<>();
         map.put(manager.getGroup(definition.getTimeDeadband()), Collections.singletonList(definition));
-        final Map<UInteger, SourceDataTagQuality> handleQualityMap = controller.subscribe(map);
+        final Map<Integer, SourceDataTagQuality> handleQualityMap = controller.subscribe(map);
         handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
         final SourceDataTagQuality quality = handleQualityMap.get(definition.getClientHandle());
         return quality != null && quality.isValid();
@@ -122,7 +122,7 @@ public class DataTagHandler implements IDataTagHandler {
         manager.clear();
     }
 
-    private void completeSubscriptionAndReportSuccess(UInteger clientHandle, SourceDataTagQuality quality) {
+    private void completeSubscriptionAndReportSuccess(int clientHandle, SourceDataTagQuality quality) {
         final Long tagId = manager.getTagId(clientHandle);
         if (quality.isValid() && tagId != null) {
             manager.addTagToGroup(tagId);
