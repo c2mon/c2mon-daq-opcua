@@ -38,5 +38,15 @@
         </DataTag>
     </DataTags>
     <CommandTags>
+        <CommandTag id="20" name="BadCommand">
+            <mode>2</mode>
+            <data-type>java.lang.Float</data-type>
+            <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                <namespace>2</namespace>
+                <opc-item-name>Unknown</opc-item-name>
+                <address-type>STRING</address-type>
+                <command-type>CLASSIC</command-type>
+            </HardwareAddress>
+        </CommandTag>
     </CommandTags>
 </EquipmentUnit>

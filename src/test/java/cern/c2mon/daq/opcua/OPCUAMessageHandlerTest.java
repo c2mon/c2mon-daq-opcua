@@ -13,9 +13,11 @@ import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
+import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.EquipmentConfiguration;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
+import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
@@ -24,11 +26,12 @@ import org.junit.Test;
 import org.springframework.context.ApplicationContext;
 
 import java.util.Collection;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.easymock.EasyMock.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @UseHandler(OPCUAMessageHandler.class)
 public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
@@ -207,5 +210,21 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         handler.onUpdateEquipmentConfiguration(config, oldConfig, changeReport);
 
         assertTrue(changeReport.getErrorMessage().contains(ExceptionContext.BAD_ALIVE_TAG.getMessage()));
+    }
+
+    @Test
+    @UseConf("mockTest.xml")
+    public void runUnknownCommandShouldThrowException() {
+        final SourceCommandTagValue value = new SourceCommandTagValue();
+        value.setId(-1L);
+        assertThrows(EqCommandTagException.class, ()-> handler.runCommand(value));
+    }
+
+    @Test
+    @UseConf("mockTest.xml")
+    public void runKnownCommandShouldCallCommandTagHandlerWithTag() throws EqCommandTagException {
+        final SourceCommandTagValue value = new SourceCommandTagValue();
+        value.setId(20L);
+        assertNull(handler.runCommand(value));
     }
 }

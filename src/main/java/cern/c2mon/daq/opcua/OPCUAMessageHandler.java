@@ -179,6 +179,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
                     startAliveWriter(newConfig);
                     changeReport.appendInfo("Alive Writer updated.");
                 } catch (ConfigurationException e) {
+                    log.error("Updating the Alive Writer failed:" , e);
                     changeReport.appendError(e.getMessage());
                     changeReport.appendError("Proceeding without updating the AliveWriter");
                 }
