@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
@@ -52,7 +51,7 @@ public abstract class EdgeTestBase {
         try {
             return CompletableFuture.supplyAsync(() -> {
                 if (cut) {
-                    return addToxic(Toxic.Timeout, img);
+                    return addToxic(Toxic.Timeout, 0, img);
                 } else {
                     return removeToxic(Toxic.Timeout, img);
                 }
@@ -63,16 +62,16 @@ public abstract class EdgeTestBase {
         }
     }
 
-    protected static boolean addToxic(Toxic toxic, EdgeImage... imgs) {
+    protected static boolean addToxic(Toxic toxic, int arg, EdgeImage... imgs) {
         boolean success = true;
         for (EdgeImage img : imgs) {
             for (ToxicDirection dir : ToxicDirection.values()) {
                 try {
                     // if timeout is 0, data is be delayed until the toxic is removed
                     if (toxic == Toxic.Timeout) {
-                        img.proxy.toxics().timeout(toxic.name() + "_" + dir.name(), dir, toxic.arg);
+                        img.proxy.toxics().timeout(toxic.name() + "_" + dir.name(), dir, arg);
                     } else if (toxic == Toxic.Latency) {
-                        img.proxy.toxics().latency(toxic.name() + "_" + dir.name(), dir, toxic.arg);
+                        img.proxy.toxics().latency(toxic.name() + "_" + dir.name(), dir, arg);
                     }
                 } catch (IOException e) {
                     log.error("Could not add toxic {}.", toxic.name() + "_" + dir.name(), e);
@@ -124,11 +123,7 @@ public abstract class EdgeTestBase {
         log.info("Executor shut down");
     }
 
-    @AllArgsConstructor
-    enum Toxic {
-        Timeout(0), Latency(2000);
-        int arg;
-    }
+    enum Toxic { Timeout, Latency; }
 
     public static class EdgeImage {
 

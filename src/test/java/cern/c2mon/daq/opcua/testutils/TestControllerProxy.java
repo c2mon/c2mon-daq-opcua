@@ -46,7 +46,13 @@ public class TestControllerProxy extends ControllerProxy {
         if (controller == null) {
             controller = new NoFailover();
         }
-        endpoint.initialize(serverAddresses.iterator().next());
-        controller.initialize(endpoint, redundantUris);
+        // ensure initialization is attempted for both
+        if (endpoint instanceof ExceptionTestEndpoint) {
+            controller.initialize(endpoint, redundantUris);
+            endpoint.initialize(serverAddresses.iterator().next());
+        } else {
+            endpoint.initialize(serverAddresses.iterator().next());
+            controller.initialize(endpoint, redundantUris);
+        }
     }
 }

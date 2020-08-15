@@ -23,6 +23,8 @@ import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.config.AddressParser;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.taghandling.AliveWriter;
 import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
@@ -69,10 +71,10 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     public void connectToDataSource() throws EqIOException {
         controller = getContext().getBean("controller", Controller.class);
         dataTagHandler = getContext().getBean(IDataTagHandler.class);
-        aliveWriter = getContext().getBean(AliveWriter.class);
         commandTagHandler = getContext().getBean(CommandTagHandler.class);
         appConfigProperties = getContext().getBean(AppConfigProperties.class);
         dataTagChanger = getContext().getBean(DataTagChanger.class);
+        aliveWriter = getContext().getBean(AliveWriter.class);
 
         // getEquipmentConfiguration always fetches the most recent equipment configuration, even if changes have occurred to the configuration since start-up of the DAQ.
         IEquipmentConfiguration config = getEquipmentConfiguration();
@@ -88,10 +90,15 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             sender.confirmEquipmentStateIncorrect(MessageSender.EquipmentState.CONNECTION_FAILED.message);
             throw e;
         }
-        dataTagHandler.subscribeTags(config.getSourceDataTags().values());
-        aliveWriter.initialize(config, appConfigProperties.isAliveWriterEnabled());
-        log.debug("connected");
 
+        dataTagHandler.subscribeTags(config.getSourceDataTags().values());
+        if (appConfigProperties.isAliveWriterEnabled()) {
+            try {
+                startAliveWriter(config);
+            } catch (ConfigurationException e) {
+                log.info("Proceeding without starting the Alive Writer.", e);
+            }
+        }
         getEquipmentCommandHandler().setCommandRunner(this);
         getEquipmentConfigurationHandler().setDataTagChanger(dataTagChanger);
         getEquipmentConfigurationHandler().setCommandTagChanger(commandTagHandler);
@@ -151,35 +158,67 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     }
 
     /**
-     * Apply changed to the equipment configuration
+     * Apply a changed equipment configuration to the DAQ. If there is a change to the equipment address, the DAQ is
+     * restarted. If the changes are restricted to the AliveTag ID or interval, the changes are applied to the running
+     * DAQ.
      * @param newConfig    The new equipment configuration.
      * @param oldConfig    A clone of the old equipment configuration.
-     * @param changeReport Report object to fill.
+     * @param changeReport A report of changes and success state. A change is only considered to have failed if a
+     *                     restart of the DAQ failed.
      */
     @Override
     public void onUpdateEquipmentConfiguration(final IEquipmentConfiguration newConfig, final IEquipmentConfiguration oldConfig, final ChangeReport changeReport) {
+        changeReport.setState(CHANGE_STATE.PENDING);
         if (!newConfig.getAddress().equals(oldConfig.getAddress())) {
-            try {
-                synchronized (this) {
-                    disconnectFromDataSource();
-                    TimeUnit.MILLISECONDS.sleep(appConfigProperties.getRestartDelay());
-                    connectToDataSource();
-                }
-                changeReport.appendInfo("DAQ restarted.");
-            } catch (EqIOException e) {
-                changeReport.appendError("Restart of DAQ failed.");
-            } catch (InterruptedException e) {
-                changeReport.appendError("Restart delay interrupted. DAQ will not connect.");
-                Thread.currentThread().interrupt();
-            }
+            restartDAQ(changeReport);
         } else {
-            if ((newConfig.getAliveTagId() != oldConfig.getAliveTagId()
-                    || newConfig.getAliveTagInterval() != oldConfig.getAliveTagInterval())
-                    && aliveWriter != null) {
-                changeReport.appendInfo(aliveWriter.updateAndReport());
-            }
             dataTagChanger.onUpdateEquipmentConfiguration(newConfig.getSourceDataTags().values(), oldConfig.getSourceDataTags().values(), changeReport);
+            if ((newConfig.getAliveTagId() != oldConfig.getAliveTagId() || newConfig.getAliveTagInterval() != oldConfig.getAliveTagInterval())
+                    && appConfigProperties.isAliveWriterEnabled()) {
+                try {
+                    startAliveWriter(newConfig);
+                    changeReport.appendInfo("Alive Writer updated.");
+                } catch (ConfigurationException e) {
+                    changeReport.appendError(e.getMessage());
+                    changeReport.appendError("Proceeding without updating the AliveWriter");
+                }
+            }
+            changeReport.setState(CHANGE_STATE.SUCCESS);
         }
-        changeReport.setState(CHANGE_STATE.SUCCESS);
+    }
+
+    private void startAliveWriter(IEquipmentConfiguration config) throws ConfigurationException {
+        if (aliveWriter == null) {
+            aliveWriter = getContext().getBean(AliveWriter.class);
+        }
+        final long aliveTagInterval = config.getAliveTagInterval();
+        if (aliveTagInterval == 0) {
+            throw new ConfigurationException(ExceptionContext.BAD_ALIVE_TAG_INTERVAL);
+        }
+        final ISourceDataTag aliveTag = config.getSourceDataTag(config.getAliveTagId());
+        if (aliveTag == null) {
+            throw new ConfigurationException(ExceptionContext.BAD_ALIVE_TAG);
+        }
+        aliveWriter.initialize(aliveTag, aliveTagInterval);
+    }
+
+    private void restartDAQ(final ChangeReport changeReport) {
+        try {
+            changeReport.setState(CHANGE_STATE.REBOOT);
+            synchronized (this) {
+                disconnectFromDataSource();
+                TimeUnit.MILLISECONDS.sleep(appConfigProperties.getRestartDelay());
+                connectToDataSource();
+            }
+            changeReport.appendInfo("DAQ restarted.");
+            changeReport.setState(CHANGE_STATE.SUCCESS);
+        } catch (EqIOException e) {
+            changeReport.setState(CHANGE_STATE.FAIL);
+            changeReport.appendError("Restart of DAQ failed.");
+        } catch (InterruptedException e) {
+            changeReport.appendError("Restart delay interrupted. DAQ will not connect.");
+            Thread.currentThread().interrupt();
+            changeReport.setState(CHANGE_STATE.FAIL);
+        }
     }
 }

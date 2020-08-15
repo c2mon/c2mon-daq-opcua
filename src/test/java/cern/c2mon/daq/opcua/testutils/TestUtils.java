@@ -42,8 +42,8 @@ public abstract class TestUtils {
                 .trustAllServers(true)
                 .keystore(new AppConfigProperties.KeystoreConfig("PKCS12", "", "password", "1"))
                 .pkiConfig(new AppConfigProperties.PKIConfig("", ""))
-                .maxRetryAttempts(1)
                 .retryDelay(2000)
+                .restartDelay(500L)
                 .aliveWriterEnabled(false)
                 .build();
     }

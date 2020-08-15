@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.simengine;
 
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
@@ -31,6 +32,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -52,8 +54,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @Autowired ApplicationContext context;
     @Autowired TestListeners.Pulse endpointListener;
     @Autowired IDataTagHandler tagHandler;
-    @Autowired
-    Controller proxy;
+    @Autowired Controller proxy;
 
 
     private OPCUAMessageHandler handler;
@@ -92,6 +93,21 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
             handler.runCommand(value);
         }
         super.cleanUp();
+    }
+
+    @Test
+    @UseConf("simengine_power.xml")
+    public void refreshShouldTriggerValueUpdateForEachSubscribedTag() throws EqIOException {
+        handler.connectToDataSource();
+
+        MessageSender senderMock = niceMock(MessageSender.class);
+        ReflectionTestUtils.setField(tagHandler, "messageSender", senderMock);
+
+        final int tagNr = handler.getEquipmentConfiguration().getSourceDataTags().size();
+        senderMock.onValueUpdate(anyLong(), anyObject(), anyObject());
+        expectLastCall().times(tagNr);
+
+        handler.refreshAllDataTags();
     }
 
     @Test

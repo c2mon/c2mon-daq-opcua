@@ -103,7 +103,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     @Test
     public void mttrWithLatencyShouldBeLessThan2s() {
         log.info("mttrWithLatencyShouldBeLessThan2s");
-        addToxic(Toxic.Latency, active, fallback);
+        addToxic(Toxic.Latency, 200, active, fallback);
         final double average = findAverageTime(new CountDownLatch(instancesPerTest), false);
         Assertions.assertTrue(average >= 0 && average < 2000);
         removeToxic(Toxic.Latency, active, fallback);

@@ -7,6 +7,8 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ExceptionContext {
     AUTH_ERROR("Could not authenticate to any server endpoint!"),
+    BAD_ALIVE_TAG_INTERVAL("Cannot start the Alive Writer with an interval of 0."),
+    BAD_ALIVE_TAG("The AliveTag is not defined in the SourceDataTags, cannot start the Alive Writer."),
     BROWSE("Browsing node failed."),
     COMMAND_TYPE_UNKNOWN("The provided command type is unknown."),
     COMMAND_VALUE_ERROR("Provided command value could not be processed. Check data type and value."),

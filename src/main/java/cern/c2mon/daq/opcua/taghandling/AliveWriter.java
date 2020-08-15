@@ -21,7 +21,6 @@ import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import cern.c2mon.shared.common.process.IEquipmentConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
@@ -44,74 +43,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class AliveWriter {
 
-    /**
-     * The failover proxy for the endpoint to write to.
-     */
     private final Controller controllerProxy;
-
-    /**
-     * The Endpoint listener which notifies the Server of a new alive.
-     */
     private final MessageSender messageSender;
-
-    /**
-     * The service to schedule periodically to write to the alive tag hardware address
-     */
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-    /**
-     * The value to write (used like a counter).
-     */
     private final AtomicInteger writeCounter = new AtomicInteger(0);
-    /**
-     * The task of writing the alive value to the equipment.
-     */
     private ScheduledFuture<?> writeAliveTask;
-    /**
-     * The time between two write operations.
-     */
     private long writeTime;
-    /**
-     * The address to write to, represents the AliveTag.
-     */
-    private NodeId address;
-    /**
-     * Flag indicating whether the aliveWriter is enabled.
-     */
-    private boolean enabled;
+    private NodeId aliveTagAddress;
 
     /**
      * Initializes the AliveWriter considering the given equipment Configuration. If no the writer is not enabled or no
      * alive tag is specified, the aliveWriter is not started.
-     * @param config  the equipment configuration
-     * @param enabled a flag indicating whether the AliveWriter should be started.
+     * @param aliveTag  the DataTag containing the Node acting as AliveTag
+     * @param aliveTagInterval the interval in which to write to the aliveTag
      */
-    public void initialize(IEquipmentConfiguration config, boolean enabled) {
-        if (enabled) {
-            final ISourceDataTag aliveTag = config.getSourceDataTag(config.getAliveTagId());
-            if (aliveTag != null) {
-                this.enabled = true;
-                this.writeTime = config.getAliveTagInterval() / 2;
-                final ItemDefinition def = ItemDefinition.of(aliveTag);
-                if (def != null) {
-                    this.address = def.getNodeId();
-                    startWriter();
-                }
-            } else {
-                log.error("The target tag is not defined, cannot start the Alive Writer.");
-            }
-        }
-    }
-
-    /**
-     * Restarts the AliveWriter if it was enabled on initialization.
-     * @return a report describing the triggered restart, or the disabled state of the aliveWriter.
-     */
-    public String updateAndReport() {
-        if (enabled) {
+    public void initialize(ISourceDataTag aliveTag, long aliveTagInterval) {
+        writeTime = aliveTagInterval;
+        final ItemDefinition def = ItemDefinition.of(aliveTag);
+        if (def != null) {
+            aliveTagAddress = def.getNodeId();
             startWriter();
-            return "Alive Writer updated";
-        } else {
-            return "Alive Writer is not active and therefore was not updated.";
         }
     }
 
@@ -135,11 +86,9 @@ public class AliveWriter {
      * Writes once to the server and increase the write value.
      */
     private void sendAlive() {
-        Object castedValue = writeCounter.intValue();
-        log.debug("Writing value: " + castedValue + " type: " + castedValue.getClass().getName());
         try {
-            if (controllerProxy.write(address, castedValue)) {
-                log.info("Written successfully to alive, sending status tag.");
+            if (controllerProxy.write(aliveTagAddress, writeCounter.intValue())) {
+                log.info("Written successfully to alive, sending AliveTag update.");
                 messageSender.onAlive();
             }
             writeCounter.incrementAndGet();

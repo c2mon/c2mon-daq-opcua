@@ -107,9 +107,9 @@ public class DataTagHandler implements IDataTagHandler {
 
     @Override
     public void refreshDataTag(ISourceDataTag sourceDataTag) {
-        final Map<Long, ItemDefinition> objectObjectHashMap = new ConcurrentHashMap<>();
-        objectObjectHashMap.put(sourceDataTag.getId(), manager.getOrCreateDefinition(sourceDataTag));
-        refresh(objectObjectHashMap);
+        final Map<Long, ItemDefinition> singleEntryMap = new ConcurrentHashMap<>();
+        singleEntryMap.put(sourceDataTag.getId(), manager.getOrCreateDefinition(sourceDataTag));
+        refresh(singleEntryMap);
     }
 
     /**

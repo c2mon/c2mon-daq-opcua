@@ -40,7 +40,6 @@ public class OPCUAMessageSender implements MessageSender {
 
     @Override
     public void onAlive() {
-        log.info("Supervision alive!");
         sender.sendSupervisionAlive();
     }
 
