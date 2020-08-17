@@ -1,4 +1,4 @@
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.controller;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.*;

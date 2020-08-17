@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.retry;
 
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
@@ -48,7 +49,7 @@ public class RetrySubscriptionRecreationIT {
     private final OpcUaSubscriptionManager managerMock = createNiceMock(OpcUaSubscriptionManager.class);
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws ConfigurationException {
         resetToNice(clientMock, managerMock, subscriptionMock);
         ReflectionTestUtils.setField(endpoint, "client", clientMock);
         BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
@@ -104,7 +105,7 @@ public class RetrySubscriptionRecreationIT {
         replay(subscriptionMock, clientMock, managerMock);
     }
 
-    private void setUpMapper() {
+    private void setUpMapper() throws ConfigurationException {
         for (EdgeTagFactory tagConfig : new EdgeTagFactory[]{AlternatingBoolean, RandomUnsignedInt32}) {
             final ISourceDataTag tag = tagConfig.createDataTag();
             mapper.getOrCreateDefinition(tag);

@@ -16,6 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -71,7 +72,7 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
     }
 
     @Override
-    public ItemDefinition getOrCreateDefinition(ISourceDataTag tag) {
+    public ItemDefinition getOrCreateDefinition(ISourceDataTag tag) throws ConfigurationException {
         if (tagIdDefinitionMap.containsKey(tag.getId())) {
             return tagIdDefinitionMap.get(tag.getId());
         } else {

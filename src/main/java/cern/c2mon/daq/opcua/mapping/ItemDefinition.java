@@ -65,8 +65,19 @@ public class ItemDefinition {
     }
 
     /**
-     * Creates a new {@link ItemDefinition} from a {@link NodeId}. Used by the {@link
-     * ConcreteController}s when subscribing to default Nodes to supervise the server health
+     * Returns the NodeId for an {@link ISourceCommandTag}'s primary address.
+     * @param tag the {@link ISourceCommandTag} for which to return a NodeId
+     * @return the {@link NodeId} for the tag's primary address
+     * @throws ConfigurationException if the primary address has an incorrect hardware type.
+     */
+    public static NodeId getNodeIdForTag(final ISourceCommandTag tag) throws ConfigurationException {
+        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+        return new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName());
+    }
+
+    /**
+     * Creates a new {@link ItemDefinition} from a {@link NodeId}. Used by the {@link ConcreteController}s when
+     * subscribing to default Nodes to supervise the server health
      * @param nodeId the {@link NodeId} for which to create an {@link ItemDefinition}
      * @return the newly created {@link ItemDefinition}
      */
@@ -79,15 +90,11 @@ public class ItemDefinition {
      * ItemDefinition} including the {@link NodeId}s and Deadband values.
      * @param tag the {@link ISourceDataTag} for which an associated {@link ItemDefinition} shall be created
      * @return the newly created {@link ItemDefinition}
+     * @throws ConfigurationException if the tag has an address of incorrect type
      */
-    public static ItemDefinition of(final ISourceDataTag tag) {
-        try {
-            OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
-            return new ItemDefinition(tag, new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName()), toRedundantNodeId(opcAddress));
-        } catch (ConfigurationException e) {
-            log.error("The tag's hardware address should be of type OPC UA, but is {}.", tag.getHardwareAddress().getClass().getName(), e);
-            return null;
-        }
+    public static ItemDefinition of(final ISourceDataTag tag) throws ConfigurationException {
+        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+        return new ItemDefinition(tag, new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName()), toRedundantNodeId(opcAddress));
     }
 
     /**
@@ -95,20 +102,16 @@ public class ItemDefinition {
      * ItemDefinition} including primary and method {@link NodeId}s.
      * @param tag the {@link ISourceCommandTag} for which an associated {@link ItemDefinition} shall be created
      * @return the newly created {@link ItemDefinition}
+     * @throws ConfigurationException if the tag has an address of incorrect type
      */
-    public static ItemDefinition of(final ISourceCommandTag tag) {
-        try {
-            OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
-            return new ItemDefinition(new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName()), toRedundantNodeId(opcAddress));
-        } catch (ConfigurationException e) {
-            log.error("Configuration error, should be unreachable!", e);
-            return null;
-        }
+    public static ItemDefinition of(final ISourceCommandTag tag) throws ConfigurationException {
+        OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
+        return new ItemDefinition(new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName()), toRedundantNodeId(opcAddress));
     }
 
     private static OPCHardwareAddress extractOpcAddress(HardwareAddress address) throws ConfigurationException {
         if (!(address instanceof OPCHardwareAddress)) {
-            throw new ConfigurationException(ExceptionContext.HARDWARE_ADDRESS_UNKNOWN);
+            throw new ConfigurationException(ExceptionContext.HARDWARE_ADDRESS_TYPE);
         }
         return (OPCHardwareAddress) address;
     }

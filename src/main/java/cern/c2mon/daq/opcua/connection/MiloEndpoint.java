@@ -71,20 +71,27 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Scope(value = "prototype")
 public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscriptionManager.SubscriptionListener {
     private static final String HOST_REGEX = "://[^/]*";
+
+    /**
+     * Shows the instance of disconnection. 0 denotes that the endpoint is currently connected to the server, -1 that
+     * the endpoint has been stopped.
+     */
+    private final AtomicLong disconnectedOn = new AtomicLong(0);
     private final SecurityModule securityModule;
     private final RetryDelegate retryDelegate;
     private final TagSubscriptionReader mapper;
     private final MessageSender messageSender;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
-    private final AtomicLong disconnectedOn = new AtomicLong(0);
     private final RetryTemplate exponentialDelayTemplate;
     private OpcUaClient client;
+    private boolean updateEquipmentStateOnSessionChanges;
+
     @Getter
     private String uri;
+
     @Setter
     private MonitoringMode mode = MonitoringMode.Reporting;
-    private boolean updateEquipmentStateOnSessionChanges;
 
     @Value("#{@appConfigProperties.getQueueSize()}")
     private int queueSize;

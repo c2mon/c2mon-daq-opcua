@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.taghandling;
 
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 
 import java.util.Collection;
@@ -14,9 +13,8 @@ public interface IDataTagHandler {
     /**
      * Subscribes to the OPC UA nodes corresponding to the data tags on the server.
      * @param dataTags the collection of ISourceDataTags to subscribe to.
-     * @throws ConfigurationException if the collection of tags was empty.
      */
-    void subscribeTags(Collection<ISourceDataTag> dataTags) throws ConfigurationException;
+    void subscribeTags(Collection<ISourceDataTag> dataTags);
 
     /**
      * Subscribes to the OPC UA node corresponding to one data tag on the server.

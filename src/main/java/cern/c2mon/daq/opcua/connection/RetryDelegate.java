@@ -35,8 +35,10 @@ public class RetryDelegate {
      * configuration issue, a {@link ConfigurationException} is thrown and no further attempts are made. Similarly, if
      * the client has been disconnected from the server for a period of time longer than the estimated time spent
      * executing all retry attempts, no further attempts are made and a {@link LongLostConnectionException} is thrown.
-     * In all other cases, the supplier.get() method is attempted for a maximum amount of times given in the application
-     * configuration as app.maxRetryAttempts with a delay in between executions of app.retryDelay.
+     * If the Endpoint has been shut down during execution, retries are ceased with an {@link
+     * EndpointDisconnectedException}. In all other cases, the supplier.get() method is attempted for a maximum amount
+     * of times given in the application configuration as app.maxRetryAttempts with a delay in between executions of
+     * app.retryDelay.
      * @param context           the context of the supplier.
      * @param futureSupplier    a supplier returning the CompletableFuture with the action to be executed.
      * @param disconnectionTime a supplier fetching the time that the calling endpoint has been disconnected
@@ -54,13 +56,13 @@ public class RetryDelegate {
                     maxDelayExpression = "#{@appConfigProperties.getMaxRetryDelay()}",
                     multiplierExpression = "#{@appConfigProperties.getRetryMultiplier()}"))
     <T> T completeOrRetry(ExceptionContext context, LongSupplier disconnectionTime, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
+        // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
+        // but not the underlying action on the OpcUaClient
+        if (disconnectionTime.getAsLong() < 0L) {
+            log.info("Endpoint was stopped, cease retries.");
+            throw new EndpointDisconnectedException(context);
+        }
         try {
-            // The call must be passed as a supplier rather than a future. Otherwise only the join() method is repeated,
-            // but not the underlying action on the OpcUaClient
-            if (disconnectionTime.getAsLong() < 0L) {
-                log.info("Endpoint was stopped, cease retries.");
-                return null;
-            }
             return futureSupplier.get().get(config.getRequestTimeout(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             log.debug("Execution {} failed with interrupted exception; ", context.name(), e);

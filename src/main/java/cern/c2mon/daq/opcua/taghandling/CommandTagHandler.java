@@ -167,9 +167,7 @@ public class CommandTagHandler implements ICommandTagChanger {
 
     private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException {
         final ItemDefinition def = ItemDefinition.of(tag);
-        if (def == null) {
-            throw new ConfigurationException(ExceptionContext.COMMAND_CLASSIC);
-        } else if (!controller.write(def.getNodeId(), arg)) {
+        if (!controller.write(def.getNodeId(), arg)) {
             throw new CommunicationException(ExceptionContext.COMMAND_CLASSIC);
         }
     }
@@ -186,9 +184,6 @@ public class CommandTagHandler implements ICommandTagChanger {
      */
     private Object readOriginal(ISourceCommandTag tag) throws OPCUAException {
         final ItemDefinition definition = ItemDefinition.of(tag);
-        if (definition == null) {
-            throw new ConfigurationException(ExceptionContext.READ);
-        }
         final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controller.read(definition.getNodeId());
         log.info("Action completed with Status Code: {}", read.getValue());
         if (read.getValue() == null || !read.getValue().isValid()) {

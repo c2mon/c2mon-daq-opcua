@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,14 +20,14 @@ public class SubscriptionGroupTest extends MappingBase {
     }
 
     @Test
-    public void addDefinitionTwiceShouldNotAddAnything() {
+    public void addDefinitionTwiceShouldNotAddAnything() throws ConfigurationException {
         group.add(tag.getId(), ItemDefinition.of(tag));
         group.add(tag.getId(), ItemDefinition.of(tag));
         assertEquals(1, group.size());
     }
 
     @Test
-    public void removeDefinitionShouldRemoveDefinitionFromGroup() {
+    public void removeDefinitionShouldRemoveDefinitionFromGroup() throws ConfigurationException {
         group.add(tag.getId(), ItemDefinition.of(tag));
         group.remove(tag.getId());
 

@@ -90,7 +90,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     }
 
     @Test
-    public void validOnAddDataTagShouldReportSuccess () {
+    public void validOnAddDataTagShouldReportSuccess () throws ConfigurationException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tag);
         mocker.replay();
         tagChanger.onAddDataTag(tag, changeReport);
@@ -109,7 +109,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     }
 
     @Test
-    public void onAddDataTagShouldSubscribeTag() {
+    public void onAddDataTagShouldSubscribeTag() throws ConfigurationException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tag);
         mocker.replay();
         tagChanger.onAddDataTag(tag, changeReport);
@@ -117,7 +117,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     }
 
     @Test
-    public void onRemoveSubscribedDataTagShouldReportSuccess() {
+    public void onRemoveSubscribedDataTagShouldReportSuccess() throws ConfigurationException {
         final ISourceDataTag tagToRemove = sourceTags.get(2L);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagToRemove);
         mocker.replay();
@@ -126,7 +126,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     }
 
     @Test
-    public void onRemoveSubscribedDataTagShouldUnsubscribeTag() {
+    public void onRemoveSubscribedDataTagShouldUnsubscribeTag() throws ConfigurationException {
         final ISourceDataTag tagToRemove = sourceTags.get(2L);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagToRemove);
         mocker.replay();
@@ -135,7 +135,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     }
 
     @Test
-    public void onUpdateUnknownTagShouldReportSuccess () {
+    public void onUpdateUnknownTagShouldReportSuccess () throws ConfigurationException {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.get(2L), tag);
         mocker.replay();
         tagChanger.onUpdateDataTag(sourceTags.get(2L), tag, changeReport);
@@ -143,7 +143,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     }
 
     @Test
-    public void validOnUpdateUnknownTagShouldReportSuccess () {
+    public void validOnUpdateUnknownTagShouldReportSuccess () throws ConfigurationException {
         final ISourceDataTag tagToUpdate = sourceTags.get(2L);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagToUpdate);
         mocker.replay();
@@ -152,7 +152,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     }
 
     @Test
-    public void validOnUpdateUnknownTagShouldReportWhichTagWasUpdated () {
+    public void validOnUpdateUnknownTagShouldReportWhichTagWasUpdated () throws ConfigurationException {
         final ISourceDataTag newTag = sourceTags.get(2L);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, newTag);
         mocker.replay();

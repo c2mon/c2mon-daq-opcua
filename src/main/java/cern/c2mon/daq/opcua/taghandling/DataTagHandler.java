@@ -19,6 +19,7 @@ package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
@@ -33,15 +34,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 
 /**
  * The {@link DataTagHandler} is responsible for managing the state of subscribed {@link ISourceDataTag}s in {@link
@@ -60,20 +57,35 @@ public class DataTagHandler implements IDataTagHandler {
 
     @Override
     public void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) {
+        final Function<List<ISourceDataTag>, List<ItemDefinition>> definitionsToTags = e -> e.stream()
+                .map(t -> {
+                    try {
+                        return manager.getOrCreateDefinition(t);
+                    } catch (ConfigurationException ex) {
+                        log.error("Cannot subscribe the Tag with ID {}: incorrect hardware address!", t.getId(), ex);
+                        return null;
+                    }
+                }).filter(Objects::nonNull)
+                .collect(toList());
+        final Map<SubscriptionGroup, List<ItemDefinition>> definitionsByGroups = dataTags.stream()
+                .collect(groupingBy(ISourceDataTag::getTimeDeadband))
+                .entrySet().stream()
+                .collect(toMap(e -> manager.getGroup(e.getKey()), e -> definitionsToTags.apply(e.getValue())));
         synchronized (this) {
-            final Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions = dataTags.stream()
-                    .collect(groupingBy(ISourceDataTag::getTimeDeadband))
-                    .entrySet()
-                    .stream()
-                    .collect(toMap(e -> manager.getGroup(e.getKey()), e -> e.getValue().stream().map(manager::getOrCreateDefinition).collect(Collectors.toList())));
-            final Map<Integer, SourceDataTagQuality> handleQualityMap = controller.subscribe(groupsWithDefinitions);
+            final Map<Integer, SourceDataTagQuality> handleQualityMap = controller.subscribe(definitionsByGroups);
             handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
         }
     }
 
     @Override
     public boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
-        ItemDefinition definition = manager.getOrCreateDefinition(sourceDataTag);
+        ItemDefinition definition = null;
+        try {
+            definition = manager.getOrCreateDefinition(sourceDataTag);
+        } catch (ConfigurationException e) {
+            log.error("The Tag with ID {} has an incorrect hardware address and cannot be refreshed.", sourceDataTag.getId(), e);
+            return false;
+        }
         final Map<SubscriptionGroup, List<ItemDefinition>> map = new ConcurrentHashMap<>();
         map.put(manager.getGroup(definition.getTimeDeadband()), Collections.singletonList(definition));
         final Map<Integer, SourceDataTagQuality> handleQualityMap = controller.subscribe(map);
@@ -107,9 +119,14 @@ public class DataTagHandler implements IDataTagHandler {
 
     @Override
     public void refreshDataTag(ISourceDataTag sourceDataTag) {
-        final Map<Long, ItemDefinition> singleEntryMap = new ConcurrentHashMap<>();
-        singleEntryMap.put(sourceDataTag.getId(), manager.getOrCreateDefinition(sourceDataTag));
-        refresh(singleEntryMap);
+        try {
+            final ItemDefinition definition = manager.getOrCreateDefinition(sourceDataTag);
+            final Map<Long, ItemDefinition> singleEntryMap = new ConcurrentHashMap<>();
+            singleEntryMap.put(sourceDataTag.getId(), definition);
+            refresh(singleEntryMap);
+        } catch (ConfigurationException e) {
+            log.error("The Tag with ID {} has an incorrect hardware address and cannot be refreshed.", sourceDataTag.getId(), e);
+        }
     }
 
     /**

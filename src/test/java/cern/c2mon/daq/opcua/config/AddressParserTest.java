@@ -1,7 +1,5 @@
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.config;
 
-import cern.c2mon.daq.opcua.config.AddressParser;
-import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -21,6 +19,13 @@ public class AddressParserTest {
     @BeforeEach
     public void setUp() {
         config = TestUtils.createDefaultConfig();
+    }
+
+    @Test
+    public void addressWithoutUriShouldThrowException() {
+        assertThrows(ConfigurationException.class,
+                ()->  AddressParser.parse("", config),
+                ExceptionContext.URI_MISSING.getMessage());
     }
 
     @Test

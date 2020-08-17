@@ -16,6 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,14 +43,14 @@ public class TagSubscriptionManagerTest extends MappingBase {
     }
 
     @Test
-    public void secondExecutionOfTagToDefinitionShouldReturnPriorDefinition() {
+    public void secondExecutionOfTagToDefinitionShouldReturnPriorDefinition() throws ConfigurationException {
         ItemDefinition definition1 = mapper.getOrCreateDefinition(tag);
         ItemDefinition definition2 = mapper.getOrCreateDefinition(tag);
         assertEquals(definition1, definition2);
     }
 
     @Test
-    public void getOrCreateDefinitionShouldCreateProperDefinition() {
+    public void getOrCreateDefinitionShouldCreateProperDefinition() throws ConfigurationException {
         ItemDefinition expected = ItemDefinition.of(tag);
         ItemDefinition actual = mapper.getOrCreateDefinition(tag);
 
@@ -96,14 +97,14 @@ public class TagSubscriptionManagerTest extends MappingBase {
     }
 
     @Test
-    public void removeExistingTagShouldReturnTrue() {
+    public void removeExistingTagShouldReturnTrue() throws ConfigurationException {
         mapper.getOrCreateDefinition(tag);
         mapper.addTagToGroup(tag.getId());
         assertTrue(mapper.removeTag(tag.getId()));
     }
 
     @Test
-    public void getDefinitionShouldReturnDefinitionWithCorrespondingTagReference() {
+    public void getDefinitionShouldReturnDefinitionWithCorrespondingTagReference() throws ConfigurationException {
         ItemDefinition definition = mapper.getOrCreateDefinition(tag);
 
         assertEquals(tag.getTimeDeadband(), definition.getTimeDeadband());
@@ -112,7 +113,7 @@ public class TagSubscriptionManagerTest extends MappingBase {
     }
 
     @Test
-    public void getDefinitionWithSameTagShouldReturnSameDefinitionTwice() {
+    public void getDefinitionWithSameTagShouldReturnSameDefinitionTwice() throws ConfigurationException {
         ItemDefinition definition = mapper.getOrCreateDefinition(tag);
         final ItemDefinition definition2 = mapper.getOrCreateDefinition(tag);
 
@@ -122,12 +123,12 @@ public class TagSubscriptionManagerTest extends MappingBase {
     }
 
     @Test
-    public void getDefinitionWithDifferentTagsShouldReturnDifferentDefinitions() {
+    public void getDefinitionWithDifferentTagsShouldReturnDifferentDefinitions() throws ConfigurationException {
         assertNotEquals(mapper.getOrCreateDefinition(tag), mapper.getOrCreateDefinition(tagWithSameDeadband));
     }
 
     @Test
-    public void registerDefinitionInGroupShouldAddDefinitionToGroup() {
+    public void registerDefinitionInGroupShouldAddDefinitionToGroup() throws ConfigurationException {
         mapper.getOrCreateDefinition(tag);
         SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
         mapper.addTagToGroup(tag.getId());
@@ -135,7 +136,7 @@ public class TagSubscriptionManagerTest extends MappingBase {
     }
 
     @Test
-    public void registerDefinitionTwiceShouldThrowError() {
+    public void registerDefinitionTwiceShouldThrowError() throws ConfigurationException {
         mapper.getOrCreateDefinition(tag);
         mapper.addTagToGroup(tag.getId());
         final int size = mapper.getGroup(tag.getTimeDeadband()).size();
@@ -144,7 +145,7 @@ public class TagSubscriptionManagerTest extends MappingBase {
     }
 
     @Test
-    public void registerDefinitionsInGroupShouldAddAllDefinitionsToGroup() {
+    public void registerDefinitionsInGroupShouldAddAllDefinitionsToGroup() throws ConfigurationException {
         mapper.getOrCreateDefinition(tag);
         mapper.getOrCreateDefinition(tagWithSameDeadband);
         SubscriptionGroup group = mapper.getGroup(tag.getTimeDeadband());
@@ -162,7 +163,7 @@ public class TagSubscriptionManagerTest extends MappingBase {
     }
 
     @Test
-    public void getTagByClientHandleShouldReturnProperTagId() {
+    public void getTagByClientHandleShouldReturnProperTagId() throws ConfigurationException {
         ItemDefinition definition = mapper.getOrCreateDefinition(tag);
         Long actual = mapper.getTagId(definition.getClientHandle());
         assertEquals(tag.getId(), actual);

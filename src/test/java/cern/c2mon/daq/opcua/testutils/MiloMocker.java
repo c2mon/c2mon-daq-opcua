@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import org.easymock.Capture;
@@ -32,17 +33,17 @@ public class MiloMocker {
         EasyMock.replay(client.getMonitoredItem());
     }
 
-    public void mockStatusCodeAndClientHandle(StatusCode code, Collection<ISourceDataTag> tags) {
+    public void mockStatusCodeAndClientHandle(StatusCode code, Collection<ISourceDataTag> tags) throws ConfigurationException {
         UaMonitoredItem monitoredItem = client.getMonitoredItem();
         expect(monitoredItem.getStatusCode()).andReturn(code).anyTimes();
         mockClientHandle(monitoredItem, tags);
     }
 
-    public void mockStatusCodeAndClientHandle(StatusCode code, ISourceDataTag... tags) {
+    public void mockStatusCodeAndClientHandle(StatusCode code, ISourceDataTag... tags) throws ConfigurationException {
         mockStatusCodeAndClientHandle(code, Arrays.asList(tags));
     }
 
-    public void mockGoodAndBadStatusCodesAndReplay(ISourceDataTag[] goodTags, ISourceDataTag[] badTags) {
+    public void mockGoodAndBadStatusCodesAndReplay(ISourceDataTag[] goodTags, ISourceDataTag[] badTags) throws ConfigurationException {
         UaMonitoredItem monitoredItem = client.getMonitoredItem();
         expect(monitoredItem.getStatusCode()).andReturn(StatusCode.GOOD).times(goodTags.length);
         mockClientHandle(monitoredItem, Arrays.asList(goodTags));
@@ -52,7 +53,7 @@ public class MiloMocker {
         replay();
     }
 
-    public void mockValueConsumerAndSubscribeTagAndReplay(StatusCode statusCode, ISourceDataTag tag) {
+    public void mockValueConsumerAndSubscribeTagAndReplay(StatusCode statusCode, ISourceDataTag tag) throws ConfigurationException {
         UaMonitoredItem monitoredItem = client.getMonitoredItem();
         int clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
         expect(monitoredItem.getClientHandle()).andReturn(UInteger.valueOf(clientHandle)).anyTimes();
@@ -70,7 +71,7 @@ public class MiloMocker {
         replay();
     }
 
-    protected void mockClientHandle (UaMonitoredItem monitoredItem, Collection<ISourceDataTag> tags) {
+    protected void mockClientHandle (UaMonitoredItem monitoredItem, Collection<ISourceDataTag> tags) throws ConfigurationException {
         if(tags.size() == 0) return;
         for (ISourceDataTag tag : tags) {
             int clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();

@@ -18,6 +18,7 @@ package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -59,10 +60,12 @@ public class AliveWriter {
      */
     public void initialize(ISourceDataTag aliveTag, long aliveTagInterval) {
         writeTime = aliveTagInterval;
-        final ItemDefinition def = ItemDefinition.of(aliveTag);
-        if (def != null) {
+        try {
+            final ItemDefinition def = ItemDefinition.of(aliveTag);
             aliveTagAddress = def.getNodeId();
             startWriter();
+        } catch (ConfigurationException e) {
+            log.error("The AliveTag has an incorrect hardware address and cannot be started", e);
         }
     }
 

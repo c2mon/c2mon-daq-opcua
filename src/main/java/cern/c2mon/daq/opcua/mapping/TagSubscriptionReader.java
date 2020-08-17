@@ -16,6 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 
 import java.util.Collection;
@@ -75,7 +76,8 @@ public interface TagSubscriptionReader {
      *            new {@link ItemDefinition} shall be created
      * @return the {@link ItemDefinition} to which the tagId is mapped, or the newly created {@link ItemDefinition} for
      * the tag.
+     * @throws ConfigurationException if the tag's hardware address has an incorrect type.
      */
-    ItemDefinition getOrCreateDefinition(ISourceDataTag tag);
+    ItemDefinition getOrCreateDefinition(ISourceDataTag tag) throws ConfigurationException;
 }
 

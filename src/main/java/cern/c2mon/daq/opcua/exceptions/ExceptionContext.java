@@ -26,7 +26,7 @@ public enum ExceptionContext {
     PKI_ERROR("Could not process the PKI base directory"),
     URI_MISSING("The equipment address must specify at least one URI."),
     URI_SYNTAX("The equipment URI has incorrect syntax"),
-    HARDWARE_ADDRESS_UNKNOWN("The hardware address is not of type OPCHardwareAddress and cannot be handled. "),
+    HARDWARE_ADDRESS_TYPE("The hardware address is not of type OPCHardwareAddress and cannot be handled. "),
     DATATAGS_EMPTY("No data tags to subscribe."),
     SECURITY("Ensure your app security settings are valid."),
     OBJ_INVALID("Could not resolve an object node for the command tag. Please specify the a redundant item name in the Tag's HardwareAddress to execute a method command."),

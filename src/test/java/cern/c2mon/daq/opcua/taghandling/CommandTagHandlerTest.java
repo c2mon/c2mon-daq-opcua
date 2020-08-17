@@ -22,6 +22,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -45,7 +49,7 @@ public class CommandTagHandlerTest {
         address.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.CLASSIC);
         tag.setHardwareAddress(address);
 
-        pulseAddress = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw", 2);
+        pulseAddress = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw", 1);
         pulseAddress.setCommandType(OPCCommandHardwareAddress.COMMAND_TYPE.CLASSIC);
 
         value = new SourceCommandTagValue();
@@ -98,14 +102,48 @@ public class CommandTagHandlerTest {
     @Test
     public void commandWithPulseShouldReadSetReset() throws EqCommandTagException, OPCUAException {
         tag.setHardwareAddress(pulseAddress);
+        final Endpoint mockEp = mockWriteRewrite();
+        ReflectionTestUtils.setField(commandTagHandler, "controller", TestUtils.getFailoverProxy(mockEp, l));
+        commandTagHandler.runCommand(tag, value);
+        verify(mockEp);
+    }
+
+    @Test
+    public void commandWithPulseShouldDoNothingIfAlreadySet() throws OPCUAException, EqCommandTagException {
+        value.setValue(0);
+        tag.setHardwareAddress(pulseAddress);
         final NodeId def = ItemDefinition.of(tag).getNodeId();
         final Endpoint mockEp = EasyMock.niceMock(Endpoint.class);
         expect(mockEp.read(anyObject())).andReturn(endpoint.read(def)).anyTimes();
-        expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();
-        expect(mockEp.write(def, 0)).andReturn(endpoint.write(def, 0)).once();
         replay(mockEp);
         ReflectionTestUtils.setField(commandTagHandler, "controller", TestUtils.getFailoverProxy(mockEp, l));
         commandTagHandler.runCommand(tag, value);
+        verify(mockEp);
+    }
+
+    @Test
+    public void interruptingPulseShouldStillResetTheTag() throws OPCUAException, InterruptedException {
+        pulseAddress = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw", 5);
+        tag.setHardwareAddress(pulseAddress);
+        final Endpoint mockEp = mockWriteRewrite();
+        ReflectionTestUtils.setField(commandTagHandler, "controller", TestUtils.getFailoverProxy(mockEp, l));
+
+        ExecutorService s = Executors.newFixedThreadPool(2);
+        s.submit(() -> commandTagHandler.runCommand(tag, value));
+        s.shutdownNow();
+        s.awaitTermination(5, TimeUnit.SECONDS);
+        verify(mockEp);
+    }
+
+    @Test
+    public void interruptingPulseShouldTerminateEarly() throws OPCUAException, InterruptedException {
+        pulseAddress = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw", 60);
+        tag.setHardwareAddress(pulseAddress);
+        final Endpoint mockEp = mockWriteRewrite();
+        ExecutorService s = Executors.newFixedThreadPool(2);
+        s.submit(() -> commandTagHandler.runCommand(tag, value));
+        s.shutdownNow();
+        s.awaitTermination(2, TimeUnit.SECONDS);
         verify(mockEp);
     }
 
@@ -138,6 +176,17 @@ public class CommandTagHandlerTest {
         proxy.setController(controller);
         ReflectionTestUtils.setField(commandTagHandler, "controller", proxy);
         verifyCommunicationException(ExceptionContext.WRITE);
+    }
+
+    private Endpoint mockWriteRewrite() throws OPCUAException {
+        final Endpoint mockEp = EasyMock.niceMock(Endpoint.class);
+        final NodeId def = ItemDefinition.of(tag).getNodeId();
+        expect(mockEp.read(anyObject())).andReturn(endpoint.read(def)).anyTimes();
+        expect(mockEp.write(def, 1)).andReturn(endpoint.write(def, 1)).once();
+        expect(mockEp.write(def, 0)).andReturn(endpoint.write(def, 0)).once();
+        replay(mockEp);
+        ReflectionTestUtils.setField(commandTagHandler, "controller", TestUtils.getFailoverProxy(mockEp, l));
+        return mockEp;
     }
 
     private void verifyCommunicationException(ExceptionContext context) {

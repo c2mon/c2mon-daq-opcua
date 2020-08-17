@@ -14,4 +14,12 @@ public class EndpointDisconnectedException extends OPCUAException {
     public EndpointDisconnectedException(final ExceptionContext context, final Throwable cause) {
         super(context, cause);
     }
+
+    /**
+     * Creates a new EndpointDisconnectedException for a particular context.
+     * @param context describes the context of the action taken when the exception was thrown.
+     */
+    public EndpointDisconnectedException(final ExceptionContext context) {
+        super(context);
+    }
 }
