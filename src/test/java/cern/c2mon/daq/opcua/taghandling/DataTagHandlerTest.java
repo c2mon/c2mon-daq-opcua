@@ -10,7 +10,9 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -82,13 +84,13 @@ public class DataTagHandlerTest extends TagHandlerTestBase {
         mocker.mockStatusCodeAndClientHandle(StatusCode.UNCERTAIN, tagInSource1);
         mocker.replay();
         listener.reset();
+        final CompletableFuture<Long> tagInvalid = listener.getTagInvalid().get(0);
         tagHandler.subscribeTag(tagInSource1);
-        final CompletableFuture<Long> tagInvalid = listener.getTagInvalid();
         assertEquals(tagInSource1.getId().longValue(), tagInvalid.get(100, TimeUnit.MILLISECONDS).longValue());
     }
 
     @Test
-    public void subscribeTagInInconsistentStateShouldNotInformTag() throws ConfigurationException, InterruptedException, ExecutionException, TimeoutException {
+    public void subscribeTagInInconsistentStateShouldNotInformTag() throws ConfigurationException, InterruptedException {
         endpoint.setDelay(200);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
@@ -101,7 +103,7 @@ public class DataTagHandlerTest extends TagHandlerTestBase {
         s.shutdown();
         s.awaitTermination(1000, TimeUnit.MILLISECONDS);
 
-        assertFalse(listener.getTagUpdate().isDone());
+        assertFalse(listener.getTagUpdate().get(0).isDone());
     }
 
     @Test
@@ -137,16 +139,34 @@ public class DataTagHandlerTest extends TagHandlerTestBase {
     }
 
     @Test
+    public void refreshAllDataTagsWhenNothingIsSubscribedShouldDoNothing() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+        final CompletableFuture<Long> f = listener.getTagUpdate().get(0);
+        tagHandler.refreshAllDataTags();
+        assertFalse(f.isDone());
+    }
+
+    @Test
     public void refreshAllDataTagsShouldInformListener() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         mockAndSubscribe(StatusCode.GOOD, tagInSource1);
         listener.reset();
 
+        final CompletableFuture<Long> f = listener.getTagUpdate().get(0);
         tagHandler.refreshAllDataTags();
-        assertEquals(tagInSource1.getId(), listener.getTagUpdate().get(100, TimeUnit.MILLISECONDS).longValue());
+        assertEquals(tagInSource1.getId(), f.get(100, TimeUnit.MILLISECONDS).longValue());
     }
 
     @Test
-    public void interruptingRefreshShouldNotInformListener() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+    public void refreshAllDataTagsShouldInformListenerOfAllIDs() throws OPCUAException {
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
+        mocker.replay();
+
+        tagHandler.refreshAllDataTags();
+        final List<Long> ids = listener.getTagUpdate().stream().filter(CompletableFuture::isDone).map(CompletableFuture::join).collect(Collectors.toList());
+        assertTrue(ids.containsAll(sourceTags.keySet()));
+    }
+
+    @Test
+    public void interruptingRefreshShouldNotInformListener() throws OPCUAException, InterruptedException {
         endpoint.setDelay(500);
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.values());
         mocker.replay();
@@ -158,7 +178,7 @@ public class DataTagHandlerTest extends TagHandlerTestBase {
         s.shutdownNow();
         s.awaitTermination(500, TimeUnit.SECONDS);
 
-        assertFalse(listener.getTagUpdate().isDone());
+        assertFalse(listener.getTagUpdate().get(0).isDone());
     }
 
     @Test
@@ -172,7 +192,7 @@ public class DataTagHandlerTest extends TagHandlerTestBase {
         endpoint.setThrowExceptions(true);
 
         tagHandler.refreshAllDataTags();
-        assertFalse(listener.getTagUpdate().isDone());
+        assertFalse(listener.getTagUpdate().get(0).isDone());
     }
 
     @Test

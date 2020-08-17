@@ -5,11 +5,12 @@ import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -25,10 +26,11 @@ public abstract class TestListeners {
     }
 
     @Getter
-    @Setter
     @Component(value = "pulseTestListener")
     public static class Pulse extends TestListener {
+        @Setter
         private long sourceID;
+        @Setter
         private int threshold = 0;
         CompletableFuture<ValueUpdate> pulseTagUpdate = new CompletableFuture<>();
         CompletableFuture<ValueUpdate> tagValUpdate = new CompletableFuture<>();
@@ -61,27 +63,38 @@ public abstract class TestListeners {
     }
 
     @Getter
-    @RequiredArgsConstructor
     @Component(value = "testListener")
     public static class TestListener implements MessageSender {
-        CompletableFuture<Long> tagUpdate = new CompletableFuture<>();
-        CompletableFuture<Long> tagInvalid = new CompletableFuture<>();
-        CompletableFuture<EquipmentState> stateUpdate = new CompletableFuture<>();
-        CompletableFuture<Void> alive = new CompletableFuture<>();
+        List<CompletableFuture<Long>> tagUpdate = new ArrayList<>();
+        List<CompletableFuture<Long>> tagInvalid = new ArrayList<>();
+        List<CompletableFuture<EquipmentState>> stateUpdate = new ArrayList<>();
+        List<CompletableFuture<Void>> alive = new ArrayList<>();
 
         @Setter
         boolean logging = true;
 
+        public TestListener() {
+            tagUpdate.add(new CompletableFuture<>());
+            tagInvalid.add(new CompletableFuture<>());
+            stateUpdate.add(new CompletableFuture<>());
+            alive.add(new CompletableFuture<>());
+        }
+
         public void reset() {
-            tagUpdate = new CompletableFuture<>();
-            tagInvalid = new CompletableFuture<>();
-            stateUpdate = new CompletableFuture<>();
-            alive = new CompletableFuture<>();
+            tagUpdate.clear();
+            tagInvalid.clear();
+            stateUpdate.clear();
+            alive.clear();
+            tagUpdate.add(new CompletableFuture<>());
+            tagInvalid.add(new CompletableFuture<>());
+            stateUpdate.add(new CompletableFuture<>());
+            alive.add(new CompletableFuture<>());
         }
 
         @Override
         public void onAlive() {
-            alive.complete(null);
+            alive.get(0).complete(null);
+            alive.add(0, new CompletableFuture<>());
         }
 
 
@@ -94,7 +107,8 @@ public abstract class TestListeners {
             if (logging) {
                 log.info("Received data tag {} invalid with quality {}", tagId, quality);
             }
-            tagInvalid.complete(tagId);
+            tagInvalid.get(0).complete(tagId);
+            tagInvalid.add(0, new CompletableFuture<>());
         }
 
         @Override
@@ -102,9 +116,8 @@ public abstract class TestListeners {
             if (logging) {
                 log.info("State update: {}", state);
             }
-            if (stateUpdate != null && !stateUpdate.isDone()) {
-                stateUpdate.complete(state);
-            }
+            stateUpdate.get(0).complete(state);
+            stateUpdate.add(0, new CompletableFuture<>());
         }
 
         @Override
@@ -113,15 +126,17 @@ public abstract class TestListeners {
                 if (logging) {
                     log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
                 }
-                tagUpdate.complete(tagId);
+                tagUpdate.get(0).complete(tagId);
+                tagUpdate.add(0, new CompletableFuture<>());
             } else {
                 onTagInvalid(tagId, quality);
             }
         }
 
         public synchronized CompletableFuture<EquipmentState> listen() {
-            stateUpdate = new CompletableFuture<>();
-            return stateUpdate;
+            CompletableFuture<EquipmentState> stateFuture = new CompletableFuture<>();
+            stateUpdate.add(0, stateFuture);
+            return stateFuture;
         }
     }
 }

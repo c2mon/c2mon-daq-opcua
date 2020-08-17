@@ -34,7 +34,7 @@ public class TestControllerProxy extends ControllerProxy {
             case Hot:
             case Warm:
             case Cold:
-                controller = new ColdFailover(config.exponentialDelayTemplate(), config);
+                controller = new ColdFailover(config);
                 break;
             default:
                 controller = new NoFailover();

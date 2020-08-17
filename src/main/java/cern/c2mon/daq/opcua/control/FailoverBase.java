@@ -12,7 +12,6 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
-import org.springframework.retry.support.RetryTemplate;
 
 import java.util.Arrays;
 import java.util.List;
@@ -43,7 +42,6 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
      */
     protected final AtomicBoolean listening = new AtomicBoolean(true);
     protected final AppConfigProperties config;
-    private final RetryTemplate exponentialDelayTemplate;
 
     /**
      * Initialize supervision and connection monitoring to the active server.
@@ -72,7 +70,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
         if (listening.getAndSet(false) && !stopped.get()) {
             currentEndpoint().setUpdateEquipmentStateOnSessionChanges(false);
             try {
-                exponentialDelayTemplate.execute(retryContext -> {
+                config.exponentialDelayTemplate().execute(retryContext -> {
                     log.info("Server switch attempt nr {}.", retryContext.getRetryCount());
                     switchServers();
                     return null;

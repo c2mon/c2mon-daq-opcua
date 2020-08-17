@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
-import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -39,11 +38,10 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
 
     /**
      * Creates a new instance of ColdFailover
-     * @param retryTemplate the retryTemplate to use to trigger failovers
      * @param config        the application properties
      */
-    public ColdFailover(RetryTemplate retryTemplate, AppConfigProperties config) {
-        super(config, retryTemplate);
+    public ColdFailover(AppConfigProperties config) {
+        super(config);
     }
 
 

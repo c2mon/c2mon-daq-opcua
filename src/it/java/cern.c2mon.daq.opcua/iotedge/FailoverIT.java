@@ -79,7 +79,7 @@ public class FailoverIT extends EdgeTestBase {
         mockColdFailover();
         controllerProxy.connect(Arrays.asList(active.getUri(), fallback.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(tag));
-        pulseListener.getTagUpdate().get(TIMEOUT_TOXI, TimeUnit.SECONDS);
+        pulseListener.getTagUpdate().get(0).get(TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         resetConnection = false;
         executor = Executors.newScheduledThreadPool(2);

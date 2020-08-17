@@ -12,13 +12,13 @@ import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
+import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.TransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.springframework.stereotype.Component;
@@ -36,24 +36,34 @@ import static org.easymock.EasyMock.createMock;
 
 @Getter
 @Setter
-@RequiredArgsConstructor
 @Component(value = "testEndpoint")
 public class TestEndpoint implements Endpoint {
-    private final MessageSender messageSender;
-    private final TagSubscriptionReader mapper;
+    private MessageSender messageSender;
+    private TagSubscriptionReader mapper;
     UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
     UaSubscription subscription = createMock(UaSubscription.class);
-    NonTransparentRedundancyTypeNode serverRedundancyTypeNode = createMock(NonTransparentRedundancyTypeNode.class);
+    NonTransparentRedundancyTypeNode nonTransparentRedundancyTypeNode = createMock(NonTransparentRedundancyTypeNode.class);
+    TransparentRedundancyTypeNode transparentRedundancyTypeNode = createMock(TransparentRedundancyTypeNode.class);
     private boolean returnGoodStatusCodes = true;
     final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
     String uri;
     boolean throwExceptions = false;
-    long delay;
+    long delay = 0;
+    boolean transparent = false;
+
+    public TestEndpoint(MessageSender sender, TagSubscriptionReader mapper) {
+        this.messageSender = sender;
+        this.mapper = mapper;
+    }
 
     @Override
     public void initialize(String uri) throws OPCUAException {
         this.uri = uri;
-        this.delay = 0;
+        try {
+            TimeUnit.MILLISECONDS.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         if (throwExceptions) {
             throw new CommunicationException(CONNECT);
         }
@@ -141,7 +151,11 @@ public class TestEndpoint implements Endpoint {
 
     @Override
     public ServerRedundancyTypeNode getServerRedundancyNode() {
-        return serverRedundancyTypeNode;
+        if (transparent) {
+            return  transparentRedundancyTypeNode;
+        } else {
+            return nonTransparentRedundancyTypeNode;
+        }
     }
 
 }

@@ -87,7 +87,7 @@ public class SecurityIT {
 
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
-        final CompletableFuture<MessageSender.EquipmentState> f = listener.getStateUpdate();
+        final CompletableFuture<MessageSender.EquipmentState> f = listener.getStateUpdate().get(0);
         controllerProxy.connect(Collections.singleton(uri));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));

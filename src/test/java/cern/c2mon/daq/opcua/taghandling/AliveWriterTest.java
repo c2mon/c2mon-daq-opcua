@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -49,27 +50,28 @@ public class AliveWriterTest {
         aliveTag = new SourceDataTag((long) 1, "test", false, (short) 0, null, tagAddress);
 
         aliveWriter.initialize(aliveTag, 2L);
-        assertThrows(TimeoutException.class, () -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
+        assertThrows(TimeoutException.class, () -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void writeAliveShouldNotifyListenerWithGoodStatusCode() {
+        final CompletableFuture<Void> alive = listener.getAlive().get(0);
         aliveWriter.initialize(aliveTag, 2L);
-        assertDoesNotThrow(() -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> alive.get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void exceptionInWriteAliveShouldNotNotifyListener() {
         testEndpoint.setThrowExceptions(true);
         aliveWriter.initialize(aliveTag, 2L);
-        assertThrows(TimeoutException.class, () -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
+        assertThrows(TimeoutException.class, () -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void badStatusCodeShouldNotNotifyListener() {
         testEndpoint.setReturnGoodStatusCodes(false);
         aliveWriter.initialize(aliveTag, 2L);
-        assertThrows(TimeoutException.class, () -> listener.getAlive().get(100, TimeUnit.MILLISECONDS));
+        assertThrows(TimeoutException.class, () -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test

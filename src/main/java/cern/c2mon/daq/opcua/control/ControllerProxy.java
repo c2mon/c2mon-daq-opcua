@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.CompletionException;
+import java.util.stream.Stream;
 
 /**
  * This class is responsible for fetching a server's redundancy support information and for delegating to the proper
@@ -58,12 +59,12 @@ public class ControllerProxy implements Controller {
         String[] redundantUris = serverAddresses.stream()
                 .filter(s -> !s.equalsIgnoreCase(currentUri))
                 .toArray(String[]::new);
-        final boolean isLoaded = loadFromConfig();
+        final boolean isLoaded = loadControllerFromConfig();
         if (isLoaded && controller instanceof FailoverMode && redundantUris.length == 0) {
-            ServerRedundancyTypeNode redundancyNode = endpoint.getServerRedundancyNode();
-            redundantUris = getRedundantUriArray(redundancyNode);
-        } else if (!isLoaded) {
-            redundantUris = loadFromAddressSpace(currentUri, redundantUris);
+            redundantUris = loadRedundantUris(currentUri, null);
+        }
+        if (!isLoaded) {
+            redundantUris = loadControllerAndUrisFromAddressSpace(currentUri);
         }
         log.info("Using redundancy mode {}, redundant URIs {}.", controller.getClass().getName(), redundantUris);
         controller.initialize(endpoint, redundantUris);
@@ -162,7 +163,7 @@ public class ControllerProxy implements Controller {
     }
 
 
-    private boolean loadFromConfig() {
+    private boolean loadControllerFromConfig() {
         final String customRedundancyMode = config.getRedundancyMode();
         if (customRedundancyMode != null && !customRedundancyMode.isEmpty()) {
             try {
@@ -171,7 +172,7 @@ public class ControllerProxy implements Controller {
                     controller = (ConcreteController) appContext.getBean(redundancyMode);
                     return true;
                 }
-                log.error("The configured redundancy mode {} must implement the FailoverProxy interface. Proceeding without.", config.getRedundancyMode());
+                log.error("The configured redundancy mode {} must implement the {} interface. Proceeding without.", config.getRedundancyMode(), ConcreteController.class.getCanonicalName());
             } catch (ClassNotFoundException e) {
                 log.error("The configured redundancy mode {} could not be resolved. Proceeding without.", config.getRedundancyMode(), e);
             } catch (BeansException e) {
@@ -181,56 +182,62 @@ public class ControllerProxy implements Controller {
         return false;
     }
 
-    private String[] loadFromAddressSpace(String currentUri, String... redundantUris) throws OPCUAException {
-        final Map.Entry<RedundancySupport, String[]> redundancySupport = redundancySupport(endpoint, currentUri, redundantUris);
-        switch (redundancySupport.getKey()) {
-            case HotAndMirrored:
-            case Hot:
-            case Warm:
-            case Cold:
-                controller = appContext.getBean(ColdFailover.class);
-                break;
-            default:
-                controller = appContext.getBean(NoFailover.class);
-        }
-        return redundancySupport.getValue();
-    }
-
-    private Map.Entry<RedundancySupport, String[]> redundancySupport(Endpoint endpoint, String uri, String... redundantUris) throws OPCUAException {
-        RedundancySupport mode = RedundancySupport.None;
-        String[] redundantUriArray = new String[0];
+    private String[] loadControllerAndUrisFromAddressSpace(String currentUri, String... redundantUris) throws OPCUAException {
+        RedundancySupport redundancyMode = RedundancySupport.None;
+        String[] redundantUriArray = new String[]{};
         try {
             final ServerRedundancyTypeNode redundancyNode = endpoint.getServerRedundancyNode();
-            mode = redundancyNode.getRedundancySupport()
+            redundancyMode = redundancyNode.getRedundancySupport()
                     .thenApply(m -> (m == null) ? RedundancySupport.None : m)
                     .join();
-            if (mode != RedundancySupport.None && mode != RedundancySupport.Transparent && redundantUris.length == 0) {
-                redundantUriArray = getRedundantUriArray(redundancyNode);
+            if (redundancyMode != RedundancySupport.None && redundancyMode != RedundancySupport.Transparent && redundantUris.length == 0) {
+                redundantUriArray = loadRedundantUris(currentUri, redundancyNode);
             }
         } catch (CompletionException e) {
             log.error("An exception occurred when reading the server's redundancy information. Proceeding without setting up redundancy.", e);
+        } finally {
+            if (redundancyMode.equals(RedundancySupport.None) || redundancyMode.equals(RedundancySupport.Transparent)) {
+                controller = appContext.getBean(NoFailover.class);
+            } else {
+                controller = appContext.getBean(ColdFailover.class);
+            }
         }
-        return new AbstractMap.SimpleEntry<>(mode, redundantUriArray);
+        return redundantUriArray;
     }
 
-    private String[] getRedundantUriArray(ServerRedundancyTypeNode redundancyNode) {
-        String[] redundantUris = loadRedundantUrisFromConfig();
-        if (redundantUris.length == 0 && redundancyNode.getClass().isAssignableFrom(NonTransparentRedundancyTypeNode.class)) {
-            redundantUris = ((NonTransparentRedundancyTypeNode) redundancyNode).getServerUriArray().join();
-            log.info("Loaded redundant uri array from server: {}.", Arrays.toString(redundantUris));
-            return redundantUris;
-        } else {
-            log.info("Could not load redundant uris from server or configuration.");
-            return new String[0];
+    private String[] loadRedundantUris(String currentUri, ServerRedundancyTypeNode redundancyNode) throws OPCUAException {
+        String[] redundantUriArray = loadRedundantUrisFromConfig(currentUri);
+        if (redundantUriArray.length > 0) {
+            return redundantUriArray;
+        } else if (redundancyNode == null) {
+            redundancyNode = endpoint.getServerRedundancyNode();
         }
+        return loadRedundantUrisFromAddressSpace(currentUri, redundancyNode);
     }
 
-    private String[] loadRedundantUrisFromConfig() {
+    private String[] loadRedundantUrisFromConfig(String currentUri) {
         final Collection<String> redundantServerUris = config.getRedundantServerUris();
         if (redundantServerUris != null && !redundantServerUris.isEmpty()) {
+            final String[] redundantUriArray = filterCurrentUri(currentUri, redundantServerUris.stream());
             log.info("Loaded redundant uris from configuration: {}.", redundantServerUris);
-            return redundantServerUris.toArray(new String[0]);
+            return redundantUriArray;
         }
-        return new String[0];
+        return new String[]{};
+    }
+
+    private String[] loadRedundantUrisFromAddressSpace(String currentUri, ServerRedundancyTypeNode redundancyNode) throws OPCUAException {
+        if (!NonTransparentRedundancyTypeNode.class.isAssignableFrom(redundancyNode.getClass())) {
+            log.info("The redundancy mode does not require redundant addresses.");
+            return new String[]{};
+        }
+        String[] redundantUriArray = ((NonTransparentRedundancyTypeNode) redundancyNode).getServerUriArray().join();
+        redundantUriArray = filterCurrentUri(currentUri, Arrays.stream(redundantUriArray));
+        log.info("Loaded redundant uri array from server: {}.", Arrays.toString(redundantUriArray));
+        return redundantUriArray;
+    }
+
+    private String[] filterCurrentUri(String currentUri, Stream<String> redundantUriStream) {
+        log.info("Filtering currently connected URI: {}.", currentUri);
+        return redundantUriStream.filter(s -> !s.equalsIgnoreCase(currentUri)).toArray(String[]::new);
     }
 }

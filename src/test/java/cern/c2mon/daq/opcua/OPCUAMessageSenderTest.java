@@ -44,6 +44,15 @@ public class OPCUAMessageSenderTest {
     }
 
     @Test
+    public void onAliveShouldNotifySender() {
+        eqSenderMock.sendSupervisionAlive();
+        expectLastCall().once();
+        replay(eqSenderMock);
+        sender.onAlive();
+        verify(eqSenderMock);
+    }
+
+    @Test
     public void onEquipmentStateUpdateShouldSendOKIFOK() {
         final MessageSender.EquipmentState state = MessageSender.EquipmentState.OK;
         eqSenderMock.confirmEquipmentStateOK(anyString());

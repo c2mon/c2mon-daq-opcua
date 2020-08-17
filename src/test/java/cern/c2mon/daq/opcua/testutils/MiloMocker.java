@@ -75,11 +75,15 @@ public class MiloMocker {
         replay();
     }
 
-    protected void mockClientHandle (UaMonitoredItem monitoredItem, Collection<ISourceDataTag> tags) throws ConfigurationException {
+    protected void mockClientHandle (UaMonitoredItem monitoredItem, Collection<ISourceDataTag> tags) {
         if(tags.size() == 0) return;
         for (ISourceDataTag tag : tags) {
-            int clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
-            expect(monitoredItem.getClientHandle()).andReturn(UInteger.valueOf(clientHandle)).once();
+            try {
+                int clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
+                expect(monitoredItem.getClientHandle()).andReturn(UInteger.valueOf(clientHandle)).once();
+            } catch (ConfigurationException ignored) {
+
+            }
         }
     }
 }

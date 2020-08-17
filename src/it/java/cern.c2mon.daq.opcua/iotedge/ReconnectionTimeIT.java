@@ -63,7 +63,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         FailoverIT.mockColdFailover();
         controllerProxy.connect(Arrays.asList(active.getUri(), fallback.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.RandomUnsignedInt32.createDataTag()));
-        pulseListener.getTagUpdate().get(TIMEOUT_TOXI, TimeUnit.SECONDS);
+        pulseListener.getTagUpdate().get(0).get(TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         pulseListener.setLogging(false);
 
@@ -179,7 +179,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         long reestablished = System.currentTimeMillis();
         pulseListener.reset();
 
-        doAndWait(pulseListener.getTagUpdate(), uncut, false);
+        doAndWait(pulseListener.getTagUpdate().get(0), uncut, false);
         final ConnectionRecord record = ConnectionRecord.of(reestablished, System.currentTimeMillis(), cut != uncut);
         log.info("Record: {}", record);
         return record;

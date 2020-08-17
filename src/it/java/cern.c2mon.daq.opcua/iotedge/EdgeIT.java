@@ -61,7 +61,7 @@ public class EdgeIT extends EdgeTestBase {
 
         controller.connect(Collections.singleton(active.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(alreadySubscribedTag));
-        pulseListener.getTagUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
+        pulseListener.getTagUpdate().get(0).get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
         log.info("Client ready");
     }
@@ -126,7 +126,7 @@ public class EdgeIT extends EdgeTestBase {
     }
 
     @Test
-    public void subscribingProperDataTagShouldReturnValue() throws ConfigurationException {
+    public void subscribingProperDataTagShouldReturnValue() {
         log.info("############ subscribingProperDataTagShouldReturnValue ############");
         tagHandler.subscribeTags(Collections.singletonList(tag));
         pulseListener.setSourceID(tag.getId());
@@ -135,13 +135,14 @@ public class EdgeIT extends EdgeTestBase {
     }
 
     @Test
-    public void subscribingImproperDataTagShouldReturnOnTagInvalid() throws ConfigurationException {
+    public void subscribingImproperDataTagShouldReturnOnTagInvalid() {
         log.info("############ subscribingImproperDataTagShouldReturnOnTagInvalid ############");
         final ISourceDataTag tag = EdgeTagFactory.Invalid.createDataTag();
         pulseListener.setSourceID(tag.getId());
         pulseListener.setThreshold(0);
+        final CompletableFuture<Long> f = pulseListener.getTagInvalid().get(0);
         tagHandler.subscribeTags(Collections.singletonList(tag));
-        assertDoesNotThrow(() -> pulseListener.getTagInvalid().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
     }
 
     @Test
