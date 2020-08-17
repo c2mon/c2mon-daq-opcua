@@ -1,17 +1,10 @@
 package cern.c2mon.daq.opcua.taghandling;
 
-import cern.c2mon.daq.opcua.control.ConcreteController;
-import cern.c2mon.daq.opcua.control.NoFailover;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
-import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
-import cern.c2mon.daq.opcua.testutils.TestControllerProxy;
-import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,59 +27,62 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     @BeforeEach
     public void setUpTagChanger() {
         tag = EdgeTagFactory.DipData.createDataTag();
-        tagChanger = new DataTagChanger(controller);
+        tagChanger = new DataTagChanger(tagHandler);
         changeReport = new ChangeReport();
     }
 
-    private void setup(Collection<ISourceDataTag> oldTags) throws ConfigurationException {
-        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, oldTags);
+    private void setup(StatusCode code, Collection<ISourceDataTag> oldTags) throws ConfigurationException {
+        mocker.mockStatusCodeAndClientHandle(code, oldTags);
         mocker.replay();
-        controller.subscribeTags(oldTags);
+        tagHandler.subscribeTags(oldTags);
     }
 
     @Test
     public void updateEqConfigShouldRemoveTagsNotInNewConfig() throws ConfigurationException {
-        //setup
         final Collection<ISourceDataTag> oldTags = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.PositiveTrendData.createDataTag(), tag);
         final Collection<ISourceDataTag> newTag = Collections.singletonList(EdgeTagFactory.StartStepUp.createDataTag());
-        setup(oldTags);
+        setup(StatusCode.GOOD, oldTags);
 
-        //action
         tagChanger.onUpdateEquipmentConfiguration(newTag, oldTags, changeReport);
 
         final Set<Long> actual = mapper.getTagIdDefinitionMap().keySet();
         final Collection<Long> expected = newTag.stream().map(ISourceDataTag::getId).collect(Collectors.toList());
-        Assertions.assertTrue(expected.containsAll(actual));
-        Assertions.assertTrue(actual.containsAll(expected));
+        assertTrue(expected.containsAll(actual));
+        assertTrue(actual.containsAll(expected));
     }
 
     @Test
     public void updateEqConfigShouldAddTagsNotInOldConfig() throws ConfigurationException {
-        //setup
         final Collection<ISourceDataTag> newTag = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.PositiveTrendData.createDataTag(), tag);
         final Collection<ISourceDataTag> oldTags = Collections.singletonList(EdgeTagFactory.StartStepUp.createDataTag());
-        setup(oldTags);
+        setup(StatusCode.GOOD, oldTags);
 
-        //action
         tagChanger.onUpdateEquipmentConfiguration(newTag, oldTags, changeReport);
 
         final Set<Long> actual = mapper.getTagIdDefinitionMap().keySet();
         final Collection<Long> expected = newTag.stream().map(ISourceDataTag::getId).collect(Collectors.toList());
-        Assertions.assertTrue(expected.containsAll(actual));
-        Assertions.assertTrue(actual.containsAll(expected));
+        assertTrue(expected.containsAll(actual));
+        assertTrue(actual.containsAll(expected));
     }
 
     @Test
     public void updateEqConfigShouldReportAddedTagsInChangeReport() throws ConfigurationException {
-        //setup
         final Collection<ISourceDataTag> newTag = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.PositiveTrendData.createDataTag(), tag);
         final Collection<ISourceDataTag> oldTags = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.AlternatingBoolean.createDataTag());
-        setup(oldTags);
+        setup(StatusCode.GOOD, oldTags);
 
-        //action
         tagChanger.onUpdateEquipmentConfiguration(newTag, oldTags, changeReport);
+        assertTrue(changeReport.getInfoMessage().contains("Subscribed to Tags "));
+    }
 
-        changeReport.getInfoMessage().contains("Added Tags ");
+    @Test
+    public void updateEqConfigShouldReportFailedTags() throws ConfigurationException {
+        final Collection<ISourceDataTag> newTag = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.PositiveTrendData.createDataTag(), tag);
+        final Collection<ISourceDataTag> oldTags = Arrays.asList(EdgeTagFactory.StartStepUp.createDataTag(), EdgeTagFactory.AlternatingBoolean.createDataTag());
+        setup(StatusCode.BAD, oldTags);
+
+        tagChanger.onUpdateEquipmentConfiguration(newTag, oldTags, changeReport);
+        assertTrue(changeReport.getInfoMessage().contains("Could not remove "));
     }
 
     @Test
@@ -98,13 +94,9 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     }
 
     @Test
-    public void invalidOnAddDataTagShouldReportFail () throws OPCUAException {
-        ConcreteController controller = new NoFailover();
-        controller.initialize(new ExceptionTestEndpoint(null, mapper), new String[0]);
-        final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, listener);
-        proxy.setController(controller);
-        final DataTagChanger testTagChanger = new DataTagChanger(new DataTagHandler(mapper, listener, proxy));
-        testTagChanger.onAddDataTag(tag, changeReport);
+    public void invalidOnAddDataTagShouldReportFail () {
+        endpoint.setThrowExceptions(true);
+        tagChanger.onAddDataTag(tag, changeReport);
         assertEquals(FAIL, changeReport.getState());
     }
 
@@ -113,12 +105,12 @@ public class DataTagChangerTest extends TagHandlerTestBase {
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tag);
         mocker.replay();
         tagChanger.onAddDataTag(tag, changeReport);
-        Assertions.assertTrue(isSubscribed(tag));
+        assertTrue(isSubscribed(tag));
     }
 
     @Test
     public void onRemoveSubscribedDataTagShouldReportSuccess() throws ConfigurationException {
-        final ISourceDataTag tagToRemove = sourceTags.get(2L);
+        final ISourceDataTag tagToRemove = tagInSource1;
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagToRemove);
         mocker.replay();
         tagChanger.onRemoveDataTag(tagToRemove,changeReport);
@@ -127,24 +119,25 @@ public class DataTagChangerTest extends TagHandlerTestBase {
 
     @Test
     public void onRemoveSubscribedDataTagShouldUnsubscribeTag() throws ConfigurationException {
-        final ISourceDataTag tagToRemove = sourceTags.get(2L);
+        final ISourceDataTag tagToRemove = tagInSource1;
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagToRemove);
         mocker.replay();
         tagChanger.onRemoveDataTag(tagToRemove,changeReport);
-        Assertions.assertFalse(isSubscribed(tagToRemove));
+        assertFalse(isSubscribed(tagToRemove));
     }
 
     @Test
     public void onUpdateUnknownTagShouldReportSuccess () throws ConfigurationException {
-        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, sourceTags.get(2L), tag);
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagInSource1, tag);
         mocker.replay();
-        tagChanger.onUpdateDataTag(sourceTags.get(2L), tag, changeReport);
+        tagChanger.onUpdateDataTag(tagInSource1, tag, changeReport);
         assertEquals(SUCCESS, changeReport.getState());
     }
 
+
     @Test
     public void validOnUpdateUnknownTagShouldReportSuccess () throws ConfigurationException {
-        final ISourceDataTag tagToUpdate = sourceTags.get(2L);
+        final ISourceDataTag tagToUpdate = tagInSource1;
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagToUpdate);
         mocker.replay();
         tagChanger.onUpdateDataTag(tagToUpdate, tag, changeReport);
@@ -153,7 +146,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
 
     @Test
     public void validOnUpdateUnknownTagShouldReportWhichTagWasUpdated () throws ConfigurationException {
-        final ISourceDataTag newTag = sourceTags.get(2L);
+        final ISourceDataTag newTag = tagInSource1;
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, newTag);
         mocker.replay();
         tagChanger.onUpdateDataTag(newTag, tag, changeReport);

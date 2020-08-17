@@ -2,29 +2,38 @@ package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.control.ConcreteController;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.NoFailover;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
-import cern.c2mon.daq.opcua.testutils.*;
+import cern.c2mon.daq.opcua.testutils.TestEndpoint;
+import cern.c2mon.daq.opcua.testutils.TestListeners;
+import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.SourceCommandTag;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
+import cern.c2mon.shared.common.datatag.address.HardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
+import cern.c2mon.shared.common.datatag.address.impl.DIPHardwareAddressImpl;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
+import cern.c2mon.shared.daq.config.ChangeReport;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.AbstractMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,7 +44,7 @@ public class CommandTagHandlerTest {
 
     SourceCommandTagValue value;
     SourceCommandTag tag;
-    OPCHardwareAddressImpl address;
+    OPCHardwareAddressImpl address = new OPCHardwareAddressImpl("simSY4527.Board00.Chan000.Pw");
     OPCHardwareAddressImpl pulseAddress;
     MessageSender l = new TestListeners.TestListener();
 
@@ -57,6 +66,15 @@ public class CommandTagHandlerTest {
         value.setValue(1);
         final Controller controllerProxy = TestUtils.getFailoverProxy(endpoint, l);
         commandTagHandler = new CommandTagHandler(controllerProxy);
+    }
+
+    @Test
+    public void runCommandWithBadHardwareAddressShouldThrowException() {
+        final HardwareAddress dip = new DIPHardwareAddressImpl("bad address type");
+        tag.setHardwareAddress(dip);
+        assertThrows(EqCommandTagException.class,
+                () -> commandTagHandler.runCommand(tag, value),
+                ExceptionContext.HARDWARE_ADDRESS_TYPE.getMessage());
     }
 
     @Test
@@ -106,6 +124,30 @@ public class CommandTagHandlerTest {
         ReflectionTestUtils.setField(commandTagHandler, "controller", TestUtils.getFailoverProxy(mockEp, l));
         commandTagHandler.runCommand(tag, value);
         verify(mockEp);
+    }
+
+    @Test
+    public void commandWithPulseShouldThrowExceptionWhenReadingNullValue() throws OPCUAException {
+        value.setValue(0);
+        tag.setHardwareAddress(pulseAddress);
+        final Endpoint mockEp = EasyMock.niceMock(Endpoint.class);
+        Map.Entry<ValueUpdate, SourceDataTagQuality> e = new AbstractMap.SimpleEntry<>(null, null);
+        expect(mockEp.read(anyObject())).andReturn(e).anyTimes();
+        replay(mockEp);
+        ReflectionTestUtils.setField(commandTagHandler, "controller", TestUtils.getFailoverProxy(mockEp, l));
+        assertThrows(EqCommandTagException.class, () -> commandTagHandler.runCommand(tag, value));
+    }
+
+    @Test
+    public void commandWithPulseShouldThrowExceptionOnInvalidQuality() throws OPCUAException {
+        value.setValue(0);
+        tag.setHardwareAddress(pulseAddress);
+        final Endpoint mockEp = EasyMock.niceMock(Endpoint.class);
+        Map.Entry<ValueUpdate, SourceDataTagQuality> e = new AbstractMap.SimpleEntry<>(new ValueUpdate(2), new SourceDataTagQuality(SourceDataTagQualityCode.DATA_UNAVAILABLE));
+        expect(mockEp.read(anyObject())).andReturn(e).anyTimes();
+        replay(mockEp);
+        ReflectionTestUtils.setField(commandTagHandler, "controller", TestUtils.getFailoverProxy(mockEp, l));
+        assertThrows(EqCommandTagException.class, () -> commandTagHandler.runCommand(tag, value));
     }
 
     @Test
@@ -169,13 +211,30 @@ public class CommandTagHandlerTest {
     }
 
     @Test
-    public void badClientShouldThrowException() throws OPCUAException {
-        ConcreteController controller = new NoFailover();
-        controller.initialize(new ExceptionTestEndpoint(l, new TagSubscriptionMapper()));
-        final TestControllerProxy proxy = TestUtils.getFailoverProxy(endpoint, l);
-        proxy.setController(controller);
-        ReflectionTestUtils.setField(commandTagHandler, "controller", proxy);
+    public void badClientShouldThrowException() {
+        endpoint.setThrowExceptions(true);
         verifyCommunicationException(ExceptionContext.WRITE);
+    }
+
+    @Test
+    public void onAddCommandTagShouldReportSuccess() {
+        assertChangeReportSuccess(r -> commandTagHandler.onAddCommandTag(null, r));
+    }
+    @Test
+    public void onRemoveCommandTagShouldReportSuccess() {
+        assertChangeReportSuccess(r -> commandTagHandler.onRemoveCommandTag(null, r));
+    }
+
+    @Test
+    public void onUpdateCommandTagShouldReportSuccess() {
+        assertChangeReportSuccess(r -> commandTagHandler.onUpdateCommandTag(null, null, r));
+    }
+
+    private void assertChangeReportSuccess(Consumer<ChangeReport> r) {
+        final ChangeReport changeReport = new ChangeReport();
+        r.accept(changeReport);
+        assertTrue(changeReport.isSuccess());
+
     }
 
     private Endpoint mockWriteRewrite() throws OPCUAException {

@@ -56,11 +56,11 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 /**
  * An implementation of {@link Endpoint} relying on Eclipse Milo. Handles all interaction with a single server including
  * the the consolidation of security settings. Maintains a mapping in between the per-server time Deadbands and
- * associated subscription IDs. Informs the {@link MessageSender} of the state of connection and of new values. A
- * {@link CommunicationException} occurs when the method has been attempted as often and with a delay as configured
- * without success. A {@link LongLostConnectionException} is thrown when the connection has already been lost for the
- * time needed to execute all configured attempts. In this case, no retries are executed. {@link
- * ConfigurationException}s are never retried, and represent failures that require a configuration change to fix. {@link
+ * associated subscription IDs. Informs the {@link MessageSender} of the state of connection and of new values. A {@link
+ * CommunicationException} occurs when the method has been attempted as often and with a delay as configured without
+ * success. A {@link LongLostConnectionException} is thrown when the connection has already been lost for the time
+ * needed to execute all configured attempts. In this case, no retries are executed. {@link ConfigurationException}s are
+ * never retried, and represent failures that require a configuration change to fix. {@link
  * EndpointDisconnectedException}s are never retried, as they indicate that a call is an asynchronously remaining
  * process of an endpoint that has been disconnected
  */
@@ -158,13 +158,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-    public void setUpdateEquipmentStateOnSessionChanges(boolean active) {
-        updateEquipmentStateOnSessionChanges = active;
-        if (active && disconnectedOn.get() <= 1L) {
-            messageSender.onEquipmentStateUpdate(OK);
-        }
-    }
-
     /**
      * Adds or removes {@link SessionActivityListener}s from the client.
      * @param add      whether to add or remove a listener. If the listener is already in the intended state, no action
@@ -186,6 +179,13 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             client.removeSessionActivityListener(listener);
         } else {
             log.info("Nothing to do.");
+        }
+    }
+
+    public void setUpdateEquipmentStateOnSessionChanges(boolean active) {
+        updateEquipmentStateOnSessionChanges = active;
+        if (active && disconnectedOn.get() <= 1L) {
+            messageSender.onEquipmentStateUpdate(OK);
         }
     }
 
@@ -277,8 +277,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @throws OPCUAException if the definitions could not be subscribed.
      */
     public Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
-                                                                     Collection<ItemDefinition> definitions,
-                                                                     Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
+                                                                    Collection<ItemDefinition> definitions,
+                                                                    Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
         UaSubscription subscription = getOrCreateSubscription(publishingInterval);
         List<MonitoredItemCreateRequest> requests = definitions.stream().map(this::toMonitoredItemCreateRequest).collect(toList());
         return retryDelegate.completeOrRetry(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
@@ -293,27 +293,33 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * the one item, the whole subscription is deleted.
      * @param clientHandle    the identifier of the monitored item to remove.
      * @param publishInterval the publishing interval subscription to remove the monitored item from.
+     * @return whether the removal from subscription could be completed successfully. False if no item with the
+     * clientHandle was previously subscribed.
      */
     @Override
     public boolean deleteItemFromSubscription(int clientHandle, int publishInterval) {
+        final UaSubscription subscription = subscriptionMap.get(publishInterval);
+        if (subscription == null) {
+            log.info("Item cannot be mapped to a subscription. Skipping deletion.");
+            return false;
+        }
         try {
-            final UaSubscription subscription = subscriptionMap.get(publishInterval);
-            if (subscription != null && subscription.getMonitoredItems().size() <= 1) {
+            if (subscription.getMonitoredItems().size() <= 1) {
                 deleteSubscription(publishInterval);
-            } else if (subscription != null) {
-                List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
-                        .filter(i -> i.getClientHandle().intValue() == clientHandle)
-                        .collect(toList());
-                retryDelegate.completeOrRetry(DELETE_MONITORED_ITEM, this::getDisconnectPeriod,
-                        () -> subscription.deleteMonitoredItems(itemsToRemove));
-            } else {
-                log.info("Item cannot be mapped to a subscription. Skipping deletion.");
+                return true;
             }
+            List<UaMonitoredItem> itemsToRemove = subscription.getMonitoredItems().stream()
+                    .filter(i -> i.getClientHandle().intValue() == clientHandle)
+                    .collect(toList());
+            final List<StatusCode> statusCodes = retryDelegate.completeOrRetry(
+                    DELETE_MONITORED_ITEM,
+                    this::getDisconnectPeriod,
+                    () -> subscription.deleteMonitoredItems(itemsToRemove));
+            return statusCodes.stream().allMatch(StatusCode::isGood);
         } catch (OPCUAException ex) {
             log.error("Tag with ID {} could not be completed successfully on endpoint {}.", mapper.getTagId(clientHandle), getUri(), ex);
             return false;
         }
-        return true;
     }
 
     /**
@@ -405,8 +411,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
         disconnectedOn.getAndUpdate(l -> l < 0 ? l : System.currentTimeMillis());
     }
-
-
 
 
     /**

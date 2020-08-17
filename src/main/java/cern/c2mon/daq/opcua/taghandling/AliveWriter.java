@@ -65,7 +65,7 @@ public class AliveWriter {
             aliveTagAddress = def.getNodeId();
             startWriter();
         } catch (ConfigurationException e) {
-            log.error("The AliveTag has an incorrect hardware address and cannot be started", e);
+            log.error("The AliveTag cannot be started, please check the configuration.", e);
         }
     }
 
@@ -73,7 +73,7 @@ public class AliveWriter {
      * Stops the aliveWriter execution.
      */
     public void stopWriter() {
-        if (writeAliveTask != null && (!writeAliveTask.isCancelled() || !writeAliveTask.isDone())) {
+        if (writeAliveTask != null && !writeAliveTask.isCancelled()) {
             log.info("Stopping OPCAliveWriter...");
             writeAliveTask.cancel(false);
         }

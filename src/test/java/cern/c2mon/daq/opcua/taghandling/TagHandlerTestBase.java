@@ -11,8 +11,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class TagHandlerTestBase {
     protected static String ADDRESS_PROTOCOL_TCP = "URI=opc.tcp://";
@@ -24,44 +24,45 @@ public abstract class TagHandlerTestBase {
 
 
 
-    protected static Map<Long, ISourceDataTag> sourceTags = generateSourceTags();
-    protected static String uri;
+
+    protected Map<Long, ISourceDataTag> sourceTags;
+    protected String uri;
 
     TagSubscriptionMapper mapper;
     TestEndpoint endpoint;
     TestListeners.TestListener listener;
-    IDataTagHandler controller;
+    IDataTagHandler tagHandler;
     MiloMocker mocker;
     TestControllerProxy proxy;
 
-
-    public static Map<Long, ISourceDataTag> generateSourceTags () {
-        Map<Long, ISourceDataTag> sourceTags = new HashMap<>();
-        sourceTags.put(2L, EdgeTagFactory.RandomUnsignedInt32.createDataTag());
-        sourceTags.put(3L, EdgeTagFactory.AlternatingBoolean.createDataTag());
-        return sourceTags;
-    }
+    ISourceDataTag tagInSource1 = EdgeTagFactory.RandomUnsignedInt32.createDataTagWithID(10L);
+    ISourceDataTag tagInSource2 = EdgeTagFactory.AlternatingBoolean.createDataTagWithID(20L);
 
     @BeforeEach
     public void setUp() throws OPCUAException, InterruptedException {
+
         uri = ADDRESS_PROTOCOL_TCP + ADDRESS_BASE + true;
+        sourceTags = new ConcurrentHashMap<>();
+        sourceTags.put(10L, tagInSource1);
+        sourceTags.put(20L, tagInSource2);
+
         mapper = new TagSubscriptionMapper();
         listener = new TestListeners.TestListener();
         endpoint = new TestEndpoint(listener, mapper);
         proxy = TestUtils.getFailoverProxy(endpoint, listener);
-        controller = new DataTagHandler(mapper, listener, proxy);
+        tagHandler = new DataTagHandler(mapper, listener, proxy);
         mocker = new MiloMocker(endpoint, mapper);
     }
 
     @AfterEach
     public void teardown() {
-        controller = null;
+        tagHandler = null;
     }
 
     protected void subscribeTagsAndMockStatusCode (StatusCode code, ISourceDataTag... tags) throws ConfigurationException {
         mocker.mockStatusCodeAndClientHandle(code, tags);
         mocker.replay();
-        controller.subscribeTags(Arrays.asList(tags));
+        tagHandler.subscribeTags(Arrays.asList(tags));
     }
 
     protected boolean isSubscribed(ISourceDataTag tag) {

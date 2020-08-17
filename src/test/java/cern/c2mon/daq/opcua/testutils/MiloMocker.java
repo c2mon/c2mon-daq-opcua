@@ -33,6 +33,10 @@ public class MiloMocker {
         EasyMock.replay(client.getMonitoredItem());
     }
 
+    public void verify (){
+        EasyMock.verify(client.getMonitoredItem());
+    }
+
     public void mockStatusCodeAndClientHandle(StatusCode code, Collection<ISourceDataTag> tags) throws ConfigurationException {
         UaMonitoredItem monitoredItem = client.getMonitoredItem();
         expect(monitoredItem.getStatusCode()).andReturn(code).anyTimes();

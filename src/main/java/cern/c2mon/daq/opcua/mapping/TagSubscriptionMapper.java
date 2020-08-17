@@ -58,7 +58,7 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
     }
 
     @Override
-    public ItemDefinition getDefinition(Long tagId) {
+    public ItemDefinition getDefinition(long tagId) {
         return tagIdDefinitionMap.get(tagId);
     }
 

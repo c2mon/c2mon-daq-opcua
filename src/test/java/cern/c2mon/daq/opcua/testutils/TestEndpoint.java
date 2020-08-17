@@ -28,10 +28,10 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
 import static org.easymock.EasyMock.createMock;
 
 @Getter
@@ -47,10 +47,16 @@ public class TestEndpoint implements Endpoint {
     private boolean returnGoodStatusCodes = true;
     final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
     String uri;
+    boolean throwExceptions = false;
+    long delay;
 
     @Override
     public void initialize(String uri) throws OPCUAException {
         this.uri = uri;
+        this.delay = 0;
+        if (throwExceptions) {
+            throw new CommunicationException(CONNECT);
+        }
     }
 
     @Override
@@ -68,7 +74,7 @@ public class TestEndpoint implements Endpoint {
 
     @Override
     public Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) {
-        BiConsumer<UaMonitoredItem, Integer> itemCreationCallback = (item, i) -> item.setValueConsumer(value -> {
+        Consumer<UaMonitoredItem> itemCreationCallback = item -> item.setValueConsumer(value -> {
             SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
             final Object updateValue = MiloMapper.toObject(value.getValue());
             ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
@@ -77,7 +83,17 @@ public class TestEndpoint implements Endpoint {
             final Long tagId = mapper.getTagId(item.getClientHandle().intValue());
             messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
         });
-        executor.schedule(() -> itemCreationCallback.accept(monitoredItem, 1), 100, TimeUnit.MILLISECONDS);
+        return subscribeWithCallback(group.getPublishInterval(), definitions,  itemCreationCallback);
+    }
+
+    @Override
+    public Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) {
+        try {
+            TimeUnit.MILLISECONDS.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        executor.schedule(() -> itemCreationCallback.accept(monitoredItem), delay + 100, TimeUnit.MILLISECONDS);
 
         return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> {
             final StatusCode statusCode = monitoredItem.getStatusCode();
@@ -86,13 +102,8 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
-        return null;
-    }
-
-    @Override
     public boolean deleteItemFromSubscription(int clientHandle, int publishInterval) {
-        return true;
+        return returnGoodStatusCodes;
     }
 
     @Override
@@ -101,18 +112,30 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
+    public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws CommunicationException {
+        if (throwExceptions) {
+            throw new CommunicationException(READ);
+        }
+        try {
+            TimeUnit.MILLISECONDS.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         final SourceDataTagQuality quality = new SourceDataTagQuality(returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
         return new AbstractMap.SimpleEntry<>(new ValueUpdate(0), quality);
     }
 
     @Override
     public boolean write (NodeId nodeId, Object value) throws CommunicationException {
+        if (throwExceptions) {
+            throw new CommunicationException(WRITE);
+        }
         return returnGoodStatusCodes;
     }
 
     @Override
-    public Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException {
+    public Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) {
         return new AbstractMap.SimpleEntry<>(returnGoodStatusCodes, new Object[] {arg});
     }
 

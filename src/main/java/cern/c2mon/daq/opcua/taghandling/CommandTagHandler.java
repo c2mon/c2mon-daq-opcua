@@ -4,7 +4,6 @@ import cern.c2mon.daq.common.conf.equipment.ICommandTagChanger;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
@@ -12,17 +11,20 @@ import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
+import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import cern.c2mon.shared.common.type.TypeConverter;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -87,6 +89,9 @@ public class CommandTagHandler implements ICommandTagChanger {
      * @throws EqCommandTagException if the command cannot be executed or the server returns an invalid status code.
      */
     public String runCommand(ISourceCommandTag tag, SourceCommandTagValue command) throws EqCommandTagException {
+        if (!(tag.getHardwareAddress() instanceof OPCHardwareAddress)) {
+            throw new EqCommandTagException(ExceptionContext.HARDWARE_ADDRESS_TYPE.getMessage());
+        }
         Object arg = command.getValue();
         if (arg != null) {
             arg = TypeConverter.cast(command.getValue(), command.getDataType());
@@ -94,25 +99,18 @@ public class CommandTagHandler implements ICommandTagChanger {
                 throw new EqCommandTagException(ExceptionContext.COMMAND_VALUE_ERROR.getMessage());
             }
         }
+        final OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
         try {
-            final OPCHardwareAddress hardwareAddress = (OPCHardwareAddress) tag.getHardwareAddress();
-            switch (hardwareAddress.getCommandType()) {
-                case METHOD:
-                    return Arrays.stream(executeMethod(tag, arg)).map(Object::toString).collect(Collectors.joining(", "));
-                case CLASSIC:
-                    runClassicCommand(tag, arg, hardwareAddress.getCommandPulseLength());
-                    break;
-                default:
-                    // impossible
-                    throw new EqCommandTagException(ExceptionContext.COMMAND_TYPE_UNKNOWN.getMessage());
+            if (hardwareAddress.getCommandType().equals(OPCCommandHardwareAddress.COMMAND_TYPE.METHOD)) {
+                return Arrays.stream(executeMethod(tag, arg))
+                        .filter(Objects::nonNull)
+                        .map(Object::toString)
+                        .collect(Collectors.joining(", "));
+            } else {
+                runClassicCommand(tag, arg, hardwareAddress.getCommandPulseLength());
             }
-        } catch (ConfigurationException e) {
-            throw new EqCommandTagException("Please check whether the configuration is correct.", e);
-        } catch (OPCUAException e) {
-            final String commandId = command.getId() == null ? "." : " " + command.getId().toString() + ".";
-            throw new EqCommandTagException("A communication error occurred while running the command on tag" + commandId, e);
         } catch (Exception e) {
-            log.error("Exception", e);
+            throw new EqCommandTagException("An exception occurred while running the command.", e);
         }
         return null;
     }
@@ -138,22 +136,23 @@ public class CommandTagHandler implements ICommandTagChanger {
 
 
     private void runClassicCommand(ISourceCommandTag tag, Object arg, int pulse) throws OPCUAException {
+        final NodeId nodeId = ItemDefinition.getNodeIdForTag(tag);
         if (pulse == 0) {
             log.info("Setting Tag with ID {} to {}.", tag.getId(), arg);
-            executeWriteCommand(tag, arg);
+            executeWriteCommand(nodeId, arg);
         } else {
-            final Object original = readOriginal(tag);
-            if (original != null && original.equals(arg)) {
+            final Object original = readOriginal(nodeId);
+            if (original.equals(arg)) {
                 log.info("Tag with ID {} is already set to {}. Skipping command with pulse.", tag.getId(), arg);
             } else {
-                writeRewrite(tag, arg, original, pulse);
+                writeRewrite(nodeId, tag.getId(), arg, original, pulse);
             }
         }
     }
 
-    private void writeRewrite(ISourceCommandTag tag, Object arg, Object original, int pulse) throws OPCUAException {
-        log.info("Setting Tag with ID {} to {} for {} seconds.", tag.getId(), arg, pulse);
-        executeWriteCommand(tag, arg);
+    private void writeRewrite(NodeId nodeId, long tagId, Object arg, Object original, int pulse) throws OPCUAException {
+        log.info("Setting Tag with ID {} to {} for {} seconds.", tagId, arg, pulse);
+        executeWriteCommand(nodeId, arg);
         try {
             TimeUnit.SECONDS.sleep(pulse);
         } catch (InterruptedException e) {
@@ -161,20 +160,19 @@ public class CommandTagHandler implements ICommandTagChanger {
             log.debug("Failed with exception ", e);
             log.info("Interrupted pulse, continue resetting the tag.");
         }
-        log.info("Resetting Tag with ID {} to {}.", tag.getId(), original);
-        executeWriteCommand(tag, original);
+        log.info("Resetting Tag with ID {} to {}.", tagId, original);
+        executeWriteCommand(nodeId, original);
     }
 
-    private void executeWriteCommand(ISourceCommandTag tag, Object arg) throws OPCUAException {
-        final ItemDefinition def = ItemDefinition.of(tag);
-        if (!controller.write(def.getNodeId(), arg)) {
+    private void executeWriteCommand(NodeId nodeId, Object arg) throws OPCUAException {
+        if (!controller.write(nodeId, arg)) {
             throw new CommunicationException(ExceptionContext.COMMAND_CLASSIC);
         }
     }
 
     /**
      * Read the current value of the tag
-     * @param tag The {@link ISourceCommandTag} whose current value shall be read
+     * @param nodeId The nodeId referencing the {@link ISourceCommandTag} whose current value shall be read
      * @return the current value of the {@link org.eclipse.milo.opcua.stack.core.types.builtin.NodeId} associated with
      * the tag
      * @throws OPCUAException if an exception occurred during the read operation, or if a bad quality reading was
@@ -182,9 +180,8 @@ public class CommandTagHandler implements ICommandTagChanger {
      *                        command executions that do not throw  an error to be successful. To ensure a reliable
      *                        result, repeat the execution by throwing an error upon status  codes that are invalid.
      */
-    private Object readOriginal(ISourceCommandTag tag) throws OPCUAException {
-        final ItemDefinition definition = ItemDefinition.of(tag);
-        final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controller.read(definition.getNodeId());
+    private Object readOriginal(NodeId nodeId) throws OPCUAException {
+        final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controller.read(nodeId);
         log.info("Action completed with Status Code: {}", read.getValue());
         if (read.getValue() == null || !read.getValue().isValid()) {
             throw new CommunicationException(ExceptionContext.READ);

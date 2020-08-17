@@ -25,11 +25,19 @@ public enum EdgeTagFactory {
         return createDataTag(0, (short) 0, 0);
     }
 
+    public ISourceDataTag createDataTagWithID(long id) {
+        return createDataTagWithID(id, 0, (short) 0, 0);
+    }
+
     public ISourceDataTag createDataTag(float valDB, short dbType, int timeDB) {
+        return createDataTagWithID(ID.getAndIncrement(), valDB, dbType, timeDB);
+    }
+
+    public ISourceDataTag createDataTagWithID(long id, float valDB, short dbType, int timeDB) {
         OPCHardwareAddressImpl hwAddress = new OPCHardwareAddressImpl(this.name());
         hwAddress.setNamespace(NAMESPACE);
         DataTagAddress dataTagAddress = new DataTagAddress(hwAddress, 0, dbType, valDB, timeDB, 2, true);
-        return new SourceDataTag(ID.getAndIncrement(), this.name(), false, (short) 0, null, dataTagAddress);
+        return new SourceDataTag(id, this.name(), false, (short) 0, null, dataTagAddress);
     }
 
     public ISourceCommandTag createMethodTag(boolean withParent) {

@@ -69,7 +69,7 @@ public class SubscribeTagsTest extends TagHandlerTestBase {
     @Test
     public void twoTagsWithOneBadStatusCodeShouldUnsubscribeOne() throws ConfigurationException {
         mocker.mockGoodAndBadStatusCodesAndReplay(new ISourceDataTag[]{tag1}, new ISourceDataTag[]{tag2});
-        controller.subscribeTags(Arrays.asList(tag1, tag2));
+        tagHandler.subscribeTags(Arrays.asList(tag1, tag2));
         assertTrue(isSubscribed(tag1) && !isSubscribed(tag2));
     }
 }

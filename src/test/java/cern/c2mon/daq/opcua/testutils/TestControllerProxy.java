@@ -47,7 +47,7 @@ public class TestControllerProxy extends ControllerProxy {
             controller = new NoFailover();
         }
         // ensure initialization is attempted for both
-        if (endpoint instanceof ExceptionTestEndpoint) {
+        if (endpoint instanceof TestEndpoint && ((TestEndpoint)endpoint).isThrowExceptions()) {
             controller.initialize(endpoint, redundantUris);
             endpoint.initialize(serverAddresses.iterator().next());
         } else {

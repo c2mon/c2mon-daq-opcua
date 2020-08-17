@@ -6,7 +6,6 @@ import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.taghandling.*;
-import cern.c2mon.daq.opcua.testutils.ExceptionTestEndpoint;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -151,9 +150,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         EquipmentConfiguration config = oldConfig.clone();
         config.setEquipmentAddress("http://test:2");
         final ChangeReport changeReport = new ChangeReport();
-        reset(context);
-        configureContextWithController(TestUtils.getFailoverProxy(new ExceptionTestEndpoint(sender, mapper), sender));
-        replay(context);
+        endpoint.setThrowExceptions(true);
 
         handler.onUpdateEquipmentConfiguration(config, oldConfig, changeReport);
         assertTrue(changeReport.isFail());

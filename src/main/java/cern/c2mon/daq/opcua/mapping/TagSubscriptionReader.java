@@ -58,7 +58,7 @@ public interface TagSubscriptionReader {
      * @return the {@link ItemDefinition} to which the tagId is mapped, or null if no {@link ItemDefinition} is
      * associated with the tagId
      */
-    ItemDefinition getDefinition(Long tagId);
+    ItemDefinition getDefinition(long tagId);
 
     /**
      * Returns the tagId associated with the {@link ItemDefinition} identified by the clientHandle, or null if

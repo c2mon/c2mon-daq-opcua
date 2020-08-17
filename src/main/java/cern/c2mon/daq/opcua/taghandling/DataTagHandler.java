@@ -28,7 +28,6 @@ import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -56,7 +55,7 @@ public class DataTagHandler implements IDataTagHandler {
     private final Controller controller;
 
     @Override
-    public void subscribeTags(@NonNull final Collection<ISourceDataTag> dataTags) {
+    public void subscribeTags(final Collection<ISourceDataTag> dataTags) {
         final Function<List<ISourceDataTag>, List<ItemDefinition>> definitionsToTags = e -> e.stream()
                 .map(t -> {
                     try {
@@ -78,8 +77,8 @@ public class DataTagHandler implements IDataTagHandler {
     }
 
     @Override
-    public boolean subscribeTag(@NonNull final ISourceDataTag sourceDataTag) {
-        ItemDefinition definition = null;
+    public boolean subscribeTag(final ISourceDataTag sourceDataTag) {
+        ItemDefinition definition;
         try {
             definition = manager.getOrCreateDefinition(sourceDataTag);
         } catch (ConfigurationException e) {
@@ -97,14 +96,11 @@ public class DataTagHandler implements IDataTagHandler {
     @Override
     public boolean removeTag(final ISourceDataTag dataTag) {
         final SubscriptionGroup group = manager.getGroup(dataTag.getTimeDeadband());
-        final boolean wasSubscribed = group != null && group.contains(dataTag.getId());
+        final boolean wasSubscribed = group.contains(dataTag.getId());
         if (wasSubscribed) {
             log.info("Unsubscribing tag from server.");
             final ItemDefinition definition = manager.getDefinition(dataTag.getId());
-            if (definition == null) {
-                log.error("The tag with id {} is not currently subscribed on the server, skipping removal.", dataTag.getId());
-                return false;
-            } else if (!controller.unsubscribe(definition)) {
+            if (!controller.unsubscribe(definition)) {
                 return false;
             }
         }

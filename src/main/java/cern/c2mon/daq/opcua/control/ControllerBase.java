@@ -67,8 +67,7 @@ public abstract class ControllerBase implements ConcreteController {
      */
     @Override
     public Map<Integer, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions) {
-        passiveEndpoints().forEach(endpoint -> groupsWithDefinitions.entrySet()
-                .forEach(e -> subscribeAndCatch(endpoint, e)));
+        passiveEndpoints().forEach(endpoint -> groupsWithDefinitions.entrySet().forEach(e -> subscribeAndCatch(endpoint, e)));
         return groupsWithDefinitions.entrySet().stream()
                 .flatMap(e -> subscribeAndCatch(currentEndpoint(), e))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
