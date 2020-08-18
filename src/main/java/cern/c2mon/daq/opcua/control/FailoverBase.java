@@ -92,17 +92,21 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     }
 
     protected void serviceLevelConsumer(DataValue value) {
-        final UByte serviceLevel = (UByte) value.getValue().getValue();
-        if (serviceLevel.compareTo(serviceLevelHealthLimit) < 0) {
-            log.info("Service level is outside of the healthy range at {}. Switching server...", serviceLevel.intValue());
+        final Object level = value.getValue().getValue();
+        if (!(level instanceof UByte)) {
+            log.error("Received service Level update with of bad class {}.", level.getClass().getName());
+        } else if (((UByte) level).compareTo(serviceLevelHealthLimit) < 0) {
+            log.info("Service level is outside of the healthy range at {}. Switching server...", ((UByte) level).intValue());
             triggerServerSwitch();
         }
     }
 
     protected void serverStateConsumer(DataValue value) {
-        final ServerState state = (ServerState) value.getValue().getValue();
-        if (!state.equals(ServerState.Running) && !state.equals(ServerState.Unknown)) {
-            log.info("Server entered state {}. Switching server...", state);
+        final Object state = value.getValue().getValue();
+        if (!(state instanceof ServerState)) {
+            log.error("Received server state update with of bad class {}.", state.getClass().getName());
+        } else if (!state.equals(ServerState.Running) && !state.equals(ServerState.Unknown)) {
+            log.info("Server entered state {}. Switching server...", ((ServerState)state).getValue());
             triggerServerSwitch();
         }
     }

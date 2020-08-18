@@ -69,11 +69,11 @@ public class TestEndpoint implements Endpoint {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        if (throwExceptions) {
-            throw toThrow == null ? new CommunicationException(CONNECT) : toThrow;
-        }
         if (initLatch != null) {
             initLatch.countDown();
+        }
+        if (throwExceptions) {
+            throw toThrow == null ? new CommunicationException(CONNECT) : toThrow;
         }
     }
 
@@ -114,7 +114,7 @@ public class TestEndpoint implements Endpoint {
         if (throwExceptions) {
             throw toThrow == null ? new CommunicationException(CREATE_SUBSCRIPTION) : toThrow;
         }
-        executor.schedule(() -> itemCreationCallback.accept(monitoredItem), delay + 100, TimeUnit.MILLISECONDS);
+        executor.schedule(() -> definitions.forEach(definition -> itemCreationCallback.accept(monitoredItem)), delay == 0 ? 100 : delay, TimeUnit.MILLISECONDS);
 
         return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> {
             final StatusCode statusCode = monitoredItem.getStatusCode();

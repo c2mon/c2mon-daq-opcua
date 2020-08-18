@@ -11,12 +11,21 @@ import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.easymock.Capture;
+import org.easymock.CaptureType;
+import org.eclipse.milo.opcua.stack.core.Identifiers;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
+import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static org.easymock.EasyMock.*;
@@ -31,9 +40,14 @@ public class ColdFailoverTest {
     AppConfigProperties config;
     CountDownLatch initLatch;
     CountDownLatch readLatch;
+    Capture<Consumer<DataValue>> serviceLevel;
+    Capture<Consumer<DataValue>> serverState;
 
     @BeforeEach
     public void setUp() {
+        serviceLevel = newCapture(CaptureType.ALL);
+        serverState = newCapture(CaptureType.ALL);
+
         readLatch = new CountDownLatch(1);
         initLatch = new CountDownLatch(2);
         config = TestUtils.createDefaultConfig();
@@ -63,7 +77,7 @@ public class ColdFailoverTest {
     }
 
     @Test
-    public void disconnectAfterInitializationShouldThrowException() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
+    public void disconnectAfterInitializationShouldThrowException() throws InterruptedException, TimeoutException, ExecutionException {
         initLatch = new CountDownLatch(1);
         endpoint.setInitLatch(initLatch);
         final CompletableFuture<Void> f = runAsync(() -> assertThrows(CommunicationException.class,
@@ -131,14 +145,13 @@ public class ColdFailoverTest {
         assertEquals("redundant", endpoint.getUri());
     }
 
-
     @Test
     public void disconnectedEndpointShouldThrowCommunicationException() throws InterruptedException, TimeoutException, ExecutionException {
         endpoint.setDelay(100L);
         endpoint.setReadValue(UByte.valueOf(10));
         final CompletableFuture<Void> f = runAsync(() -> assertThrows(CommunicationException.class,
-                        () -> setupConnectionMonitoringAndVerify("redundant"),
-                        ExceptionContext.NO_REDUNDANT_SERVER.getMessage()));
+                () -> setupConnectionMonitoringAndVerify("redundant"),
+                ExceptionContext.NO_REDUNDANT_SERVER.getMessage()));
         initLatch.await(200L, TimeUnit.MILLISECONDS);
         endpoint.setThrowExceptions(true);
         f.get(1000L, TimeUnit.MILLISECONDS);
@@ -171,6 +184,111 @@ public class ColdFailoverTest {
     }
 
     @Test
+    public void connectionMonitoringShouldSetValueConsumers() {
+        CompletableFuture.runAsync(() -> {
+            try {
+                captureConsumers(serviceLevel, serverState, "redundant1", "redundant2");
+            } catch (OPCUAException e) {
+                log.error("Exception:", e);
+            }
+        });
+        assertDoesNotThrow(() -> waitForConsumerCapture(serviceLevel, serverState));
+    }
+
+    @Test
+    public void serviceLevelConsumerShouldTriggerFailoverIfUnhealthy() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
+        captureConsumers(serviceLevel, serverState, "redundant1", "redundant2");
+        waitForConsumerCapture(serviceLevel);
+        initLatch = new CountDownLatch(1);
+        endpoint.setInitLatch(initLatch);
+        serviceLevel.getValue().accept(new DataValue(new Variant(UByte.valueOf(10))));
+        initLatch.await(100L, TimeUnit.MILLISECONDS);
+        assertEquals("redundant1", endpoint.getUri());
+    }
+
+    @Test
+    public void serviceLevelConsumerShouldNotTriggerFailoverIfHealthy() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
+        captureConsumers(serviceLevel, serverState, "redundant1", "redundant2");
+        waitForConsumerCapture(serviceLevel);
+        initLatch = new CountDownLatch(1);
+        endpoint.setInitLatch(initLatch);
+        serviceLevel.getValue().accept(new DataValue(new Variant(UByte.valueOf(200))));
+        initLatch.await(100L, TimeUnit.MILLISECONDS);
+        assertEquals("test", endpoint.getUri());
+    }
+
+    @Test
+    public void serviceLevelConsumerShouldIgnoreBadValue() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
+        captureConsumers(serviceLevel, serverState, "redundant1", "redundant2");
+        waitForConsumerCapture(serviceLevel);
+        initLatch = new CountDownLatch(1);
+        endpoint.setInitLatch(initLatch);
+        serviceLevel.getValue().accept(new DataValue(new Variant("bad value")));
+        initLatch.await(100L, TimeUnit.MILLISECONDS);
+        assertEquals("test", endpoint.getUri());
+    }
+
+    @Test
+    public void serverStateConsumerShouldIgnoreBadUpdates() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
+        captureConsumers(serviceLevel, serverState, "redundant1", "redundant2");
+        waitForConsumerCapture(serverState);
+        initLatch = new CountDownLatch(1);
+        endpoint.setInitLatch(initLatch);
+        serverState.getValue().accept(new DataValue(new Variant("bad value")));
+        initLatch.await(100L, TimeUnit.MILLISECONDS);
+        assertEquals("test", endpoint.getUri());
+    }
+
+    @Test
+    public void serverStateConsumerShouldTriggerFailoverIfUnhealthy() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
+        captureConsumers(serviceLevel, serverState, "redundant1", "redundant2");
+        waitForConsumerCapture(serverState);
+        initLatch = new CountDownLatch(1);
+        endpoint.setInitLatch(initLatch);
+        serverState.getValue().accept(new DataValue(new Variant(ServerState.CommunicationFault)));
+        initLatch.await(100L, TimeUnit.MILLISECONDS);
+        assertEquals("redundant1", endpoint.getUri());
+    }
+
+    @Test
+    public void serverStateConsumerShouldNotTriggerFailoverIfHealthy() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
+        captureConsumers(serviceLevel, serverState, "redundant1", "redundant2");
+        waitForConsumerCapture(serverState);
+        initLatch = new CountDownLatch(1);
+        endpoint.setInitLatch(initLatch);
+        serverState.getValue().accept(new DataValue(new Variant(ServerState.Running)));
+        initLatch.await(100L, TimeUnit.MILLISECONDS);
+        assertEquals("test", endpoint.getUri());
+    }
+
+    private void waitForConsumerCapture(Capture<Consumer<DataValue>>... capture) throws InterruptedException, ExecutionException, TimeoutException {
+        runAsync(() -> {
+            while (!Arrays.stream(capture).allMatch(Capture::hasCaptured)) {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(endpoint.getDelay());
+                } catch (InterruptedException e) {
+                    log.info("Interrupted, proceed now");
+                    return;
+                }
+            }
+        }).get(10000L, TimeUnit.MILLISECONDS);
+    }
+
+    private void captureConsumers(Capture<Consumer<DataValue>> serviceLevel, Capture<Consumer<DataValue>> serverState, String... uris) throws OPCUAException {
+        expect(endpoint.getMonitoredItem().getReadValueId())
+                .andReturn(ReadValueId.builder().nodeId(Identifiers.Server_ServiceLevel).build())
+                .once();
+        endpoint.getMonitoredItem().setValueConsumer(capture(serviceLevel));
+        expectLastCall().times(1);
+        expect(endpoint.getMonitoredItem().getReadValueId())
+                .andReturn(ReadValueId.builder().nodeId(Identifiers.ServerState).build())
+                .once();
+        endpoint.getMonitoredItem().setValueConsumer(capture(serverState));
+        expectLastCall().times(1);
+        setupConnectionMonitoring(uris);
+    }
+
+    @Test
     public void switchServersOnAfterStopShouldDoNothing() throws OPCUAException {
         setupConnectionMonitoring("redundant");
         coldFailover.stop();
@@ -190,24 +308,14 @@ public class ColdFailoverTest {
         setupConnectionMonitoring("redundant");
         config.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
-        TimeUnit.MILLISECONDS.sleep(100L);
-        assertEquals("redundant", endpoint.getUri());
-    }
-
-    @Test
-    public void twoOnSessionInactivesShouldOnlyTriggerOneFailover() throws OPCUAException, InterruptedException {
-        setupConnectionMonitoring("redundant");
-        config.setFailoverDelay(10L);
-        coldFailover.onSessionInactive(null);
-        coldFailover.onSessionInactive(null);
-        TimeUnit.MILLISECONDS.sleep(100L);
+        initLatch.await(100L, TimeUnit.MILLISECONDS);
         assertEquals("redundant", endpoint.getUri());
     }
 
     @Test
     public void unsuccessfulFailoverShouldBeRepeated() throws OPCUAException, InterruptedException {
         setupConnectionMonitoring("redundant");
-        initLatch = new CountDownLatch(5);
+        initLatch = new CountDownLatch(4);
         endpoint.setInitLatch(initLatch);
         config.setFailoverDelay(1L);
         config.setRetryDelay(1);
@@ -215,13 +323,24 @@ public class ColdFailoverTest {
         config.setFailoverDelay(1);
         endpoint.setThrowExceptions(true);
         coldFailover.onSessionInactive(null);
-        assertDoesNotThrow(() -> initLatch.await(500L, TimeUnit.MILLISECONDS));
+        assertTrue(initLatch.await(500L, TimeUnit.MILLISECONDS));
 
         //cleanup
         endpoint.setThrowExceptions(false);
         initLatch = new CountDownLatch(1);
         endpoint.setInitLatch(initLatch);
-        initLatch.await(500L, TimeUnit.MILLISECONDS);
+        assertTrue(initLatch.await(100L, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void onSessionInactiveOnStoppedServerShouldDoNothing() throws OPCUAException, InterruptedException {
+        setupConnectionMonitoring("redundant");
+        coldFailover.stop();
+        initLatch.await(100L, TimeUnit.MILLISECONDS);
+        initLatch = new CountDownLatch(1);
+        endpoint.setInitLatch(initLatch);
+        coldFailover.onSessionInactive(null);
+        assertFalse(initLatch.await(100L, TimeUnit.MILLISECONDS));
     }
 
     @Test
