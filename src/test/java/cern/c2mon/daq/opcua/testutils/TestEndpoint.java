@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -48,8 +49,12 @@ public class TestEndpoint implements Endpoint {
     final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
     String uri;
     boolean throwExceptions = false;
+    OPCUAException toThrow;
     long delay = 0;
     boolean transparent = false;
+    Object readValue = 0;
+    CountDownLatch initLatch;
+    CountDownLatch readLatch;
 
     public TestEndpoint(MessageSender sender, TagSubscriptionReader mapper) {
         this.messageSender = sender;
@@ -65,7 +70,10 @@ public class TestEndpoint implements Endpoint {
             Thread.currentThread().interrupt();
         }
         if (throwExceptions) {
-            throw new CommunicationException(CONNECT);
+            throw toThrow == null ? new CommunicationException(CONNECT) : toThrow;
+        }
+        if (initLatch != null) {
+            initLatch.countDown();
         }
     }
 
@@ -83,7 +91,7 @@ public class TestEndpoint implements Endpoint {
     public void disconnect () {}
 
     @Override
-    public Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) {
+    public Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException {
         Consumer<UaMonitoredItem> itemCreationCallback = item -> item.setValueConsumer(value -> {
             SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
             final Object updateValue = MiloMapper.toObject(value.getValue());
@@ -97,11 +105,14 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) {
+    public Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
         try {
             TimeUnit.MILLISECONDS.sleep(delay);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        }
+        if (throwExceptions) {
+            throw toThrow == null ? new CommunicationException(CREATE_SUBSCRIPTION) : toThrow;
         }
         executor.schedule(() -> itemCreationCallback.accept(monitoredItem), delay + 100, TimeUnit.MILLISECONDS);
 
@@ -122,24 +133,26 @@ public class TestEndpoint implements Endpoint {
     }
 
     @Override
-    public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws CommunicationException {
-        if (throwExceptions) {
-            throw new CommunicationException(READ);
-        }
+    public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
         try {
             TimeUnit.MILLISECONDS.sleep(delay);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-
+        if (readLatch != null) {
+            readLatch.countDown();
+        }
+        if (throwExceptions) {
+            throw toThrow == null ? new CommunicationException(READ) : toThrow;
+        }
         final SourceDataTagQuality quality = new SourceDataTagQuality(returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
-        return new AbstractMap.SimpleEntry<>(new ValueUpdate(0), quality);
+        return new AbstractMap.SimpleEntry<>(new ValueUpdate(readValue), quality);
     }
 
     @Override
-    public boolean write (NodeId nodeId, Object value) throws CommunicationException {
+    public boolean write(NodeId nodeId, Object value) throws OPCUAException {
         if (throwExceptions) {
-            throw new CommunicationException(WRITE);
+            throw toThrow == null ? new CommunicationException(WRITE) : toThrow;
         }
         return returnGoodStatusCodes;
     }

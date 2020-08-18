@@ -20,25 +20,25 @@ import static org.easymock.EasyMock.*;
 
 public class MiloMocker {
 
-    TestEndpoint client;
+    TestEndpoint endpoint;
     TagSubscriptionReader mapper;
 
-    public MiloMocker(Endpoint client, TagSubscriptionReader mapper) {
-        assert client instanceof TestEndpoint;
-        this.client = (TestEndpoint) client;
+    public MiloMocker(Endpoint endpoint, TagSubscriptionReader mapper) {
+        assert endpoint instanceof TestEndpoint;
+        this.endpoint = (TestEndpoint) endpoint;
         this.mapper = mapper;
     }
 
     public void replay (){
-        EasyMock.replay(client.getMonitoredItem());
+        EasyMock.replay(endpoint.getMonitoredItem());
     }
 
     public void verify (){
-        EasyMock.verify(client.getMonitoredItem());
+        EasyMock.verify(endpoint.getMonitoredItem());
     }
 
     public void mockStatusCodeAndClientHandle(StatusCode code, Collection<ISourceDataTag> tags) throws ConfigurationException {
-        UaMonitoredItem monitoredItem = client.getMonitoredItem();
+        UaMonitoredItem monitoredItem = endpoint.getMonitoredItem();
         expect(monitoredItem.getStatusCode()).andReturn(code).anyTimes();
         mockClientHandle(monitoredItem, tags);
     }
@@ -48,7 +48,7 @@ public class MiloMocker {
     }
 
     public void mockGoodAndBadStatusCodesAndReplay(ISourceDataTag[] goodTags, ISourceDataTag[] badTags) throws ConfigurationException {
-        UaMonitoredItem monitoredItem = client.getMonitoredItem();
+        UaMonitoredItem monitoredItem = endpoint.getMonitoredItem();
         expect(monitoredItem.getStatusCode()).andReturn(StatusCode.GOOD).times(goodTags.length);
         mockClientHandle(monitoredItem, Arrays.asList(goodTags));
 
@@ -58,7 +58,7 @@ public class MiloMocker {
     }
 
     public void mockValueConsumerAndSubscribeTagAndReplay(StatusCode statusCode, ISourceDataTag tag) throws ConfigurationException {
-        UaMonitoredItem monitoredItem = client.getMonitoredItem();
+        UaMonitoredItem monitoredItem = endpoint.getMonitoredItem();
         int clientHandle = mapper.getOrCreateDefinition(tag).getClientHandle();
         expect(monitoredItem.getClientHandle()).andReturn(UInteger.valueOf(clientHandle)).anyTimes();
 
