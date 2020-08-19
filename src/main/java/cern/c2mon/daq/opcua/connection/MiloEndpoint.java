@@ -130,12 +130,10 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         if (add && !sessionActivityListeners.contains(listener)) {
             sessionActivityListeners.add(listener);
             client.addSessionActivityListener(listener);
-            synchronized (this) {
-                if (disconnectedOn.get() <= 1L) {
-                    listener.onSessionActive(null);
-                }
+            if (disconnectedOn.get() <= 1L) {
+                listener.onSessionActive(null);
             }
-        } else if (!add) {
+        } else if (!add && sessionActivityListeners.contains(listener)) {
             sessionActivityListeners.remove(listener);
             client.removeSessionActivityListener(listener);
         } else {
@@ -143,6 +141,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
+    @Override
     public void setUpdateEquipmentStateOnSessionChanges(boolean active) {
         updateEquipmentStateOnSessionChanges = active;
         if (active && disconnectedOn.get() <= 1L) {

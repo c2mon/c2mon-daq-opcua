@@ -43,11 +43,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
 
-    @Autowired TestListeners.Pulse pulseListener;
-    @Autowired IDataTagHandler tagHandler;
-    @Autowired ConcreteController coldFailover;
-    @Autowired Controller controllerProxy;
-    @Autowired AppConfigProperties config;
+    @Autowired
+    TestListeners.Pulse pulseListener;
+    @Autowired
+    IDataTagHandler tagHandler;
+    @Autowired
+    ConcreteController coldFailover;
+    @Autowired
+    Controller controllerProxy;
+    @Autowired
+    AppConfigProperties config;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(((FailoverBase) coldFailover), "triggerServerSwitch");
@@ -68,7 +73,8 @@ public class FailoverIT extends EdgeTestBase {
 
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
-        log.info("############ SET UP ############");;
+        log.info("############ SET UP ############");
+        config.setFailoverDelay(5000L);
         config.setRedundancyMode(ColdFailover.class.getName());
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
@@ -114,7 +120,7 @@ public class FailoverIT extends EdgeTestBase {
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
-        log.info("coldFailoverShouldResumeSubscriptions" + config.getRequestTimeout());
+        log.info("coldFailoverShouldResumeSubscriptions: " + config.getRequestTimeout());
         doAndWait(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
         doAndWait(pulseListener.listen(), fallback, false);
@@ -124,6 +130,7 @@ public class FailoverIT extends EdgeTestBase {
 
     @Test
     public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
+        config.setFailoverDelay(100L);
         log.info("longDisconnectShouldTriggerReconnectToAnyAvailableServer");
         doAndWait(pulseListener.listen(), active, true);
         doAndWait(pulseListener.listen(), fallback, false);
@@ -150,10 +157,12 @@ public class FailoverIT extends EdgeTestBase {
         assertTagUpdate();
     }
 
-    private void assertTagUpdate() {
-        log.info("Assert tag update for tag with ID {}.", tag.getId());
-        pulseListener.reset();
-        pulseListener.setSourceID(tag.getId());
-        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
+    private void assertTagUpdate() throws InterruptedException, ExecutionException, TimeoutException {
+        CompletableFuture.runAsync(() -> {
+            log.info("Assert tag update for tag with ID {}.", tag.getId());
+            pulseListener.reset();
+            pulseListener.setSourceID(tag.getId());
+            assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
+        }).get(TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
     }
 }

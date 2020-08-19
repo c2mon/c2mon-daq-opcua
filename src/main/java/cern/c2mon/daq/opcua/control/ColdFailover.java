@@ -67,7 +67,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         if (serviceLevel.compareTo(serviceLevelHealthLimit) < 0) {
             log.info("Endpoint not healthy, attempt next URI.");
             activeEndpoint.disconnect();
-            if (!connectToHealthiestServerFinished()) {
+            if (!connectToHealthiestServerSucceeded()) {
                 log.info("Controller stopped. Stopping initialization process.");
                 return;
             }
@@ -92,27 +92,24 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      * @throws OPCUAException if the no connection could be established to any server
      */
     @Override
-    public void
-    switchServers() throws OPCUAException {
+    public void switchServers() throws OPCUAException {
         if (currentEndpoint() == null) {
             log.error("Cannot switch server, the Endpoint must be initialized first.");
         } else if (!stopped.get()) {
             log.info("Attempt to switch to next healthy server.");
-            synchronized (stopped) {
-                activeEndpoint.disconnect();
-                try {
-                    //move current URI to end of list of servers to try
-                    redundantServers.remove(currentUri);
-                    redundantServers.add(currentUri);
-                    if (connectToHealthiestServerFinished()) {
-                        activeEndpoint.recreateAllSubscriptions();
-                        monitorConnection();
-                    }
-                } catch (OPCUAException e) {
-                    log.info("No server currently available.");
-                    activeEndpoint.disconnect();
-                    throw e;
+            activeEndpoint.disconnect();
+            //move current URI to end of list of servers to try
+            redundantServers.remove(currentUri);
+            redundantServers.add(currentUri);
+            try {
+                if (connectToHealthiestServerSucceeded()) {
+                    activeEndpoint.recreateAllSubscriptions();
+                    monitorConnection();
                 }
+            } catch (OPCUAException e) {
+                log.info("No server currently available.", e);
+                activeEndpoint.disconnect();
+                throw e;
             }
         } else {
             log.info("Server was manually shut down.");
@@ -127,7 +124,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     @Override
     public void onSessionActive(UaSession session) {
         if (future != null && !future.isCancelled()) {
-            log.info("Cancelling server switch due to long disconnection");
             future.cancel(false);
         }
     }
@@ -140,12 +136,14 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      */
     @Override
     public void onSessionInactive(UaSession session) {
-        if (!stopped.get() && config.getFailoverDelay() >= 0 && (future == null || future.isCancelled())) {
-            log.info("Starting timeout on inactive session.");
-            future = executor.schedule(() -> {
-                log.info("Trigger server switch due to long disconnection");
-                triggerServerSwitch();
+        if (config.getFailoverDelay() >= 0 && listening.get() && !stopped.get()) {
+            if (future == null || future.isCancelled()) {
+                log.info("Starting timeout on inactive session.");
+                future = executor.schedule(() -> {
+                    log.info("Trigger server switch due to long disconnection");
+                    triggerServerSwitch();
                 }, config.getFailoverDelay(), TimeUnit.MILLISECONDS);
+            }
         }
     }
 
@@ -159,7 +157,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         return Collections.emptyList();
     }
 
-    private boolean connectToHealthiestServerFinished() throws OPCUAException {
+    private boolean connectToHealthiestServerSucceeded() throws OPCUAException {
         log.info("Current uri: {}, redundantAddressList, {}.", currentUri, redundantServers);
         UByte maxServiceLevel = UByte.valueOf(0);
         String maxServiceUri = null;
@@ -173,6 +171,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
                 final UByte nextServiceLevel = readServiceLevel(activeEndpoint);
                 log.info("Server at {} has service level of {}.", nextUri, nextServiceLevel.intValue());
                 if (nextServiceLevel.compareTo(serviceLevelHealthLimit) >= 0) {
+                    log.info("Server is healthy!");
                     currentUri = nextUri;
                     return true;
                 } else if (nextServiceLevel.compareTo(maxServiceLevel) >= 0) {
@@ -195,7 +194,9 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     }
 
     private void monitorConnection() throws OPCUAException {
-        if (!stopped.get()) {
+        if (stopped.get()) {
+            log.info("The endpoint was stopped, skipping connection monitoring.");
+        } else {
             log.info("Setting up monitoring");
             activeEndpoint.setUpdateEquipmentStateOnSessionChanges(true);
             activeEndpoint.manageSessionActivityListener(true, this);
@@ -204,8 +205,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             } catch (EndpointDisconnectedException e) {
                 log.info("Session was closed, abort setting up connection monitoring.");
             }
-        } else {
-            log.info("The endpoint was stopped, skipping connection monitoring.");
         }
     }
 }

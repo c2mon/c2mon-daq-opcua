@@ -63,8 +63,9 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     @Override
     public void stop() {
         log.info("Disconnecting... ");
-        stopped.set(true);
-        listening.set(false);
+
+            stopped.set(true);
+            listening.set(false);
         super.stop();
     }
 
@@ -85,17 +86,15 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     }
 
     protected void monitoringCallback(UaMonitoredItem item) {
-        synchronized (stopped) {
-            if (!stopped.get()) {
-                final NodeId nodeId = item.getReadValueId().getNodeId();
-                Consumer<DataValue> valueConsumer = v -> {};
-                if (nodeId.equals(Identifiers.Server_ServiceLevel)) {
-                    valueConsumer = v -> serverSwitchConsumer(v, b -> b.compareTo(serviceLevelHealthLimit) < 0, UByte.class);
-                } else if (nodeId.equals(Identifiers.ServerState)) {
-                    valueConsumer = v -> serverSwitchConsumer(v, s -> !s.equals(ServerState.Running) && !s.equals(ServerState.Unknown), ServerState.class);
-                }
-                item.setValueConsumer(valueConsumer);
+        if (!stopped.get()) {
+            final NodeId nodeId = item.getReadValueId().getNodeId();
+            Consumer<DataValue> valueConsumer = v -> {};
+            if (nodeId.equals(Identifiers.Server_ServiceLevel)) {
+                valueConsumer = v -> serverSwitchConsumer(v, b -> b.compareTo(serviceLevelHealthLimit) < 0, UByte.class);
+            } else if (nodeId.equals(Identifiers.ServerState)) {
+                valueConsumer = v -> serverSwitchConsumer(v, s -> !s.equals(ServerState.Running) && !s.equals(ServerState.Unknown), ServerState.class);
             }
+            item.setValueConsumer(valueConsumer);
         }
     }
 
