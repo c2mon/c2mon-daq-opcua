@@ -25,6 +25,7 @@ public enum ExceptionContext {
     COMMAND_CLASSIC("Could not write command value."),
     PKI_ERROR("Could not process the PKI base directory"),
     URI_MISSING("The equipment address must specify at least one URI."),
+    URI_NOT_FOUND("The URI of the returned EndpointDescriptions could not be found when modified as configured. Are the settings correct for the network?"),
     URI_SYNTAX("The equipment URI has incorrect syntax"),
     HARDWARE_ADDRESS_TYPE("The hardware address is not of type OPCHardwareAddress and cannot be handled. "),
     DATATAGS_EMPTY("No data tags to subscribe."),
@@ -33,7 +34,6 @@ public enum ExceptionContext {
     EMPTY_SUBSCRIPTION("Cannot recreate a subscription without any monitored items."),
     SERVER_NODE("Could not get the server node."),
     NO_REDUNDANT_SERVER("No redundant server is available.");
-
     @Getter
     private final String message;
 }

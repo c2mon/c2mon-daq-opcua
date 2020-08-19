@@ -45,10 +45,8 @@ public class FailoverIT extends EdgeTestBase {
 
     @Autowired TestListeners.Pulse pulseListener;
     @Autowired IDataTagHandler tagHandler;
-    @Autowired
-    ConcreteController coldFailover;
-    @Autowired
-    Controller controllerProxy;
+    @Autowired ConcreteController coldFailover;
+    @Autowired Controller controllerProxy;
     @Autowired AppConfigProperties config;
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
@@ -70,7 +68,7 @@ public class FailoverIT extends EdgeTestBase {
 
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
-        log.info("############ SET UP ############");
+        log.info("############ SET UP ############");;
         config.setRedundancyMode(ColdFailover.class.getName());
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");

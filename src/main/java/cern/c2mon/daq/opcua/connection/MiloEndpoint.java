@@ -38,16 +38,12 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_LOST;
 import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.OK;
-import static cern.c2mon.daq.opcua.exceptions.CommunicationException.of;
 import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -62,7 +58,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
  * needed to execute all configured attempts. In this case, no retries are executed. {@link ConfigurationException}s are
  * never retried, and represent failures that require a configuration change to fix. {@link
  * EndpointDisconnectedException}s are never retried, as they indicate that a call is an asynchronously remaining
- * process of an endpoint that has been disconnected
+ * process of an endpoint that has been disconnected.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -70,7 +66,6 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @Primary
 @Scope(value = "prototype")
 public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscriptionManager.SubscriptionListener {
-    private static final String HOST_REGEX = "://[^/]*";
 
     /**
      * Shows the instance of disconnection. 0 denotes that the endpoint is currently connected to the server, -1 that
@@ -96,35 +91,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     @Value("#{@appConfigProperties.getQueueSize()}")
     private int queueSize;
 
-    /**
-     * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
-     * be resolved by the client. Replace the hostname of each endpoint's URL by the one used to originally reach the
-     * server to work around the issue.
-     * @param originalUri       the (resolvable) uri used to originally reach the server.
-     * @param originalEndpoints a list of originalEndpoints returned by the DiscoveryClient potentially containing
-     *                          incorrect endpointUrls
-     * @return a list of endpoints with the original url as as endpointUrl, but other identical to the
-     * originalEndpoints.
-     */
-    private static Collection<EndpointDescription> updateEndpointUrls(String originalUri, Collection<EndpointDescription> originalEndpoints) {
-        // Some hostnames contain characters not allowed in a URI, such as underscores in Windows machine hostnames.
-        // Therefore, parsing is done using a regular expression rather than relying on java URI class methods.
-
-        final Matcher matcher = Pattern.compile(HOST_REGEX).matcher(originalUri);
-        if (matcher.find()) {
-            return originalEndpoints.stream().map(e -> new EndpointDescription(
-                    e.getEndpointUrl().replaceAll(HOST_REGEX, matcher.group()),
-                    e.getServer(),
-                    e.getServerCertificate(),
-                    e.getSecurityMode(),
-                    e.getSecurityPolicyUri(),
-                    e.getUserIdentityTokens(),
-                    e.getTransportProfileUri(),
-                    e.getSecurityLevel()))
-                    .collect(toList());
-        }
-        return originalEndpoints;
-    }
+    @Value("#{@appConfigProperties.getRequestTimeout()}")
+    private long requestTimeout;
 
     /**
      * Connects to a server through the Milo OPC UA SDK. Discover available endpoints and select the most secure one in
@@ -140,22 +108,15 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     public void initialize(String uri) throws OPCUAException {
         this.uri = uri;
         disconnectedOn.set(0L);
-        try {
-            final Collection<EndpointDescription> endpoints = retryDelegate.completeOrRetry(CONNECT,
-                    this::getDisconnectPeriod,
-                    () -> DiscoveryClient.getEndpoints(uri));
-            final Collection<EndpointDescription> updatedEndpoints = updateEndpointUrls(uri, endpoints);
-            client = retryDelegate.completeOrRetry(CONNECT, this::getDisconnectPeriod,
-                    () -> securityModule.createClient(updatedEndpoints));
-            client.addSessionActivityListener(this);
-            sessionActivityListeners.add(this);
-            final OpcUaSubscriptionManager subscriptionManager = client.getSubscriptionManager();
-            subscriptionManager.addSubscriptionListener(this);
-            subscriptionManager.resumeDelivery();
-        } catch (CompletionException e) {
-            log.error("Error on connection to uri {}: ", uri, e);
-            throw of(CONNECT, e.getCause(), false);
-        }
+        final Collection<EndpointDescription> endpoints = retryDelegate.completeOrRetry(CONNECT,
+                this::getDisconnectPeriod,
+                () -> DiscoveryClient.getEndpoints(uri));
+        this.client = securityModule.createClient(uri, endpoints);
+        this.client.addSessionActivityListener(this);
+        sessionActivityListeners.add(this);
+        final OpcUaSubscriptionManager subscriptionManager = this.client.getSubscriptionManager();
+        subscriptionManager.addSubscriptionListener(this);
+        subscriptionManager.resumeDelivery();
     }
 
     /**

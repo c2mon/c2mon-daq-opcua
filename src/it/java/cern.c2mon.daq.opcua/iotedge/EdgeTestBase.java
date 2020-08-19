@@ -1,11 +1,13 @@
 package cern.c2mon.daq.opcua.iotedge;
 
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.ToxiproxyContainer;
@@ -24,6 +26,9 @@ public abstract class EdgeTestBase {
     private static final ToxiproxyContainer toxiProxyContainer;
     public static EdgeImage active;
     public static EdgeImage fallback;
+
+    @Autowired
+    protected AppConfigProperties config;
 
     static {
         toxiProxyContainer = new ToxiproxyContainer().withNetwork(network);

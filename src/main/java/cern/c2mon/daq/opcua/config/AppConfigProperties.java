@@ -123,6 +123,37 @@ public class AppConfigProperties {
      */
     private Map<String, Integer> certifierPriority;
 
+
+    /**
+     * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
+     * be resolved by the client. If "globalHostName" is set and an UnknownHostException is encountered on initial
+     * connection, the globalHostName will be appended or substituted at the respective endpointDescription URI
+     * depending on the value of "substitute".
+     * 0, 1, 2
+     */
+    private UriSubstitutionMode hostSubstitutionMode;
+
+    /**
+     * If an UnknownHostException is encountered on initial connection, the port given in respective endpointDescription
+     * URI will be replaced by "globalPort", if "substitutePort" is set.
+     */
+    private PortSubstitutionMode portSubstitutionMode;
+
+    /**
+     * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
+     * be resolved by the client. If "globalHostName" is set and an UnknownHostException is encountered on initial
+     * connection, the globalHostName will be appended or substituted at the respective endpointDescription URI
+     * depending on the value of "substitute".
+     */
+    private String globalHostName;
+
+    /**
+     * If an UnknownHostException is encountered on initial connection, the port given in respective endpointDescription
+     * URI will be replaced by "globalPort", if "substitutePort" is set.
+     */
+    private int globalPort;
+
+
     // Settings to create a certificate, and to request connection to the server
     private String applicationName;
     private String applicationUri;
@@ -151,6 +182,26 @@ public class AppConfigProperties {
         template.setRetryPolicy(retry);
         template.setBackOffPolicy(backoff);
         return template;
+    }
+
+    @AllArgsConstructor
+    enum UriSubstitutionMode {
+        NONE(false, false),
+        SUBSTITUTE_LOCAL(false, true),
+        APPEND_LOCAL(false, false),
+        SUBSTITUTE_GLOBAL(true, true),
+        APPEND_GLOBAL(true, false);
+        boolean global;
+        boolean substitute;
+    }
+
+    @AllArgsConstructor
+    public
+    enum PortSubstitutionMode {
+        NONE(false),
+        LOCAL(false),
+        GLOBAL(true);
+        boolean global;
     }
 
     /**

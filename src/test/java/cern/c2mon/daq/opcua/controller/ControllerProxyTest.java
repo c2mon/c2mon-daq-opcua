@@ -134,6 +134,19 @@ public class ControllerProxyTest {
     }
 
     @Test
+    public void controllerThatConcreteControllerAndBeanShouldInitializeConcreteController() throws OPCUAException {
+        config.setRedundancyMode(ColdFailover.class.getName());
+        expect(testEndpoint.getServerRedundancyNode().getRedundancySupport())
+                .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
+                .once();
+        mockFailoverInitialization(coldFailover, true);
+        replay(applicationContext, testEndpoint.getServerRedundancyNode(), noFailover);
+        proxy.connect(Arrays.asList("test", "test2"));
+        verify(noFailover);
+    }
+
+
+    @Test
     public void controllerThatIsNotBeanShouldInitializeNoFailover() throws OPCUAException {
         config.setRedundancyMode(BadController.class.getName());
         expect(testEndpoint.getServerRedundancyNode().getRedundancySupport())

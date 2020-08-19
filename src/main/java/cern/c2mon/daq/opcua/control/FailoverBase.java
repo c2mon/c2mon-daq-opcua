@@ -16,6 +16,8 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * An abstract base class of a controller that manages the connection to servers in a redundant server set and is
@@ -83,31 +85,30 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     }
 
     protected void monitoringCallback(UaMonitoredItem item) {
-        final NodeId nodeId = item.getReadValueId().getNodeId();
-        if (!stopped.get() && nodeId.equals(Identifiers.Server_ServiceLevel)) {
-            item.setValueConsumer(this::serviceLevelConsumer);
-        } else if (!stopped.get() && nodeId.equals(Identifiers.ServerState)) {
-            item.setValueConsumer(this::serverStateConsumer);
+        synchronized (stopped) {
+            if (!stopped.get()) {
+                final NodeId nodeId = item.getReadValueId().getNodeId();
+                Consumer<DataValue> valueConsumer = v -> {};
+                if (nodeId.equals(Identifiers.Server_ServiceLevel)) {
+                    valueConsumer = v -> serverSwitchConsumer(v, b -> b.compareTo(serviceLevelHealthLimit) < 0, UByte.class);
+                } else if (nodeId.equals(Identifiers.ServerState)) {
+                    valueConsumer = v -> serverSwitchConsumer(v, s -> !s.equals(ServerState.Running) && !s.equals(ServerState.Unknown), ServerState.class);
+                }
+                item.setValueConsumer(valueConsumer);
+            }
         }
     }
 
-    protected void serviceLevelConsumer(DataValue value) {
-        final Object level = value.getValue().getValue();
-        if (!(level instanceof UByte)) {
-            log.error("Received service Level update with of bad class {}.", level.getClass().getName());
-        } else if (((UByte) level).compareTo(serviceLevelHealthLimit) < 0) {
-            log.info("Service level is outside of the healthy range at {}. Switching server...", ((UByte) level).intValue());
-            triggerServerSwitch();
-        }
-    }
-
-    protected void serverStateConsumer(DataValue value) {
-        final Object state = value.getValue().getValue();
-        if (!(state instanceof ServerState)) {
-            log.error("Received server state update with of bad class {}.", state.getClass().getName());
-        } else if (!state.equals(ServerState.Running) && !state.equals(ServerState.Unknown)) {
-            log.info("Server entered state {}. Switching server...", ((ServerState)state).getValue());
-            triggerServerSwitch();
+    protected <T> void serverSwitchConsumer(DataValue value, Predicate<T> predicate, Class<T> type) {
+        final Object o = value.getValue().getValue();
+        if (o.getClass().isAssignableFrom(type)) {
+            final T update = type.cast(o);
+            if (predicate.test(update)) {
+                log.info("Update {} triggered a server switch...", update.toString());
+                triggerServerSwitch();
+            }
+        } else {
+            log.error("Received update for ServerSwitchConsumer for class {} with of class {}.", type.getName(), o.getClass().getName());
         }
     }
 

@@ -39,16 +39,11 @@ public class ReconnectionTimeIT extends EdgeTestBase {
 
     private static int instancesPerTest = 10;
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
-    @Autowired
-    TestListeners.Pulse pulseListener;
-    @Autowired
-    IDataTagHandler tagHandler;
-    @Autowired
-    ConcreteController coldFailover;
-    @Autowired
-    Controller controllerProxy;
-    @Autowired
-    AppConfigProperties config;
+    @Autowired TestListeners.Pulse pulseListener;
+    @Autowired IDataTagHandler tagHandler;
+    @Autowired ConcreteController coldFailover;
+    @Autowired Controller controllerProxy;
+    @Autowired AppConfigProperties config;
     private EdgeImage current;
 
     @BeforeEach

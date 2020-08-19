@@ -114,9 +114,12 @@ public class TestEndpoint implements Endpoint {
         if (throwExceptions) {
             throw toThrow == null ? new CommunicationException(CREATE_SUBSCRIPTION) : toThrow;
         }
-        executor.schedule(() -> definitions.forEach(definition -> itemCreationCallback.accept(monitoredItem)), delay == 0 ? 100 : delay, TimeUnit.MILLISECONDS);
 
-        return  definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> {
+        for (int i = 1; i <= definitions.size(); i++) {
+            executor.schedule(() -> itemCreationCallback.accept(monitoredItem), i * (delay == 0 ? 100 : delay), TimeUnit.MILLISECONDS);
+        }
+
+        return definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> {
             final StatusCode statusCode = monitoredItem.getStatusCode();
             return MiloMapper.getDataTagQuality(statusCode == null ? StatusCode.BAD : statusCode);
         }));

@@ -1,0 +1,171 @@
+package cern.c2mon.daq.opcua.config;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static cern.c2mon.daq.opcua.config.AppConfigProperties.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class UriModifierTest {
+
+    AppConfigProperties config;
+    UriModifier modifier;
+
+    String discovery = "http://discovery:3000/path";
+
+    @BeforeEach
+    public void setUp() {
+        config = builder()
+                .hostSubstitutionMode(UriSubstitutionMode.SUBSTITUTE_GLOBAL)
+                .globalHostName("test.tf")
+                .portSubstitutionMode(PortSubstitutionMode.GLOBAL)
+                .globalPort(20)
+                .build();
+        modifier = new UriModifier(config);
+    }
+
+    @Test
+    public void noSubstitutionAndNullHostConfiguredShouldReturnUnchanged() {
+        config.setHostSubstitutionMode(UriSubstitutionMode.NONE);
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "http://aaaa/path/query?test", "http://aaaa/path/query?test");
+    }
+
+    @Test
+    public void uriWithIllegalCharactersShouldReturnUnchanged() {
+        updateAndAssertEquals(discovery, "opc.tcp://!§\"$$§%\"!%", "opc.tcp://!§\"$$§%\"!%");
+    }
+
+    @Test
+    public void localNullShouldReturnNull() {
+        updateAndAssertEquals(discovery, null, null);
+    }
+
+    @Test
+    public void discoveryNullShouldReturnLocal() {
+        updateAndAssertEquals(null, "local", "local");
+    }
+
+    @Test
+    public void unsetGlobalUriShouldReturnLocal() {
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        config.setGlobalHostName(null);
+        updateAndAssertEquals(discovery, "http://aaaa/path/query?test", "http://aaaa/path/query?test");
+    }
+
+    @Test
+    public void hostShouldBeSubstitutedByGlobalUriIfConfigured() {
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "http://aaaa/path/query?test", "http://test.tf/path/query?test");
+    }
+    @Test
+    public void uriWithUnderscoreShouldBeRecognized() {
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "http://a_aaa/path/query?test", "http://test.tf/path/query?test");
+    }
+
+
+    @Test
+    public void substitutingSameHostShouldReturnLocal() {
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "http://test.tf/path/query?test", "http://test.tf/path/query?test");
+    }
+
+    @Test
+    public void longHostShouldBeSubstitutedIfConfigured() {
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "http://a.b.cde/path/query?test", "http://test.tf/path/query?test");
+    }
+
+    @Test
+    public void userShouldNotBeSubstituted() {
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "http://user@a.b.cde/path/query?test", "http://user@test.tf/path/query?test");
+    }
+
+    @Test
+    public void userWithPwdShouldNotBeSubstituted() {
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "http://user:pwd@a.b.cde/path/query?test", "http://user:pwd@test.tf/path/query?test");
+    }
+
+    @Test
+    public void globalHostShouldBeAppendedIfConfigured() {
+        config.setHostSubstitutionMode(UriSubstitutionMode.APPEND_GLOBAL);
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "http://aaaa/path/query?test", "http://aaaa.test.tf/path/query?test");
+    }
+
+    @Test
+    public void substitutingHostShouldBeSkippedIfEmpty() {
+        config.setGlobalHostName("");
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "opc.tcp://cccc:2000/path", "opc.tcp://cccc:2000/path");
+    }
+
+    @Test
+    public void substitutingHostShouldBeSkippedIfNull() {
+        config.setGlobalHostName(null);
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "opc.tcp://cccc:2000/path", "opc.tcp://cccc:2000/path");
+    }
+
+    @Test
+    public void portShouldBeReplacedIfConfigured() {
+        config.setHostSubstitutionMode(UriSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "opc.tcp://cccc:2000/path", "opc.tcp://cccc:20/path");
+    }
+
+    @Test
+    public void portShouldBeAddedIfNotPresent() {
+        config.setHostSubstitutionMode(UriSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "opc.tcp://cccc/path", "opc.tcp://cccc:20/path");
+    }
+
+
+    @Test
+    public void localPortShouldBeReplacedIfConfigured() {
+        config.setHostSubstitutionMode(UriSubstitutionMode.NONE);
+        config.setPortSubstitutionMode(PortSubstitutionMode.LOCAL);
+        updateAndAssertEquals(discovery, "opc.tcp://cccc:333/path", "opc.tcp://cccc:3000/path");
+    }
+
+    @Test
+    public void localPortShouldBeSkippedIfNotInURI() {
+        config.setHostSubstitutionMode(UriSubstitutionMode.NONE);
+        config.setPortSubstitutionMode(PortSubstitutionMode.LOCAL);
+        updateAndAssertEquals("opc.tcp://discovery/path", "opc.tcp://cccc/path", "opc.tcp://cccc/path");
+    }
+
+    @Test
+    public void localPortShouldRemainIfNotInDiscoveryURIButInLocalURI() {
+        config.setHostSubstitutionMode(UriSubstitutionMode.NONE);
+        config.setPortSubstitutionMode(PortSubstitutionMode.LOCAL);
+        updateAndAssertEquals("opc.tcp://discovery/path", "opc.tcp://cccc:2000/path", "opc.tcp://cccc:2000/path");
+    }
+
+
+    @Test
+    public void portAndHostShouldBeReplacedIfConfigured() {
+        updateAndAssertEquals(discovery, "opc.tcp://cccc:2000/path", "opc.tcp://test.tf:20/path");
+    }
+
+    @Test
+    public void discoveryHostShouldBeReplacedIfConfigured() {
+        config.setHostSubstitutionMode(UriSubstitutionMode.SUBSTITUTE_LOCAL);
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals(discovery, "opc.tcp://test.tf:2000/path", "opc.tcp://discovery:2000/path");
+    }
+
+    @Test
+    public void discoveryHostShouldBeSkippedIfMalformed() {
+        config.setHostSubstitutionMode(UriSubstitutionMode.SUBSTITUTE_LOCAL);
+        config.setPortSubstitutionMode(PortSubstitutionMode.NONE);
+        updateAndAssertEquals("baduri", "opc.tcp://test.tf:2000/path", "opc.tcp://test.tf:2000/path");
+    }
+
+    private void updateAndAssertEquals(String discovery, String local, String expected) {
+        final String global = modifier.updateEndpointUrl(discovery, local);
+        assertEquals(expected, global);
+    }
+}

@@ -92,11 +92,11 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      * @throws OPCUAException if the no connection could be established to any server
      */
     @Override
-    public void switchServers() throws OPCUAException {
-        if (!stopped.get()) {
-            if (activeEndpoint == null) {
-                throw new IllegalArgumentException("The Endpoint must be initialized!");
-            }
+    public void
+    switchServers() throws OPCUAException {
+        if (currentEndpoint() == null) {
+            log.error("Cannot switch server, the Endpoint must be initialized first.");
+        } else if (!stopped.get()) {
             log.info("Attempt to switch to next healthy server.");
             synchronized (stopped) {
                 activeEndpoint.disconnect();
@@ -145,7 +145,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             future = executor.schedule(() -> {
                 log.info("Trigger server switch due to long disconnection");
                 triggerServerSwitch();
-            }, config.getFailoverDelay(), TimeUnit.MILLISECONDS);
+                }, config.getFailoverDelay(), TimeUnit.MILLISECONDS);
         }
     }
 

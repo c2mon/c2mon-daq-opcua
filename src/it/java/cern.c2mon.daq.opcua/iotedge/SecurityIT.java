@@ -43,8 +43,7 @@ public class SecurityIT {
 
 
     @Autowired AppConfigProperties config;
-    @Autowired
-    Controller controllerProxy;
+    @Autowired Controller controllerProxy;
     @Autowired IDataTagHandler tagHandler;
     @Autowired TestListeners.Pulse listener;
 
@@ -63,7 +62,6 @@ public class SecurityIT {
         ReflectionTestUtils.setField(tagHandler, "controller", controllerProxy);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", listener);
-
         listener.reset();
     }
 
