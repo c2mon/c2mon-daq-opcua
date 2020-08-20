@@ -63,9 +63,8 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     @Override
     public void stop() {
         log.info("Disconnecting... ");
-
-            stopped.set(true);
-            listening.set(false);
+        stopped.set(true);
+        listening.set(false);
         super.stop();
     }
 
@@ -73,7 +72,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
         if (listening.getAndSet(false) && !stopped.get()) {
             currentEndpoint().setUpdateEquipmentStateOnSessionChanges(false);
             try {
-                config.exponentialDelayTemplate().execute(retryContext -> {
+                config.alwaysRetryTemplate().execute(retryContext -> {
                     log.info("Server switch attempt nr {}.", retryContext.getRetryCount());
                     switchServers();
                     return null;

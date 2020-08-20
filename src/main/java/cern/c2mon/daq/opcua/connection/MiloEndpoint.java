@@ -33,7 +33,6 @@ import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
-import org.springframework.retry.RetryCallback;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
@@ -78,7 +77,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private final MessageSender messageSender;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
-    private final RetryTemplate exponentialDelayTemplate;
+    private final RetryTemplate exceptionClassifierTemplate;
     private OpcUaClient client;
     private boolean updateEquipmentStateOnSessionChanges;
 
@@ -156,7 +155,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     @Override
     public void disconnect() {
         log.info("Disconnecting endpoint at {}", uri);
-
         if (client != null) {
             try {
                 client.getSubscriptionManager().clearSubscriptions();
@@ -207,10 +205,15 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     @Override
     public void recreateAllSubscriptions() throws CommunicationException {
-        boolean anySuccess = false;
-        for (SubscriptionGroup group : mapper.getGroups()) {
+        final Collection<SubscriptionGroup> groups = mapper.getGroups()
+                .stream()
+                .filter(g -> g.size() > 0)
+                .collect(toList());
+        boolean anySuccess = groups.isEmpty();
+        for (SubscriptionGroup group : groups) {
             try {
-                anySuccess = anySuccess || group.size() > 0 && resubscribeGroupsAndReportSuccess(group);
+                // if at least one group could be subscribed, the operation is considered to have been a success.
+                anySuccess = anySuccess || resubscribeGroupsAndReportSuccess(group);
             } catch (EndpointDisconnectedException e) {
                 log.debug("Failed with exception: ", e);
                 log.info("Session was closed, abort subscription recreation process.");
@@ -240,7 +243,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                                                                     Collection<ItemDefinition> definitions,
                                                                     Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
         UaSubscription subscription = getOrCreateSubscription(publishingInterval);
-        List<MonitoredItemCreateRequest> requests = definitions.stream().map(this::toMonitoredItemCreateRequest).collect(toList());
+        List<MonitoredItemCreateRequest> requests = definitions.stream()
+                .map(this::toMonitoredItemCreateRequest)
+                .collect(toList());
         return retryDelegate.completeOrRetry(CREATE_MONITORED_ITEM, this::getDisconnectPeriod,
                 () -> subscription.createMonitoredItems(TimestampsToReturn.Both, requests, (item, i) -> itemCreationCallback.accept(item)))
                 .stream()
@@ -293,7 +298,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
         final DataValue value = retryDelegate.completeOrRetry(READ, this::getDisconnectPeriod,
                 () -> client.readValue(0, TimestampsToReturn.Both, nodeId));
-        if (value.getSourceTime() == null || value.getStatusCode() == null) {
+        if (value == null) {
             throw new ConfigurationException(READ);
         }
         return new AbstractMap.SimpleEntry<>(
@@ -472,34 +477,18 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 log.error("Could not delete subscription. Proceed with recreation.", e);
             }
             try {
-                exponentialDelayTemplate.execute(recreateWithRetry(group));
+                exceptionClassifierTemplate.execute(retryContext -> {
+                    if (!resubscribeGroupsAndReportSuccess(group)) {
+                        throw new CommunicationException(CREATE_SUBSCRIPTION);
+                    }
+                    return null;
+                });
             } catch (OPCUAException e) {
-                log.error("Retry logic is not correctly configured! Retries ceased.", e);
+                log.error("Subscription recreation aborted: ", e);
             }
         } else {
             log.info("The subscription cannot be recreated, since it cannot be associated with any DataTags.");
         }
-    }
-
-    private RetryCallback<Object, OPCUAException> recreateWithRetry(SubscriptionGroup group) {
-        return retryContext -> {
-            log.info("Retry number {} to create subscription with publish interval {}.", retryContext.getRetryCount(), group.getPublishInterval());
-            if (disconnectedOn.get() < 0L || Thread.currentThread().isInterrupted()) {
-                log.info("Client was stopped, cease subscription recreation attempts.");
-            } else if (retryContext.getLastThrowable() != null && !(retryContext.getLastThrowable() instanceof CommunicationException)) {
-                log.error("Subscription recreation aborted due to an unexpected error: ", retryContext.getLastThrowable());
-            } else {
-                try {
-                    if (!resubscribeGroupsAndReportSuccess(group)) {
-                        throw new CommunicationException(CREATE_SUBSCRIPTION);
-                    }
-                } catch (EndpointDisconnectedException e) {
-                    log.debug("Failed with exception: ", e);
-                    log.info("Session was closed, abort subscription recreation process.");
-                }
-            }
-            return null;
-        };
     }
 
     private UaSubscription getOrCreateSubscription(int timeDeadband) throws OPCUAException {

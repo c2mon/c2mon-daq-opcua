@@ -1,6 +1,9 @@
 package cern.c2mon.daq.opcua.config;
 
 import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.EndpointDisconnectedException;
+import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,13 +11,17 @@ import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.retry.RetryPolicy;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.AlwaysRetryPolicy;
+import org.springframework.retry.policy.ExceptionClassifierRetryPolicy;
+import org.springframework.retry.policy.NeverRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This class contains configuration options regarding the OPC UA DAQ connection and certification options and
@@ -125,31 +132,28 @@ public class AppConfigProperties {
 
 
     /**
-     * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
-     * be resolved by the client. If "globalHostName" is set and an UnknownHostException is encountered on initial
-     * connection, the globalHostName will be appended or substituted at the respective endpointDescription URI
-     * depending on the value of "substitute".
-     * 0, 1, 2
+     * OPC UA servers are commonly configured to return a local host address in EndpointDescriptions returned on
+     * discovery that may not be resolvable to the client (e.g. "127.0.0.1" if the endpoint resides in the same server.
+     * Substituting the hostname allows administrators to handle such (mis-)configurations of the server. The DAQ may
+     * append or substitute another hostname, where "global" refers to the configured "globalHostName", while "local"
+     * uses the hostname within the address used for discovery.
      */
     private UriSubstitutionMode hostSubstitutionMode;
 
     /**
-     * If an UnknownHostException is encountered on initial connection, the port given in respective endpointDescription
-     * URI will be replaced by "globalPort", if "substitutePort" is set.
+     * As with the "hostSubstitutionMode", the port can be substituted by the one of the address used for discovery, or
+     * by the configured "globalPort".
      */
     private PortSubstitutionMode portSubstitutionMode;
 
     /**
-     * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
-     * be resolved by the client. If "globalHostName" is set and an UnknownHostException is encountered on initial
-     * connection, the globalHostName will be appended or substituted at the respective endpointDescription URI
-     * depending on the value of "substitute".
+     * The hostname to append of substitute if the "hostSubstitutionMode" is set to a global option. If the
+     * "hostSubstitutionMode" is global but the "globalHostName" is not set, then the host is not substituted.
      */
     private String globalHostName;
 
     /**
-     * If an UnknownHostException is encountered on initial connection, the port given in respective endpointDescription
-     * URI will be replaced by "globalPort", if "substitutePort" is set.
+     * The port to substitute if the "postSubstitutionMode" is GLOBAL.
      */
     private int globalPort;
 
@@ -167,12 +171,12 @@ public class AppConfigProperties {
     private PKIConfig pkiConfig = new PKIConfig();
 
     /**
-     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of 2 on every
-     * failed attempt up to a maximum of maxFailoverDelay.
+     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of retryDelay on every
+     * failed attempt up to a maximum of maxFailoverDelay. Method calls are repeated disregarding the type of exception.
      * @return the retry template.
      */
     @Bean
-    public RetryTemplate exponentialDelayTemplate() {
+    public RetryTemplate alwaysRetryTemplate() {
         AlwaysRetryPolicy retry = new AlwaysRetryPolicy();
         ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
         backoff.setMaxInterval(maxRetryDelay);
@@ -180,6 +184,30 @@ public class AppConfigProperties {
         backoff.setMultiplier(retryMultiplier);
         RetryTemplate template = new RetryTemplate();
         template.setRetryPolicy(retry);
+        template.setBackOffPolicy(backoff);
+        return template;
+    }
+
+    /**
+     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of 2 on every
+     * failed attempt up to a maximum of maxFailoverDelay.
+     * @return the retry template.
+     */
+    @Bean
+    public RetryTemplate exceptionClassifierTemplate() {
+        AlwaysRetryPolicy alwaysRetry = new AlwaysRetryPolicy();
+        final NeverRetryPolicy neverRetry = new NeverRetryPolicy();
+        final Map<Class<? extends Throwable>, RetryPolicy> policyMap = new ConcurrentHashMap<>();
+        policyMap.put(CommunicationException.class, alwaysRetry);
+        policyMap.put(OPCUAException.class, neverRetry);
+        final ExceptionClassifierRetryPolicy retryPolicy = new ExceptionClassifierRetryPolicy();
+        retryPolicy.setPolicyMap(policyMap);
+        ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
+        backoff.setMaxInterval(maxRetryDelay);
+        backoff.setInitialInterval(retryDelay);
+        backoff.setMultiplier(retryMultiplier);
+        RetryTemplate template = new RetryTemplate();
+        template.setRetryPolicy(retryPolicy);
         template.setBackOffPolicy(backoff);
         return template;
     }
@@ -197,12 +225,7 @@ public class AppConfigProperties {
 
     @AllArgsConstructor
     public
-    enum PortSubstitutionMode {
-        NONE(false),
-        LOCAL(false),
-        GLOBAL(true);
-        boolean global;
-    }
+    enum PortSubstitutionMode { NONE, LOCAL, GLOBAL}
 
     /**
      * Settings required to load an existing certificate from a keystore file

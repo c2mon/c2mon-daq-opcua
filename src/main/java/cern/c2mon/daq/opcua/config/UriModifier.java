@@ -78,10 +78,10 @@ public class UriModifier {
         final PortSubstitutionMode portMode = config.getPortSubstitutionMode();
         if (!portMode.equals(PortSubstitutionMode.NONE)) {
             String newPort = ":" + config.getGlobalPort();
-            if (!portMode.global && (!discoveryMatcher.find() || discoveryMatcher.group(3) == null)) {
+            if (portMode.equals(PortSubstitutionMode.LOCAL) && (!discoveryMatcher.find() || discoveryMatcher.group(3) == null)) {
                 log.info("Cannot find a port to substitute in the discovery URI. Skipping modification.");
                 return localUri;
-            } else if (!portMode.global) {
+            } else if (portMode.equals(PortSubstitutionMode.LOCAL)) {
                 newPort = discoveryMatcher.group(3);
             }
             if (localMatcher.find() && localMatcher.group(3) != null) {
