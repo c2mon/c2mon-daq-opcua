@@ -7,8 +7,8 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.security.Certifier;
-import com.google.common.collect.ImmutableMap;
 import io.netty.util.internal.StringUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
@@ -19,7 +19,6 @@ import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.security.DefaultTrustListManager;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -38,32 +37,15 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
  */
 @Component("securityModule")
 @Slf4j
+@RequiredArgsConstructor
 public class SecurityModule {
     private final AppConfigProperties config;
     private final UriModifier modifier;
-    private final Map<String, Certifier> key2Certifier;
+    private final Certifier loader;
+    private final Certifier generator;
+    private final Certifier noSecurity;
     private OpcUaClientConfigBuilder builder;
-
-    /**
-     * Creates a new SecurityModule instance and assigns the {@link Certifier} a priority depending on the
-     * configuration
-     * @param config     the up-to-date application properties containing information that shall be passed in initial
-     *                   connection to the server
-     * @param modifier the UriModifier to process the URLs contained in the {@link EndpointDescription} as configured.
-     * @param loader     the {@link Certifier} responsible for loading a certificate and keypair from local storage
-     * @param generator  the {@link Certifier} responsible for creating a new self-signed certificate and keypair
-     * @param noSecurity the {@link Certifier} responsible for establishing connection without security
-     */
-    @Autowired
-    public SecurityModule(AppConfigProperties config, UriModifier modifier, Certifier loader, Certifier generator, Certifier noSecurity) {
-        this.config = config;
-        this.modifier = modifier;
-        key2Certifier = ImmutableMap.<String, Certifier>builder()
-                .put("none", noSecurity)
-                .put("generate", generator)
-                .put("load", loader)
-                .build();
-    }
+    private final List<AppConfigProperties.CertifierMode> certifiers = new ArrayList<>();
 
     /**
      * Creates an {@link OpcUaClient} according to the configuration specified in {@link AppConfigProperties} and
@@ -86,11 +68,6 @@ public class SecurityModule {
                 .setRequestTimeout(uint(config.getRequestTimeout()))
                 .setCertificateValidator(getValidator());
 
-        List<String> certifiers = config.getCertifierPriority().entrySet().stream()
-                .sorted((o1, o2) -> -o1.getValue().compareTo(o2.getValue()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-
         // assure that endpointDescriptions are in a mutable list
         List<EndpointDescription> endpoints = endpointDescriptions.stream()
                 .map(e -> new EndpointDescription(
@@ -104,8 +81,9 @@ public class SecurityModule {
                         e.getSecurityLevel()))
                 .sorted(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed())
                 .collect(Collectors.toList());
+        sortCertifiers();
         try {
-            final OpcUaClient client = attemptConnection(certifiers, endpoints);
+            final OpcUaClient client = attemptConnection(endpoints);
             log.info("Connected successfully!");
             return client;
         } catch (Exception e) {
@@ -129,23 +107,46 @@ public class SecurityModule {
         throw new ConfigurationException(ExceptionContext.PKI_ERROR);
     }
 
-    private OpcUaClient attemptConnection(List<String> sortedCertifiers, List<EndpointDescription> mutableEndpoints) throws Exception {
+    private void sortCertifiers() {
+        if (config.getCertifierPriority() != null) {
+            certifiers.addAll(config.getCertifierPriority().entrySet().stream()
+                    .filter(e -> e.getValue() != 0)
+                    .sorted((o1, o2) -> -o1.getValue().compareTo(o2.getValue()))
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList()));
+        } else {
+            certifiers.add(AppConfigProperties.CertifierMode.NO_SECURITY);
+        }
+    }
+
+    private OpcUaClient attemptConnection(List<EndpointDescription> mutableEndpoints) throws Exception {
         OpcUaClient client = null;
-        final Iterator<String> i = sortedCertifiers.iterator();
-        while (i.hasNext()) {
-            final Certifier certifier = key2Certifier.get(i.next());
+        final Iterator<AppConfigProperties.CertifierMode> certifierIterator = certifiers.iterator();
+        while (certifierIterator.hasNext()) {
+            final Certifier certifier = getCertifierForMode(certifierIterator.next());
+            log.info("Attempt connection with Certifier '{}'! ", certifier.getClass().getName());
             try {
-                log.info("Attempt connection with Certifier '{}'! ", certifier.getClass().getName());
                 client = attemptConnectionWithCertifier(mutableEndpoints, certifier);
                 break;
             } catch (Exception e) {
                 log.info("Unable to connect with Certifier {}. Last encountered exception: ", certifier.getClass().getName(), e);
-                if (!i.hasNext()) {
+                if (!certifierIterator.hasNext()) {
                     throw e;
                 }
             }
         }
         return client;
+    }
+
+    private Certifier getCertifierForMode(AppConfigProperties.CertifierMode mode) {
+        switch (mode) {
+            case LOAD:
+                return loader;
+            case GENERATE:
+                return generator;
+            default:
+                return noSecurity;
+        }
     }
 
     private OpcUaClient attemptConnectionWithCertifier(List<EndpointDescription> endpoints, Certifier certifier) throws Exception {

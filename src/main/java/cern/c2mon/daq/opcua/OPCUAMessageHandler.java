@@ -1,19 +1,3 @@
-/******************************************************************************
- * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- *
- * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
- * C2MON is free software: you can redistribute it and/or modify it under the
- * terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation, either version 3 of the license.
- *
- * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
- * more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.EquipmentMessageHandler;
@@ -40,6 +24,7 @@ import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.jmx.export.annotation.ManagedResource;
 
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +37,7 @@ import java.util.concurrent.TimeUnit;
  * @author Andreas Lang, Nacho Vilches
  */
 @Slf4j
+@ManagedResource
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
 
     private Controller controller;
@@ -69,6 +55,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public void connectToDataSource() throws EqIOException {
+        log.info("Initializing the OPC UA DAQ");
         controller = getContext().getBean("controller", Controller.class);
         dataTagHandler = getContext().getBean(IDataTagHandler.class);
         commandTagHandler = getContext().getBean(CommandTagHandler.class);
@@ -87,22 +74,27 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         try {
             controller.connect(addresses);
         } catch (OPCUAException e) {
+            log.error("Connection failed with error: ", e);
             sender.confirmEquipmentStateIncorrect(MessageSender.EquipmentState.CONNECTION_FAILED.message);
             throw e;
         }
 
+        log.info("Subscribing to Tags {}", config.getSourceDataTags().values());
         dataTagHandler.subscribeTags(config.getSourceDataTags().values());
-        if (appConfigProperties.isAliveWriterEnabled()) {
-            try {
-                startAliveWriter(config);
-            } catch (ConfigurationException e) {
-                log.info("Proceeding without starting the Alive Writer.", e);
-            }
+
+        try {
+            log.info("Starting Alive Writer....");
+            startAliveWriter(config);
+        } catch (ConfigurationException e) {
+            log.info("Proceeding without starting the Alive Writer. Fallback to simple alive monitoring...", e);
+            aliveWriter.keepAliveMonitoring();
         }
+
         getEquipmentCommandHandler().setCommandRunner(this);
         getEquipmentConfigurationHandler().setDataTagChanger(dataTagChanger);
         getEquipmentConfigurationHandler().setCommandTagChanger(commandTagHandler);
         getEquipmentConfigurationHandler().setEquipmentConfigurationChanger(this);
+        log.info("OPC UA DAQ was initialized successfully!");
     }
 
     /**
@@ -110,11 +102,11 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public void disconnectFromDataSource() {
-        log.debug("disconnecting from OPC data source...");
+        log.info("Disconnecting from OPC data source...");
         dataTagHandler.reset();
         controller.stop();
         aliveWriter.stopWriter();
-        log.debug("disconnected");
+        log.info("Disconnected");
     }
 
     /** Triggers the refresh of all values directly from the OPC server. */
@@ -131,7 +123,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     public void refreshDataTag(final long dataTagId) {
         ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
         if (sourceDataTag == null) {
-            log.error("SourceDataTag with ID {} is unknown", dataTagId);
+            log.error("SourceDataTag with ID {} is unknown.", dataTagId);
         } else {
             dataTagHandler.refreshDataTag(sourceDataTag);
         }
@@ -151,9 +143,10 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         Long id = value.getId();
         ISourceCommandTag tag = getEquipmentConfiguration().getSourceCommandTag(id);
         if (tag == null) {
+            log.error("SourceCommandTagValue with ID {} is unknown.", id);
             throw new EqCommandTagException("Command tag with id '" + id + "' unknown!");
         }
-        log.debug("running command {} with value {}", id, value.getValue());
+        log.info("Running command {} with value {}", id, value.getValue());
         return commandTagHandler.runCommand(tag, value);
     }
 
@@ -168,27 +161,33 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public void onUpdateEquipmentConfiguration(final IEquipmentConfiguration newConfig, final IEquipmentConfiguration oldConfig, final ChangeReport changeReport) {
+        log.info("Updating the Equipment Configuration");
         changeReport.setState(CHANGE_STATE.PENDING);
         if (!newConfig.getAddress().equals(oldConfig.getAddress())) {
             restartDAQ(changeReport);
         } else {
+            log.info("Resubscribing DataTags");
             dataTagChanger.onUpdateEquipmentConfiguration(newConfig.getSourceDataTags().values(), oldConfig.getSourceDataTags().values(), changeReport);
             if ((newConfig.getAliveTagId() != oldConfig.getAliveTagId() || newConfig.getAliveTagInterval() != oldConfig.getAliveTagInterval())
                     && appConfigProperties.isAliveWriterEnabled()) {
                 try {
+                    aliveWriter.stopWriter();
                     startAliveWriter(newConfig);
                     changeReport.appendInfo("Alive Writer updated.");
                 } catch (ConfigurationException e) {
-                    log.error("Updating the Alive Writer failed:" , e);
+                    log.error("Updating the Alive Writer failed. Fallback to simple alive monitoring..." , e);
+                    aliveWriter.keepAliveMonitoring();
                     changeReport.appendError(e.getMessage());
                     changeReport.appendError("Proceeding without updating the AliveWriter");
                 }
             }
             changeReport.setState(CHANGE_STATE.SUCCESS);
         }
+        log.info("Finished the Equipment Configuration update!");
     }
 
     private void startAliveWriter(IEquipmentConfiguration config) throws ConfigurationException {
+        log.info("Starting Alive Writer...");
         if (aliveWriter == null) {
             aliveWriter = getContext().getBean(AliveWriter.class);
         }
@@ -204,6 +203,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     }
 
     private void restartDAQ(final ChangeReport changeReport) {
+        log.info("Restarting the DAQ...");
         try {
             changeReport.setState(CHANGE_STATE.REBOOT);
             synchronized (this) {
@@ -214,9 +214,11 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             changeReport.appendInfo("DAQ restarted.");
             changeReport.setState(CHANGE_STATE.SUCCESS);
         } catch (EqIOException e) {
+            log.error("Restart of the DAQ failed: ", e);
             changeReport.setState(CHANGE_STATE.FAIL);
             changeReport.appendError("Restart of DAQ failed.");
         } catch (InterruptedException e) {
+            log.error("Restart of the DAQ was interrupted.: ", e);
             changeReport.appendError("Restart delay interrupted. DAQ will not connect.");
             Thread.currentThread().interrupt();
             changeReport.setState(CHANGE_STATE.FAIL);

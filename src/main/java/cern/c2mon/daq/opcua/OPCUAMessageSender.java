@@ -35,7 +35,7 @@ public class OPCUAMessageSender implements MessageSender {
 
     @Override
     public void onTagInvalid(long tagId, final SourceDataTagQuality quality) {
-            this.sender.update(tagId, quality);
+        this.sender.update(tagId, quality);
     }
 
     @Override

@@ -1,18 +1,20 @@
 package cern.c2mon.daq.opcua.iotedge;
 
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
-import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import com.google.common.io.Files;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,7 +33,9 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.*;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static cern.c2mon.daq.opcua.config.AppConfigProperties.CertifierMode.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
 @SpringBootTest
@@ -68,9 +72,9 @@ public class SecurityIT {
     @AfterEach
     public void cleanUp() throws IOException, InterruptedException {
         config.setTrustAllServers(true);
-        config.getCertifierPriority().put("none", 1);
-        config.getCertifierPriority().put("generate", 2);
-        config.getCertifierPriority().put("load", 3);
+        config.getCertifierPriority().put(NO_SECURITY, 1);
+        config.getCertifierPriority().put(GENERATE, 2);
+        config.getCertifierPriority().put(LOAD, 3);
         cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
         final CompletableFuture<MessageSender.EquipmentState> f = listener.listen();
@@ -93,16 +97,16 @@ public class SecurityIT {
 
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
-        config.getCertifierPriority().remove("none");
-        config.getCertifierPriority().remove("load");
+        config.getCertifierPriority().remove(NO_SECURITY);
+        config.getCertifierPriority().remove(LOAD);
         final CompletableFuture<MessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
         assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
-        config.getCertifierPriority().remove("none");
-        config.getCertifierPriority().remove("generate");
+        config.getCertifierPriority().remove(NO_SECURITY);
+        config.getCertifierPriority().remove(GENERATE);
         final CompletableFuture<MessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
         assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
@@ -110,16 +114,16 @@ public class SecurityIT {
     @Test
     public void activeKeyChainValidatorShouldFail() {
         config.setTrustAllServers(false);
-        config.getCertifierPriority().remove("none");
-        config.getCertifierPriority().remove("generate");
+        config.getCertifierPriority().remove(NO_SECURITY);
+        config.getCertifierPriority().remove(GENERATE);
         assertThrows(CommunicationException.class, this::trustCertificatesOnServerAndConnect);
     }
 
     @Test
     public void serverCertificateInPkiFolderShouldSucceed() throws InterruptedException, OPCUAException, IOException, TimeoutException, ExecutionException {
         config.setTrustAllServers(false);
-        config.getCertifierPriority().remove("none");
-        config.getCertifierPriority().remove("generate");
+        config.getCertifierPriority().remove(NO_SECURITY);
+        config.getCertifierPriority().remove(GENERATE);
 
         try {
             trustCertificatesOnServerAndConnect();

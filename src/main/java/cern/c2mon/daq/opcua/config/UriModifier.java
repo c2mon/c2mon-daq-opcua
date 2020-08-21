@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static cern.c2mon.daq.opcua.config.AppConfigProperties.PortSubstitutionMode;
-import static cern.c2mon.daq.opcua.config.AppConfigProperties.UriSubstitutionMode;
+import static cern.c2mon.daq.opcua.config.AppConfigProperties.HostSubstitutionMode;
 
 @Slf4j
 @Component("uriModifier")
@@ -32,7 +32,7 @@ public class UriModifier {
     public String updateEndpointUrl(String discoveryUri, String localUri) {
         if (Stream.of(discoveryUri, localUri).anyMatch(StringUtil::isNullOrEmpty) ||
                 (config.getPortSubstitutionMode().equals(PortSubstitutionMode.NONE) &&
-                        config.getHostSubstitutionMode().equals(UriSubstitutionMode.NONE))) {
+                        config.getHostSubstitutionMode().equals(HostSubstitutionMode.NONE))) {
             return localUri;
         }
 
@@ -54,8 +54,8 @@ public class UriModifier {
     }
 
     private String substituteHost(String uri, Matcher localMatcher, Matcher discoveryMatcher) {
-        final UriSubstitutionMode hostMode = config.getHostSubstitutionMode();
-        if (hostMode.equals(UriSubstitutionMode.NONE)) {
+        final HostSubstitutionMode hostMode = config.getHostSubstitutionMode();
+        if (hostMode.equals(HostSubstitutionMode.NONE)) {
             return uri;
         }
         if (hostMode.global && StringUtil.isNullOrEmpty(config.getGlobalHostName())) {

@@ -7,7 +7,6 @@ import cern.c2mon.daq.opcua.exceptions.EndpointDisconnectedException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.testutils.TestController;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +18,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Slf4j
 @SpringBootTest
@@ -43,28 +44,28 @@ public class RetryFailoverIT {
         config.setRetryMultiplier(1);
         config.setRetryDelay(1L);
         testController.triggerRetryFailover();
-        Assertions.assertTrue(testController.getSwitchDone().isDone());
+        assertTrue(testController.getSwitchDone().isDone());
     }
 
     @Test
     public void endpointDisconnectedShouldBeRetried() throws InterruptedException {
         testController.setToThrow(new EndpointDisconnectedException(ExceptionContext.CREATE_SUBSCRIPTION));
         CompletableFuture.runAsync(() -> testController.triggerRetryFailover());
-        Assertions.assertTrue(testController.getServerSwitchLatch().await(2000L, TimeUnit.MILLISECONDS));
+        assertTrue(testController.getServerSwitchLatch().await(2000L, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void communicationExceptionShouldBeRetried() throws InterruptedException {
         testController.setToThrow(new CommunicationException(ExceptionContext.CREATE_SUBSCRIPTION));
         CompletableFuture.runAsync(() -> testController.triggerRetryFailover());
-        Assertions.assertTrue(testController.getServerSwitchLatch().await(2000L, TimeUnit.MILLISECONDS));
+        assertTrue(testController.getServerSwitchLatch().await(2000L, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void configurationExceptionShouldBeRetried() throws InterruptedException {
         testController.setToThrow(new ConfigurationException(ExceptionContext.CREATE_SUBSCRIPTION));
         CompletableFuture.runAsync(() -> testController.triggerRetryFailover());
-        Assertions.assertTrue(testController.getServerSwitchLatch().await(2000L, TimeUnit.MILLISECONDS));
+        assertTrue(testController.getServerSwitchLatch().await(2000L, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -72,6 +73,6 @@ public class RetryFailoverIT {
         testController.setToThrow(new ConfigurationException(ExceptionContext.CREATE_SUBSCRIPTION));
         testController.setStopped(true);
         testController.triggerRetryFailover();
-        Assertions.assertTrue(testController.getSwitchDone().isDone());
+        assertTrue(testController.getSwitchDone().isDone());
     }
 }

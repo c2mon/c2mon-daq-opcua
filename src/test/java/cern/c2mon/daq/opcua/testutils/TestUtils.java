@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.testutils;
 
 import cern.c2mon.daq.common.messaging.IProcessMessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.AppConfigProperties.CertifierMode;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -26,8 +27,10 @@ public abstract class TestUtils {
     public final static int TIMEOUT_REDUNDANCY = 2;
 
     public static AppConfigProperties createDefaultConfig() {
-        final ImmutableMap<String, Integer> certifierPriority = ImmutableMap.<String, Integer>builder()
-                .put("none", 3).put("generate", 2).put("load", 1).build();
+        final ImmutableMap<CertifierMode, Integer> certifierPriority = ImmutableMap.<CertifierMode, Integer>builder()
+                .put(CertifierMode.NO_SECURITY, 3)
+                .put(CertifierMode.GENERATE, 2)
+                .put(CertifierMode.LOAD, 1).build();
         return AppConfigProperties.builder()
                 .applicationName("c2mon-opcua-daq")
                 .applicationUri("urn:localhost:UA:C2MON")

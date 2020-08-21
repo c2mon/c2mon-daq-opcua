@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.config;
 
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.EndpointDisconnectedException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * optionally specific options for the respective certification option.
  */
 @Configuration
-@ConfigurationProperties(prefix = "app")
+@ConfigurationProperties(prefix = "c2mon.daq.opcua")
 @EnableRetry
 @Data
 @AllArgsConstructor
@@ -70,7 +69,7 @@ public class AppConfigProperties {
      * could not be transferred automatically, or a failed failover. In these cases, the time in between retries is
      * multiplied by retryMultiplier on every new failure, until reaching the maximum time of maxRetryDelay.
      */
-    private long retryDelay = 50000L;
+    private long retryDelay = 5000L;
 
     /**
      * The maximum delay when retrying to recreate a subscription which could not be transferred automatically, or a
@@ -86,7 +85,7 @@ public class AppConfigProperties {
     private long retryMultiplier = 2;
 
     /**
-     * The maximum amount of attempts to retry service calls
+     * The maximum amount of attempts to retry service calls.
      */
     private int maxRetryAttempts = 1;
 
@@ -124,21 +123,21 @@ public class AppConfigProperties {
 
     /**
      * Connection with a {@link cern.c2mon.daq.opcua.security.Certifier} associated with the element will be attempted
-     * in decreasing order of the associated value until successful. If the value is not given then that Certifier will
-     * not be used. The entries are: "none" : {@link cern.c2mon.daq.opcua.security.NoSecurityCertifier} "generate" :
-     * {@link cern.c2mon.daq.opcua.security.CertificateGenerator} "load" : {@link cern.c2mon.daq.opcua.security.CertificateLoader}
+     * in decreasing order of the associated value until successful. If the value is 0 then that Certifier will not be
+     * used. The entries are: "none" : {@link cern.c2mon.daq.opcua.security.NoSecurityCertifier} "generate" : {@link
+     * cern.c2mon.daq.opcua.security.CertificateGenerator} "load" : {@link cern.c2mon.daq.opcua.security.CertificateLoader}.
      */
-    private Map<String, Integer> certifierPriority;
+    private Map<CertifierMode, Integer> certifierPriority;
 
 
     /**
      * OPC UA servers are commonly configured to return a local host address in EndpointDescriptions returned on
-     * discovery that may not be resolvable to the client (e.g. "127.0.0.1" if the endpoint resides in the same server.
-     * Substituting the hostname allows administrators to handle such (mis-)configurations of the server. The DAQ may
-     * append or substitute another hostname, where "global" refers to the configured "globalHostName", while "local"
-     * uses the hostname within the address used for discovery.
+     * discovery that may not be resolvable to the client (e.g. "127.0.0.1", or "opc.tcp://server:50" instead of
+     * "opc.tcp://server.domain.ch:50".) Substituting the hostname allows administrators to handle such
+     * (mis-)configurations of the server. The DAQ may append or substitute another hostname, where "global" refers to
+     * the configured "globalHostName", while "local" uses the hostname within the address used for discovery.
      */
-    private UriSubstitutionMode hostSubstitutionMode;
+    private HostSubstitutionMode hostSubstitutionMode;
 
     /**
      * As with the "hostSubstitutionMode", the port can be substituted by the one of the address used for discovery, or
@@ -171,8 +170,9 @@ public class AppConfigProperties {
     private PKIConfig pkiConfig = new PKIConfig();
 
     /**
-     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of retryDelay on every
-     * failed attempt up to a maximum of maxFailoverDelay. Method calls are repeated disregarding the type of exception.
+     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of retryDelay
+     * on every failed attempt up to a maximum of maxFailoverDelay. Method calls are repeated disregarding the type of
+     * exception.
      * @return the retry template.
      */
     @Bean
@@ -213,7 +213,7 @@ public class AppConfigProperties {
     }
 
     @AllArgsConstructor
-    enum UriSubstitutionMode {
+    enum HostSubstitutionMode {
         NONE(false, false),
         SUBSTITUTE_LOCAL(false, true),
         APPEND_LOCAL(false, false),
@@ -223,9 +223,9 @@ public class AppConfigProperties {
         boolean substitute;
     }
 
-    @AllArgsConstructor
-    public
-    enum PortSubstitutionMode { NONE, LOCAL, GLOBAL}
+    enum PortSubstitutionMode {NONE, LOCAL, GLOBAL}
+
+    public enum CertifierMode {LOAD, GENERATE, NO_SECURITY}
 
     /**
      * Settings required to load an existing certificate from a keystore file

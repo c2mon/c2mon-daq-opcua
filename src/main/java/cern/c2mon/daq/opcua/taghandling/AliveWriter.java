@@ -22,11 +22,15 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -67,6 +71,23 @@ public class AliveWriter {
         } catch (ConfigurationException e) {
             log.error("The AliveTag cannot be started, please check the configuration.", e);
         }
+    }
+
+    public void keepAliveMonitoring() {
+        writeTime = 10000L;
+        log.info("Starting keepAliveMonitoring...");
+        writeAliveTask = executor.scheduleAtFixedRate(() -> {
+            try {
+                final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controllerProxy.read(Identifiers.Server_ServiceLevel);
+                if (read.getValue().isValid()) {
+                    messageSender.onAlive();
+                }
+            } catch (OPCUAException e) {
+                log.error("Exception during keepAliveMonitoring ", e);
+            }
+        }, writeTime, writeTime, TimeUnit.MILLISECONDS);
+
+
     }
 
     /**

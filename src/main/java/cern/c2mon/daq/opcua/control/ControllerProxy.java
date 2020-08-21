@@ -10,6 +10,7 @@ import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
@@ -54,6 +55,7 @@ public class ControllerProxy implements Controller {
      */
     @Override
     public void connect(Collection<String> serverAddresses) throws OPCUAException {
+        log.error("Attempting Connection to URIs {}.", StringUtils.join(serverAddresses, ","));
         String currentUri = establishInitialConnection(serverAddresses);
         log.info("Connection established to server at URI {}.", currentUri);
         String[] redundantUris = serverAddresses.stream()
