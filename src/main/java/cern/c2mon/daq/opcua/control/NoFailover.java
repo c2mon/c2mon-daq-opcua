@@ -3,6 +3,7 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -14,6 +15,7 @@ import java.util.List;
 @Slf4j
 @NoArgsConstructor
 @Component("noFailover")
+@ManagedResource
 public class NoFailover extends ControllerBase {
 
     /**

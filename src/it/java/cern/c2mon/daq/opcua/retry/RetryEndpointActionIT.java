@@ -31,7 +31,7 @@ public class RetryEndpointActionIT {
     @Autowired
     Endpoint endpoint;
 
-    @Value("${app.maxRetryAttempts}")
+    @Value("${c2mon.daq.opcua.maxRetryAttempts}")
     int maxRetryAttempts;
 
     OpcUaClient client = createMock(OpcUaClient.class);

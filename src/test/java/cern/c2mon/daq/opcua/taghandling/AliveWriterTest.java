@@ -49,34 +49,34 @@ public class AliveWriterTest {
         DataTagAddress tagAddress = new DataTagAddress(dip, 0, (short) 0, 0, 0, 2, true);
         aliveTag = new SourceDataTag((long) 1, "test", false, (short) 0, null, tagAddress);
 
-        aliveWriter.initialize(aliveTag, 2L);
+        aliveWriter.startAliveWriter(aliveTag, 2L);
         assertThrows(TimeoutException.class, () -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void writeAliveShouldNotifyListenerWithGoodStatusCode() {
         final CompletableFuture<Void> alive = listener.getAlive().get(0);
-        aliveWriter.initialize(aliveTag, 2L);
+        aliveWriter.startAliveWriter(aliveTag, 2L);
         assertDoesNotThrow(() -> alive.get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void exceptionInWriteAliveShouldNotNotifyListener() {
         testEndpoint.setThrowExceptions(true);
-        aliveWriter.initialize(aliveTag, 2L);
+        aliveWriter.startAliveWriter(aliveTag, 2L);
         assertThrows(TimeoutException.class, () -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void badStatusCodeShouldNotNotifyListener() {
         testEndpoint.setReturnGoodStatusCodes(false);
-        aliveWriter.initialize(aliveTag, 2L);
+        aliveWriter.startAliveWriter(aliveTag, 2L);
         assertThrows(TimeoutException.class, () -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void cancellingAliveWriterTwiceShouldDoNothing() {
-        aliveWriter.initialize(aliveTag, 2L);
+        aliveWriter.startAliveWriter(aliveTag, 2L);
         aliveWriter.stopWriter();
         assertDoesNotThrow(() -> aliveWriter.stopWriter());
     }

@@ -19,6 +19,7 @@ package cern.c2mon.daq.opcua.taghandling;
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
@@ -28,6 +29,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.springframework.jmx.export.annotation.ManagedOperation;
+import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -46,37 +49,57 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component("aliveWriter")
 @Slf4j
 @RequiredArgsConstructor
+@ManagedResource
 public class AliveWriter {
 
     private final Controller controllerProxy;
     private final MessageSender messageSender;
-    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     private final AtomicInteger writeCounter = new AtomicInteger(0);
+    private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> writeAliveTask;
     private long writeTime;
     private NodeId aliveTagAddress;
 
     /**
-     * Initializes the AliveWriter considering the given equipment Configuration. If no the writer is not enabled or no
-     * alive tag is specified, the aliveWriter is not started.
-     * @param aliveTag  the DataTag containing the Node acting as AliveTag
+     * Start the AliveWriter on the given aliveTag. If no the writer is not enabled or no alive tag is specified, a
+     * simple alive monitoring procedure is started instead which uses regular read operations to supervise the
+     * connection to the server.
+     * @param aliveTag         the DataTag containing the Node acting as AliveTag
      * @param aliveTagInterval the interval in which to write to the aliveTag
      */
-    public void initialize(ISourceDataTag aliveTag, long aliveTagInterval) {
-        writeTime = aliveTagInterval;
+    public void startAliveWriter(ISourceDataTag aliveTag, long aliveTagInterval) {
+        this.writeTime = aliveTagInterval;
         try {
             final ItemDefinition def = ItemDefinition.of(aliveTag);
             aliveTagAddress = def.getNodeId();
-            startWriter();
+            log.info("Starting Alive Writer...");
+            scheduleWriteTask(writeTime, () -> {
+                try {
+                    if (controllerProxy.write(aliveTagAddress, writeCounter.intValue())) {
+                        log.info("Written successfully to alive, sending AliveTag update.");
+                        messageSender.onAlive();
+                    }
+                    writeCounter.incrementAndGet();
+                    writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
+                } catch (OPCUAException e) {
+                    log.error("Error while writing alive. Retrying...", e);
+                }
+            });
         } catch (ConfigurationException e) {
             log.error("The AliveTag cannot be started, please check the configuration.", e);
+            startSimpleAliveMonitoring(writeTime);
         }
     }
 
-    public void keepAliveMonitoring() {
-        writeTime = 10000L;
-        log.info("Starting keepAliveMonitoring...");
-        writeAliveTask = executor.scheduleAtFixedRate(() -> {
+    /**
+     * Start a simple mechanism for updating the aliveTag using regular read operations to supervise the connection to
+     * the server.
+     * @param aliveTagInterval the interval during which to read from the aliveTag
+     */
+    @ManagedOperation
+    public void startSimpleAliveMonitoring(long aliveTagInterval) {
+        log.info("Starting simple alive monitoring procedure...");
+        scheduleWriteTask(aliveTagInterval, () -> {
             try {
                 final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controllerProxy.read(Identifiers.Server_ServiceLevel);
                 if (read.getValue().isValid()) {
@@ -85,40 +108,36 @@ public class AliveWriter {
             } catch (OPCUAException e) {
                 log.error("Exception during keepAliveMonitoring ", e);
             }
-        }, writeTime, writeTime, TimeUnit.MILLISECONDS);
-
-
+        });
     }
 
     /**
      * Stops the aliveWriter execution.
      */
+    @ManagedOperation
     public void stopWriter() {
-        if (writeAliveTask != null && !writeAliveTask.isCancelled()) {
-            log.info("Stopping OPCAliveWriter...");
-            writeAliveTask.cancel(false);
+        cancelTask();
+        executor.shutdown();
+    }
+
+    private void scheduleWriteTask(long writeTime, Runnable writeAliveTask) {
+        cancelTask();
+        // the AliveWriter may have been shutdown terminally via JMX. In this case the executor was stopped and must be recreated.
+        if (executor.isShutdown()) {
+            executor = Executors.newScheduledThreadPool(1);
+        }
+        this.writeTime = writeTime;
+        if (writeTime > 0L) {
+            this.writeAliveTask = executor.scheduleAtFixedRate(writeAliveTask, this.writeTime, this.writeTime, TimeUnit.MILLISECONDS);
+        } else {
+            log.error(ExceptionContext.BAD_ALIVE_TAG_INTERVAL.getMessage());
         }
     }
 
-    private void startWriter() {
-        stopWriter();
-        log.info("Starting OPCAliveWriter...");
-        writeAliveTask = executor.scheduleAtFixedRate(this::sendAlive, writeTime, writeTime, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Writes once to the server and increase the write value.
-     */
-    private void sendAlive() {
-        try {
-            if (controllerProxy.write(aliveTagAddress, writeCounter.intValue())) {
-                log.info("Written successfully to alive, sending AliveTag update.");
-                messageSender.onAlive();
-            }
-            writeCounter.incrementAndGet();
-            writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
-        } catch (OPCUAException e) {
-            log.error("Error while writing alive. Retrying...", e);
+    private void cancelTask() {
+        if (writeAliveTask != null && !writeAliveTask.isCancelled()) {
+            log.info("Stopping Alive Writer...");
+            writeAliveTask.cancel(false);
         }
     }
 }

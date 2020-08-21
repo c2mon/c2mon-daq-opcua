@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
+import org.springframework.jmx.export.annotation.ManagedOperation;
+import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -25,6 +27,7 @@ import java.util.concurrent.*;
  */
 @Slf4j
 @Component("coldFailover")
+@ManagedResource
 public class ColdFailover extends FailoverBase implements SessionActivityListener {
 
     private final Queue<String> redundantServers = new ConcurrentLinkedDeque<>();
@@ -92,6 +95,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      * @throws OPCUAException if the no connection could be established to any server
      */
     @Override
+    @ManagedOperation
     public void switchServers() throws OPCUAException {
         if (currentEndpoint() == null) {
             log.error("Cannot switch server, the Endpoint must be initialized first.");

@@ -79,15 +79,18 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             throw e;
         }
 
-        log.info("Subscribing to Tags {}", config.getSourceDataTags().values());
+        log.info("Subscribing to Tags...");
         dataTagHandler.subscribeTags(config.getSourceDataTags().values());
 
-        try {
-            log.info("Starting Alive Writer....");
-            startAliveWriter(config);
-        } catch (ConfigurationException e) {
-            log.info("Proceeding without starting the Alive Writer. Fallback to simple alive monitoring...", e);
-            aliveWriter.keepAliveMonitoring();
+        if (appConfigProperties.isAliveWriterEnabled()) {
+            try {
+                startAliveWriter(config);
+            } catch (ConfigurationException e) {
+                log.info("Proceeding without starting the Alive Writer. Fallback to simple alive monitoring...", e);
+                aliveWriter.startSimpleAliveMonitoring(config.getAliveTagInterval());
+            }
+        } else {
+            log.info("Alive Writer is disabled.");
         }
 
         getEquipmentCommandHandler().setCommandRunner(this);
@@ -171,14 +174,11 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             if ((newConfig.getAliveTagId() != oldConfig.getAliveTagId() || newConfig.getAliveTagInterval() != oldConfig.getAliveTagInterval())
                     && appConfigProperties.isAliveWriterEnabled()) {
                 try {
-                    aliveWriter.stopWriter();
                     startAliveWriter(newConfig);
                     changeReport.appendInfo("Alive Writer updated.");
                 } catch (ConfigurationException e) {
-                    log.error("Updating the Alive Writer failed. Fallback to simple alive monitoring..." , e);
-                    aliveWriter.keepAliveMonitoring();
+                    log.error("Updating the Alive Writer failed." , e);
                     changeReport.appendError(e.getMessage());
-                    changeReport.appendError("Proceeding without updating the AliveWriter");
                 }
             }
             changeReport.setState(CHANGE_STATE.SUCCESS);
@@ -187,7 +187,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     }
 
     private void startAliveWriter(IEquipmentConfiguration config) throws ConfigurationException {
-        log.info("Starting Alive Writer...");
         if (aliveWriter == null) {
             aliveWriter = getContext().getBean(AliveWriter.class);
         }
@@ -199,7 +198,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         if (aliveTag == null) {
             throw new ConfigurationException(ExceptionContext.BAD_ALIVE_TAG);
         }
-        aliveWriter.initialize(aliveTag, aliveTagInterval);
+        aliveWriter.startAliveWriter(aliveTag, aliveTagInterval);
     }
 
     private void restartDAQ(final ChangeReport changeReport) {

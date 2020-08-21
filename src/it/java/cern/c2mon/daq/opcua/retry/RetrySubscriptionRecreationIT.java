@@ -42,7 +42,7 @@ public class RetrySubscriptionRecreationIT {
     @Autowired
     TagSubscriptionMapper mapper;
     @Autowired UaSubscriptionManager.SubscriptionListener endpoint;
-    @Value("${app.retryDelay}") int delay;
+    @Value("${c2mon.daq.opcua.retryDelay}") int delay;
 
     private final OpcUaClient clientMock = createNiceMock(OpcUaClient.class);
     private final UaSubscription subscriptionMock = createNiceMock(UaSubscription.class);

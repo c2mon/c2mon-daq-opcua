@@ -55,6 +55,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     @Override
     protected void beforeTest() throws Exception {
         appConfigProperties.setRetryDelay(0);
+        appConfigProperties.setAliveWriterEnabled(true);
         handler = (OPCUAMessageHandler) msgHandler;
         handler.setContext(context);
 

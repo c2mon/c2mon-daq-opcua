@@ -18,6 +18,7 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -33,6 +34,7 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 @Component(value = "controller")
 @Primary
+@ManagedResource
 public class ControllerProxy implements Controller {
     protected final ApplicationContext appContext;
     protected final AppConfigProperties config;
