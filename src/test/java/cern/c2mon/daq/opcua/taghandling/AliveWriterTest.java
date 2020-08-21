@@ -44,13 +44,13 @@ public class AliveWriterTest {
     }
 
     @Test
-    public void aliveWriterShouldNotStartOnInvalidAliveTagAddress() {
+    public void aliveWriterShouldFallbackToSimpleMonitoringProceedureOn() {
         final HardwareAddress dip = new DIPHardwareAddressImpl("bad address type");
         DataTagAddress tagAddress = new DataTagAddress(dip, 0, (short) 0, 0, 0, 2, true);
         aliveTag = new SourceDataTag((long) 1, "test", false, (short) 0, null, tagAddress);
 
         aliveWriter.startAliveWriter(aliveTag, 2L);
-        assertThrows(TimeoutException.class, () -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
     }
 
     @Test

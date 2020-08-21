@@ -86,7 +86,7 @@ public class AliveWriter {
                 }
             });
         } catch (ConfigurationException e) {
-            log.error("The AliveTag cannot be started, please check the configuration.", e);
+            log.error("Error starting the AliveWriter. Please check the configuration.", e);
             startSimpleAliveMonitoring(writeTime);
         }
     }
