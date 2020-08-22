@@ -77,7 +77,7 @@ public class DataTagChanger implements IDataTagChanger {
      */
     @Override
     public void onAddDataTag(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        log.info("Adding data tag {}", sourceDataTag);
+        log.info("Adding data tag {} with ID {}.", sourceDataTag.getName(), sourceDataTag.getId());
         addAndReport(sourceDataTag, changeReport);
     }
 
@@ -89,7 +89,7 @@ public class DataTagChanger implements IDataTagChanger {
      */
     @Override
     public void onRemoveDataTag(final ISourceDataTag sourceDataTag, final ChangeReport changeReport) {
-        log.info("Removing data tag {}", sourceDataTag);
+        log.info("Removing data tag {} with ID {}.", sourceDataTag.getName(), sourceDataTag.getId());
         removeAndReport(sourceDataTag, changeReport);
     }
 
@@ -103,7 +103,7 @@ public class DataTagChanger implements IDataTagChanger {
      */
     @Override
     public void onUpdateDataTag(final ISourceDataTag sourceDataTag, final ISourceDataTag oldSourceDataTag, final ChangeReport changeReport) {
-        log.info("Updating data tag {} to {}", oldSourceDataTag, sourceDataTag);
+        log.info("Updating data tag {}  with ID {}.", oldSourceDataTag.getName(), oldSourceDataTag.getId());
         if (sourceDataTag.getHardwareAddress().equals(oldSourceDataTag.getHardwareAddress())) {
             applyToReport.apply(true, "The new and old sourceDataTags have the same hardware address, no update was required.", changeReport);
         } else {

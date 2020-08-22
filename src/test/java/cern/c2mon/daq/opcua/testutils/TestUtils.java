@@ -47,7 +47,6 @@ public abstract class TestUtils {
                 .pkiConfig(new AppConfigProperties.PKIConfig("", ""))
                 .retryDelay(2000)
                 .restartDelay(500L)
-                .aliveWriterEnabled(false)
                 .build();
     }
 
