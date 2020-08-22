@@ -31,9 +31,9 @@ import java.util.concurrent.*;
 public class ColdFailover extends FailoverBase implements SessionActivityListener {
 
     private final Queue<String> redundantServers = new ConcurrentLinkedDeque<>();
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private String currentUri;
     private Endpoint activeEndpoint;
-    private ScheduledExecutorService executor;
     private ScheduledFuture<?> future;
 
     /**
@@ -60,7 +60,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         }
         activeEndpoint = endpoint;
         this.currentUri = activeEndpoint.getUri();
-        executor = Executors.newSingleThreadScheduledExecutor();
         redundantServers.addAll(Arrays.asList(redundantAddresses));
         log.info("Initialized endpoint {} with redundant addresses {}.", endpoint.getUri(), redundantServers);
         redundantServers.add(currentUri);

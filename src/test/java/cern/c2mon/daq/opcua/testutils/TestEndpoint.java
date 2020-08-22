@@ -58,6 +58,7 @@ public class TestEndpoint implements Endpoint {
     Object readValue = 0;
     CountDownLatch initLatch;
     CountDownLatch readLatch;
+    CountDownLatch subscribeLatch;
 
     public TestEndpoint(MessageSender sender, TagSubscriptionReader mapper) {
         this.messageSender = sender;
@@ -114,14 +115,15 @@ public class TestEndpoint implements Endpoint {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        if (subscribeLatch != null) {
+            subscribeLatch.countDown();
+        }
         if (throwExceptions) {
             throw toThrow == null ? new CommunicationException(CREATE_SUBSCRIPTION) : toThrow;
         }
-
         for (int i = 1; i <= definitions.size(); i++) {
             executor.schedule(() -> itemCreationCallback.accept(monitoredItem), i * (delay == 0 ? 100 : delay), TimeUnit.MILLISECONDS);
         }
-
         return definitions.stream().collect(Collectors.toMap(ItemDefinition::getClientHandle, c -> {
             final StatusCode statusCode = monitoredItem.getStatusCode();
             return MiloMapper.getDataTagQuality(statusCode == null ? StatusCode.BAD : statusCode);

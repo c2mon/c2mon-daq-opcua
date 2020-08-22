@@ -81,6 +81,8 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
                 log.error("Retry logic is not correctly configured! Retries ceased.", e);
             }
             listening.set(true);
+        } else if (!stopped.get()) {
+            log.info("Failover is already in process.");
         }
     }
 

@@ -21,6 +21,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -42,6 +43,7 @@ public class ColdFailoverTest {
     AppConfigProperties config;
     CountDownLatch initLatch;
     CountDownLatch readLatch;
+    CountDownLatch subscribeLatch;
     Capture<Consumer<DataValue>> serviceLevel;
     Capture<Consumer<DataValue>> serverState;
 
@@ -52,6 +54,7 @@ public class ColdFailoverTest {
 
         readLatch = new CountDownLatch(1);
         initLatch = new CountDownLatch(2);
+        subscribeLatch = new CountDownLatch(2);
         config = TestUtils.createDefaultConfig();
         coldFailover = new ColdFailover(config);
         endpoint = new TestEndpoint(listener, new TagSubscriptionMapper());
@@ -59,6 +62,12 @@ public class ColdFailoverTest {
         endpoint.setThrowExceptions(false);
         endpoint.setInitLatch(initLatch);
         endpoint.setReadLatch(readLatch);
+        endpoint.setSubscribeLatch(subscribeLatch);
+    }
+
+    @AfterEach
+    public void cleanUp() {
+        coldFailover.stop();
     }
 
     @Test
@@ -114,7 +123,7 @@ public class ColdFailoverTest {
     public void endpointDisconnectedExceptionShouldNotThrowException() throws InterruptedException, TimeoutException, ExecutionException {
         endpoint.setToThrow(new EndpointDisconnectedException(ExceptionContext.READ));
         final CompletableFuture<Void> f = runAsync(() -> assertDoesNotThrow((Executable) this::setupConnectionMonitoring));
-        synchronized (endpoint.getReadLatch()) {
+        synchronized (endpoint.getSubscribeLatch()) {
             readLatch.await(300L, TimeUnit.MILLISECONDS);
             endpoint.setThrowExceptions(true);
         }
