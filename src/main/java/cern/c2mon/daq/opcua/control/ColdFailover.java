@@ -3,7 +3,6 @@ package cern.c2mon.daq.opcua.control;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.EndpointDisconnectedException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.extern.slf4j.Slf4j;
@@ -203,11 +202,7 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
             log.info("Setting up monitoring");
             activeEndpoint.setUpdateEquipmentStateOnSessionChanges(true);
             activeEndpoint.manageSessionActivityListener(true, this);
-            try {
-                activeEndpoint.subscribeWithCallback(config.getConnectionMonitoringRate(), connectionMonitoringNodes, this::monitoringCallback);
-            } catch (EndpointDisconnectedException e) {
-                log.info("Session was closed, abort setting up connection monitoring.");
-            }
+            activeEndpoint.subscribeWithCallback(config.getConnectionMonitoringRate(), connectionMonitoringNodes, this::monitoringCallback);
         }
     }
 }

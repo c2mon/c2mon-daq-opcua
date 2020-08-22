@@ -58,7 +58,7 @@ public class TestEndpoint implements Endpoint {
     Object readValue = 0;
     CountDownLatch initLatch;
     CountDownLatch readLatch;
-    CountDownLatch subscribeLatch;
+
 
     public TestEndpoint(MessageSender sender, TagSubscriptionReader mapper) {
         this.messageSender = sender;
@@ -114,9 +114,6 @@ public class TestEndpoint implements Endpoint {
             TimeUnit.MILLISECONDS.sleep(delay);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        }
-        if (subscribeLatch != null) {
-            subscribeLatch.countDown();
         }
         if (throwExceptions) {
             throw toThrow == null ? new CommunicationException(CREATE_SUBSCRIPTION) : toThrow;

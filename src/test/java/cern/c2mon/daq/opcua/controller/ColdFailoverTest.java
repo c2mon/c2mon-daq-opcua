@@ -4,7 +4,6 @@ import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.ColdFailover;
 import cern.c2mon.daq.opcua.control.FailoverMode;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.EndpointDisconnectedException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
@@ -24,7 +23,6 @@ import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.Arrays;
 import java.util.concurrent.*;
@@ -43,7 +41,6 @@ public class ColdFailoverTest {
     AppConfigProperties config;
     CountDownLatch initLatch;
     CountDownLatch readLatch;
-    CountDownLatch subscribeLatch;
     Capture<Consumer<DataValue>> serviceLevel;
     Capture<Consumer<DataValue>> serverState;
 
@@ -54,7 +51,6 @@ public class ColdFailoverTest {
 
         readLatch = new CountDownLatch(1);
         initLatch = new CountDownLatch(2);
-        subscribeLatch = new CountDownLatch(2);
         config = TestUtils.createDefaultConfig();
         coldFailover = new ColdFailover(config);
         endpoint = new TestEndpoint(listener, new TagSubscriptionMapper());
@@ -62,7 +58,6 @@ public class ColdFailoverTest {
         endpoint.setThrowExceptions(false);
         endpoint.setInitLatch(initLatch);
         endpoint.setReadLatch(readLatch);
-        endpoint.setSubscribeLatch(subscribeLatch);
     }
 
     @AfterEach
@@ -117,17 +112,6 @@ public class ColdFailoverTest {
             coldFailover.stop();
         }
         verify(endpoint.getMonitoredItem());
-    }
-
-    @Test
-    public void endpointDisconnectedExceptionShouldNotThrowException() throws InterruptedException, TimeoutException, ExecutionException {
-        endpoint.setToThrow(new EndpointDisconnectedException(ExceptionContext.READ));
-        final CompletableFuture<Void> f = runAsync(() -> assertDoesNotThrow((Executable) this::setupConnectionMonitoring));
-        synchronized (endpoint.getSubscribeLatch()) {
-            readLatch.await(300L, TimeUnit.MILLISECONDS);
-            endpoint.setThrowExceptions(true);
-        }
-        f.get(1000L, TimeUnit.MILLISECONDS);
     }
 
     @Test
@@ -284,6 +268,7 @@ public class ColdFailoverTest {
         waitForConsumerCapture(serviceLevel);
         initLatch = new CountDownLatch(2);
         endpoint.setInitLatch(initLatch);
+        endpoint.setDelay(100L);
         CompletableFuture.runAsync(() -> serviceLevel.getValue().accept(new DataValue(new Variant(UByte.valueOf(10)))));
         CompletableFuture.runAsync(() -> serviceLevel.getValue().accept(new DataValue(new Variant(UByte.valueOf(10)))));
         assertFalse(initLatch.await(200L, TimeUnit.MILLISECONDS));

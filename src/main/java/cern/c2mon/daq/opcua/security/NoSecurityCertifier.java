@@ -53,7 +53,7 @@ public class NoSecurityCertifier implements Certifier {
     }
 
     /**
-     * An endpoint can be certified if it's {@link org.eclipse.milo.opcua.stack.core.security.SecurityPolicy} and its
+     * An endpoint can be certified if its {@link org.eclipse.milo.opcua.stack.core.security.SecurityPolicy} and its
      * {@link org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode} are None.
      * @param endpoint the endpoint to check.
      * @return whether it's possible to connect to the endpoint without security.
