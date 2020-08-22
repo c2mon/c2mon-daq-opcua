@@ -212,8 +212,18 @@ public class AppConfigProperties {
         return template;
     }
 
+    /**
+     * Describes the modes offered by the OPC UA DAQ to modify the hostname in the address returned by the server with
+     * the EndpointDescriptions on initial discovery. Possible modes are:
+     * NONE:              Don't modify the hostname
+     * SUBSTITUTE_LOCAL:  Substitute the hostname in the EndpointDescription URI with the one used for discovery
+     * APPEND_LOCAL:      Append the hostname of the address used for discovery to the one returned in the EndpointDescription
+     *                    URI, separated with a dot '.'
+     * SUBSTITUTE_GLOBAL: Substitute the hostname in the EndpointDescription URI with the "globalHostName"
+     * APPEND_GLOBAL:     Append the "globalHostName" to thehostname in the EndpointDescription URI
+     */
     @AllArgsConstructor
-    enum HostSubstitutionMode {
+    public enum HostSubstitutionMode {
         NONE(false, false),
         SUBSTITUTE_LOCAL(false, true),
         APPEND_LOCAL(false, false),
@@ -223,8 +233,21 @@ public class AppConfigProperties {
         boolean substitute;
     }
 
-    enum PortSubstitutionMode {NONE, LOCAL, GLOBAL}
+    /**
+     * Describes the modes offered by the OPC UA DAQ to substitute the port references in the address returned by the
+     * server with the EndpointDescriptions on initial discovery. Possible modes are:
+     * NONE:   Don't modify the port
+     * LOCAL:  Substitute the port in the EndpointDescription URI with the one of the address used for discovery (if
+     *         stated)
+     * GLOBAL: Substitute the port in the EndpointDescription URI with the "globalPort".
+     */
+    public enum PortSubstitutionMode {NONE, LOCAL, GLOBAL}
 
+    /**
+     * Describes the three modes of certifying a connection request offered by the OPC UA DAQ: using a  certificate
+     * loaded from the local storage for connection, generating a self-signed certificate and attempting connection, or
+     * connecting without signing or encrypting traffic.
+     */
     public enum CertifierMode {LOAD, GENERATE, NO_SECURITY}
 
     /**

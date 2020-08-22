@@ -1,19 +1,3 @@
-/******************************************************************************
- * Copyright (C) 2010-2016 CERN. All rights not expressly granted are reserved.
- *
- * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
- * C2MON is free software: you can redistribute it and/or modify it under the
- * terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation, either version 3 of the license.
- *
- * C2MON is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
- * more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with C2MON. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.MessageSender;
@@ -58,7 +42,7 @@ public class AliveWriter {
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> writeAliveTask;
     private NodeId aliveTagAddress;
-    private Runnable writeAliveRunnable = null;
+    private Runnable writeAliveRunnable = this::simpleAliveMonitoring;
 
     /**
      * Start the AliveWriter on the given aliveTag. If no the writer is not enabled or no alive tag is specified, a
@@ -75,6 +59,7 @@ public class AliveWriter {
             writeAliveRunnable = this::aliveTagMonitoring;
         } catch (ConfigurationException e) {
             log.error("Error starting the AliveWriter. Please check the configuration.", e);
+            log.info("Fall back to simple alive monitoring procedure...");
         }
         startAliveWriter(aliveTagInterval);
     }
@@ -85,10 +70,6 @@ public class AliveWriter {
      */
     @ManagedOperation
     public void startAliveWriter(long aliveTagInterval) {
-        if (writeAliveRunnable == null) {
-            log.info("Fall back to simple alive monitoring procedure...");
-            writeAliveRunnable = this::simpleAliveMonitoring;
-        }
         scheduleWriteTask(aliveTagInterval, writeAliveRunnable);
     }
 

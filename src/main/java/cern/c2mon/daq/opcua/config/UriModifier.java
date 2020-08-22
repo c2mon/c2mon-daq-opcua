@@ -25,6 +25,7 @@ public class UriModifier {
      * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
      * be resolved by the client. Replace the hostname of each endpoint's URI by the one used to originally reach the
      * server to work around the issue.
+     * @param discoveryUri the URI used for discovering the server
      * @param localUri the URI with local hostnames to change as configured.
      * @return The URI updated according to the policies in config. If no modifications are configured or the URI could
      * not be modified, the localUri is returned without modification.

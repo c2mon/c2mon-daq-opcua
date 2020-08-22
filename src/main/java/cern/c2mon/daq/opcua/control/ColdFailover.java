@@ -138,15 +138,14 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
      */
     @Override
     public void onSessionInactive(UaSession session) {
-        if (config.getFailoverDelay() >= 0 && listening.get() && !stopped.get()) {
-            if (future == null || future.isCancelled()) {
+        boolean failoverInProcess = !listening.get() || future == null || future.isCancelled();
+        if (config.getFailoverDelay() >= 0 && failoverInProcess && !stopped.get()) {
                 log.info("Starting timeout on inactive session.");
                 future = executor.schedule(() -> {
                     log.info("Trigger server switch due to long disconnection");
                     triggerServerSwitch();
                 }, config.getFailoverDelay(), TimeUnit.MILLISECONDS);
             }
-        }
     }
 
     @Override

@@ -25,7 +25,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
@@ -54,11 +53,12 @@ public class SecurityModule {
      * this is not possible and on-the-fly certificate generation is enabled, self-signed certificates will be generated
      * to attempt connection with appropriate endpointDescriptions. Connection with an insecure endpoint are attempted only if this
      * is not possible either and the option is allowed in the configuration.
+     * @param discoveryUri the URI used for discovering the server
      * @param endpointDescriptions A list of endpointDescriptions of which to connect to one.
-     * @return An {@link CompletableFuture} containing the {@link OpcUaClient} object that is connected to one of the
-     * endpointDescriptions, or an exception that caused a failure in establishing a secure channel. That exception may be type
-     * {@link ConfigurationException} if the connection failed due to a configuration issue, and of type {@link
-     * CommunicationException} if the connection attempt failed for reasons unrelated to configuration, where a retry
+     * @return The {@link OpcUaClient} object that is connected to one of the
+     * @throws OPCUAException if a failure occurred when establishing a secure channel. That exception may be type
+     * {@link ConfigurationException} if the connection failed due to a configuration issue, or of type {@link
+     * CommunicationException} if the connection attempt failed for reasons unrelated to configuration where a retry
      * may be fruitful.
      */
     public OpcUaClient createClient(String discoveryUri, Collection<EndpointDescription> endpointDescriptions) throws OPCUAException {
@@ -82,13 +82,7 @@ public class SecurityModule {
                 .sorted(Comparator.comparing(EndpointDescription::getSecurityLevel).reversed())
                 .collect(Collectors.toList());
         sortCertifiers();
-        try {
-            final OpcUaClient client = attemptConnection(endpoints);
-            log.info("Connected successfully!");
-            return client;
-        } catch (Exception e) {
-            throw OPCUAException.of(ExceptionContext.AUTH_ERROR, e, false);
-        }
+        return attemptConnection(endpoints);
     }
 
     private ClientCertificateValidator getValidator() throws ConfigurationException {
@@ -111,7 +105,7 @@ public class SecurityModule {
         if (config.getCertifierPriority() != null) {
             certifiers.addAll(config.getCertifierPriority().entrySet().stream()
                     .filter(e -> e.getValue() != 0)
-                    .sorted((o1, o2) -> -o1.getValue().compareTo(o2.getValue()))
+                    .sorted((o1, o2) -> Integer.compare(o2.getValue(), o1.getValue()))
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList()));
         } else {
@@ -119,7 +113,7 @@ public class SecurityModule {
         }
     }
 
-    private OpcUaClient attemptConnection(List<EndpointDescription> mutableEndpoints) throws Exception {
+    private OpcUaClient attemptConnection(List<EndpointDescription> mutableEndpoints) throws OPCUAException {
         OpcUaClient client = null;
         final Iterator<AppConfigProperties.CertifierMode> certifierIterator = certifiers.iterator();
         while (certifierIterator.hasNext()) {
@@ -128,7 +122,7 @@ public class SecurityModule {
             try {
                 client = attemptConnectionWithCertifier(mutableEndpoints, certifier);
                 break;
-            } catch (Exception e) {
+            } catch (OPCUAException e) {
                 log.info("Unable to connect with Certifier {}. Last encountered exception: ", certifier.getClass().getName(), e);
                 if (!certifierIterator.hasNext()) {
                     throw e;
@@ -149,8 +143,8 @@ public class SecurityModule {
         }
     }
 
-    private OpcUaClient attemptConnectionWithCertifier(List<EndpointDescription> endpoints, Certifier certifier) throws Exception {
-        Exception lastException = new CommunicationException(ExceptionContext.AUTH_ERROR);
+    private OpcUaClient attemptConnectionWithCertifier(List<EndpointDescription> endpoints, Certifier certifier) throws OPCUAException {
+        Exception lastException = null;
         final List<EndpointDescription> matchingEndpoints = endpoints.stream().filter(certifier::supportsAlgorithm).collect(Collectors.toList());
         for (EndpointDescription e : matchingEndpoints) {
             if (certifier.canCertify(e)) {
@@ -172,7 +166,11 @@ public class SecurityModule {
                 }
             }
         }
-        throw lastException;
+        if (lastException == null) {
+            throw new CommunicationException(ExceptionContext.AUTH_ERROR);
+        } else {
+            throw OPCUAException.of(ExceptionContext.AUTH_ERROR, lastException, false);
+        }
     }
 
     private boolean handleAndShouldContinue(Certifier certifier, CompletionException ex) {
