@@ -13,6 +13,7 @@ import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
@@ -34,15 +35,17 @@ import java.util.stream.Collectors;
 
 import static cern.c2mon.daq.opcua.exceptions.ExceptionContext.*;
 import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.createNiceMock;
 
 @Getter
 @Setter
+@Slf4j
 @Component(value = "testEndpoint")
 public class TestEndpoint implements Endpoint {
     private MessageSender messageSender;
     private TagSubscriptionReader mapper;
-    UaMonitoredItem monitoredItem = createMock(UaMonitoredItem.class);
-    UaSubscription subscription = createMock(UaSubscription.class);
+    UaMonitoredItem monitoredItem = createNiceMock(UaMonitoredItem.class);
+    UaSubscription subscription = createNiceMock(UaSubscription.class);
     NonTransparentRedundancyTypeNode nonTransparentRedundancyTypeNode = createMock(NonTransparentRedundancyTypeNode.class);
     TransparentRedundancyTypeNode transparentRedundancyTypeNode = createMock(TransparentRedundancyTypeNode.class);
     private boolean returnGoodStatusCodes = true;
@@ -137,6 +140,7 @@ public class TestEndpoint implements Endpoint {
 
     @Override
     public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
+        final Object r = readValue;
         try {
             TimeUnit.MILLISECONDS.sleep(delay);
         } catch (InterruptedException e) {
@@ -149,7 +153,7 @@ public class TestEndpoint implements Endpoint {
             throw toThrow == null ? new CommunicationException(READ) : toThrow;
         }
         final SourceDataTagQuality quality = new SourceDataTagQuality(returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
-        return new AbstractMap.SimpleEntry<>(new ValueUpdate(readValue), quality);
+        return new AbstractMap.SimpleEntry<>(new ValueUpdate(r), quality);
     }
 
     @Override

@@ -87,7 +87,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
                 startAliveWriter(config);
             } catch (ConfigurationException e) {
                 log.info("Proceeding without starting the Alive Writer. Fallback to simple alive monitoring...", e);
-                aliveWriter.startSimpleAliveMonitoring(config.getAliveTagInterval());
             }
         } else {
             log.info("Alive Writer is disabled.");

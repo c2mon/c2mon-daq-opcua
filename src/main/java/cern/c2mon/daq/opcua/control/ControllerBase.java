@@ -53,7 +53,9 @@ public abstract class ControllerBase implements ConcreteController {
     @Override
     public void stop() {
         passiveEndpoints().forEach(Endpoint::disconnect);
-        currentEndpoint().disconnect();
+        if (currentEndpoint() != null) {
+            currentEndpoint().disconnect();
+        }
     }
 
     /**
