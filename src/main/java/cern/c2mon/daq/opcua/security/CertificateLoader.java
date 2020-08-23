@@ -77,7 +77,7 @@ public class CertificateLoader extends CertifierBase {
                 log.error("An error occurred loading the certificate and keypair from pfx. ", e);
             }
         }
-        if (keyPair == null || certificate == null && isPkiConfigured()) {
+        if ((keyPair == null || certificate == null) && isPkiConfigured()) {
             log.info("Loading from PEM files");
             try {
                 final PrivateKey privateKey = PkiUtil.loadPrivateKey(pkiConfig.getPrivateKeyPath());

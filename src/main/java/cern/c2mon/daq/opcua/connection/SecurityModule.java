@@ -102,13 +102,15 @@ public class SecurityModule {
     }
 
     private void sortCertifiers() {
+        certifiers.clear();
         if (config.getCertifierPriority() != null) {
             certifiers.addAll(config.getCertifierPriority().entrySet().stream()
                     .filter(e -> e.getValue() != 0)
                     .sorted((o1, o2) -> Integer.compare(o2.getValue(), o1.getValue()))
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList()));
-        } else {
+        }
+        if (certifiers.isEmpty()) {
             certifiers.add(AppConfigProperties.CertifierMode.NO_SECURITY);
         }
     }

@@ -112,10 +112,10 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         final Collection<EndpointDescription> endpoints = retryDelegate.completeOrRetry(CONNECT,
                 this::getDisconnectPeriod,
                 () -> DiscoveryClient.getEndpoints(uri));
-        this.client = securityModule.createClient(uri, endpoints);
-        this.client.addSessionActivityListener(this);
+        client = securityModule.createClient(uri, endpoints);
+        client.addSessionActivityListener(this);
         sessionActivityListeners.add(this);
-        final OpcUaSubscriptionManager subscriptionManager = this.client.getSubscriptionManager();
+        final OpcUaSubscriptionManager subscriptionManager = client.getSubscriptionManager();
         subscriptionManager.addSubscriptionListener(this);
         subscriptionManager.resumeDelivery();
     }

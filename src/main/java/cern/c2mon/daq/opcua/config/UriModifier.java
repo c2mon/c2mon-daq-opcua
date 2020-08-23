@@ -9,9 +9,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static cern.c2mon.daq.opcua.config.AppConfigProperties.PortSubstitutionMode;
 import static cern.c2mon.daq.opcua.config.AppConfigProperties.HostSubstitutionMode;
+import static cern.c2mon.daq.opcua.config.AppConfigProperties.PortSubstitutionMode;
 
+/**
+ * A utility class for modifying hostname and/or port of URIs either to values set in the {@link AppConfigProperties},
+ * or to reflect another URI.
+ */
 @Slf4j
 @Component("uriModifier")
 @RequiredArgsConstructor
@@ -25,13 +29,13 @@ public class UriModifier {
      * There is a common misconfiguration in OPC UA servers to return a local hostname in the endpointUrl that can not
      * be resolved by the client. Replace the hostname of each endpoint's URI by the one used to originally reach the
      * server to work around the issue.
-     * @param discoveryUri the URI used for discovering the server
-     * @param localUri the URI with local hostnames to change as configured.
+     * @param reference the URI used as a reference for changing the localUri.
+     * @param localUri  the URI with local hostnames to change as configured.
      * @return The URI updated according to the policies in config. If no modifications are configured or the URI could
      * not be modified, the localUri is returned without modification.
      */
-    public String updateEndpointUrl(String discoveryUri, String localUri) {
-        if (Stream.of(discoveryUri, localUri).anyMatch(StringUtil::isNullOrEmpty) ||
+    public String updateEndpointUrl(String reference, String localUri) {
+        if (Stream.of(reference, localUri).anyMatch(StringUtil::isNullOrEmpty) ||
                 (config.getPortSubstitutionMode().equals(PortSubstitutionMode.NONE) &&
                         config.getHostSubstitutionMode().equals(HostSubstitutionMode.NONE))) {
             return localUri;
@@ -45,7 +49,7 @@ public class UriModifier {
             log.info("URI {} could not be processed. Does it follow the propper syntax?", localUri);
             return localUri;
         }
-        final Matcher discoveryMatcher = HOST_PATTERN.matcher(discoveryUri);
+        final Matcher discoveryMatcher = HOST_PATTERN.matcher(reference);
         String globalizedUri = substituteHost(localUri, localMatcher, discoveryMatcher);
         localMatcher.reset();
         discoveryMatcher.reset();

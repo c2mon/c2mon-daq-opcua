@@ -90,7 +90,12 @@ public class PkiUtil {
         try (FileInputStream is = new FileInputStream(filename);
              InputStreamReader isReader = new InputStreamReader(is, StandardCharsets.UTF_8);
              PemReader pemReader = new PemReader(isReader)) {
-            return pemReader.readPemObject();
+            final PemObject pemObject = pemReader.readPemObject();
+            if (pemObject == null || pemObject.getContent() == null) {
+                throw new IOException();
+            } else {
+                return pemObject;
+            }
         }
     }
 }

@@ -254,7 +254,7 @@ public class AppConfigProperties {
      * Settings required to load an existing certificate from a keystore file
      */
     @Configuration
-    @ConfigurationProperties(prefix = "app.keystore")
+    @ConfigurationProperties(prefix = "c2mon.daq.opcua.keystore")
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -269,7 +269,7 @@ public class AppConfigProperties {
      * Settings required to load an existing certificate from a PEM-encoded private key and certificate files
      */
     @Configuration
-    @ConfigurationProperties(prefix = "app.pki")
+    @ConfigurationProperties(prefix = "c2mon.daq.opcua.pki")
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
