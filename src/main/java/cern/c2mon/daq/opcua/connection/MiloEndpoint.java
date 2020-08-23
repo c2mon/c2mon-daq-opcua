@@ -33,7 +33,6 @@ import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
-import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
@@ -64,7 +63,6 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
 @RequiredArgsConstructor
 @Component(value = "miloEndpoint")
 @Primary
-@ManagedResource
 @Scope(value = "prototype")
 public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscriptionManager.SubscriptionListener {
 

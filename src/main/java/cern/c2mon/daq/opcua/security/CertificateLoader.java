@@ -2,19 +2,15 @@ package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import io.netty.util.internal.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.Paths;
 import java.security.KeyPair;
-import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_CertificateInvalid;
 import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SecurityChecksFailed;
@@ -67,42 +63,27 @@ public class CertificateLoader extends CertifierBase {
     }
 
     private void loadCertificateAndKeypair() {
-        if (isKeystoreConfigured()) {
+        Map.Entry<X509Certificate, KeyPair> entry = null;
+        if (PkiUtil.isKeystoreConfigured(keystoreConfig)) {
             log.info("Loading from pfx");
             try {
-                final Map.Entry<X509Certificate, KeyPair> entry = PkiUtil.loadFromPfx(keystoreConfig);
-                certificate = entry.getKey();
-                keyPair = entry.getValue();
+                entry = PkiUtil.loadFromPfx(keystoreConfig);
             } catch (ConfigurationException e) {
                 log.error("An error occurred loading the certificate and keypair from pfx. ", e);
             }
         }
-        if ((keyPair == null || certificate == null) && isPkiConfigured()) {
+        if (entry == null && PkiUtil.isPkiConfigured(pkiConfig)) {
             log.info("Loading from PEM files");
             try {
-                final PrivateKey privateKey = PkiUtil.loadPrivateKey(pkiConfig.getPrivateKeyPath());
-                X509Certificate tmpCert = PkiUtil.loadCertificate(pkiConfig.getCertificatePath());
-                // ensure both certificate and keyPair are both either loaded or not
-                keyPair = new KeyPair(tmpCert.getPublicKey(), privateKey);
-                certificate = tmpCert;
+                entry = PkiUtil.loadFromPki(pkiConfig);
             } catch (ConfigurationException e) {
                 log.error("An error occurred loading certificate and private key. ", e);
             }
         }
-    }
+        if (entry != null) {
+            certificate = entry.getKey();
+            keyPair = entry.getValue();
+        }
 
-    private boolean isKeystoreConfigured() {
-        return keystoreConfig != null &&
-                Stream.of(keystoreConfig.getType(), keystoreConfig.getPath(), keystoreConfig.getAlias()).noneMatch(StringUtil::isNullOrEmpty) &&
-                Paths.get(keystoreConfig.getPath()).toFile().exists();
-    }
-
-    private boolean isPkiConfigured() {
-        boolean isConfigComplete = pkiConfig != null &&
-                !StringUtil.isNullOrEmpty(pkiConfig.getCertificatePath()) &&
-                !StringUtil.isNullOrEmpty(pkiConfig.getPrivateKeyPath());
-        return isConfigComplete &&
-                Paths.get(pkiConfig.getCertificatePath()).toFile().exists() &&
-                Paths.get(pkiConfig.getPrivateKeyPath()).toFile().exists();
     }
 }

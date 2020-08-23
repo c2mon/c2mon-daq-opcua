@@ -18,6 +18,7 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 
@@ -31,10 +32,10 @@ import java.util.stream.Stream;
  * capabilities.
  */
 @Slf4j
+@ManagedResource
 @RequiredArgsConstructor
 @Component(value = "controller")
 @Primary
-@ManagedResource
 public class ControllerProxy implements Controller {
     protected final ApplicationContext appContext;
     protected final AppConfigProperties config;
@@ -42,8 +43,18 @@ public class ControllerProxy implements Controller {
     protected ConcreteController controller;
 
     /**
-     * Delegated failover handling to an appropriate {@link Controller} according to the application configuration
-     * or, secondarily, according to server capabilities. If no redundant Uris are preconfigured, they are read from the
+     * Returns the simple name of the controller for the failover mode currently in use. To be invoked as an actuator
+     * operation.
+     * @return the simple name of the controller for the failover mode currently in use.
+     */
+    @ManagedOperation(description = "Find the controller name for the failover mode currently in use.")
+    public String getFailoverMode() {
+        return controller == null ? "Currently not connected." : controller.getClass().getSimpleName();
+    }
+
+    /**
+     * Delegated failover handling to an appropriate {@link Controller} according to the application configuration or,
+     * secondarily, according to server capabilities. If no redundant Uris are preconfigured, they are read from the
      * server's ServerUriArray node. In case of errors in the configuration and when reading from the server's address
      * space, the FailoverProxy treats the server as not part of a redundant setup. Notify the {@link
      * cern.c2mon.daq.common.IEquipmentMessageSender} if a failure occurs which prevents the DAQ from starting

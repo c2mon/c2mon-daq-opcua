@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.security.SecurityAlgorithm;
@@ -23,7 +22,6 @@ import java.util.Optional;
  * (http://www.w3.org/2001/04/xmldsig-more#rsa-sha256) is supported.
  */
 @Component("generator")
-@Getter
 @Slf4j
 @RequiredArgsConstructor
 public class CertificateGenerator extends CertifierBase {
@@ -39,12 +37,14 @@ public class CertificateGenerator extends CertifierBase {
      */
     @Override
     public boolean supportsAlgorithm(EndpointDescription endpoint) {
-        final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
-        if (!sp.isPresent()) {
-            return false;
+        if (endpoint != null) {
+            final Optional<SecurityPolicy> sp = SecurityPolicy.fromUriSafe(endpoint.getSecurityPolicyUri());
+            if (sp.isPresent()) {
+                final String sigAlg = sp.get().getAsymmetricSignatureAlgorithm().getTransformation();
+                return Arrays.stream(SUPPORTED_SIG_ALGS).anyMatch(s -> s.equalsIgnoreCase(sigAlg));
+            }
         }
-        final String sigAlg = sp.get().getAsymmetricSignatureAlgorithm().getTransformation();
-        return Arrays.stream(SUPPORTED_SIG_ALGS).anyMatch(s -> s.equalsIgnoreCase(sigAlg));
+        return false;
     }
 
     /**
@@ -61,12 +61,13 @@ public class CertificateGenerator extends CertifierBase {
 
     private boolean generateCertificateIfMissing(SecurityPolicy securityPolicy) {
         return (existingCertificateMatchesSecurityPolicy(securityPolicy)) ||
-                (securityPolicy.getAsymmetricSignatureAlgorithm().equals(SecurityAlgorithm.RsaSha256) && generateRSASHA256());
+                (securityPolicy.getAsymmetricSignatureAlgorithm().equals(SecurityAlgorithm.RsaSha256)
+                        && generateRSASHA256());
     }
 
     private boolean generateRSASHA256() {
+        log.info("Generating self-signed certificate and keypair.");
         try {
-            log.info("Generating self-signed certificate and keypair.");
             final KeyPair tmpKp = SelfSignedCertificateGenerator.generateRsaKeyPair(2048);
             SelfSignedCertificateBuilder builder = new SelfSignedCertificateBuilder(tmpKp)
                     .setCommonName(config.getApplicationName())

@@ -7,8 +7,6 @@ import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.DataTagAddress;
 import cern.c2mon.shared.common.datatag.SourceDataTag;
-import cern.c2mon.shared.common.datatag.address.HardwareAddress;
-import cern.c2mon.shared.common.datatag.address.impl.DIPHardwareAddressImpl;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,17 +38,7 @@ public class AliveWriterTest {
 
     @AfterEach
     public void tearDown() {
-        aliveWriter.stopWriter();
-    }
-
-    @Test
-    public void aliveWriterShouldFallbackToSimpleMonitoringProceedureOn() {
-        final HardwareAddress dip = new DIPHardwareAddressImpl("bad address type");
-        DataTagAddress tagAddress = new DataTagAddress(dip, 0, (short) 0, 0, 0, 2, true);
-        aliveTag = new SourceDataTag((long) 1, "test", false, (short) 0, null, tagAddress);
-
-        aliveWriter.startAliveWriter(aliveTag, 2L);
-        assertDoesNotThrow(() -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
+        aliveWriter.stopAliveWriter();
     }
 
     @Test
@@ -77,12 +65,12 @@ public class AliveWriterTest {
     @Test
     public void cancellingAliveWriterTwiceShouldDoNothing() {
         aliveWriter.startAliveWriter(aliveTag, 2L);
-        aliveWriter.stopWriter();
-        assertDoesNotThrow(() -> aliveWriter.stopWriter());
+        aliveWriter.stopAliveWriter();
+        assertDoesNotThrow(() -> aliveWriter.stopAliveWriter());
     }
 
     @Test
     public void stopUninitializedAliveWriterShouldDoNothing() {
-        assertDoesNotThrow(() -> aliveWriter.stopWriter());
+        assertDoesNotThrow(() -> aliveWriter.stopAliveWriter());
     }
 }

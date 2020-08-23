@@ -7,17 +7,13 @@ import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
-import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -36,18 +32,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 @ManagedResource
 public class AliveWriter {
 
+    private final AtomicInteger writeCounter = new AtomicInteger(0);
     private final Controller controllerProxy;
     private final MessageSender messageSender;
-    private final AtomicInteger writeCounter = new AtomicInteger(0);
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> writeAliveTask;
     private NodeId aliveTagAddress;
-    private Runnable writeAliveRunnable = this::simpleAliveMonitoring;
 
     /**
-     * Start the AliveWriter on the given aliveTag. If no the writer is not enabled or no alive tag is specified, a
-     * simple alive monitoring procedure is started instead which uses regular read operations to supervise the
-     * connection to the server.
+     * Start the AliveWriter on the given aliveTag.
      * @param aliveTag         the DataTag containing the Node acting as AliveTag
      * @param aliveTagInterval the interval in which to write to the aliveTag
      */
@@ -56,30 +49,43 @@ public class AliveWriter {
             final ItemDefinition def = ItemDefinition.of(aliveTag);
             aliveTagAddress = def.getNodeId();
             log.info("Starting Alive Writer...");
-            writeAliveRunnable = this::aliveTagMonitoring;
+            startAliveWriter(aliveTagInterval);
         } catch (ConfigurationException e) {
             log.error("Error starting the AliveWriter. Please check the configuration.", e);
-            log.info("Fall back to simple alive monitoring procedure...");
         }
-        startAliveWriter(aliveTagInterval);
     }
 
     /**
-     * Restart a aliveWriter. To be invoked as an actuator operation.
+     * Restart a previously configured aliveWriter. To be invoked as an actuator operation.
      * @param aliveTagInterval the interval during which to read from the aliveTag
      */
     @ManagedOperation
     public void startAliveWriter(long aliveTagInterval) {
-        scheduleWriteTask(aliveTagInterval, writeAliveRunnable);
+        if (aliveTagAddress != null) {
+            log.info("Starting AliveWriter...");
+            cancelTask();
+            // the AliveWriter may have been shutdown terminally. In this case the executor was stopped and must be recreated.
+            if (executor.isShutdown()) {
+                executor = Executors.newScheduledThreadPool(1);
+            }
+            if (aliveTagInterval > 0L) {
+                this.writeAliveTask = executor.scheduleAtFixedRate(this::aliveTagMonitoring, aliveTagInterval, aliveTagInterval, TimeUnit.MILLISECONDS);
+            } else {
+                log.error(ExceptionContext.BAD_ALIVE_TAG_INTERVAL.getMessage());
+            }
+        } else {
+            log.error("The AliveWriter has not been configured appropriately and cannot be invoked.");
+        }
     }
 
     /**
      * Stops the aliveWriter execution.
      */
     @ManagedOperation
-    public void stopWriter() {
+    public void stopAliveWriter() {
+        log.info("Stopping AliveWriter...");
         cancelTask();
-        executor.shutdown();
+        executor.shutdownNow();
     }
 
     private void aliveTagMonitoring() {
@@ -94,34 +100,10 @@ public class AliveWriter {
         }
     }
 
-    private void simpleAliveMonitoring() {
-        try {
-            final Map.Entry<ValueUpdate, SourceDataTagQuality> read = controllerProxy.read(Identifiers.Server_ServiceLevel);
-            if (read.getValue().isValid()) {
-                messageSender.onAlive();
-            }
-        } catch (OPCUAException e) {
-            log.error("Exception during simple alive monitoring ", e);
-        }
-    }
-
-    private void scheduleWriteTask(long writeTime, Runnable r) {
-        cancelTask();
-        // the AliveWriter may have been shutdown terminally. In this case the executor was stopped and must be recreated.
-        if (executor.isShutdown()) {
-            executor = Executors.newScheduledThreadPool(1);
-        }
-        if (writeTime > 0L) {
-            this.writeAliveTask = executor.scheduleAtFixedRate(r, writeTime, writeTime, TimeUnit.MILLISECONDS);
-        } else {
-            log.error(ExceptionContext.BAD_ALIVE_TAG_INTERVAL.getMessage());
-        }
-    }
-
     private void cancelTask() {
         if (writeAliveTask != null && !writeAliveTask.isCancelled()) {
             log.info("Stopping Alive Writer...");
-            writeAliveTask.cancel(false);
+            writeAliveTask.cancel(true);
         }
     }
 }

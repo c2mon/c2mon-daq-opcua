@@ -6,6 +6,8 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jmx.export.annotation.ManagedOperation;
+import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 @NoArgsConstructor
 @Slf4j
 @Primary
+@ManagedResource
 public class OPCUAMessageSender implements MessageSender {
 
     private IEquipmentMessageSender sender;
@@ -39,6 +42,7 @@ public class OPCUAMessageSender implements MessageSender {
     }
 
     @Override
+    @ManagedOperation
     public void onAlive() {
         sender.sendSupervisionAlive();
     }
@@ -49,6 +53,20 @@ public class OPCUAMessageSender implements MessageSender {
             sender.confirmEquipmentStateOK(state.message);
         } else {
             sender.confirmEquipmentStateIncorrect(state.message);
+        }
+    }
+
+    /**
+     * Send a CommfaultTag update as an actuator operation.
+     * @param state The EquipmentState to send with the Commfault. The value 'OK' will send set the CommfaultTag to
+     *              false, any other value will set it to true.
+     */
+    @ManagedOperation(description = "Manually send a CommfaultTag. The value 'OK' will send set the CommfaultTag to false, any other value will set it to true.")
+    public void onEquipmentStateUpdate(String state) {
+        if (state.equalsIgnoreCase(EquipmentState.OK.name())) {
+            sender.confirmEquipmentStateOK(state);
+        } else {
+            sender.confirmEquipmentStateIncorrect(state);
         }
     }
 }

@@ -2,20 +2,28 @@ package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
+import org.eclipse.milo.opcua.stack.core.security.SecurityAlgorithm;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Slf4j
 class CertificateGeneratorTest {
     AppConfigProperties config;
     CertificateGenerator generator;
@@ -29,8 +37,33 @@ class CertificateGeneratorTest {
 
         modes = new ArrayList<>(Arrays.asList(MessageSecurityMode.SignAndEncrypt, MessageSecurityMode.Sign, MessageSecurityMode.None));
         policies = new ArrayList<>(Arrays.asList(SecurityPolicy.Basic256Sha256, SecurityPolicy.Basic128Rsa15, SecurityPolicy.Basic256, SecurityPolicy.None));
-
     }
+
+    @Test
+    public void supportsAlgorithmShouldReturnFalseIfEndpointDescriptionIsNull() {
+        assertFalse(generator.supportsAlgorithm(null));
+    }
+
+    @Test
+    public void supportsAlgorithmShouldReturnFalseIfEndpointDescriptionHasBadSecurityPolicyURI() {
+        assertFalse(supportAlgorithmWithSecurityPolicyUri("badSecurityPolicy"));
+    }
+
+    @Test
+    public void supportsAlgorithmShouldReturnTrueForSecurityPolicyAlgorithmsWithSHA256withRSA() {
+        assertPolicySupportStatus(true);
+    }
+
+    @Test
+    public void supportsAlgorithmShouldReturnFalseForSecurityPolicyAlgorithmsWithoutSHA256withRSA() {
+        assertPolicySupportStatus(false);
+    }
+
+    @Test
+    public void supportsAlgorithmShouldReturnTrueForRsaSha256() {
+        assertTrue(supportAlgorithmWithSecurityPolicyUri(SecurityPolicy.Basic256Sha256.getUri()));
+    }
+
     @Test
     void certifyShouldModifyBuilderIfSupported() {
         for (SecurityPolicy p : policies) {
@@ -89,15 +122,56 @@ class CertificateGeneratorTest {
             assertEquals(expected, generator.supportsAlgorithm(e));
         }
     }
+
+    @Test
+    public void uncertifyShouldRemoveValues() {
+        EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
+        OpcUaClientConfigBuilder b = new OpcUaClientConfigBuilder();
+        generator.certify(b, e);
+        generator.uncertify(b);
+        assertThrows(NullPointerException.class, b::build);
+    }
+
+    @Test
+    public void certifyTheSameEndpointTwiceShouldNotRegenerateCertificate() {
+        EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
+        OpcUaClientConfigBuilder b = new OpcUaClientConfigBuilder();
+        generator.certify(b, e);
+        final X509Certificate expectedCert = generator.certificate;
+        final KeyPair expectedKp = generator.keyPair;
+        generator.certify(b, e);
+        assertEquals(expectedCert, generator.certificate);
+        assertEquals(expectedKp, generator.keyPair);
+    }
+
+    @Test
+    public void onlyCertificateLoadedShouldReloadBoth() {
+        EndpointDescription e = createEndpointWithSecurityPolicy(SecurityPolicy.Basic256Sha256.getUri());
+        OpcUaClientConfigBuilder b = new OpcUaClientConfigBuilder();
+        generator.certify(b, e);
+        final X509Certificate firstCert = generator.certificate;
+        generator.keyPair = null;
+        generator.certify(b, e);
+        assertNotEquals(firstCert, generator.certificate);
+    }
+
+    private boolean supportAlgorithmWithSecurityPolicyUri(String securityPolicyUri) {
+        final EndpointDescription e = new EndpointDescription("endpointUrl", null, null, null, securityPolicyUri, null, "transportProfileUri", null);
+        return generator.supportsAlgorithm(e);
+    }
+
+    private void assertPolicySupportStatus(boolean shouldBeSupported) {
+        final SecurityAlgorithm supportedAlgorithm = SecurityAlgorithm.RsaSha256;
+        final Map<Boolean, List<SecurityPolicy>> expected = Stream.of(SecurityPolicy.values())
+                .collect(Collectors.partitioningBy(p -> p.getAsymmetricSignatureAlgorithm().equals(supportedAlgorithm)));
+        final Map<Boolean, List<SecurityPolicy>> actual = Stream.of(SecurityPolicy.values())
+                .collect(Collectors.partitioningBy(p -> supportAlgorithmWithSecurityPolicyUri(p.getUri())));
+        assertTrue(expected.get(shouldBeSupported).containsAll(actual.get(shouldBeSupported)));
+    }
+
+
     private EndpointDescription createEndpointWithSecurityPolicy(String securityPolicyUri) {
-        return new EndpointDescription("test",
-                null,
-                null,
-                null,
-                securityPolicyUri,
-                null,
-                null,
-                null);
+        return new EndpointDescription("test", null, null, null, securityPolicyUri, null, null, null);
     }
 
     public static void assertEqualConfigFields(OpcUaClientConfigBuilder expectedBuilder, OpcUaClientConfigBuilder actualBuilder) {
