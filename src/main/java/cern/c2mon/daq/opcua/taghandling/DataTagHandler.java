@@ -93,7 +93,6 @@ public class DataTagHandler implements IDataTagHandler {
     }
 
     @Override
-    @ManagedOperation
     public void refreshAllDataTags() {
         refresh(manager.getTagIdDefinitionMap());
     }
@@ -119,6 +118,28 @@ public class DataTagHandler implements IDataTagHandler {
         manager.clear();
     }
 
+    /**
+     * Read the value of the DataTag mapped to the given ID. To be invoked as an actuator operation.
+     * @param id the ID of the DataTag whose value shall be read. The DataTag must be configured on the DAQ.
+     * @return the value and quality of the reading, or the reason for a failure.
+     */
+    @ManagedOperation
+    public String readDataTag(long id) {
+        final ItemDefinition itemDefinition = manager.getDefinition(id);
+        if (itemDefinition == null) {
+            return "The ID " + id + " cannot be mapped to a DataTag. Refresh is not possible.";
+        }
+        try {
+            final Map.Entry<ValueUpdate, SourceDataTagQuality> reading = controller.read(itemDefinition.getNodeId());
+            String valStr = reading.getKey() == null ?  "No value returned." : reading.getKey().toString();
+            String qualityStr = reading.getValue() == null ? "No quality returned. ": reading.getValue().toString();
+            return valStr + ", " + qualityStr;
+        } catch (OPCUAException e) {
+            log.error("Refreshing tag with ID {} failed with exception:", id, e);
+            return "Refreshing Tag with ID " + id +" failed : " + e.toString();
+        }
+    }
+    
     private void completeSubscriptionAndReportSuccess(int clientHandle, SourceDataTagQuality quality) {
         final Long tagId = manager.getTagId(clientHandle);
         if (quality.isValid() && tagId != null) {
