@@ -24,8 +24,6 @@ import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.springframework.jmx.export.annotation.ManagedOperation;
-import org.springframework.jmx.export.annotation.ManagedResource;
 
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +36,6 @@ import java.util.concurrent.TimeUnit;
  * @author Andreas Lang, Nacho Vilches
  */
 @Slf4j
-@ManagedResource
 public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEquipmentConfigurationChanger, ICommandRunner {
 
     private Controller controller;
@@ -55,7 +52,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * @throws EqIOException Throws an {@link EqIOException} if there is an IO problem during startup.
      */
     @Override
-    @ManagedOperation
     public void connectToDataSource() throws EqIOException {
         log.info("Initializing the OPC UA DAQ");
         controller = getContext().getBean("controller", Controller.class);
@@ -105,7 +101,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * Called when the core wants the OPC module to disconnect from the OPC server and discard all configuration.
      */
     @Override
-    @ManagedOperation
     public void disconnectFromDataSource() {
         log.info("Disconnecting from OPC data source...");
         dataTagHandler.reset();
@@ -116,7 +111,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
     /** Triggers the refresh of all values directly from the OPC server. */
     @Override
-    @ManagedOperation
     public void refreshAllDataTags() {
         dataTagHandler.refreshAllDataTags();
     }
@@ -126,7 +120,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * @param dataTagId The id of the data tag to refresh.
      */
     @Override
-    @ManagedOperation
     public void refreshDataTag(final long dataTagId) {
         ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
         if (sourceDataTag == null) {

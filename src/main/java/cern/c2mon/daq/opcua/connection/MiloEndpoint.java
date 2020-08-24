@@ -509,9 +509,14 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             } else {
                 SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
                 final Object updateValue = MiloMapper.toObject(value.getValue());
-                ValueUpdate valueUpdate = (value.getSourceTime() == null) ?
-                        new ValueUpdate(updateValue) :
-                        new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
+                ValueUpdate valueUpdate;
+                if (value.getServerTime() != null) {
+                    valueUpdate = new ValueUpdate(updateValue, value.getServerTime().getJavaTime());
+                } else if (value.getSourceTime() != null) {
+                    valueUpdate = new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
+                } else {
+                    valueUpdate = new ValueUpdate(updateValue);
+                }
                 messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
             }
         });

@@ -13,8 +13,8 @@ import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.jmx.export.annotation.ManagedOperation;
+import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -31,7 +31,7 @@ import static java.util.stream.Collectors.*;
 @Component("dataTagHandler")
 @Slf4j
 @RequiredArgsConstructor
-@Lazy
+@ManagedResource
 public class DataTagHandler implements IDataTagHandler {
 
     private final TagSubscriptionManager manager;
