@@ -156,6 +156,12 @@ public class AppConfigProperties {
      */
     private int globalPort;
 
+    /**
+     * The timestamp use for the generation of value updates. The Server reports a server timestamp, a source timestamp,
+     * or both, where either may be null or misconfigured.
+     */
+    private TimeRecordMode timeRecordMode;
+
 
     // Settings to create a certificate, and to request connection to the server
     private String applicationName;
@@ -214,13 +220,12 @@ public class AppConfigProperties {
 
     /**
      * Describes the modes offered by the OPC UA DAQ to modify the hostname in the address returned by the server with
-     * the EndpointDescriptions on initial discovery. Possible modes are:
-     * NONE:              Don't modify the hostname
+     * the EndpointDescriptions on initial discovery. Possible modes are: NONE:              Don't modify the hostname
      * SUBSTITUTE_LOCAL:  Substitute the hostname in the EndpointDescription URI with the one used for discovery
-     * APPEND_LOCAL:      Append the hostname of the address used for discovery to the one returned in the EndpointDescription
-     *                    URI, separated with a dot '.'
-     * SUBSTITUTE_GLOBAL: Substitute the hostname in the EndpointDescription URI with the "globalHostName"
-     * APPEND_GLOBAL:     Append the "globalHostName" to thehostname in the EndpointDescription URI
+     * APPEND_LOCAL:      Append the hostname of the address used for discovery to the one returned in the
+     * EndpointDescription URI, separated with a dot '.' SUBSTITUTE_GLOBAL: Substitute the hostname in the
+     * EndpointDescription URI with the "globalHostName" APPEND_GLOBAL:     Append the "globalHostName" to thehostname
+     * in the EndpointDescription URI
      */
     @AllArgsConstructor
     public enum HostSubstitutionMode {
@@ -235,11 +240,9 @@ public class AppConfigProperties {
 
     /**
      * Describes the modes offered by the OPC UA DAQ to substitute the port references in the address returned by the
-     * server with the EndpointDescriptions on initial discovery. Possible modes are:
-     * NONE:   Don't modify the port
+     * server with the EndpointDescriptions on initial discovery. Possible modes are: NONE:   Don't modify the port
      * LOCAL:  Substitute the port in the EndpointDescription URI with the one of the address used for discovery (if
-     *         stated)
-     * GLOBAL: Substitute the port in the EndpointDescription URI with the "globalPort".
+     * stated) GLOBAL: Substitute the port in the EndpointDescription URI with the "globalPort".
      */
     public enum PortSubstitutionMode {NONE, LOCAL, GLOBAL}
 
@@ -249,6 +252,7 @@ public class AppConfigProperties {
      * connecting without signing or encrypting traffic.
      */
     public enum CertifierMode {LOAD, GENERATE, NO_SECURITY}
+
 
     /**
      * Settings required to load an existing certificate from a keystore file

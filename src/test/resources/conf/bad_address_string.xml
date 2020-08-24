@@ -26,7 +26,6 @@
                 <guaranteed-delivery>false</guaranteed-delivery>
             </DataTagAddress>
         </DataTag>
-
     </DataTags>
     <CommandTags>
     </CommandTags>

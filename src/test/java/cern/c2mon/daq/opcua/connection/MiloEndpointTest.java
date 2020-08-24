@@ -74,7 +74,7 @@ public class MiloEndpointTest {
         dipSbsGrp = mapper.getGroup(dip.getTimeDeadband());
 
         AppConfigProperties config = AppConfigProperties.builder().maxRetryAttempts(3).requestTimeout(300).retryDelay(1000).build();
-        endpoint = new MiloEndpoint(mockSecurityModule, mockRetryDelegate, mapper, msgSender, config.alwaysRetryTemplate());
+        endpoint = new MiloEndpoint(mockSecurityModule, mockRetryDelegate, mapper, msgSender, config);
         expect(mockClient.getSubscriptionManager()).andReturn(mockSubscriptionManager).anyTimes();
         expect(mockClient.getSerializationContext()).andReturn(serializationContext).anyTimes();
         expect(mockClient.getNamespaceTable()).andReturn(serializationContext.getNamespaceTable()).anyTimes();

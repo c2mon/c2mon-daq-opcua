@@ -4,7 +4,7 @@
     <commfault-tag-value>true</commfault-tag-value>
     <alive-tag-id>216215</alive-tag-id>
     <alive-interval>60000</alive-interval>
-    <address>URI=opc.tcp://localhost:4841;serverRetryTimeout=500;serverTimeout=12;aliveWriter=false</address>
+    <address>URI=opc.tcp://test;serverRetryTimeout=500;serverTimeout=12;aliveWriter=false</address>
     <SubEquipmentUnits>
     </SubEquipmentUnits>
 

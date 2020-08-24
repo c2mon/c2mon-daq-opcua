@@ -1,16 +1,10 @@
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.opcuamessagehandler;
 
-import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.MessageSender;
+import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
-import cern.c2mon.daq.opcua.taghandling.*;
 import cern.c2mon.daq.opcua.testutils.MiloMocker;
-import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
-import cern.c2mon.daq.opcua.testutils.TestUtils;
-import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
@@ -24,7 +18,6 @@ import org.easymock.CaptureType;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
-import org.springframework.context.ApplicationContext;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collection;
@@ -37,34 +30,23 @@ import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @UseHandler(OPCUAMessageHandler.class)
-public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
+public class OPCUAMessageHandlerTest extends OPCUAMessageHandlerTestBase {
 
-    ApplicationContext context = createMock(ApplicationContext.class);
-    OPCUAMessageHandler handler;
     MiloMocker mocker;
-    MessageSender sender = niceMock(MessageSender.class);
-    TagSubscriptionManager mapper = new TagSubscriptionMapper();
-    TestEndpoint endpoint = new TestEndpoint(sender, mapper);
-    AppConfigProperties appConfigProperties = TestUtils.createDefaultConfig();
-    Controller controller = TestUtils.getFailoverProxy(endpoint, sender);
-    IDataTagHandler dataTagHandler = new DataTagHandler(mapper, sender, controller);
-    CommandTagHandler commandTagHandler = new CommandTagHandler(controller);
-    DataTagChanger dataTagChanger = new DataTagChanger(dataTagHandler);
-    AliveWriter writer = new AliveWriter(controller, sender);
+    MessageSender sender;
 
     @Override
     protected void beforeTest() throws Exception {
+        sender = niceMock(MessageSender.class);
+        super.beforeTest(sender);
         appConfigProperties.setRetryDelay(0);
         appConfigProperties.setAliveWriterEnabled(true);
-        handler = (OPCUAMessageHandler) msgHandler;
-        handler.setContext(context);
-
-        mocker = new MiloMocker(endpoint, mapper);
-        configureContextWithController(controller);
+        mocker = new MiloMocker(testEndpoint, mapper);
+        configureContextWithController(testController, sender);
 
         final Collection<ISourceDataTag> tags = handler.getEquipmentConfiguration().getSourceDataTags().values();
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tags);
-        replay(context, endpoint.getMonitoredItem());
+        replay(testEndpoint.getMonitoredItem());
         handler.connectToDataSource();
     }
 
@@ -72,17 +54,6 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
     protected void afterTest() throws Exception {
 
     }
-
-    private void configureContextWithController(Controller controller) {
-        expect(context.getBean("controller", Controller.class)).andReturn(controller).anyTimes();
-        expect(context.getBean(IDataTagHandler.class)).andReturn(dataTagHandler).anyTimes();
-        expect(context.getBean(CommandTagHandler.class)).andReturn(commandTagHandler).anyTimes();
-        expect(context.getBean(AppConfigProperties.class)).andReturn(appConfigProperties).anyTimes();
-        expect(context.getBean(DataTagChanger.class)).andReturn(dataTagChanger).anyTimes();
-        expect(context.getBean(AliveWriter.class)).andReturn(writer).anyTimes();
-        expect(context.getBean(MessageSender.class)).andReturn(sender).anyTimes();
-    }
-
     @Test
     @UseConf("mock_test.xml")
     public void refreshShouldTriggerValueUpdateForEachSubscribedTag() {
@@ -156,7 +127,7 @@ public class OPCUAMessageHandlerTest extends GenericMessageHandlerTest {
         EquipmentConfiguration config = oldConfig.clone();
         config.setEquipmentAddress("http://test:2");
         final ChangeReport changeReport = new ChangeReport();
-        endpoint.setThrowExceptions(true);
+        testEndpoint.setThrowExceptions(true);
 
         handler.onUpdateEquipmentConfiguration(config, oldConfig, changeReport);
         assertTrue(changeReport.isFail());

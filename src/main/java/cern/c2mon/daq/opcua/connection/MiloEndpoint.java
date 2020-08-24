@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.MessageSender;
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
@@ -30,10 +31,8 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
-import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -75,9 +74,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private final RetryDelegate retryDelegate;
     private final TagSubscriptionReader mapper;
     private final MessageSender messageSender;
+    private final AppConfigProperties config;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
-    private final RetryTemplate exceptionClassifierTemplate;
     private OpcUaClient client;
     private boolean updateEquipmentStateOnSessionChanges;
 
@@ -86,12 +85,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     @Setter
     private MonitoringMode mode = MonitoringMode.Reporting;
-
-    @Value("#{@appConfigProperties.getQueueSize()}")
-    private int queueSize;
-
-    @Value("#{@appConfigProperties.getRequestTimeout()}")
-    private long requestTimeout;
 
     /**
      * Connects to a server through the Milo OPC UA SDK. Discover available endpoints and select the most secure one in
@@ -477,7 +470,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 log.error("Could not delete subscription. Proceed with recreation.", e);
             }
             try {
-                exceptionClassifierTemplate.execute(retryContext -> {
+                config.exceptionClassifierTemplate().execute(retryContext -> {
                     if (!resubscribeGroupsAndReportSuccess(group)) {
                         throw new CommunicationException(CREATE_SUBSCRIPTION);
                     }
@@ -506,16 +499,14 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
             final Long tagId = mapper.getTagId(item.getClientHandle().intValue());
             if (tagId == null) {
                 log.info("Receives a value update that could not be associated with a DataTag.");
+            } else if (value == null) {
+                log.info("Received a null update.");
             } else {
                 SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
-                final Object updateValue = MiloMapper.toObject(value.getValue());
-                ValueUpdate valueUpdate;
-                if (value.getServerTime() != null) {
-                    valueUpdate = new ValueUpdate(updateValue, value.getServerTime().getJavaTime());
-                } else if (value.getSourceTime() != null) {
-                    valueUpdate = new ValueUpdate(updateValue, value.getSourceTime().getJavaTime());
-                } else {
-                    valueUpdate = new ValueUpdate(updateValue);
+                ValueUpdate valueUpdate = new ValueUpdate(value.getValue());
+                final Long recordedTime = config.getTimeRecordMode().getTime(value.getSourceTime(), value.getServerTime());
+                if (recordedTime != null) {
+                    valueUpdate.setSourceTimestamp(recordedTime);
                 }
                 messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
             }
@@ -532,7 +523,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         MonitoringParameters mp = new MonitoringParameters(UInteger.valueOf(definition.getClientHandle()),
                 samplingInterval,
                 ExtensionObject.encode(client.getSerializationContext(), filter),
-                uint(queueSize),
+                uint(config.getQueueSize()),
                 true);
         ReadValueId id = new ReadValueId(definition.getNodeId(),
                 AttributeId.Value.uid(),

@@ -1,14 +1,13 @@
-package cern.c2mon.daq.opcua;
+package cern.c2mon.daq.opcua.opcuamessagehandler;
 
-import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.OPCUAMessageHandler;
+import cern.c2mon.daq.opcua.OPCUAMessageSender;
+import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
-import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
-import cern.c2mon.daq.opcua.testutils.TestEndpoint;
+import cern.c2mon.daq.opcua.testutils.TestControllerProxy;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
-import cern.c2mon.daq.test.GenericMessageHandlerTest;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -16,11 +15,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_FAILED;
 import static org.easymock.EasyMock.replay;
@@ -32,26 +29,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @TestPropertySource(locations = "classpath:opcua.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @RunWith(SpringRunner.class)
-public class OPCUAMessageHandlerCommfaultTest extends GenericMessageHandlerTest {
+public class OPCUAMessageHandlerCommfaultTest extends OPCUAMessageHandlerTestBase {
 
-    @Autowired ApplicationContext context;
-    @Autowired IDataTagHandler tagHandler;
-    @Autowired MessageSender epMessageSender;
-    @Autowired Endpoint miloEndpoint;
-    @Autowired TagSubscriptionReader mapper;
-
-    OPCUAMessageHandler handler;
+    @Autowired MiloEndpoint miloEndpoint;
+    OPCUAMessageSender sender;
+    TestControllerProxy miloController;
     TestUtils.CommfaultSenderCapture capture;
-
-    final TestEndpoint testEndpoint = new TestEndpoint(epMessageSender, mapper);
 
     @Override
     protected void beforeTest() throws Exception {
+        sender = new OPCUAMessageSender();
+        super.beforeTest(sender);
+        miloController = TestUtils.getFailoverProxy(miloEndpoint, sender);
         testEndpoint.setThrowExceptions(true);
-        handler = (OPCUAMessageHandler) msgHandler;
-        handler.setContext(context);
-        ReflectionTestUtils.setField(tagHandler, "controller", TestUtils.getFailoverProxy(miloEndpoint, epMessageSender));
-        capture = new TestUtils.CommfaultSenderCapture(messageSender);
+        testEndpoint.setDelay(100);
+        capture = new TestUtils.CommfaultSenderCapture(this.messageSender);
     }
 
     @Override
@@ -61,15 +53,15 @@ public class OPCUAMessageHandlerCommfaultTest extends GenericMessageHandlerTest 
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigButBadEndpointShouldThrowCommunicationError() {
-        ReflectionTestUtils.setField(tagHandler, "controller", TestUtils.getFailoverProxy(testEndpoint, epMessageSender));
+        configureContextWithController(testController, sender);
         replay(messageSender);
-        assertThrows(CommunicationException.class, () -> handler.connectToDataSource());
+        assertThrows(CommunicationException.class, handler::connectToDataSource);
     }
 
     @Test
     @UseConf("commfault_ok.xml")
     public void properConfigButBadEndpointShouldSendFAIL() {
-        ReflectionTestUtils.setField(tagHandler, "controller", TestUtils.getFailoverProxy(testEndpoint, epMessageSender));
+        configureContextWithController(testController, sender);
         replay(messageSender);
         try {
             handler.connectToDataSource();
@@ -83,8 +75,9 @@ public class OPCUAMessageHandlerCommfaultTest extends GenericMessageHandlerTest 
     }
 
     @Test
-    @UseConf("address_string_missing_properties.xml")
+    @UseConf("bad_address_string.xml")
     public void badAddressStringShouldThrowError() {
+        configureContextWithController(testController, sender);
         replay(messageSender);
         assertThrows(ConfigurationException.class,
                 () -> handler.connectToDataSource(),
@@ -92,8 +85,9 @@ public class OPCUAMessageHandlerCommfaultTest extends GenericMessageHandlerTest 
     }
 
     @Test
-    @UseConf("commfault_incorrect.xml")
-    public void improperConfigShouldSendFAIL() {
+    @UseConf("commfault_ok.xml")
+    public void cannotEstablishInitialConnectionShouldSendFAIL() {
+        configureContextWithController(miloController, sender);
         replay(messageSender);
         try {
             handler.connectToDataSource();
@@ -107,8 +101,9 @@ public class OPCUAMessageHandlerCommfaultTest extends GenericMessageHandlerTest 
     }
 
     @Test
-    @UseConf("commfault_incorrect.xml")
-    public void improperConfigShouldConfigurationError() {
+    @UseConf("commfault_ok.xml")
+    public void cannotEstablishInitialConnectionShouldConfigurationError() {
+        configureContextWithController(miloController, sender);
         replay(messageSender);
         assertThrows(ConfigurationException.class, handler::connectToDataSource);
     }

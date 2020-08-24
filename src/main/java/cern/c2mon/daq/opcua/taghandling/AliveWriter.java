@@ -59,7 +59,7 @@ public class AliveWriter {
      * Restart a previously configured aliveWriter. To be invoked as an actuator operation.
      * @param aliveTagInterval the interval during which to read from the aliveTag
      */
-    @ManagedOperation
+    @ManagedOperation(description = "Start the aliveWriter remotely. The Writer must have been initialized during DAQ startup.")
     public void startAliveWriter(long aliveTagInterval) {
         if (aliveTagAddress != null) {
             log.info("Starting AliveWriter...");
