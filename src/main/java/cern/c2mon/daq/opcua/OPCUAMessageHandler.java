@@ -54,17 +54,15 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     @Override
     public void connectToDataSource() throws EqIOException {
         log.info("Initializing the OPC UA DAQ");
+        IEquipmentConfiguration config = getEquipmentConfiguration();
+        IEquipmentMessageSender sender = getEquipmentMessageSender();
+
         controller = getContext().getBean("controller", Controller.class);
         dataTagHandler = getContext().getBean(IDataTagHandler.class);
         commandTagHandler = getContext().getBean(CommandTagHandler.class);
         appConfigProperties = getContext().getBean(AppConfigProperties.class);
         dataTagChanger = getContext().getBean(DataTagChanger.class);
         aliveWriter = getContext().getBean(AliveWriter.class);
-
-        // getEquipmentConfiguration always fetches the most recent equipment configuration, even if changes have occurred to the configuration since start-up of the DAQ.
-        IEquipmentConfiguration config = getEquipmentConfiguration();
-        IEquipmentMessageSender sender = getEquipmentMessageSender();
-
         getContext().getBean(MessageSender.class).initialize(sender);
 
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
@@ -84,7 +82,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             try {
                 startAliveWriter(config);
             } catch (ConfigurationException e) {
-                log.info("Proceeding without starting the Alive Writer. Fallback to simple alive monitoring...", e);
+                log.info("Proceeding without starting the Alive Writer. ", e);
             }
         } else {
             log.info("Alive Writer is disabled.");

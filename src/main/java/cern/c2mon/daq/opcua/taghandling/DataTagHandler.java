@@ -54,10 +54,8 @@ public class DataTagHandler implements IDataTagHandler {
                 .collect(groupingBy(ISourceDataTag::getTimeDeadband))
                 .entrySet().stream()
                 .collect(toMap(e -> manager.getGroup(e.getKey()), e -> definitionsToTags.apply(e.getValue())));
-        synchronized (this) {
-            final Map<Integer, SourceDataTagQuality> handleQualityMap = controller.subscribe(definitionsByGroups);
-            handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
-        }
+        final Map<Integer, SourceDataTagQuality> handleQualityMap = controller.subscribe(definitionsByGroups);
+        handleQualityMap.forEach(this::completeSubscriptionAndReportSuccess);
     }
 
     @Override

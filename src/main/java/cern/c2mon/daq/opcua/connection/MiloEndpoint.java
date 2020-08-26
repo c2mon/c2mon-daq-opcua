@@ -495,22 +495,29 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     private void defaultSubscriptionCallback(UaMonitoredItem item) {
-        item.setValueConsumer(value -> {
-            final Long tagId = mapper.getTagId(item.getClientHandle().intValue());
-            if (tagId == null) {
-                log.info("Receives a value update that could not be associated with a DataTag.");
-            } else if (value == null) {
-                log.info("Received a null update.");
-            } else {
-                SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality((value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode());
-                ValueUpdate valueUpdate = new ValueUpdate(value.getValue());
-                final Long recordedTime = config.getTimeRecordMode().getTime(value.getSourceTime(), value.getServerTime());
-                if (recordedTime != null) {
-                    valueUpdate.setSourceTimestamp(recordedTime);
-                }
-                messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
+        final Long tagId = mapper.getTagId(item.getClientHandle().intValue());
+        if (tagId == null) {
+            log.info("Receives a value update that could not be associated with a DataTag.");
+        } else {
+            item.setValueConsumer(value -> dataValueToValueUpdate(value, tagId));
+        }
+    }
+
+    private void dataValueToValueUpdate(DataValue value, Long tagId) {
+         if (value == null) {
+            log.info("Received a null update.");
+        } else {
+            final StatusCode statusCode = (value.getStatusCode() == null) ? StatusCode.BAD : value.getStatusCode();
+            SourceDataTagQuality tagQuality = MiloMapper.getDataTagQuality(statusCode);
+            ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()));
+            final Long sourceTime = value.getSourceTime() == null ? null : value.getSourceTime().getJavaTime();
+            final Long serverTime = value.getServerTime() == null ? null : value.getServerTime().getJavaTime();
+            final Long recordedTime = config.getTimeRecordMode().getTime(sourceTime, serverTime);
+            if (recordedTime != null) {
+                valueUpdate.setSourceTimestamp(recordedTime);
             }
-        });
+            messageSender.onValueUpdate(tagId, tagQuality, valueUpdate);
+        }
     }
 
     private MonitoredItemCreateRequest toMonitoredItemCreateRequest(ItemDefinition definition) {

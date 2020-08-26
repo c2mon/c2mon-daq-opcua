@@ -2,11 +2,11 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
-import cern.c2mon.shared.common.type.TypeConverter;
 import com.google.common.collect.ImmutableSet;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.serialization.UaEnumeration;
 import org.eclipse.milo.opcua.stack.core.types.builtin.ExpandedNodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -78,7 +78,9 @@ public abstract class MiloMapper {
      */
     public static SourceDataTagQuality getDataTagQuality(StatusCode statusCode) {
         SourceDataTagQualityCode tagCode = SourceDataTagQualityCode.UNKNOWN;
-        if (statusCode.isGood()) {
+        if (statusCode == null) {
+            return new SourceDataTagQuality(tagCode, "No status code was passed with the value update");
+        } else if (statusCode.isGood()) {
             tagCode = SourceDataTagQualityCode.OK;
         } else if (OUT_OF_BOUNDS.contains(statusCode.getValue())) {
             tagCode = SourceDataTagQualityCode.OUT_OF_BOUNDS;
@@ -131,11 +133,6 @@ public abstract class MiloMapper {
             log.error("The backing object class was not recognized by the Milo OPC UA stack and cannot be processed.");
             return null;
         }
-        final String className = objectClass.getName();
-        if (!TypeConverter.isConvertible(variant.getValue(), className)) {
-            log.error("The {} cannot convert the value object {} into class {}.", TypeConverter.class.getName(), variant.getValue(), className);
-            return null;
-        }
-        return TypeConverter.cast(variant.getValue(), className);
+        return variant.getValue() instanceof UaEnumeration ? ((UaEnumeration) variant.getValue()).getValue() : variant.getValue();
     }
 }

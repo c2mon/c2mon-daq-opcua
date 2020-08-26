@@ -6,6 +6,8 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
+import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -15,6 +17,10 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -23,12 +29,12 @@ import java.util.function.Predicate;
  * An abstract base class of a controller that manages the connection to servers in a redundant server set and is
  * capable of failing over in between these servers in case of error. It offers redundancy-specific functionality that
  * is shared in between different failover modes of the OPC UA redundancy model. Concrete Failover modes should
- * implement specific behavior on initial connection by implementing the {@link ConcreteController}'s initialize() method, and
- * on failover by implementing  the {@link FailoverMode}'s switchServers() method.
+ * implement specific behavior on initial connection by implementing the {@link ConcreteController}'s initialize()
+ * method, and on failover by implementing  the {@link FailoverMode}'s switchServers() method.
  */
 @Slf4j
 @RequiredArgsConstructor
-public abstract class FailoverBase extends ControllerBase implements FailoverMode {
+public abstract class FailoverBase extends ControllerBase implements FailoverMode, SessionActivityListener {
 
     protected static final UByte serviceLevelHealthLimit = UByte.valueOf(200);
     protected static final List<ItemDefinition> connectionMonitoringNodes = Arrays.asList(
@@ -44,6 +50,8 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
      */
     protected final AtomicBoolean listening = new AtomicBoolean(true);
     protected final AppConfigProperties config;
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> triggerFailoverFuture;
 
     /**
      * Initialize supervision and connection monitoring to the active server.
@@ -65,7 +73,39 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
         log.info("Disconnecting... ");
         stopped.set(true);
         listening.set(false);
+        executor.shutdown();
         super.stop();
+    }
+
+
+    /**
+     * Called when a session activates. This interrupts an active timeout to failover initiated in
+     * onSessionInactive(session).
+     * @param session the session that has activated.
+     */
+    @Override
+    public void onSessionActive(UaSession session) {
+        if (triggerFailoverFuture != null && !triggerFailoverFuture.isCancelled()) {
+            triggerFailoverFuture.cancel(false);
+        }
+    }
+
+    /**
+     * The session becoming inactive means that the connection to the server has been lost. A timeout is started to see
+     * it the connection loss is only momentary, otherwise it is assumed that the active servers have switches and a
+     * failover process is initiated.
+     * @param session the session that has become inactive
+     */
+    @Override
+    public void onSessionInactive(UaSession session) {
+        boolean readyForFailover = !listening.get() || triggerFailoverFuture == null || triggerFailoverFuture.isCancelled();
+        if (readyForFailover && !stopped.get()) {
+            log.info("Starting timeout on inactive session.");
+            triggerFailoverFuture = executor.schedule(() -> {
+                log.info("Trigger server switch due to long disconnection");
+                triggerServerSwitch();
+            }, config.getFailoverDelay(), TimeUnit.MILLISECONDS);
+        }
     }
 
     protected void triggerServerSwitch() {
@@ -124,6 +164,24 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
         } catch (OPCUAException e) {
             log.debug("Error reading service level from endpoint {}. ", endpoint.getUri(), e);
             return UByte.valueOf(0);
+        }
+    }
+
+    /**
+     * Subscribes to the ServerState and ServiceLevel nodes with a callback triggering a failover in case the nodes
+     * report unhealthy states. Also listens to the session activity and triggers a failover after the configured
+     * failoverDelay if the session has not reactivated. The latter is skipped if the the FailoverDelay is negative.
+     * @throws OPCUAException if the subscription creation failed.
+     */
+    protected void monitorConnection() throws OPCUAException {
+        if (stopped.get()) {
+            log.info("The endpoint was stopped, skipping connection monitoring.");
+        } else {
+            log.info("Setting up monitoring");
+            if (config.getFailoverDelay() >= 0) {
+                currentEndpoint().manageSessionActivityListener(true, this);
+            }
+            currentEndpoint().subscribeWithCallback(config.getConnectionMonitoringRate(), connectionMonitoringNodes, this::monitoringCallback);
         }
     }
 }

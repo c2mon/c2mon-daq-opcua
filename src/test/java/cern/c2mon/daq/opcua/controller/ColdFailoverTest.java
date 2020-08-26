@@ -387,17 +387,6 @@ public class ColdFailoverTest {
     }
 
     @Test
-    public void onSessionInactiveWithNegativeFailoverDelayShouldDoNothing() throws OPCUAException, InterruptedException {
-        config.setFailoverDelay(-1);
-        setupConnectionMonitoring("redundant");
-        initLatch.await(100L, TimeUnit.MILLISECONDS);
-        initLatch = new CountDownLatch(1);
-        endpoint.setInitLatch(initLatch);
-        coldFailover.onSessionInactive(null);
-        assertFalse(initLatch.await(100L, TimeUnit.MILLISECONDS));
-    }
-
-    @Test
     public void onSessionActiveShouldCancelFailover() throws OPCUAException {
         setupConnectionMonitoring("redundant");
         config.setFailoverDelay(10L);

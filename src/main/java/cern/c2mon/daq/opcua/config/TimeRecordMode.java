@@ -1,8 +1,6 @@
 package cern.c2mon.daq.opcua.config;
 
 
-import org.eclipse.milo.opcua.stack.core.types.builtin.DateTime;
-
 import java.time.Instant;
 
 /**
@@ -15,17 +13,21 @@ import java.time.Instant;
 public enum TimeRecordMode {
     SOURCE, SERVER, CLOSEST;
 
-    public Long getTime(DateTime sourceTime, DateTime serverTime) {
-        if (sourceTime == null && serverTime == null) {
+    /**
+     * Get the time to use for a DataValue update for the source server time values returned by the OPC UA values.
+     * @param source the nullable source time value
+     * @param server the nullable server time value
+     * @return the appropriate time as configured.
+     */
+    public Long getTime(Long source, Long server) {
+        if (source == null && server == null) {
             return null;
-        } else if (sourceTime == null || this.equals(SERVER)) {
-            return serverTime.getJavaTime();
-        } else if (serverTime == null || this.equals(SOURCE)) {
-            return sourceTime.getJavaTime();
+        } else if (source == null || (this.equals(SERVER) && server != null)) {
+            return server;
+        } else if (server == null || this.equals(SOURCE)) {
+            return source;
         } else {
-            final long source = sourceTime.getJavaTime();
-            final long server = serverTime.getJavaTime();
-            final long reference = Instant.now().getEpochSecond();
+            final long reference = Instant.now().toEpochMilli();
             return (Math.abs(server - reference) > Math.abs(source - reference)) ? source : server;
         }
     }

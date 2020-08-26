@@ -6,8 +6,6 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
-import org.eclipse.milo.opcua.sdk.client.api.UaSession;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
@@ -17,7 +15,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * In Cold Failover mode a client can only connect to one server at a time. When the client loses connectivity with the
@@ -27,13 +25,11 @@ import java.util.concurrent.*;
 @Slf4j
 @Component("coldFailover")
 @ManagedResource
-public class ColdFailover extends FailoverBase implements SessionActivityListener {
+public class ColdFailover extends FailoverBase {
 
     private final Queue<String> redundantServers = new ConcurrentLinkedDeque<>();
-    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private String currentUri;
     private Endpoint activeEndpoint;
-    private ScheduledFuture<?> future;
 
     /**
      * Creates a new instance of ColdFailover
@@ -82,7 +78,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
     public void stop() {
         super.stop();
         log.info("Stopping ColdFailover");
-        executor.shutdown();
         redundantServers.clear();
     }
 
@@ -116,36 +111,6 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         } else {
             log.info("Server was manually shut down.");
         }
-    }
-
-    /**
-     * Called when a session activates. This interrupts an active timeout to failover initiated in
-     * onSessionInactive(session).
-     * @param session the session that has activated.
-     */
-    @Override
-    public void onSessionActive(UaSession session) {
-        if (future != null && !future.isCancelled()) {
-            future.cancel(false);
-        }
-    }
-
-    /**
-     * The session becoming inactive means that the connection to the server has been lost. A timeout is started to see
-     * it the connection loss is only momentary, otherwise it is assumed that the active servers have switches and a
-     * failover process is initiated.
-     * @param session the session that has become inactive
-     */
-    @Override
-    public void onSessionInactive(UaSession session) {
-        boolean failoverInProcess = !listening.get() || future == null || future.isCancelled();
-        if (config.getFailoverDelay() >= 0 && failoverInProcess && !stopped.get()) {
-                log.info("Starting timeout on inactive session.");
-                future = executor.schedule(() -> {
-                    log.info("Trigger server switch due to long disconnection");
-                    triggerServerSwitch();
-                }, config.getFailoverDelay(), TimeUnit.MILLISECONDS);
-            }
     }
 
     @Override
@@ -194,14 +159,11 @@ public class ColdFailover extends FailoverBase implements SessionActivityListene
         }
     }
 
-    private void monitorConnection() throws OPCUAException {
-        if (stopped.get()) {
-            log.info("The endpoint was stopped, skipping connection monitoring.");
-        } else {
-            log.info("Setting up monitoring");
+    @Override
+    protected void monitorConnection() throws OPCUAException {
+        if (!stopped.get()) {
             activeEndpoint.setUpdateEquipmentStateOnSessionChanges(true);
-            activeEndpoint.manageSessionActivityListener(true, this);
-            activeEndpoint.subscribeWithCallback(config.getConnectionMonitoringRate(), connectionMonitoringNodes, this::monitoringCallback);
         }
+        super.monitorConnection();
     }
 }

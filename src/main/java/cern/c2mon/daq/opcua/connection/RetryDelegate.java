@@ -67,7 +67,7 @@ public class RetryDelegate {
         } catch (InterruptedException e) {
             log.debug("Execution {} failed with interrupted exception; ", context.name(), e);
             Thread.currentThread().interrupt();
-            throw OPCUAException.of(context, e.getCause(), isLongDisconnection(disconnectionTime));
+            throw new CommunicationException(context, e.getCause());
         } catch (ExecutionException | TimeoutException e) {
             log.debug("Execution {} failed with exception; ", context.name(), e);
             throw OPCUAException.of(context, e.getCause(), isLongDisconnection(disconnectionTime));
@@ -78,6 +78,6 @@ public class RetryDelegate {
     }
 
     private boolean isLongDisconnection(LongSupplier disconnectionTime) {
-        return config.getMaxRetryAttempts() * (config.getRetryDelay() + config.getRequestTimeout()) < disconnectionTime.getAsLong();
+        return config.getMaxRetryAttempts() * config.getRetryDelay() < disconnectionTime.getAsLong();
     }
 }

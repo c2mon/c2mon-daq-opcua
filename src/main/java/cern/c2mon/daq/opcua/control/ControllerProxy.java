@@ -92,8 +92,6 @@ public class ControllerProxy implements Controller {
     public void stop() {
         if (controller != null) {
             controller.stop();
-        } else {
-            log.info("No Controller.");
         }
     }
 
@@ -165,7 +163,7 @@ public class ControllerProxy implements Controller {
             try {
                 endpoint.initialize(currentUri);
                 return currentUri;
-            } catch (CommunicationException e) {
+            } catch (OPCUAException e) {
                 if (!iterator.hasNext()) {
                     log.error("Could not connect to redundant URI {}, and no other server URIs remain.", currentUri);
                     throw e;
@@ -240,7 +238,7 @@ public class ControllerProxy implements Controller {
         return new String[]{};
     }
 
-    private String[] loadRedundantUrisFromAddressSpace(String currentUri, ServerRedundancyTypeNode redundancyNode) throws OPCUAException {
+    private String[] loadRedundantUrisFromAddressSpace(String currentUri, ServerRedundancyTypeNode redundancyNode) {
         if (!NonTransparentRedundancyTypeNode.class.isAssignableFrom(redundancyNode.getClass())) {
             log.info("The redundancy mode does not require redundant addresses.");
             return new String[]{};

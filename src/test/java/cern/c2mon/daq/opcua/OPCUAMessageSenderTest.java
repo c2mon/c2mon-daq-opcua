@@ -12,7 +12,7 @@ import static org.easymock.EasyMock.*;
 public class OPCUAMessageSenderTest {
 
     IEquipmentMessageSender eqSenderMock = niceMock(IEquipmentMessageSender.class);
-    MessageSender sender = new OPCUAMessageSender();
+    OPCUAMessageSender sender = new OPCUAMessageSender();
 
     @BeforeEach
     public void setUp() {
@@ -53,7 +53,7 @@ public class OPCUAMessageSenderTest {
     }
 
     @Test
-    public void onEquipmentStateUpdateShouldSendOKIFOK() {
+    public void onEquipmentStateUpdateShouldSendOKIfStateOK() {
         final MessageSender.EquipmentState state = MessageSender.EquipmentState.OK;
         eqSenderMock.confirmEquipmentStateOK(anyString());
         expectLastCall().once();
@@ -64,13 +64,35 @@ public class OPCUAMessageSenderTest {
     }
 
 
+
     @Test
-    public void onEquipmentStateUpdateShouldSendIncorrectOtherwise() {
+    public void onEquipmentStateUpdateShouldSendOKIfStringIsOk() {
+        eqSenderMock.confirmEquipmentStateOK(anyString());
+        expectLastCall().once();
+        replay(eqSenderMock);
+
+        sender.onEquipmentStateUpdate("ok");
+        verify(eqSenderMock);
+    }
+
+
+    @Test
+    public void onEquipmentStateUpdateShouldSendIncorrectOnOtherString() {
+        eqSenderMock.confirmEquipmentStateIncorrect(anyString());
+        expectLastCall().times(1);
+        replay(eqSenderMock);
+
+        sender.onEquipmentStateUpdate("Bad");
+        verify(eqSenderMock);
+    }
+
+    @Test
+    public void onEquipmentStateUpdateShouldSendIncorrectOnOtherState() {
         eqSenderMock.confirmEquipmentStateIncorrect(anyString());
         expectLastCall().times(2);
         replay(eqSenderMock);
 
-        sender.onEquipmentStateUpdate(MessageSender.EquipmentState.CONNECTION_FAILED);
+        sender.onEquipmentStateUpdate(MessageSender.EquipmentState.CONNECTION_LOST);
         sender.onEquipmentStateUpdate(MessageSender.EquipmentState.CONNECTION_LOST);
         verify(eqSenderMock);
     }
