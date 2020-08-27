@@ -32,7 +32,7 @@ public class ItemDefinitionTest extends MappingBase {
         assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getNodeId().getNamespaceIndex().intValue());
         assertEquals(tag.getTimeDeadband(), dataTagDefinition.getTimeDeadband());
         assertEquals(tag.getValueDeadband(), dataTagDefinition.getValueDeadband());
-        assertEquals(tag.getValueDeadbandType(), dataTagDefinition.getValueDeadbandType());
+        assertEquals(ValueDeadbandType.of(tag.getValueDeadbandType()), dataTagDefinition.getValueDeadbandType());
     }
 
     @Test

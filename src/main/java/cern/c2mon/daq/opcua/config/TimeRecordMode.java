@@ -5,9 +5,9 @@ import java.time.Instant;
 
 /**
  * The server can report a server timestamp, a source timestamp, or both, where either may be null or
- * misconfigured. Possible values are:
+ * badly configured. Some SDKs report unset values as Unix 0, which will be interpreted as 1970. Possible values are:
  * SOURCE:  prefer the source  timestamp reported by the server, and fall back to the server timestamp if null.
- * SERVER:  use the server timestamp reported by the server, and fall back to the server timestamp if null.
+ * SERVER:  use the server timestamp reported by the server, and fall back to the source timestamp if null.
  * CLOSEST: use the source or server timestamp which is closer to the Java time of the DAQ process.
  */
 public enum TimeRecordMode {

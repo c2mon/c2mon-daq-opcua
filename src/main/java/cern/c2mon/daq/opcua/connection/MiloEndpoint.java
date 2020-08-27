@@ -525,7 +525,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         double samplingInterval = 0;
 
         DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue,
-                uint(definition.getValueDeadbandType()),
+                uint(definition.getValueDeadbandType().getOpcuaValueDeadbandType()),
                 (double) definition.getValueDeadband());
         MonitoringParameters mp = new MonitoringParameters(UInteger.valueOf(definition.getClientHandle()),
                 samplingInterval,

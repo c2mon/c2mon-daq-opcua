@@ -39,7 +39,7 @@ public class ItemDefinition {
     private final NodeId methodNodeId;
     private final int timeDeadband;
     private final float valueDeadband;
-    private final int valueDeadbandType;
+    private final ValueDeadbandType valueDeadbandType;
 
     /**
      * The {@link ItemDefinition}'s unique identifier, equal to the client Handle of a monitoredItem returned by a Milo
@@ -55,13 +55,13 @@ public class ItemDefinition {
         this(nodeId, methodNodeId, tag.getTimeDeadband(), tag.getValueDeadband(), tag.getValueDeadbandType());
     }
 
-    private ItemDefinition(NodeId nodeId, NodeId methodNodeId, int timeDeadband, float valueDeadband, int valueDeadbandType) {
+    private ItemDefinition(NodeId nodeId, NodeId methodNodeId, int timeDeadband, float valueDeadband, short valueDeadbandType) {
         this.nodeId = nodeId;
         this.methodNodeId = methodNodeId;
         this.clientHandle = clientHandles.getAndIncrement();
         this.timeDeadband = timeDeadband;
         this.valueDeadband = valueDeadband;
-        this.valueDeadbandType = valueDeadbandType;
+        this.valueDeadbandType = ValueDeadbandType.of(valueDeadbandType);
     }
 
     /**
