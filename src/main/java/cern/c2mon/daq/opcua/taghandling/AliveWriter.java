@@ -18,7 +18,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The AliveWriter ensures that the SubEquipments connected to the OPC UA server are still running by writing to them.
@@ -32,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @ManagedResource
 public class AliveWriter {
 
-    private final AtomicInteger writeCounter = new AtomicInteger(0);
+    private int writeCounter = 0;
     private final Controller controllerProxy;
     private final MessageSender messageSender;
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
@@ -90,11 +89,10 @@ public class AliveWriter {
 
     private void aliveTagMonitoring() {
         try {
-            if (controllerProxy.write(aliveTagAddress, writeCounter.intValue())) {
+            if (controllerProxy.write(aliveTagAddress, writeCounter)) {
                 messageSender.onAlive();
             }
-            writeCounter.incrementAndGet();
-            writeCounter.compareAndSet(Byte.MAX_VALUE, 0);
+            writeCounter = (writeCounter < Byte.MAX_VALUE) ? writeCounter++ : 0;
         } catch (OPCUAException e) {
             log.error("Error while writing alive. Retrying...", e);
         }
