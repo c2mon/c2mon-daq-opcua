@@ -21,7 +21,6 @@ import java.util.Optional;
  * certificate and keypair with a matching signature algorithm. Currently, only @RsaSha256
  * (http://www.w3.org/2001/04/xmldsig-more#rsa-sha256) is supported.
  */
-@Component("generator")
 @Slf4j
 @RequiredArgsConstructor
 public class CertificateGenerator extends CertifierBase {

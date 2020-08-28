@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -32,7 +31,6 @@ import java.util.stream.Collectors;
  * The CommandRunner identifies appropriate actions to take upon receiving an {@link ISourceCommandTag}s and executes
  * them on the {@link Endpoint}.
  */
-@Component("commandTagHandler")
 @Slf4j
 @RequiredArgsConstructor
 public class CommandTagHandler implements ICommandTagChanger {

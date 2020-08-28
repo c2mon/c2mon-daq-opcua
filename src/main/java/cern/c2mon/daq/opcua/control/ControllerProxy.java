@@ -17,10 +17,8 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Primary;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
-import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.CompletionException;
@@ -34,8 +32,6 @@ import java.util.stream.Stream;
 @Slf4j
 @ManagedResource
 @RequiredArgsConstructor
-@Component(value = "controller")
-@Primary
 public class ControllerProxy implements Controller {
     protected final ApplicationContext appContext;
     protected final AppConfigProperties config;
@@ -177,19 +173,13 @@ public class ControllerProxy implements Controller {
 
 
     private boolean loadControllerFromConfig() {
-        final String customRedundancyMode = config.getRedundancyMode();
-        if (customRedundancyMode != null && !customRedundancyMode.isEmpty()) {
+        if (config.getRedundancyMode() != null) {
             try {
-                final Class<?> redundancyMode = Class.forName(customRedundancyMode);
-                if (ConcreteController.class.isAssignableFrom(redundancyMode)) {
-                    controller = (ConcreteController) appContext.getBean(redundancyMode);
-                    return true;
-                }
-                log.error("The configured redundancy mode {} must implement the {} interface. Proceeding without.", config.getRedundancyMode(), ConcreteController.class.getCanonicalName());
-            } catch (ClassNotFoundException e) {
-                log.error("The configured redundancy mode {} could not be resolved. Proceeding without.", config.getRedundancyMode(), e);
+                controller = appContext.getBean(ConcreteController.class, config.getRedundancyMode());
+                log.info("Loaded ConcreteController with class {} for redundancy type {}.", controller.getClass().getName(), config.getRedundancyMode());
+                return true;
             } catch (BeansException e) {
-                log.error("The configured redundancy mode {} must be a Spring Bean. Proceeding without.", config.getRedundancyMode(), e);
+                log.error("Cannot load a ConcreteController for the redundancyType {}.  Is it properly configured in the EquipmentScopeConfig?", config.getRedundancyMode());
             }
         }
         return false;
@@ -210,9 +200,9 @@ public class ControllerProxy implements Controller {
             log.error("An exception occurred when reading the server's redundancy information. Proceeding without setting up redundancy.", e);
         } finally {
             if (redundancyMode.equals(RedundancySupport.None) || redundancyMode.equals(RedundancySupport.Transparent)) {
-                controller = appContext.getBean(NoFailover.class);
+                controller = appContext.getBean(ConcreteController.class, FailoverMode.Type.NONE);
             } else {
-                controller = appContext.getBean(ColdFailover.class);
+                controller = appContext.getBean(ConcreteController.class, FailoverMode.Type.COLD);
             }
         }
         return redundantUriArray;

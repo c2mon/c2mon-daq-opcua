@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.opcuamessagehandler;
 
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.OPCUAMessageSender;
-import cern.c2mon.daq.opcua.connection.MiloEndpoint;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -31,7 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @RunWith(SpringRunner.class)
 public class OPCUAMessageHandlerCommfaultTest extends OPCUAMessageHandlerTestBase {
 
-    @Autowired MiloEndpoint miloEndpoint;
+    @Autowired
+    Endpoint miloEndpoint;
     OPCUAMessageSender sender;
     TestControllerProxy miloController;
     TestUtils.CommfaultSenderCapture capture;

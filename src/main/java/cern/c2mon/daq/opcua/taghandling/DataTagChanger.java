@@ -5,7 +5,6 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.List;
@@ -23,7 +22,6 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
  * The {@link DataTagChanger} handles changes  at runtime to the {@link ISourceDataTag}s in  {@link
  * cern.c2mon.shared.common.process.IEquipmentConfiguration}.
  */
-@Component("dataTagChanger")
 @RequiredArgsConstructor
 @Slf4j
 public class DataTagChanger implements IDataTagChanger {

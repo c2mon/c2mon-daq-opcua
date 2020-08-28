@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.simengine;
 
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -53,11 +52,11 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static final long CMDID_V0SET = 20L;
 
     @Autowired ApplicationContext context;
-    @Autowired TestListeners.Pulse endpointListener;
     @Autowired IDataTagHandler tagHandler;
     @Autowired Controller proxy;
 
 
+    TestListeners.Pulse endpointListener;
     private OPCUAMessageHandler handler;
     private SourceCommandTagValue value;
 
@@ -71,6 +70,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     protected void beforeTest() throws Exception {
         handler = (OPCUAMessageHandler) msgHandler;
         handler.setContext(context);
+        endpointListener = new TestListeners.Pulse();
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
         ReflectionTestUtils.setField(tagHandler, "messageSender", endpointListener);

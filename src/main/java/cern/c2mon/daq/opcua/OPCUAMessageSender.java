@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 /**
  * Handles communication with the DAQ Core's {@link IEquipmentMessageSender}
  */
-@Component(value = "messageSender")
 @NoArgsConstructor
 @Slf4j
 @Primary

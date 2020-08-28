@@ -24,6 +24,7 @@ import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.context.ApplicationContext;
 
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
@@ -53,17 +54,19 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public void connectToDataSource() throws EqIOException {
+
         log.info("Initializing the OPC UA DAQ");
+        final ApplicationContext ctx = getContext();
         IEquipmentConfiguration config = getEquipmentConfiguration();
         IEquipmentMessageSender sender = getEquipmentMessageSender();
 
-        controller = getContext().getBean("controller", Controller.class);
-        dataTagHandler = getContext().getBean(IDataTagHandler.class);
-        commandTagHandler = getContext().getBean(CommandTagHandler.class);
-        appConfigProperties = getContext().getBean(AppConfigProperties.class);
-        dataTagChanger = getContext().getBean(DataTagChanger.class);
-        aliveWriter = getContext().getBean(AliveWriter.class);
-        getContext().getBean(MessageSender.class).initialize(sender);
+        controller = ctx.getBean("controller", Controller.class);
+        dataTagHandler = ctx.getBean(IDataTagHandler.class);
+        commandTagHandler = ctx.getBean(CommandTagHandler.class);
+        appConfigProperties = ctx.getBean(AppConfigProperties.class);
+        dataTagChanger = ctx.getBean(DataTagChanger.class);
+        aliveWriter = ctx.getBean(AliveWriter.class);
+        ctx.getBean(MessageSender.class).initialize(sender);
 
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));

@@ -15,8 +15,6 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SecurityChecksFa
 /**
  * A Certifier to configure an {@link OpcUaClientConfigBuilder} for a connection with an endpoint without encryption.
  */
-@Component("noSecurity")
-@Getter
 @Slf4j
 @RequiredArgsConstructor
 public class NoSecurityCertifier implements Certifier {

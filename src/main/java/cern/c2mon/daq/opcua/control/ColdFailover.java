@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
-import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,7 +22,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * situation the client may need to wait for the redundant server to become available. See UA Part 4 6.6.2.4.5.2.
  */
 @Slf4j
-@Component("coldFailover")
 @ManagedResource
 public class ColdFailover extends FailoverBase {
 

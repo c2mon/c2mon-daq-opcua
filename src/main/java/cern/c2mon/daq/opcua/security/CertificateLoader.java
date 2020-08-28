@@ -18,7 +18,6 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SecurityChecksFa
 /**
  * Loads a certificate and keypair from a keystore file configured in AppConfig, and configures a builder to use them.
  */
-@Component("loader")
 @Slf4j
 @RequiredArgsConstructor
 public class CertificateLoader extends CertifierBase {

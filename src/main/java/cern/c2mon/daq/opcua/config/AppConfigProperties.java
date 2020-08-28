@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.config;
 
 import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.FailoverMode;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.AllArgsConstructor;
@@ -40,7 +41,7 @@ public class AppConfigProperties {
      * query on an OPC UA server for its redundancy support information and proceeding and resolving the appropriate
      * failover mode. Must match exactly the Java class name of the class implementing {@link Controller}.
      */
-    private String redundancyMode;
+    private FailoverMode.Type redundancyMode;
 
     /**
      * If set, the client will not query a server its redundant server uri array upon initial connection, but use these

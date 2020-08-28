@@ -40,7 +40,6 @@ import static org.easymock.EasyMock.createNiceMock;
 @Getter
 @Setter
 @Slf4j
-@Component(value = "testEndpoint")
 public class TestEndpoint implements Endpoint {
     private MessageSender messageSender;
     private TagSubscriptionReader mapper;

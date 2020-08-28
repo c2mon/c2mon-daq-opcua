@@ -17,7 +17,6 @@ import java.util.concurrent.CountDownLatch;
 @Getter
 @Setter
 @Slf4j
-@Component("testController")
 public class TestController extends FailoverBase {
     CountDownLatch serverSwitchLatch = new CountDownLatch(2);
     CompletableFuture<Void> switchDone = new CompletableFuture<>();

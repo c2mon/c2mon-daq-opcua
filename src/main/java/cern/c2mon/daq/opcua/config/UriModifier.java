@@ -17,7 +17,6 @@ import static cern.c2mon.daq.opcua.config.AppConfigProperties.PortSubstitutionMo
  * or to reflect another URI.
  */
 @Slf4j
-@Component("uriModifier")
 @RequiredArgsConstructor
 public class UriModifier {
     private static final String HOST_REGEX = "^[a-z][a-z0-9+\\-.]*://([a-z0-9\\-._~%!$&'()*+,;=:]+@)?([a-z0-9\\-._~%]+|\\[[a-z0-9\\-._~%!$&'()*+,;=:]+])(:[0-9]+)?";

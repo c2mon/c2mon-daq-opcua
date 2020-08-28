@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
-import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -22,7 +21,6 @@ import java.util.function.Supplier;
  * complete all retries, a method is only executed once before it fails. Retry logic is implemented using Spring Retry,
  * which is AOP-based, meaning that Retry annotations methods do not retry if called from within the same class.
  */
-@Component(value = "retryDelegate")
 @RequiredArgsConstructor
 @Slf4j
 public class RetryDelegate {

@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.controller;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
-import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
@@ -15,13 +14,11 @@ import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedun
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.*;
 
 import static org.easymock.EasyMock.*;
@@ -41,8 +38,13 @@ public class ControllerProxyTest {
     public void setUp() {
         testEndpoint = new TestEndpoint(new TestListeners.TestListener(), new TagSubscriptionMapper());
         proxy = new ControllerProxy(applicationContext, config, testEndpoint);
-        expect(applicationContext.getBean(ColdFailover.class)).andReturn(coldFailover).anyTimes();
-        expect(applicationContext.getBean(NoFailover.class)).andReturn(noFailover).anyTimes();
+        for (FailoverMode.Type t : FailoverMode.Type.values()) {
+            if (t.equals(FailoverMode.Type.NONE)) {
+                expect(applicationContext.getBean(ConcreteController.class, t)).andReturn(noFailover).anyTimes();
+            } else {
+                expect(applicationContext.getBean(ConcreteController.class, t)).andReturn(coldFailover).anyTimes();
+            }
+        }
     }
 
     @Test
@@ -89,7 +91,6 @@ public class ControllerProxyTest {
 
     @Test
     public void emptyModeInConfigShouldInitializeNoFailover() throws OPCUAException {
-        config.setRedundancyMode("");
         expect(testEndpoint.getServerRedundancyNode().getRedundancySupport())
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
                 .once();
@@ -123,7 +124,6 @@ public class ControllerProxyTest {
 
     @Test
     public void badModeInConfigShouldInitializeNoFailover() throws OPCUAException {
-        config.setRedundancyMode("XXX");
         expect(testEndpoint.getServerRedundancyNode().getRedundancySupport())
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
                 .once();
@@ -135,44 +135,13 @@ public class ControllerProxyTest {
 
     @Test
     public void controllerThatConcreteControllerAndBeanShouldInitializeConcreteController() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         expect(testEndpoint.getServerRedundancyNode().getRedundancySupport())
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
                 .once();
         mockFailoverInitialization(coldFailover, true);
         replay(applicationContext, testEndpoint.getServerRedundancyNode(), noFailover);
         proxy.connect(Arrays.asList("test", "test2"));
-        verify(noFailover);
-    }
-
-
-    @Test
-    public void controllerThatIsNotBeanShouldInitializeNoFailover() throws OPCUAException {
-        config.setRedundancyMode(BadController.class.getName());
-        expect(testEndpoint.getServerRedundancyNode().getRedundancySupport())
-                .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
-                .once();
-        mockFailoverInitialization(noFailover, false);
-        expect(applicationContext.getBean(BadController.class))
-                .andThrow(new NoSuchBeanDefinitionException(""))
-                .anyTimes();
-        replay(applicationContext, testEndpoint.getServerRedundancyNode(), noFailover);
-        proxy.connect(Collections.singleton("test"));
-        verify(noFailover);
-    }
-
-    @Test
-    public void controllerThatIsNotConcreteControllerShouldInitializeNoFailover() throws OPCUAException {
-        config.setRedundancyMode(TagSubscriptionMapper.class.getName());
-        expect(testEndpoint.getServerRedundancyNode().getRedundancySupport())
-                .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
-                .once();
-        mockFailoverInitialization(noFailover, false);
-        expect(applicationContext.getBean(TagSubscriptionMapper.class))
-                .andReturn(new TagSubscriptionMapper())
-                .anyTimes();
-        replay(applicationContext, testEndpoint.getServerRedundancyNode(), noFailover);
-        proxy.connect(Collections.singleton("test"));
         verify(noFailover);
     }
 
@@ -204,7 +173,7 @@ public class ControllerProxyTest {
 
     @Test
     public void failoverAndUrisInConfigShouldNotQueryServer() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         config.setRedundantServerUris(Collections.singletonList("redundantAddress"));
         mockFailoverInitialization(coldFailover, true);
         replay(applicationContext, testEndpoint.getServerRedundancyNode(), coldFailover);
@@ -226,7 +195,7 @@ public class ControllerProxyTest {
 
     @Test
     public void badlyConfiguredServerShouldIgnoreRedundantUris() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         expect(testEndpoint.getServerRedundancyNode().getRedundancySupport())
                 .andReturn(CompletableFuture.completedFuture(RedundancySupport.None))
                 .once();
@@ -250,7 +219,7 @@ public class ControllerProxyTest {
 
     @Test
     public void emptyUriListInConfigShouldQueryServer() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         config.setRedundantServerUris(Collections.emptyList());
         mockFailoverInitialization(coldFailover, false);
         mockServerUriCall();
@@ -261,7 +230,7 @@ public class ControllerProxyTest {
 
     @Test
     public void uriUsedToInitializeInConfigShouldQueryServer() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         config.setRedundantServerUris(Collections.singletonList("test"));
         mockFailoverInitialization(coldFailover, false);
         mockServerUriCall();
@@ -272,7 +241,7 @@ public class ControllerProxyTest {
 
     @Test
     public void singleUriInArgConfigAndServerShouldNotUseRedundantAddresses() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         config.setRedundantServerUris(Collections.singletonList("redUri1"));
         mockFailoverInitialization(coldFailover, false);
         mockServerUriCall();
@@ -284,7 +253,7 @@ public class ControllerProxyTest {
 
     @Test
     public void noFailoverInConfigShouldNotQueryUris() throws OPCUAException {
-        config.setRedundancyMode(NoFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.NONE);
         mockFailoverInitialization(noFailover, false);
         replay(applicationContext, noFailover, testEndpoint.getServerRedundancyNode());
         proxy.connect(Collections.singleton("test"));
@@ -293,7 +262,7 @@ public class ControllerProxyTest {
 
     @Test
     public void coldConfigNoUrisShouldQueryServerForUrisNotForMode() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         mockServerUriCall();
         mockFailoverInitialization(coldFailover, true);
         replay(applicationContext, noFailover, coldFailover, testEndpoint.getServerRedundancyNode());
@@ -303,7 +272,7 @@ public class ControllerProxyTest {
 
     @Test
     public void coldFailoverWithUrisInArgsShouldNotQueryServer() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         mockFailoverInitialization(coldFailover, true);
         replay(applicationContext, coldFailover, testEndpoint.getServerRedundancyNode());
         proxy.connect(Arrays.asList("test", "test2"));
@@ -312,7 +281,7 @@ public class ControllerProxyTest {
 
     @Test
     public void coldFailoverWithUrisInConfigShouldNotQueryServer() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         config.setRedundantServerUris(Arrays.asList("test1", "test2"));
         mockFailoverInitialization(coldFailover, true);
         replay(applicationContext, noFailover, coldFailover);
@@ -322,7 +291,7 @@ public class ControllerProxyTest {
 
     @Test
     public void currentlyConnectedUriShouldBeFilteredFromList() throws OPCUAException {
-        config.setRedundancyMode(ColdFailover.class.getName());
+        config.setRedundancyMode(FailoverMode.Type.COLD);
         config.setRedundantServerUris(Arrays.asList("test1", "test2", "test3"));
         coldFailover.initialize(testEndpoint, "test2", "test3");
         expectLastCall().once();
@@ -359,21 +328,4 @@ public class ControllerProxyTest {
         verify(coldFailover);
     }
 
-
-    public static class BadController extends ControllerBase {
-
-        @Override
-        protected Endpoint currentEndpoint() {
-            return null;
-        }
-
-        @Override
-        protected List<Endpoint> passiveEndpoints() {
-            return null;
-        }
-
-        @Override
-        public void initialize(Endpoint endpoint, String... redundantAddresses) throws OPCUAException {
-        }
-    }
 }

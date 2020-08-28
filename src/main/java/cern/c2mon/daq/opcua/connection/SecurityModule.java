@@ -19,7 +19,6 @@ import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.security.DefaultTrustListManager;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
-import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +33,6 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
  * Chooses an endpoint to connect to and creates a client as configured in {@link AppConfigProperties}, selecting from a
  * list of endpoints.
  */
-@Component("securityModule")
 @Slf4j
 @RequiredArgsConstructor
 public class SecurityModule {
@@ -43,8 +41,8 @@ public class SecurityModule {
     private final Certifier loader;
     private final Certifier generator;
     private final Certifier noSecurity;
-    private OpcUaClientConfigBuilder builder;
     private final List<AppConfigProperties.CertifierMode> certifiers = new ArrayList<>();
+    private OpcUaClientConfigBuilder builder;
 
     /**
      * Creates an {@link OpcUaClient} according to the configuration specified in {@link AppConfigProperties} and

@@ -11,11 +11,9 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.Setter;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 
-@Component(value = "testFailoverProxy")
 public class TestControllerProxy extends ControllerProxy {
     @Setter
     private String[] redundantUris = new String[0];

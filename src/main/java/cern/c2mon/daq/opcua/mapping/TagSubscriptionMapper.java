@@ -22,7 +22,6 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Map;
@@ -34,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * org.eclipse.milo.opcua.stack.core.types.builtin.NodeId}s, and {@link ISourceDataTag}s.
  */
 @NoArgsConstructor
-@Component("mapper")
 @Getter
 public class TagSubscriptionMapper implements TagSubscriptionManager {
 
@@ -108,5 +106,9 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
 
     private boolean groupExists(int deadband) {
         return subscriptionGroups.get(deadband) != null;
+    }
+    public void sayHello() {
+
+        System.out.printf("Hello from %s of type %s%n", this, this.getClass().getName());
     }
 }

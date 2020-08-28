@@ -26,7 +26,6 @@ public abstract class TestListeners {
     }
 
     @Getter
-    @Component(value = "pulseTestListener")
     public static class Pulse extends TestListener {
         @Setter
         private long sourceID;
@@ -63,7 +62,6 @@ public abstract class TestListeners {
     }
 
     @Getter
-    @Component(value = "testListener")
     public static class TestListener implements MessageSender {
         List<CompletableFuture<Long>> tagUpdate = new ArrayList<>();
         List<CompletableFuture<Long>> tagInvalid = new ArrayList<>();

@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
-import org.springframework.stereotype.Component;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,14 +24,13 @@ import java.util.concurrent.TimeUnit;
  * running. The SubEquipment behind the Server may be down. The AliveWriter checks the state of the SubEquipment by
  * writing a counter to it and validating that the counter values are as expected.
  */
-@Component("aliveWriter")
 @Slf4j
 @RequiredArgsConstructor
 @ManagedResource
 public class AliveWriter {
 
     private int writeCounter = 0;
-    private final Controller controllerProxy;
+    private final Controller controller;
     private final MessageSender messageSender;
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> writeAliveTask;
@@ -89,7 +87,7 @@ public class AliveWriter {
 
     private void aliveTagMonitoring() {
         try {
-            if (controllerProxy.write(aliveTagAddress, writeCounter)) {
+            if (controller.write(aliveTagAddress, writeCounter)) {
                 messageSender.onAlive();
             }
             writeCounter = (writeCounter < Byte.MAX_VALUE) ? writeCounter++ : 0;
