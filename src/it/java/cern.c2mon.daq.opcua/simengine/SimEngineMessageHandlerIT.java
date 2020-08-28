@@ -3,6 +3,7 @@ package cern.c2mon.daq.opcua.simengine;
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.taghandling.DataTagHandler;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -52,12 +53,11 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private static final long CMDID_V0SET = 20L;
 
     @Autowired ApplicationContext context;
-    @Autowired IDataTagHandler tagHandler;
-    @Autowired Controller proxy;
 
-
-    TestListeners.Pulse endpointListener;
     private OPCUAMessageHandler handler;
+    private IDataTagHandler tagHandler;
+    private Controller proxy;
+    private TestListeners.Pulse endpointListener;
     private SourceCommandTagValue value;
 
     @ClassRule
@@ -73,8 +73,6 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         endpointListener = new TestListeners.Pulse();
         value = new SourceCommandTagValue();
         value.setDataType("java.lang.Integer");
-        ReflectionTestUtils.setField(tagHandler, "messageSender", endpointListener);
-        ReflectionTestUtils.setField(ReflectionTestUtils.getField(proxy, "endpoint"), "messageSender", endpointListener);
         TestUtils.mapEquipmentAddress(equipmentConfiguration, image);
         log.info("############### TEST ##############");
     }
@@ -100,8 +98,8 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     @UseConf("simengine_power.xml")
     public void refreshShouldTriggerValueUpdateForEachSubscribedTag() throws EqIOException {
         handler.connectToDataSource();
-
         MessageSender senderMock = niceMock(MessageSender.class);
+        tagHandler = context.getBean(DataTagHandler.class);
         ReflectionTestUtils.setField(tagHandler, "messageSender", senderMock);
 
         final int tagNr = handler.getEquipmentConfiguration().getSourceDataTags().size();
@@ -116,7 +114,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     public void write1SetsValueTo1() throws EqIOException, EqCommandTagException, InterruptedException, ExecutionException, TimeoutException {
         endpointListener.setSourceID(DATAID_PW);
         endpointListener.setThreshold(1);
-        handler.connectToDataSource();
+        connectAndInjectListener();
 
         setIDTo(CMDID_PW, 1);
 
@@ -131,7 +129,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     public void testPowerOnAndSetV0ShouldNotifyVMon() throws EqIOException, EqCommandTagException {
         endpointListener.setSourceID(DATAID_VMON);
         endpointListener.setThreshold(10);
-        handler.connectToDataSource();
+        connectAndInjectListener();
         setIDTo(CMDID_PW, 1);
         setIDTo(CMDID_V0SET, 10);
 
@@ -145,7 +143,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     public void testPowerOnAndOff() throws EqIOException, ExecutionException, InterruptedException, EqCommandTagException, TimeoutException {
         endpointListener.setSourceID(DATAID_PW);
         endpointListener.setThreshold(1);
-        handler.connectToDataSource();
+        connectAndInjectListener();
         setIDTo(CMDID_PW, 1);
 
         final ValueUpdate pwOnUpdate = endpointListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
@@ -157,6 +155,14 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
         // A pulse length of 1 second, plus a margin for connection lag
         assertTrue(timeDiff >= 0 && timeDiff < 4000);
+    }
+
+    private void connectAndInjectListener() throws EqIOException {
+        handler.connectToDataSource();
+        tagHandler = context.getBean(DataTagHandler.class);
+        proxy = context.getBean(Controller.class);
+        ReflectionTestUtils.setField(ReflectionTestUtils.getField(proxy, "endpoint"), "messageSender", endpointListener);
+
     }
 
     private void setIDTo(long id, float val) throws EqCommandTagException {

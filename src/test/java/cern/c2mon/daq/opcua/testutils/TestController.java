@@ -4,11 +4,11 @@ import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.FailoverBase;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 @Getter
 @Setter
 @Slf4j
+@EquipmentScoped
 public class TestController extends FailoverBase {
     CountDownLatch serverSwitchLatch = new CountDownLatch(2);
     CompletableFuture<Void> switchDone = new CompletableFuture<>();

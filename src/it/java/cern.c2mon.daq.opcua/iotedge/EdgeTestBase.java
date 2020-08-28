@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.iotedge;
 
+import cern.c2mon.daq.opcua.SpringTestBase;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
@@ -19,7 +20,7 @@ import java.util.concurrent.*;
 import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_IT;
 
 @Slf4j
-public abstract class EdgeTestBase {
+public abstract class EdgeTestBase extends SpringTestBase {
 
     public static final int IOTEDGE = 50000;
     private static final Network network = Network.newNetwork();

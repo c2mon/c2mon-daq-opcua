@@ -2,11 +2,11 @@ package cern.c2mon.daq.opcua.security;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
-import org.springframework.stereotype.Component;
 
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
@@ -20,6 +20,7 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SecurityChecksFa
  */
 @Slf4j
 @RequiredArgsConstructor
+@EquipmentScoped
 public class CertificateLoader extends CertifierBase {
     private final AppConfigProperties.KeystoreConfig keystoreConfig;
     private final AppConfigProperties.PKIConfig pkiConfig;

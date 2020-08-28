@@ -6,16 +6,17 @@ import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.scope.EquipmentScope;
 import cern.c2mon.daq.opcua.taghandling.*;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 
 import static org.easymock.EasyMock.*;
 
 public abstract class OPCUAMessageHandlerTestBase extends GenericMessageHandlerTest {
-
 
     protected OPCUAMessageHandler handler;
     protected Controller testController;
@@ -46,7 +47,9 @@ public abstract class OPCUAMessageHandlerTestBase extends GenericMessageHandlerT
 
 
     protected void configureContextWithController(Controller controller, MessageSender sender) {
-        expect(context.getBean("controller", Controller.class)).andReturn(controller).anyTimes();
+        expect(context.getAutowireCapableBeanFactory()).andReturn(new DefaultListableBeanFactory()).anyTimes();
+        expect(context.getBean(EquipmentScope.class)).andReturn(new EquipmentScope()).anyTimes();
+        expect(context.getBean(Controller.class)).andReturn(controller).anyTimes();
         expect(context.getBean(MessageSender.class)).andReturn(sender).anyTimes();
         expect(context.getBean(IDataTagHandler.class)).andReturn(dataTagHandler).anyTimes();
         expect(context.getBean(CommandTagHandler.class)).andReturn(commandTagHandler).anyTimes();

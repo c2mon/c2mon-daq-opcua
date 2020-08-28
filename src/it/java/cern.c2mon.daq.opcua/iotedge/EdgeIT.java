@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
+import cern.c2mon.daq.opcua.taghandling.DataTagHandler;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -19,8 +20,6 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -36,7 +35,6 @@ import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_LOST;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
-@SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -45,14 +43,20 @@ public class EdgeIT extends EdgeTestBase {
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final ISourceDataTag alreadySubscribedTag = EdgeTagFactory.DipData.createDataTag();
 
-    @Autowired TestListeners.Pulse pulseListener;
-    @Autowired Controller controller;
-    @Autowired IDataTagHandler tagHandler;
-    @Autowired CommandTagHandler commandTagHandler;
+    TestListeners.Pulse pulseListener;
+    Controller controller;
+    IDataTagHandler tagHandler;
+    CommandTagHandler commandTagHandler;
 
     @BeforeEach
     public void setupEndpoint() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         log.info("############ SET UP ############");
+        super.setUp();
+        pulseListener = new TestListeners.Pulse();
+        controller = ctx.getBean(Controller.class);
+        tagHandler = ctx.getBean(DataTagHandler.class);
+        commandTagHandler = ctx.getBean(CommandTagHandler.class);
+
         pulseListener.setSourceID(tag.getId());
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controller, "endpoint");

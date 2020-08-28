@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.common.conf.equipment.IDataTagChanger;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
  */
 @RequiredArgsConstructor
 @Slf4j
+@EquipmentScoped
 public class DataTagChanger implements IDataTagChanger {
 
     private static final TriConsumer<Boolean, String, ChangeReport> applyToReport = (success, message, report) -> {

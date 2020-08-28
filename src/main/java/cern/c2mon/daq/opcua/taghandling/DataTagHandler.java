@@ -8,6 +8,7 @@ import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -30,6 +31,7 @@ import static java.util.stream.Collectors.*;
 @Slf4j
 @RequiredArgsConstructor
 @ManagedResource
+@EquipmentScoped
 public class DataTagHandler implements IDataTagHandler {
 
     private final TagSubscriptionManager manager;

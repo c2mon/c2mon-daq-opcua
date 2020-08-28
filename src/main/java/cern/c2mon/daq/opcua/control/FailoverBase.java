@@ -30,11 +30,11 @@ import java.util.function.Predicate;
  * capable of failing over in between these servers in case of error. It offers redundancy-specific functionality that
  * is shared in between different failover modes of the OPC UA redundancy model. Concrete Failover modes should
  * implement specific behavior on initial connection by implementing the {@link ConcreteController}'s initialize()
- * method, and on failover by implementing  the {@link FailoverMode}'s switchServers() method.
+ * method, and on failover by implementing  the {@link FailoverController}'s switchServers() method.
  */
 @Slf4j
 @RequiredArgsConstructor
-public abstract class FailoverBase extends ControllerBase implements FailoverMode, SessionActivityListener {
+public abstract class FailoverBase extends ControllerBase implements FailoverController, SessionActivityListener {
 
     protected static final UByte serviceLevelHealthLimit = UByte.valueOf(200);
     protected static final List<ItemDefinition> connectionMonitoringNodes = Arrays.asList(
@@ -109,20 +109,22 @@ public abstract class FailoverBase extends ControllerBase implements FailoverMod
     }
 
     protected void triggerServerSwitch() {
-        if (listening.getAndSet(false) && !stopped.get()) {
-            currentEndpoint().setUpdateEquipmentStateOnSessionChanges(false);
-            try {
-                config.alwaysRetryTemplate().execute(retryContext -> {
-                    log.info("Server switch attempt nr {}.", retryContext.getRetryCount());
-                    switchServers();
-                    return null;
-                });
-            } catch (OPCUAException e) {
-                log.error("Retry logic is not correctly configured! Retries ceased.", e);
+        synchronized (listening) {
+            if (listening.getAndSet(false) && !stopped.get()) {
+                currentEndpoint().setUpdateEquipmentStateOnSessionChanges(false);
+                try {
+                    config.alwaysRetryTemplate().execute(retryContext -> {
+                        log.info("Server switch attempt nr {}.", retryContext.getRetryCount());
+                        switchServers();
+                        return null;
+                    });
+                } catch (OPCUAException e) {
+                    log.error("Retry logic is not correctly configured! Retries ceased.", e);
+                }
+                listening.set(true);
+            } else if (!stopped.get()) {
+                log.info("Failover is already in process.");
             }
-            listening.set(true);
-        } else if (!stopped.get()) {
-            log.info("Failover is already in process.");
         }
     }
 

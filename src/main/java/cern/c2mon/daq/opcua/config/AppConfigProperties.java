@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.config;
 
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.control.FailoverMode;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.AllArgsConstructor;
@@ -12,7 +11,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.RetryPolicy;
-import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.AlwaysRetryPolicy;
 import org.springframework.retry.policy.ExceptionClassifierRetryPolicy;
@@ -29,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Configuration
 @ConfigurationProperties(prefix = "c2mon.daq.opcua")
-@EnableRetry
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -37,11 +34,53 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AppConfigProperties {
 
     /**
+     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of retryDelay
+     * on every failed attempt up to a maximum of maxFailoverDelay. Method calls are repeated disregarding the type of
+     * exception.
+     * @return the retry template.
+     */
+    @Bean
+    public RetryTemplate alwaysRetryTemplate() {
+        AlwaysRetryPolicy retry = new AlwaysRetryPolicy();
+        ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
+        backoff.setMaxInterval(maxRetryDelay);
+        backoff.setInitialInterval(retryDelay);
+        backoff.setMultiplier(retryMultiplier);
+        RetryTemplate template = new RetryTemplate();
+        template.setRetryPolicy(retry);
+        template.setBackOffPolicy(backoff);
+        return template;
+    }
+
+    /**
+     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of 2 on every
+     * failed attempt up to a maximum of maxFailoverDelay.
+     * @return the retry template.
+     */
+    @Bean
+    public RetryTemplate exceptionClassifierTemplate() {
+        AlwaysRetryPolicy alwaysRetry = new AlwaysRetryPolicy();
+        final NeverRetryPolicy neverRetry = new NeverRetryPolicy();
+        final Map<Class<? extends Throwable>, RetryPolicy> policyMap = new ConcurrentHashMap<>();
+        policyMap.put(CommunicationException.class, alwaysRetry);
+        policyMap.put(OPCUAException.class, neverRetry);
+        final ExceptionClassifierRetryPolicy retryPolicy = new ExceptionClassifierRetryPolicy();
+        retryPolicy.setPolicyMap(policyMap);
+        ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
+        backoff.setMaxInterval(maxRetryDelay);
+        backoff.setInitialInterval(retryDelay);
+        backoff.setMultiplier(retryMultiplier);
+        RetryTemplate template = new RetryTemplate();
+        template.setRetryPolicy(retryPolicy);
+        template.setBackOffPolicy(backoff);
+        return template;
+    }
+    /**
      * The Java class name of the a custom redundancy failover mode, if one shall be used. If specified, the default
      * query on an OPC UA server for its redundancy support information and proceeding and resolving the appropriate
      * failover mode. Must match exactly the Java class name of the class implementing {@link Controller}.
      */
-    private FailoverMode.Type redundancyMode;
+    private FailoverMode redundancyMode;
 
     /**
      * If set, the client will not query a server its redundant server uri array upon initial connection, but use these
@@ -163,7 +202,6 @@ public class AppConfigProperties {
      */
     private TimeRecordMode timeRecordMode;
 
-
     // Settings to create a certificate, and to request connection to the server
     private String applicationName;
     private String applicationUri;
@@ -175,49 +213,6 @@ public class AppConfigProperties {
 
     private KeystoreConfig keystore = new KeystoreConfig();
     private PKIConfig pkiConfig = new PKIConfig();
-
-    /**
-     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of retryDelay
-     * on every failed attempt up to a maximum of maxFailoverDelay. Method calls are repeated disregarding the type of
-     * exception.
-     * @return the retry template.
-     */
-    @Bean
-    public RetryTemplate alwaysRetryTemplate() {
-        AlwaysRetryPolicy retry = new AlwaysRetryPolicy();
-        ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
-        backoff.setMaxInterval(maxRetryDelay);
-        backoff.setInitialInterval(retryDelay);
-        backoff.setMultiplier(retryMultiplier);
-        RetryTemplate template = new RetryTemplate();
-        template.setRetryPolicy(retry);
-        template.setBackOffPolicy(backoff);
-        return template;
-    }
-
-    /**
-     * A retry template to execute a call with a delay starting at retryDelay and increasing by a factor of 2 on every
-     * failed attempt up to a maximum of maxFailoverDelay.
-     * @return the retry template.
-     */
-    @Bean
-    public RetryTemplate exceptionClassifierTemplate() {
-        AlwaysRetryPolicy alwaysRetry = new AlwaysRetryPolicy();
-        final NeverRetryPolicy neverRetry = new NeverRetryPolicy();
-        final Map<Class<? extends Throwable>, RetryPolicy> policyMap = new ConcurrentHashMap<>();
-        policyMap.put(CommunicationException.class, alwaysRetry);
-        policyMap.put(OPCUAException.class, neverRetry);
-        final ExceptionClassifierRetryPolicy retryPolicy = new ExceptionClassifierRetryPolicy();
-        retryPolicy.setPolicyMap(policyMap);
-        ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
-        backoff.setMaxInterval(maxRetryDelay);
-        backoff.setInitialInterval(retryDelay);
-        backoff.setMultiplier(retryMultiplier);
-        RetryTemplate template = new RetryTemplate();
-        template.setRetryPolicy(retryPolicy);
-        template.setBackOffPolicy(backoff);
-        return template;
-    }
 
     /**
      * Describes the modes offered by the OPC UA DAQ to modify the hostname in the address returned by the server with
@@ -254,7 +249,10 @@ public class AppConfigProperties {
      */
     public enum CertifierMode {LOAD, GENERATE, NO_SECURITY}
 
-
+    /**
+     * The four OPC UA Redundancy types. Add a custom value to add support for a vendor-proprietary redundancy setup.
+     * */
+    public enum FailoverMode { NONE, COLD, WARM, HOT, HOTANDMIRRORED }
     /**
      * Settings required to load an existing certificate from a keystore file
      */

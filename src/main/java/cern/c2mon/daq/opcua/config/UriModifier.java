@@ -1,9 +1,9 @@
 package cern.c2mon.daq.opcua.config;
 
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import io.netty.util.internal.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,6 +18,7 @@ import static cern.c2mon.daq.opcua.config.AppConfigProperties.PortSubstitutionMo
  */
 @Slf4j
 @RequiredArgsConstructor
+@EquipmentScoped
 public class UriModifier {
     private static final String HOST_REGEX = "^[a-z][a-z0-9+\\-.]*://([a-z0-9\\-._~%!$&'()*+,;=:]+@)?([a-z0-9\\-._~%]+|\\[[a-z0-9\\-._~%!$&'()*+,;=:]+])(:[0-9]+)?";
     private static final Pattern HOST_PATTERN = Pattern.compile(HOST_REGEX);

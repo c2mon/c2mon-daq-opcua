@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.retry;
 
+import cern.c2mon.daq.opcua.SpringTestBase;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -17,7 +18,6 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
@@ -37,11 +37,10 @@ import static org.easymock.EasyMock.*;
 @TestPropertySource(locations = "classpath:retry.properties")
 @ExtendWith(SpringExtension.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class RetrySubscriptionRecreationIT {
+public class RetrySubscriptionRecreationIT extends SpringTestBase {
 
-    @Autowired
     TagSubscriptionMapper mapper;
-    @Autowired UaSubscriptionManager.SubscriptionListener endpoint;
+    UaSubscriptionManager.SubscriptionListener endpoint;
     @Value("${c2mon.daq.opcua.retryDelay}") int delay;
 
     private final OpcUaClient clientMock = createNiceMock(OpcUaClient.class);
@@ -50,6 +49,9 @@ public class RetrySubscriptionRecreationIT {
 
     @BeforeEach
     public void setUp() throws ConfigurationException {
+        super.setUp();
+        mapper = ctx.getBean(TagSubscriptionMapper.class);
+        endpoint = ctx.getBean(UaSubscriptionManager.SubscriptionListener.class);
         resetToNice(clientMock, managerMock, subscriptionMock);
         ReflectionTestUtils.setField(endpoint, "client", clientMock);
         BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();

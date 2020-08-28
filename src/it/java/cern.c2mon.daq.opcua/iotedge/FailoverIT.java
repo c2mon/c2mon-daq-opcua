@@ -5,6 +5,7 @@ import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.taghandling.DataTagHandler;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -34,25 +34,20 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
-@SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:opcua.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
-
-    @Autowired
-    TestListeners.Pulse pulseListener;
-    @Autowired
-    IDataTagHandler tagHandler;
-    @Autowired
-    ConcreteController coldFailover;
-    @Autowired
-    Controller controllerProxy;
     @Autowired
     AppConfigProperties config;
 
+    TestListeners.Pulse pulseListener;
+    IDataTagHandler tagHandler;
+    ControllerBase coldFailover;
+    Controller controllerProxy;
+
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
-    private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(((FailoverBase) coldFailover), "triggerServerSwitch");
+    private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch");
 
     private boolean resetConnection;
     private ExecutorService executor;
@@ -71,8 +66,13 @@ public class FailoverIT extends EdgeTestBase {
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("############ SET UP ############");
+        super.setUp();
+        pulseListener = new TestListeners.Pulse();
+        tagHandler = ctx.getBean(DataTagHandler.class);
+        controllerProxy = ctx.getBean(Controller.class);
+
         config.setFailoverDelay(5000L);
-        config.setRedundancyMode(FailoverMode.Type.COLD);
+        config.setRedundancyMode(AppConfigProperties.FailoverMode.COLD);
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);
@@ -84,6 +84,8 @@ public class FailoverIT extends EdgeTestBase {
         pulseListener.reset();
         resetConnection = false;
         executor = Executors.newScheduledThreadPool(2);
+
+        coldFailover = (ControllerBase) ReflectionTestUtils.getField(controllerProxy, "controller");
         log.info("############ TEST ############");
     }
 

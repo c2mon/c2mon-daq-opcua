@@ -1,13 +1,12 @@
 package cern.c2mon.daq.opcua.security;
 
-import lombok.Getter;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
-import org.springframework.stereotype.Component;
 
 import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NoValidCertificates;
 import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SecurityChecksFailed;
@@ -17,6 +16,7 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SecurityChecksFa
  */
 @Slf4j
 @RequiredArgsConstructor
+@EquipmentScoped
 public class NoSecurityCertifier implements Certifier {
     /**
      * Append configures the builder to connect to the endpoint without security.

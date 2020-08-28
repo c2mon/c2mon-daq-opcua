@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
-import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.config.AddressParser;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
@@ -10,6 +9,8 @@ import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.scope.EquipmentScope;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.daq.opcua.taghandling.AliveWriter;
 import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
 import cern.c2mon.daq.opcua.taghandling.DataTagChanger;
@@ -24,10 +25,13 @@ import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.ApplicationContext;
 
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
+
+import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_FAILED;
 
 /**
  * The OPCUAMessageHandler is the entry point of the application. It is created and called by the C2MON DAQ core and
@@ -45,6 +49,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     private AliveWriter aliveWriter;
     private CommandTagHandler commandTagHandler;
     private AppConfigProperties appConfigProperties;
+    private EquipmentScope scope;
+
 
     /**
      * Called when the core wants the OPC UA module to start up. Connects to the OPC UA server, triggers initial
@@ -56,17 +62,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     public void connectToDataSource() throws EqIOException {
 
         log.info("Initializing the OPC UA DAQ");
-        final ApplicationContext ctx = getContext();
+        initializeScope();
         IEquipmentConfiguration config = getEquipmentConfiguration();
-        IEquipmentMessageSender sender = getEquipmentMessageSender();
-
-        controller = ctx.getBean("controller", Controller.class);
-        dataTagHandler = ctx.getBean(IDataTagHandler.class);
-        commandTagHandler = ctx.getBean(CommandTagHandler.class);
-        appConfigProperties = ctx.getBean(AppConfigProperties.class);
-        dataTagChanger = ctx.getBean(DataTagChanger.class);
-        aliveWriter = ctx.getBean(AliveWriter.class);
-        ctx.getBean(MessageSender.class).initialize(sender);
 
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
@@ -74,7 +71,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             controller.connect(addresses);
         } catch (OPCUAException e) {
             log.error("Connection failed with error: ", e);
-            sender.confirmEquipmentStateIncorrect(MessageSender.EquipmentState.CONNECTION_FAILED.message);
+            getEquipmentMessageSender().confirmEquipmentStateIncorrect(CONNECTION_FAILED.message);
             throw e;
         }
 
@@ -175,13 +172,37 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
                     startAliveWriter(newConfig);
                     changeReport.appendInfo("Alive Writer updated.");
                 } catch (ConfigurationException e) {
-                    log.error("Updating the Alive Writer failed." , e);
+                    log.error("Updating the Alive Writer failed.", e);
                     changeReport.appendError(e.getMessage());
                 }
             }
             changeReport.setState(CHANGE_STATE.SUCCESS);
         }
         log.info("Finished the Equipment Configuration update!");
+    }
+
+    /**
+     * {@link EquipmentScoped} beans should be shared across one instance of the OPCUAMessageHandler. Registering a new
+     * instance of the prototype-scoped {@link EquipmentScope} once when initiating the data collection process ensures
+     * that a new set of beans is created.
+     */
+    private void initializeScope() {
+        final ApplicationContext ctx = getContext();
+        if (scope == null) {
+            scope = ctx.getBean(EquipmentScope.class);
+            ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", scope);
+
+            log.info("##################");
+            log.info("Created scope {} for Equipment {}", scope.toString(), getEquipmentConfiguration().getName());
+            log.info("##################");
+        }
+        controller = ctx.getBean(Controller.class);
+        dataTagHandler = ctx.getBean(IDataTagHandler.class);
+        commandTagHandler = ctx.getBean(CommandTagHandler.class);
+        appConfigProperties = ctx.getBean(AppConfigProperties.class);
+        dataTagChanger = ctx.getBean(DataTagChanger.class);
+        aliveWriter = ctx.getBean(AliveWriter.class);
+        ctx.getBean(MessageSender.class).initialize(getEquipmentMessageSender());
     }
 
     private void startAliveWriter(IEquipmentConfiguration config) throws ConfigurationException {

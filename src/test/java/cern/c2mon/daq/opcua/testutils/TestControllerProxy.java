@@ -3,10 +3,7 @@ package cern.c2mon.daq.opcua.testutils;
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.control.ColdFailover;
-import cern.c2mon.daq.opcua.control.ConcreteController;
-import cern.c2mon.daq.opcua.control.ControllerProxy;
-import cern.c2mon.daq.opcua.control.NoFailover;
+import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import lombok.Setter;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
@@ -23,7 +20,7 @@ public class TestControllerProxy extends ControllerProxy {
     }
 
     public TestControllerProxy(ApplicationContext appContext, AppConfigProperties config, MessageSender messageSender, Endpoint endpoint) {
-        super(appContext, config, endpoint);
+        super(new ControllerFactory(config), config, endpoint);
     }
 
     public void setFailoverMode(RedundancySupport mode) {

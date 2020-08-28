@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.NoArgsConstructor;
@@ -8,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
-import org.springframework.stereotype.Component;
 
 /**
  * Handles communication with the DAQ Core's {@link IEquipmentMessageSender}
@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Primary
 @ManagedResource
+@EquipmentScoped
 public class OPCUAMessageSender implements MessageSender {
 
     private IEquipmentMessageSender sender;

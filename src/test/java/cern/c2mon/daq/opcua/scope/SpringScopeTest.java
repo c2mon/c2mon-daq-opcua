@@ -1,11 +1,7 @@
 package cern.c2mon.daq.opcua.scope;
 
-import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
-import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.daq.opcua.taghandling.AliveWriter;
 import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
 import cern.c2mon.daq.opcua.taghandling.DataTagChanger;
@@ -15,16 +11,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 @Slf4j
 @SpringBootTest
@@ -33,32 +26,6 @@ public class SpringScopeTest {
     @Autowired
     ApplicationContext ctx;
 
-    @Test
-    public final void whenRegisterScopeAndBeans_thenContextContainsFooAndBar() {
-        try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
-            ctx.register(EquipmentScopeConfig.class);
-            ctx.refresh();
-
-            TagSubscriptionMapper foo = (TagSubscriptionMapper) ctx.getBean(TagSubscriptionManager.class);
-            foo.sayHello();
-            TagSubscriptionMapper bar = (TagSubscriptionMapper) ctx.getBean(TagSubscriptionReader.class);
-            bar.sayHello();
-
-            MessageSender aliveWriter = ctx.getBean(MessageSender.class);
-
-            Map<String, TagSubscriptionMapper> foos = ctx.getBeansOfType(TagSubscriptionMapper.class);
-
-            assertEquals(foos.size(), 1);
-            assertTrue(foos.containsValue(foo));
-            assertTrue(foos.containsValue(bar));
-
-            BeanDefinition fooDefinition = ctx.getBeanDefinition("tagSubscriptionManager");
-            BeanDefinition barDefinition = ctx.getBeanDefinition("aliveWriter");
-
-            assertEquals(fooDefinition.getScope(), "equipment");
-            assertEquals(barDefinition.getScope(), "equipment");
-        }
-    }
 
     @Test
     public final void newEquCreatesScope() {
@@ -102,15 +69,14 @@ public class SpringScopeTest {
             final EquipmentScope s = ctx.getBean(EquipmentScope.class);
             ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", s);
 
-            s.setName("Scope: # " + s.toString());
-            controller = ctx.getBean("controller", Controller.class);
+            controller = ctx.getBean(Controller.class);
             dataTagHandler = ctx.getBean(IDataTagHandler.class);
             commandTagHandler = ctx.getBean(CommandTagHandler.class);
             appConfigProperties = ctx.getBean(AppConfigProperties.class);
             dataTagChanger = ctx.getBean(DataTagChanger.class);
             aliveWriter = ctx.getBean(AliveWriter.class);
 
-            log.info(s.getName());
+            log.info(s.toString());
         }
     }
 }

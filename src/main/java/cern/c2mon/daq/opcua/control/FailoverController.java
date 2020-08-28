@@ -6,9 +6,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
  * Implementing classes are {@link ConcreteController}s that are connected to one or more servers in a non-transparent redundant
  * server set. They support the failover between servers in case of error.
  */
-public interface FailoverMode {
-
-    enum Type { NONE, COLD, WARM, HOT, HOTANDMIRRORED }
+public interface FailoverController {
 
     /**
      * Initiates a server failover. This method is periodically  when the client loses connectivity with the active

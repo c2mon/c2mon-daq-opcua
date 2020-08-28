@@ -17,6 +17,7 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -34,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @NoArgsConstructor
 @Getter
+@EquipmentScoped
 public class TagSubscriptionMapper implements TagSubscriptionManager {
 
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();

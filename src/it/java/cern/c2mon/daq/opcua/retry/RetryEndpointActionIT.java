@@ -1,19 +1,17 @@
 package cern.c2mon.daq.opcua.retry;
 
+import cern.c2mon.daq.opcua.SpringTestBase;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.UnknownHostException;
@@ -22,13 +20,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.easymock.EasyMock.*;
 
-@SpringBootTest
 @TestPropertySource(locations = "classpath:retry.properties")
-@ExtendWith(SpringExtension.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class RetryEndpointActionIT {
+public class RetryEndpointActionIT extends SpringTestBase {
 
-    @Autowired
     Endpoint endpoint;
 
     @Value("${c2mon.daq.opcua.maxRetryAttempts}")
@@ -36,8 +31,11 @@ public class RetryEndpointActionIT {
 
     OpcUaClient client = createMock(OpcUaClient.class);
 
+
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws ConfigurationException {
+        super.setUp();
+        endpoint = ctx.getBean(Endpoint.class);
         ReflectionTestUtils.setField(endpoint, "client", client);
     }
 

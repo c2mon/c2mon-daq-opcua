@@ -2,7 +2,7 @@ package cern.c2mon.daq.opcua.controller;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.ColdFailover;
-import cern.c2mon.daq.opcua.control.FailoverMode;
+import cern.c2mon.daq.opcua.control.FailoverController;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
@@ -257,7 +257,7 @@ public class ColdFailoverTest {
     public void triggerFailoverOnUninitializedServerShouldDoNothing() throws InterruptedException, OPCUAException {
         initLatch = new CountDownLatch(1);
         endpoint.setInitLatch(initLatch);
-        ((FailoverMode)coldFailover).switchServers();
+        ((FailoverController)coldFailover).switchServers();
         assertFalse(initLatch.await(200L, TimeUnit.MILLISECONDS));
     }
 

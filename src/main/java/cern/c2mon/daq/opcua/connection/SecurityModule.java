@@ -6,7 +6,11 @@ import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
+import cern.c2mon.daq.opcua.security.CertificateGenerator;
+import cern.c2mon.daq.opcua.security.CertificateLoader;
 import cern.c2mon.daq.opcua.security.Certifier;
+import cern.c2mon.daq.opcua.security.NoSecurityCertifier;
 import io.netty.util.internal.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,12 +39,13 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
  */
 @Slf4j
 @RequiredArgsConstructor
+@EquipmentScoped
 public class SecurityModule {
     private final AppConfigProperties config;
     private final UriModifier modifier;
-    private final Certifier loader;
-    private final Certifier generator;
-    private final Certifier noSecurity;
+    private final CertificateLoader loader;
+    private final CertificateGenerator generator;
+    private final NoSecurityCertifier noSecurity;
     private final List<AppConfigProperties.CertifierMode> certifiers = new ArrayList<>();
     private OpcUaClientConfigBuilder builder;
 

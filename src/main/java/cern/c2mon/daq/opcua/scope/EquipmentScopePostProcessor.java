@@ -10,7 +10,6 @@ public class EquipmentScopePostProcessor implements BeanFactoryPostProcessor {
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory factory) throws BeansException {
-        log.info("Registering equipment scope!");
         factory.registerScope("equipment", new EquipmentScope());
     }
 }

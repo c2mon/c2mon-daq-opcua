@@ -5,6 +5,7 @@ import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
@@ -15,8 +16,6 @@ import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedun
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
 
@@ -32,8 +31,10 @@ import java.util.stream.Stream;
 @Slf4j
 @ManagedResource
 @RequiredArgsConstructor
+@EquipmentScoped
 public class ControllerProxy implements Controller {
-    protected final ApplicationContext appContext;
+
+    protected final ControllerFactory controllerFactory;
     protected final AppConfigProperties config;
     protected final Endpoint endpoint;
     protected ConcreteController controller;
@@ -70,11 +71,12 @@ public class ControllerProxy implements Controller {
         String[] redundantUris = serverAddresses.stream()
                 .filter(s -> !s.equalsIgnoreCase(currentUri))
                 .toArray(String[]::new);
-        final boolean isLoaded = loadControllerFromConfig();
-        if (isLoaded && controller instanceof FailoverMode && redundantUris.length == 0) {
-            redundantUris = loadRedundantUris(currentUri, null);
-        }
-        if (!isLoaded) {
+        if (config.getRedundancyMode() != null) {
+            controller = controllerFactory.getObject(config.getRedundancyMode());
+            if (controller instanceof FailoverController && redundantUris.length == 0) {
+                redundantUris = loadRedundantUris(currentUri, null);
+            }
+        } else {
             redundantUris = loadControllerAndUrisFromAddressSpace(currentUri);
         }
         log.info("Using redundancy mode {}, redundant URIs {}.", controller.getClass().getName(), redundantUris);
@@ -171,20 +173,6 @@ public class ControllerProxy implements Controller {
         throw new ConfigurationException(ExceptionContext.NO_REDUNDANT_SERVER);
     }
 
-
-    private boolean loadControllerFromConfig() {
-        if (config.getRedundancyMode() != null) {
-            try {
-                controller = appContext.getBean(ConcreteController.class, config.getRedundancyMode());
-                log.info("Loaded ConcreteController with class {} for redundancy type {}.", controller.getClass().getName(), config.getRedundancyMode());
-                return true;
-            } catch (BeansException e) {
-                log.error("Cannot load a ConcreteController for the redundancyType {}.  Is it properly configured in the EquipmentScopeConfig?", config.getRedundancyMode());
-            }
-        }
-        return false;
-    }
-
     private String[] loadControllerAndUrisFromAddressSpace(String currentUri, String... redundantUris) throws OPCUAException {
         RedundancySupport redundancyMode = RedundancySupport.None;
         String[] redundantUriArray = new String[]{};
@@ -199,11 +187,7 @@ public class ControllerProxy implements Controller {
         } catch (CompletionException e) {
             log.error("An exception occurred when reading the server's redundancy information. Proceeding without setting up redundancy.", e);
         } finally {
-            if (redundancyMode.equals(RedundancySupport.None) || redundancyMode.equals(RedundancySupport.Transparent)) {
-                controller = appContext.getBean(ConcreteController.class, FailoverMode.Type.NONE);
-            } else {
-                controller = appContext.getBean(ConcreteController.class, FailoverMode.Type.COLD);
-            }
+            controller = controllerFactory.getObject(redundancyMode);
         }
         return redundantUriArray;
     }

@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.*;
+import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;
@@ -23,6 +24,7 @@ import java.util.function.Supplier;
  */
 @RequiredArgsConstructor
 @Slf4j
+@EquipmentScoped
 public class RetryDelegate {
 
     private final AppConfigProperties config;

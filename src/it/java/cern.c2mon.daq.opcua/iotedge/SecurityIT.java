@@ -1,11 +1,15 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.MessageSender;
+import cern.c2mon.daq.opcua.SpringTestBase;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.ControllerProxy;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
+import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.taghandling.DataTagHandler;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
 import cern.c2mon.daq.opcua.testutils.EdgeTagFactory;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
@@ -15,12 +19,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -38,18 +39,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
-@SpringBootTest
 @Testcontainers
 @TestPropertySource(locations = "classpath:securityIT.properties")
-@ExtendWith(SpringExtension.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class SecurityIT {
+public class SecurityIT extends SpringTestBase {
 
 
     @Autowired AppConfigProperties config;
-    @Autowired Controller controllerProxy;
-    @Autowired IDataTagHandler tagHandler;
-    @Autowired TestListeners.Pulse listener;
+    Controller controller;
+    IDataTagHandler tagHandler;
+    TestListeners.Pulse listener;
 
     private String uri;
 
@@ -60,11 +59,15 @@ public class SecurityIT {
             .withExposedPorts(EdgeTestBase.IOTEDGE);
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws ConfigurationException {
+        super.setUp();
+        controller = ctx.getBean(ControllerProxy.class);
+        tagHandler = ctx.getBean(DataTagHandler.class);
+        listener = new TestListeners.Pulse();
         uri = "opc.tcp://" + active.getContainerIpAddress() + ":" + active.getFirstMappedPort();
         ReflectionTestUtils.setField(tagHandler, "messageSender", listener);
-        ReflectionTestUtils.setField(tagHandler, "controller", controllerProxy);
-        final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
+        ReflectionTestUtils.setField(tagHandler, "controller", controller);
+        final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controller, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", listener);
         listener.reset();
     }
@@ -78,7 +81,7 @@ public class SecurityIT {
         cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
         final CompletableFuture<MessageSender.EquipmentState> f = listener.listen();
-        controllerProxy.stop();
+        controller.stop();
         try {
             f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
         } catch (TimeoutException | CompletionException | ExecutionException e) {
@@ -90,7 +93,7 @@ public class SecurityIT {
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
         final CompletableFuture<MessageSender.EquipmentState> f = listener.getStateUpdate().get(0);
-        controllerProxy.connect(Collections.singleton(uri));
+        controller.connect(Collections.singleton(uri));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
@@ -134,7 +137,7 @@ public class SecurityIT {
         trustCertificatesOnClient();
 
         final CompletableFuture<MessageSender.EquipmentState> state = listener.listen();
-        controllerProxy.connect(Collections.singleton(uri));
+        controller.connect(Collections.singleton(uri));
         assertEquals(MessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
@@ -149,17 +152,17 @@ public class SecurityIT {
     private CompletableFuture<MessageSender.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
         log.info("Initial connection attempt...");
         try {
-            controllerProxy.connect(Collections.singleton(uri));
+            controller.connect(Collections.singleton(uri));
         } catch (CommunicationException e) {
             // expected behavior: rejected by the server
         }
-        controllerProxy.stop();
+        controller.stop();
 
         log.info("Trust certificates server-side and reconnect...");
         trustCertificates();
         final CompletableFuture<MessageSender.EquipmentState> state = listener.listen();
 
-        controllerProxy.connect(Collections.singleton(uri));
+        controller.connect(Collections.singleton(uri));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         return state;
     }
