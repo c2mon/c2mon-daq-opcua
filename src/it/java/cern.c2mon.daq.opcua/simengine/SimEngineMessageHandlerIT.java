@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @UseHandler(OPCUAMessageHandler.class)
 @SpringBootTest
 @RunWith(SpringRunner.class)
-@TestPropertySource(locations = "classpath:opcua.properties")
+@TestPropertySource(locations = "classpath:application.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
@@ -56,7 +56,6 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     private OPCUAMessageHandler handler;
     private IDataTagHandler tagHandler;
-    private Controller proxy;
     private TestListeners.Pulse endpointListener;
     private SourceCommandTagValue value;
 
@@ -160,7 +159,7 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
     private void connectAndInjectListener() throws EqIOException {
         handler.connectToDataSource();
         tagHandler = context.getBean(DataTagHandler.class);
-        proxy = context.getBean(Controller.class);
+        Controller proxy = context.getBean(Controller.class);
         ReflectionTestUtils.setField(ReflectionTestUtils.getField(proxy, "endpoint"), "messageSender", endpointListener);
 
     }

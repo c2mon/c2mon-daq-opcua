@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.easymock.EasyMock.*;
 
-@TestPropertySource(locations = "classpath:retry.properties")
+@TestPropertySource(properties = {"c2mon.daq.opcua.retryDelay=1000", "c2mon.daq.opcua.maxRetryAttempts=3"}, locations = "classpath:application.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class RetryEndpointActionIT extends SpringTestBase {
 
@@ -33,8 +33,8 @@ public class RetryEndpointActionIT extends SpringTestBase {
 
 
     @BeforeEach
-    public void setUp() throws ConfigurationException {
-        super.setUp();
+    public void setupEquipmentScope() throws ConfigurationException {
+        super.setupEquipmentScope();
         endpoint = ctx.getBean(Endpoint.class);
         ReflectionTestUtils.setField(endpoint, "client", client);
     }

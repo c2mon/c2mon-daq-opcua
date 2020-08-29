@@ -16,7 +16,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -31,12 +30,11 @@ import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_TOXI;
 
 @Slf4j
 @Testcontainers
-@TestPropertySource(locations = "classpath:opcua.properties")
+@TestPropertySource(locations = "classpath:application.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class ReconnectionTimeIT extends EdgeTestBase {
 
     private static int instancesPerTest = 10;
-    @Autowired  AppConfigProperties config;
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
     TestListeners.Pulse pulseListener;
     IDataTagHandler tagHandler;
@@ -47,6 +45,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("############ SET UP ############");
+        super.setupEquipmentScope();
         current = active;
         pulseListener = new TestListeners.Pulse();
         tagHandler = ctx.getBean(DataTagHandler.class);

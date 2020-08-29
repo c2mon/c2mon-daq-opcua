@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 @Testcontainers
-@TestPropertySource(locations = "classpath:opcua.properties")
+@TestPropertySource(locations = "classpath:application.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class EdgeIT extends EdgeTestBase {
 
@@ -51,7 +51,7 @@ public class EdgeIT extends EdgeTestBase {
     @BeforeEach
     public void setupEndpoint() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         log.info("############ SET UP ############");
-        super.setUp();
+        super.setupEquipmentScope();
         pulseListener = new TestListeners.Pulse();
         controller = ctx.getBean(Controller.class);
         tagHandler = ctx.getBean(DataTagHandler.class);

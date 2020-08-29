@@ -3,7 +3,8 @@ package cern.c2mon.daq.opcua.iotedge;
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
-import cern.c2mon.daq.opcua.control.*;
+import cern.c2mon.daq.opcua.control.Controller;
+import cern.c2mon.daq.opcua.control.ControllerBase;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.taghandling.DataTagHandler;
 import cern.c2mon.daq.opcua.taghandling.IDataTagHandler;
@@ -17,7 +18,6 @@ import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -35,12 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
 @Testcontainers
-@TestPropertySource(locations = "classpath:opcua.properties")
+@TestPropertySource(properties = {"c2mon.daq.opcua.retryDelay=500", "c2mon.daq.opcua.redundancyMode=COLD"}, locations = "classpath:application.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
-    @Autowired
-    AppConfigProperties config;
-
     TestListeners.Pulse pulseListener;
     IDataTagHandler tagHandler;
     ControllerBase coldFailover;
@@ -66,7 +63,7 @@ public class FailoverIT extends EdgeTestBase {
     @BeforeEach
     public void setupEndpoint() throws InterruptedException, ExecutionException, TimeoutException, OPCUAException {
         log.info("############ SET UP ############");
-        super.setUp();
+        super.setupEquipmentScope();
         pulseListener = new TestListeners.Pulse();
         tagHandler = ctx.getBean(DataTagHandler.class);
         controllerProxy = ctx.getBean(Controller.class);

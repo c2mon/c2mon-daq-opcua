@@ -38,7 +38,7 @@ public class OPCUAMessageHandlerTest extends OPCUAMessageHandlerTestBase {
         appConfigProperties.setRetryDelay(0);
         appConfigProperties.setAliveWriterEnabled(false);
         mocker = new MiloMocker(testEndpoint, mapper);
-        configureContextWithController(testController, sender);
+        configureContext(sender);
 
         final Collection<ISourceDataTag> tags = handler.getEquipmentConfiguration().getSourceDataTags().values();
         mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tags);

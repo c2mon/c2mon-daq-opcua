@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.retry;
 
 import cern.c2mon.daq.opcua.SpringTestBase;
-import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.EndpointDisconnectedException;
@@ -10,7 +9,6 @@ import cern.c2mon.daq.opcua.testutils.TestController;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 
@@ -20,16 +18,15 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Slf4j
-@TestPropertySource(locations = "classpath:retry.properties")
+@TestPropertySource(properties = {"c2mon.daq.opcua.retryDelay=1000"}, locations = "classpath:application.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class RetryFailoverIT extends SpringTestBase {
 
-    @Autowired AppConfigProperties config;
     TestController testController;
 
     @BeforeEach
-    public void setUp() throws ConfigurationException {
-        super.setUp();
+    public void setupEquipmentScope() throws ConfigurationException {
+        super.setupEquipmentScope();
         testController = ctx.getBean(TestController.class);
         config.setFailoverDelay(1L);
         testController.setStopped(false);

@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua;
 
+import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.scope.EquipmentScope;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,15 +15,17 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 public class SpringTestBase {
 
     @Autowired
-    public ApplicationContext ctx;
+    protected ApplicationContext ctx;
+    protected AppConfigProperties config;
 
     private EquipmentScope s = null;
 
-    public void setUp() throws ConfigurationException {
+    public void setupEquipmentScope() throws ConfigurationException {
         System.out.println("Setup ctx");
         if (s == null) {
             s = ctx.getBean(EquipmentScope.class);
             ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", s);
         }
+        config = ctx.getBean(AppConfigProperties.class);
     }
 }

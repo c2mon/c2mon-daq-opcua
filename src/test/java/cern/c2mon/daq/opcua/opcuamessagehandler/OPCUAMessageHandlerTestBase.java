@@ -46,10 +46,10 @@ public abstract class OPCUAMessageHandlerTestBase extends GenericMessageHandlerT
     }
 
 
-    protected void configureContextWithController(Controller controller, MessageSender sender) {
+    protected void configureContext(MessageSender sender) {
         expect(context.getAutowireCapableBeanFactory()).andReturn(new DefaultListableBeanFactory()).anyTimes();
         expect(context.getBean(EquipmentScope.class)).andReturn(new EquipmentScope()).anyTimes();
-        expect(context.getBean(Controller.class)).andReturn(controller).anyTimes();
+        expect(context.getBean(Controller.class)).andReturn(testController).anyTimes();
         expect(context.getBean(MessageSender.class)).andReturn(sender).anyTimes();
         expect(context.getBean(IDataTagHandler.class)).andReturn(dataTagHandler).anyTimes();
         expect(context.getBean(CommandTagHandler.class)).andReturn(commandTagHandler).anyTimes();

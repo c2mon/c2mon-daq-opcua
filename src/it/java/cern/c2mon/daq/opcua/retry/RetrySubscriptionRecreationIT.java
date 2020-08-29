@@ -34,7 +34,7 @@ import static cern.c2mon.daq.opcua.testutils.EdgeTagFactory.RandomUnsignedInt32;
 import static org.easymock.EasyMock.*;
 
 @SpringBootTest
-@TestPropertySource(locations = "classpath:retry.properties")
+@TestPropertySource(properties = {"c2mon.daq.opcua.retryDelay=500"}, locations = "classpath:application.properties")
 @ExtendWith(SpringExtension.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class RetrySubscriptionRecreationIT extends SpringTestBase {
@@ -48,8 +48,8 @@ public class RetrySubscriptionRecreationIT extends SpringTestBase {
     private final OpcUaSubscriptionManager managerMock = createNiceMock(OpcUaSubscriptionManager.class);
 
     @BeforeEach
-    public void setUp() throws ConfigurationException {
-        super.setUp();
+    public void setupEquipmentScope() throws ConfigurationException {
+        super.setupEquipmentScope();
         mapper = ctx.getBean(TagSubscriptionMapper.class);
         endpoint = ctx.getBean(UaSubscriptionManager.SubscriptionListener.class);
         resetToNice(clientMock, managerMock, subscriptionMock);

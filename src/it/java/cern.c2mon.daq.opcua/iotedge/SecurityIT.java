@@ -2,7 +2,6 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.SpringTestBase;
-import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.ControllerProxy;
@@ -19,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -40,12 +38,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
 @Testcontainers
-@TestPropertySource(locations = "classpath:securityIT.properties")
+@TestPropertySource(locations = {"classpath:application.properties", "classpath:securityIT.properties"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class SecurityIT extends SpringTestBase {
 
-
-    @Autowired AppConfigProperties config;
     Controller controller;
     IDataTagHandler tagHandler;
     TestListeners.Pulse listener;
@@ -59,8 +55,8 @@ public class SecurityIT extends SpringTestBase {
             .withExposedPorts(EdgeTestBase.IOTEDGE);
 
     @BeforeEach
-    public void setUp() throws ConfigurationException {
-        super.setUp();
+    public void setupEquipmentScope() throws ConfigurationException {
+        super.setupEquipmentScope();
         controller = ctx.getBean(ControllerProxy.class);
         tagHandler = ctx.getBean(DataTagHandler.class);
         listener = new TestListeners.Pulse();
