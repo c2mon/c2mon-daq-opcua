@@ -19,21 +19,12 @@ public class TestControllerProxy extends ControllerProxy {
         this.controller = controller;
     }
 
-    public TestControllerProxy(ApplicationContext appContext, AppConfigProperties config, MessageSender messageSender, Endpoint endpoint) {
-        super(new ControllerFactory(config), config, endpoint);
+    public TestControllerProxy(ApplicationContext appContext, AppConfigProperties configProperties, MessageSender messageSender, Endpoint endpoint) {
+        super(new ControllerFactory(configProperties, null), configProperties, endpoint);
     }
 
     public void setFailoverMode(RedundancySupport mode) {
-        switch (mode) {
-            case HotAndMirrored:
-            case Hot:
-            case Warm:
-            case Cold:
-                controller = new ColdFailover(config);
-                break;
-            default:
-                controller = new NoFailover();
-        }
+       controller = new ControllerFactory(config, null).getObject(mode);
     }
 
     @Override

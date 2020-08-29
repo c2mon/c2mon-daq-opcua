@@ -32,6 +32,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.*;
 import org.eclipse.milo.opcua.stack.core.types.structured.*;
 import org.springframework.context.annotation.Scope;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -73,6 +74,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     private final TagSubscriptionReader mapper;
     private final MessageSender messageSender;
     private final AppConfigProperties config;
+    private final RetryTemplate exceptionClassifierTemplate;
     private final BiMap<Integer, UaSubscription> subscriptionMap = HashBiMap.create();
     private final Collection<SessionActivityListener> sessionActivityListeners = new ArrayList<>();
     private OpcUaClient client;
@@ -86,8 +88,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     /**
      * Connects to a server through the Milo OPC UA SDK. Discover available endpoints and select the most secure one in
-     * line with configuration options. In case of a communication error this method is retried a given amount of times
-     * with a given delay as specified in the application configuration.
+     * line with configuration options.
      * @param uri the server address to connect to.
      * @throws OPCUAException of type {@link CommunicationException} if it is not possible to connect to the OPC UA
      *                        server within the configured number of attempts, and of type {@link
@@ -109,12 +110,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         subscriptionManager.resumeDelivery();
     }
 
-    /**
-     * Adds or removes {@link SessionActivityListener}s from the client.
-     * @param add      whether to add or remove a listener. If the listener is already in the intended state, no action
-     *                 is taken.
-     * @param listener the listener to add or remove.
-     */
     @Override
     public void manageSessionActivityListener(boolean add, SessionActivityListener listener) {
         if (add && !sessionActivityListeners.contains(listener)) {
@@ -139,10 +134,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-    /**
-     * Disconnect from the server with the number of retries configured in {@link cern.c2mon.daq.opcua.config.AppConfigProperties}
-     * in case of connection error.
-     */
     @Override
     public void disconnect() {
         log.info("Disconnecting endpoint at {}", uri);
@@ -166,16 +157,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         log.info("Completed disconnecting endpoint {}", uri);
     }
 
-    /**
-     * Add a list of item definitions as monitored items to a subscription with the number of retries configured in
-     * {@link cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults and notify the {@link
-     * MessageSender} of all future value updates
-     * @param group       The {@link SubscriptionGroup} to add the {@link ItemDefinition}s to
-     * @param definitions the {@link ItemDefinition}s for which to create monitored items
-     * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
-     * call.
-     * @throws OPCUAException of type {@link ConfigurationException} or {@link EndpointDisconnectedException}.
-     */
     @Override
     public Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException {
         try {
@@ -220,16 +201,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         log.info("Recreated subscriptions on server {}.", uri);
     }
 
-    /**
-     * Subscribes to a {@link NodeId} with the itemCreationCallback  with the number of retries configured in {@link
-     * cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults.
-     * @param publishingInterval   the publishing interval of the subscription the definitions are added to.
-     * @param definitions          the {@link ItemDefinition}s containing the {@link NodeId}s to subscribe to
-     * @param itemCreationCallback the callback to apply upon creation of the items in the subscription
-     * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
-     * call.
-     * @throws OPCUAException if the definitions could not be subscribed.
-     */
     public Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
                                                                     Collection<ItemDefinition> definitions,
                                                                     Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
@@ -243,15 +214,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 .collect(toMap(i -> i.getClientHandle().intValue(), i -> MiloMapper.getDataTagQuality(i.getStatusCode())));
     }
 
-    /**
-     * Delete an item from an OPC UA subscription  with the number of retries configured in {@link
-     * cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults. If the subscription contains only
-     * the one item, the whole subscription is deleted.
-     * @param clientHandle    the identifier of the monitored item to remove.
-     * @param publishInterval the publishing interval subscription to remove the monitored item from.
-     * @return whether the removal from subscription could be completed successfully. False if no item with the
-     * clientHandle was previously subscribed.
-     */
     @Override
     public boolean deleteItemFromSubscription(int clientHandle, int publishInterval) {
         final UaSubscription subscription = subscriptionMap.get(publishInterval);
@@ -278,13 +240,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-    /**
-     * Read the current value from a node on the currently connected OPC UA server  with the number of retries
-     * configured in {@link cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults.
-     * @param nodeId the nodeId of the node whose value to read.
-     * @return the {@link DataValue} containing the value read from the node.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     */
     @Override
     public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
         final DataValue value = retryDelegate.completeOrRetry(READ, this::getDisconnectPeriod,
@@ -297,14 +252,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 MiloMapper.getDataTagQuality(value.getStatusCode()));
     }
 
-    /**
-     * Write a value to a node on the currently connected OPC UA server with the number of retries configured in {@link
-     * cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults.
-     * @param nodeId the nodeId of the node to write a value to.
-     * @param value  the value to write to the node.
-     * @return whether the write action finished successfully
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     */
     @Override
     public boolean write(NodeId nodeId, Object value) throws OPCUAException {
         // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
@@ -314,17 +261,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         return statusCode.isGood();
     }
 
-    /**
-     * Call the method node associated with the definition  with the number of retries configured in {@link
-     * cern.c2mon.daq.opcua.config.AppConfigProperties} in case of connection faults. It no method node is specified
-     * within the definition, it is assumed that the primary node is the method node, and the first object node ID
-     * encountered during browse is used as object node.
-     * @param definition the definition containing the nodeId of Method which shall be called
-     * @param arg        the input argument to pass to the methodId call.
-     * @return whether the methodId was successful, and the output arguments of the called method (if applicable, else
-     * null) in a Map Entry.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     */
     @Override
     public Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException {
         return (definition.getMethodNodeId() == null)
@@ -332,11 +268,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 : callMethod(definition.getNodeId(), definition.getMethodNodeId(), arg);
     }
 
-    /**
-     * Return the node containing the server's redundancy information. See OPC UA Part 5, 6.3.7
-     * @return the server's {@link ServerRedundancyTypeNode}
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
-     */
     @Override
     public ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException {
         return retryDelegate.completeOrRetry(SERVER_NODE, this::getDisconnectPeriod,
@@ -468,7 +399,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 log.error("Could not delete subscription. Proceed with recreation.", e);
             }
             try {
-                config.exceptionClassifierTemplate().execute(retryContext -> {
+                exceptionClassifierTemplate.execute(retryContext -> {
                     if (!resubscribeGroupsAndReportSuccess(group)) {
                         throw new CommunicationException(CREATE_SUBSCRIPTION);
                     }

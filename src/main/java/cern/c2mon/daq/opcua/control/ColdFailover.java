@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
+import org.springframework.retry.support.RetryTemplate;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,14 +30,15 @@ public class ColdFailover extends FailoverBase {
     private String currentUri;
     private Endpoint activeEndpoint;
 
+
     /**
      * Creates a new instance of ColdFailover
-     * @param config the application properties
+     * @param configProperties the application properties
+     * @param alwaysRetryTemplate a retry template to continuously execute a method call until successful termination.
      */
-    public ColdFailover(AppConfigProperties config) {
-        super(config);
+    public ColdFailover(AppConfigProperties configProperties, RetryTemplate alwaysRetryTemplate) {
+        super(configProperties, alwaysRetryTemplate);
     }
-
 
     /**
      * Connect to the healthiest endpoint of the redundant server set. Since in Cold Failover only one endpoint can be

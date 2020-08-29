@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.controller;
 
+import cern.c2mon.daq.opcua.config.AppConfig;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.ColdFailover;
 import cern.c2mon.daq.opcua.control.FailoverController;
@@ -38,7 +39,7 @@ public class ColdFailoverTest {
     ColdFailover coldFailover;
     TestEndpoint endpoint;
     TestListeners.TestListener listener = new TestListeners.TestListener();
-    AppConfigProperties config;
+    AppConfigProperties poperties;
     CountDownLatch initLatch;
     CountDownLatch readLatch;
     Capture<Consumer<DataValue>> serviceLevel;
@@ -51,8 +52,8 @@ public class ColdFailoverTest {
 
         readLatch = new CountDownLatch(1);
         initLatch = new CountDownLatch(2);
-        config = TestUtils.createDefaultConfig();
-        coldFailover = new ColdFailover(config);
+        poperties = TestUtils.createDefaultConfig();
+        coldFailover = new ColdFailover(poperties, new AppConfig(poperties).alwaysRetryTemplate());
         endpoint = new TestEndpoint(listener, new TagSubscriptionMapper());
         endpoint.setReadValue(UByte.valueOf(250));
         endpoint.setThrowExceptions(false);
@@ -348,7 +349,7 @@ public class ColdFailoverTest {
     @Test
     public void onSessionInactiveShouldTriggerFailover() throws OPCUAException, InterruptedException {
         setupConnectionMonitoring("redundant");
-        config.setFailoverDelay(10L);
+        poperties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         initLatch.await(100L, TimeUnit.MILLISECONDS);
         assertEquals("redundant", endpoint.getUri());
@@ -360,9 +361,9 @@ public class ColdFailoverTest {
         endpoint.setThrowExceptions(true);
         initLatch = new CountDownLatch(4);
         endpoint.setInitLatch(initLatch);
-        config.setFailoverDelay(2L);
-        config.setRetryDelay(1L);
-        config.setRetryMultiplier(1);
+        poperties.setFailoverDelay(2L);
+        poperties.setRetryDelay(1L);
+        poperties.setRetryMultiplier(1);
         coldFailover.onSessionInactive(null);
         assertTrue(initLatch.await(500L, TimeUnit.MILLISECONDS));
 
@@ -389,7 +390,7 @@ public class ColdFailoverTest {
     @Test
     public void onSessionActiveShouldCancelFailover() throws OPCUAException {
         setupConnectionMonitoring("redundant");
-        config.setFailoverDelay(10L);
+        poperties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         coldFailover.onSessionActive(null);
         assertEquals("test", endpoint.getUri());
@@ -398,7 +399,7 @@ public class ColdFailoverTest {
     @Test
     public void onSessionInactiveActiveInactiveShouldTriggerFailover() throws OPCUAException, InterruptedException {
         setupConnectionMonitoring("redundant");
-        config.setFailoverDelay(10L);
+        poperties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         coldFailover.onSessionActive(null);
         coldFailover.onSessionInactive(null);
@@ -409,7 +410,7 @@ public class ColdFailoverTest {
     @Test
     public void onSessionActiveWhenNeverInactiveShouldDoNothing() throws OPCUAException {
         setupConnectionMonitoring("redundant");
-        config.setFailoverDelay(10L);
+        poperties.setFailoverDelay(10L);
         coldFailover.onSessionActive(null);
         assertEquals("test", endpoint.getUri());
     }
@@ -417,7 +418,7 @@ public class ColdFailoverTest {
     @Test
     public void twoOnSessionActivesShouldDoNothing() throws OPCUAException {
         setupConnectionMonitoring("redundant");
-        config.setFailoverDelay(10L);
+        poperties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         coldFailover.onSessionActive(null);
         coldFailover.onSessionActive(null);
@@ -427,7 +428,7 @@ public class ColdFailoverTest {
     @Test
     public void twoOnSessionInactivesShouldTriggerOne() throws OPCUAException, InterruptedException {
         setupConnectionMonitoring("redundant");
-        config.setFailoverDelay(10L);
+        poperties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         coldFailover.onSessionInactive(null);
         initLatch.await(100L, TimeUnit.MILLISECONDS);

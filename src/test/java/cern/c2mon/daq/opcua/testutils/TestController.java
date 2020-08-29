@@ -1,10 +1,10 @@
 package cern.c2mon.daq.opcua.testutils;
 
+import cern.c2mon.daq.opcua.config.AppConfig;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.FailoverBase;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +17,6 @@ import java.util.concurrent.CountDownLatch;
 @Getter
 @Setter
 @Slf4j
-@EquipmentScoped
 public class TestController extends FailoverBase {
     CountDownLatch serverSwitchLatch = new CountDownLatch(2);
     CompletableFuture<Void> switchDone = new CompletableFuture<>();
@@ -27,8 +26,8 @@ public class TestController extends FailoverBase {
     @Setter
     OPCUAException toThrow;
 
-    public TestController(AppConfigProperties config) {
-        super(config);
+    public TestController(AppConfigProperties properties) {
+        super(properties, new AppConfig(properties).alwaysRetryTemplate());
         listening.set(true);
         stopped.set(false);
         toThrow = null;

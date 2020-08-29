@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.controller;
 
+import cern.c2mon.daq.opcua.config.AppConfig;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.*;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
@@ -31,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
 public class ControllerProxyTest {
-    AppConfigProperties config;
+    AppConfigProperties properties;
     ControllerFactory controllerFactory;
     ApplicationContext applicationContext;
     ControllerFactory controllerFactoryMock;
@@ -40,12 +41,12 @@ public class ControllerProxyTest {
 
     @BeforeEach
     public void setUp() {
-        config = TestUtils.createDefaultConfig();
-        controllerFactory = new ControllerFactory(config);
+        properties = TestUtils.createDefaultConfig();
+        controllerFactory = new ControllerFactory(properties, new AppConfig(properties).alwaysRetryTemplate());
         applicationContext = createMock(ApplicationContext.class);
         controllerFactoryMock = createMock(ControllerFactory.class);
         testEndpoint = new TestEndpoint(new TestListeners.TestListener(), new TagSubscriptionMapper());
-        proxy = new ControllerProxy(controllerFactoryMock, config, testEndpoint);
+        proxy = new ControllerProxy(controllerFactoryMock, properties, testEndpoint);
         final UaMonitoredItem item = testEndpoint.getMonitoredItem();
         reset(item, testEndpoint.getServerRedundancyNode(), applicationContext, controllerFactoryMock);
         expect(item.getStatusCode()).andReturn(StatusCode.GOOD).anyTimes();
@@ -112,32 +113,32 @@ public class ControllerProxyTest {
 
     @Test
     public void warmShouldFallbackToColdFailover() throws OPCUAException {
-        config.setRedundantServerUris(Collections.singletonList("redUri2"));
+        properties.setRedundantServerUris(Collections.singletonList("redUri2"));
         verifyResultingRedundancyMode(RedundancySupport.Warm, ColdFailover.class);
     }
 
     @Test
     public void hotShouldFallbackToColdFailover() throws OPCUAException {
-        config.setRedundantServerUris(Collections.singletonList("redUri2"));
+        properties.setRedundantServerUris(Collections.singletonList("redUri2"));
         verifyResultingRedundancyMode(RedundancySupport.Hot, ColdFailover.class);
     }
 
     @Test
     public void hotAndMirroredShouldFallbackToColdFailover() throws OPCUAException {
-        config.setRedundantServerUris(Collections.singletonList("redUri2"));
+        properties.setRedundantServerUris(Collections.singletonList("redUri2"));
         verifyResultingRedundancyMode(RedundancySupport.HotAndMirrored, ColdFailover.class);
     }
 
     @Test
     public void transparentShouldUseNone() throws OPCUAException {
-        config.setRedundantServerUris(Collections.singletonList("redUri2"));
+        properties.setRedundantServerUris(Collections.singletonList("redUri2"));
         verifyResultingRedundancyMode(RedundancySupport.Transparent, NoFailover.class);
     }
 
     @Test
     public void failoverAndUrisInConfigShouldNotQueryServer() throws OPCUAException {
-        config.setRedundancyMode(FailoverMode.COLD);
-        config.setRedundantServerUris(Collections.singletonList("redundantAddress"));
+        properties.setRedundancyMode(FailoverMode.COLD);
+        properties.setRedundantServerUris(Collections.singletonList("redundantAddress"));
         replay(testEndpoint.getServerRedundancyNode());
         verifyConfigFailover(FailoverMode.COLD);
         verify(testEndpoint.getServerRedundancyNode());
@@ -158,23 +159,23 @@ public class ControllerProxyTest {
 
     @Test
     public void emptyUriListInConfigShouldQueryServer() throws OPCUAException {
-        config.setRedundancyMode(FailoverMode.COLD);
-        config.setRedundantServerUris(Collections.emptyList());
+        properties.setRedundancyMode(FailoverMode.COLD);
+        properties.setRedundantServerUris(Collections.emptyList());
         mockServerUriCall();
         verifyResultingRedundancyMode(FailoverMode.COLD, ColdFailover.class);
     }
 
     @Test
     public void uriUsedToInitializeInConfigShouldQueryServer() throws OPCUAException {
-        config.setRedundancyMode(FailoverMode.COLD);
-        config.setRedundantServerUris(Collections.singletonList("test"));
+        properties.setRedundancyMode(FailoverMode.COLD);
+        properties.setRedundantServerUris(Collections.singletonList("test"));
         mockServerUriCall();
         verifyResultingRedundancyMode(FailoverMode.COLD, ColdFailover.class);
     }
 
     @Test
     public void noFailoverInConfigShouldNotQueryUris() throws OPCUAException {
-        config.setRedundancyMode(FailoverMode.NONE);
+        properties.setRedundancyMode(FailoverMode.NONE);
         replay(testEndpoint.getServerRedundancyNode());
         verifyConfigFailover(FailoverMode.NONE);
         verify(testEndpoint.getServerRedundancyNode());
@@ -182,14 +183,14 @@ public class ControllerProxyTest {
 
     @Test
     public void coldConfigNoUrisShouldQueryServerForUrisNotForMode() throws OPCUAException {
-        config.setRedundancyMode(FailoverMode.COLD);
+        properties.setRedundancyMode(FailoverMode.COLD);
         mockServerUriCall();
         verifyResultingRedundancyMode(FailoverMode.COLD, ColdFailover.class);
     }
 
     @Test
     public void coldFailoverWithUrisInArgsShouldNotQueryServer() throws OPCUAException {
-        config.setRedundancyMode(FailoverMode.COLD);
+        properties.setRedundancyMode(FailoverMode.COLD);
         expect(controllerFactoryMock.getObject(FailoverMode.COLD))
                 .andReturn(controllerFactory.getObject(FailoverMode.COLD))
                 .once();
@@ -200,16 +201,16 @@ public class ControllerProxyTest {
 
     @Test
     public void coldFailoverWithUrisInConfigShouldNotQueryServer() throws OPCUAException {
-        config.setRedundancyMode(FailoverMode.COLD);
-        config.setRedundantServerUris(Collections.singletonList("redUri2"));
+        properties.setRedundancyMode(FailoverMode.COLD);
+        properties.setRedundantServerUris(Collections.singletonList("redUri2"));
         verifyResultingRedundancyMode(FailoverMode.COLD, ColdFailover.class);
     }
 
     @Test
     public void currentlyConnectedUriShouldBeFilteredFromList() throws OPCUAException {
         ColdFailover coldFailover = createMock(ColdFailover.class);
-        config.setRedundancyMode(FailoverMode.COLD);
-        config.setRedundantServerUris(Arrays.asList("test", "test2", "test3"));
+        properties.setRedundancyMode(FailoverMode.COLD);
+        properties.setRedundantServerUris(Arrays.asList("test", "test2", "test3"));
         replay(applicationContext, testEndpoint.getServerRedundancyNode());
         expect(controllerFactoryMock.getObject(FailoverMode.COLD)).andReturn(coldFailover).once();
         replay(controllerFactoryMock);

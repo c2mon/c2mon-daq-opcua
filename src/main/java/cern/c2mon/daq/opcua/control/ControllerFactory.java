@@ -5,15 +5,17 @@ import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import lombok.RequiredArgsConstructor;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.retry.support.RetryTemplate;
 
 @EquipmentScoped
 @RequiredArgsConstructor
 public class ControllerFactory implements FactoryBean<ConcreteController> {
 
-    private final AppConfigProperties config;
+    private final AppConfigProperties configProperties;
+    private final RetryTemplate alwaysRetryTemplate;
 
     public ConcreteController getObject(AppConfigProperties.FailoverMode mode) {
-        return mode.equals(AppConfigProperties.FailoverMode.NONE) ? new NoFailover() : new ColdFailover(config);
+        return mode.equals(AppConfigProperties.FailoverMode.NONE) ? new NoFailover() : new ColdFailover(configProperties, alwaysRetryTemplate);
     }
 
     public ConcreteController getObject(RedundancySupport redundancySupport) {

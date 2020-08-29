@@ -1,10 +1,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.MessageSender;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.LongLostConnectionException;
-import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
@@ -30,7 +27,7 @@ public interface Endpoint {
     /**
      * Connects to a server through OPC UA.
      * @param uri the server address to connect to.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link ConfigurationException}.
+     * @throws OPCUAException if the server is unreachable or the configuration is erroneous.
      */
     void initialize(String uri) throws OPCUAException;
 
@@ -42,7 +39,7 @@ public interface Endpoint {
     void manageSessionActivityListener(boolean add, SessionActivityListener listener);
 
     /**
-     * If actived, the {@link MessageSender} will be informed of changes to a Session's activation status.
+     * If active, the {@link MessageSender} will be informed of changes to a Session's activation status.
      * @param active whether or not to inform the {@link MessageSender} of changes to a Session's activation status.
      */
     void setUpdateEquipmentStateOnSessionChanges(boolean active);
@@ -64,8 +61,7 @@ public interface Endpoint {
      * @param definitions the {@link ItemDefinition}s for which to create monitored items
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
      * call.
-     * @throws OPCUAException if the server returned an error code indicating a misconfiguration, or the endpoint was
-     *                        disconnected.
+     * @throws OPCUAException if the server indicates an error in the configuration of the ItemDefinitions, is unreachable, or has been disconnected.
      */
     Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException;
 
@@ -83,7 +79,7 @@ public interface Endpoint {
      * @param itemCreationCallback the callback to apply upon creation of the items in the subscription
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
      * call.
-     * @throws OPCUAException if the definitions could not be subscribed.
+     * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
     Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException;
 
@@ -99,7 +95,7 @@ public interface Endpoint {
      * Read the current value from a node on the currently connected OPC UA server
      * @param nodeId the nodeId of the node whose value to read.
      * @return the {@link ValueUpdate} and associated {@link SourceDataTagQualityCode} of the reading
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
     Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException;
 
@@ -108,7 +104,7 @@ public interface Endpoint {
      * @param nodeId the nodeId of the node to write a value to.
      * @param value  the value to write to the node.
      * @return whether the write command finished successfully
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
     boolean write(NodeId nodeId, Object value) throws OPCUAException;
 
@@ -120,14 +116,14 @@ public interface Endpoint {
      * @param arg        the input argument to pass to the methodId call.
      * @return whether the methodId was successful, and the output arguments of the called method (if applicable, else
      * null) in a Map Entry.
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
     Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException;
 
     /**
      * Return the node containing the server's redundancy information. See OPC UA Part 5, 6.3.7
      * @return the server's {@link ServerRedundancyTypeNode}
-     * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
+     * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
     ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException;
 

@@ -14,6 +14,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.ServerState;
+import org.springframework.retry.support.RetryTemplate;
 
 import java.util.Arrays;
 import java.util.List;
@@ -49,7 +50,8 @@ public abstract class FailoverBase extends ControllerBase implements FailoverCon
      * there are different ways of triggering a failover, which may occur simultaneously.
      */
     protected final AtomicBoolean listening = new AtomicBoolean(true);
-    protected final AppConfigProperties config;
+    protected final AppConfigProperties configProperties;
+    private final RetryTemplate alwaysRetryTemplate;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> triggerFailoverFuture;
 
@@ -104,7 +106,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverCon
             triggerFailoverFuture = executor.schedule(() -> {
                 log.info("Trigger server switch due to long disconnection");
                 triggerServerSwitch();
-            }, config.getFailoverDelay(), TimeUnit.MILLISECONDS);
+            }, configProperties.getFailoverDelay(), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -113,7 +115,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverCon
             if (listening.getAndSet(false) && !stopped.get()) {
                 currentEndpoint().setUpdateEquipmentStateOnSessionChanges(false);
                 try {
-                    config.alwaysRetryTemplate().execute(retryContext -> {
+                    alwaysRetryTemplate.execute(retryContext -> {
                         log.info("Server switch attempt nr {}.", retryContext.getRetryCount());
                         switchServers();
                         return null;
@@ -180,10 +182,10 @@ public abstract class FailoverBase extends ControllerBase implements FailoverCon
             log.info("The endpoint was stopped, skipping connection monitoring.");
         } else {
             log.info("Setting up monitoring");
-            if (config.getFailoverDelay() >= 0) {
+            if (configProperties.getFailoverDelay() >= 0) {
                 currentEndpoint().manageSessionActivityListener(true, this);
             }
-            currentEndpoint().subscribeWithCallback(config.getConnectionMonitoringRate(), connectionMonitoringNodes, this::monitoringCallback);
+            currentEndpoint().subscribeWithCallback(configProperties.getConnectionMonitoringRate(), connectionMonitoringNodes, this::monitoringCallback);
         }
     }
 }
