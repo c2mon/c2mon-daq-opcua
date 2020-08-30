@@ -3,6 +3,7 @@ package cern.c2mon.daq.opcua.connection;
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.config.AppConfig;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
+import cern.c2mon.daq.opcua.config.TimeRecordMode;
 import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
@@ -74,7 +75,7 @@ public class MiloEndpointTest {
         altBoolSbsGrp = mapper.getGroup(altBool.getTimeDeadband());
         dipSbsGrp = mapper.getGroup(dip.getTimeDeadband());
 
-        AppConfigProperties properties = AppConfigProperties.builder().maxRetryAttempts(3).requestTimeout(300).retryDelay(1000).build();
+        AppConfigProperties properties = AppConfigProperties.builder().maxRetryAttempts(3).requestTimeout(300).timeRecordMode(TimeRecordMode.CLOSEST).retryDelay(1000).build();
         endpoint = new MiloEndpoint(mockSecurityModule, mockRetryDelegate, mapper, msgSender, properties, new AppConfig(properties).exceptionClassifierTemplate());
         expect(mockClient.getSubscriptionManager()).andReturn(mockSubscriptionManager).anyTimes();
         expect(mockClient.getSerializationContext()).andReturn(serializationContext).anyTimes();

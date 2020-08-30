@@ -1,7 +1,6 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.MessageSender;
-import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.ControllerBase;
@@ -35,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
 @Testcontainers
-@TestPropertySource(properties = {"c2mon.daq.opcua.retryDelay=500", "c2mon.daq.opcua.redundancyMode=COLD"}, locations = "classpath:application.properties")
+@TestPropertySource(properties = {"c2mon.daq.opcua.failoverDelay=2500", "c2mon.daq.opcua.retryDelay=250", "c2mon.daq.opcua.redundancyMode=COLD"}, locations = "classpath:application.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
     TestListeners.Pulse pulseListener;
@@ -68,8 +67,6 @@ public class FailoverIT extends EdgeTestBase {
         tagHandler = ctx.getBean(DataTagHandler.class);
         controllerProxy = ctx.getBean(Controller.class);
 
-        config.setFailoverDelay(5000L);
-        config.setRedundancyMode(AppConfigProperties.FailoverMode.COLD);
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);

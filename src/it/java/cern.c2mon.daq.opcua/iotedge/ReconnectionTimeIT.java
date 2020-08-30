@@ -1,6 +1,5 @@
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.ConcreteController;
 import cern.c2mon.daq.opcua.control.Controller;
@@ -30,11 +29,11 @@ import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_TOXI;
 
 @Slf4j
 @Testcontainers
-@TestPropertySource(locations = "classpath:application.properties")
+@TestPropertySource(locations = "classpath:failover.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class ReconnectionTimeIT extends EdgeTestBase {
 
-    private static int instancesPerTest = 10;
+    private static int RUNS_PER_TEST = 10;
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
     TestListeners.Pulse pulseListener;
     IDataTagHandler tagHandler;
@@ -50,7 +49,6 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         pulseListener = new TestListeners.Pulse();
         tagHandler = ctx.getBean(DataTagHandler.class);
         controllerProxy = ctx.getBean(Controller.class);
-        config.setRedundancyMode(AppConfigProperties.FailoverMode.COLD);
         ReflectionTestUtils.setField(tagHandler, "messageSender", pulseListener);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controllerProxy, "endpoint");
         ReflectionTestUtils.setField(e, "messageSender", pulseListener);
@@ -91,15 +89,24 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     @Test
     public void mttrWithoutFailoverShouldBeLessThan1s() {
         log.info("mttrWithoutFailoverShouldBeLessThan1s");
-        final double average = findAverageTime(new CountDownLatch(instancesPerTest), false);
+        final double average = findAverageTime(new CountDownLatch(RUNS_PER_TEST), "without failover", false);
         Assertions.assertTrue(average >= 0 && average < 1000);
     }
 
     @Test
-    public void mttrWithLatencyShouldBeLessThan2s() {
+    public void mttrWith200LatencyShouldBeLessThan2s() {
         log.info("mttrWithLatencyShouldBeLessThan2s");
         addToxic(Toxic.Latency, 200, active, fallback);
-        final double average = findAverageTime(new CountDownLatch(instancesPerTest), false);
+        final double average = findAverageTime(new CountDownLatch(RUNS_PER_TEST), "without failover and latency 200", false);
+        Assertions.assertTrue(average >= 0 && average < 2000);
+        removeToxic(Toxic.Latency, active, fallback);
+    }
+
+    @Test
+    public void mttrWith400LatencyShouldBeLessThan2s() {
+        log.info("mttrWithLatencyShouldBeLessThan2s");
+        addToxic(Toxic.Latency, 200, active, fallback);
+        final double average = findAverageTime(new CountDownLatch(RUNS_PER_TEST), "without failover and latency 400", false);
         Assertions.assertTrue(average >= 0 && average < 2000);
         removeToxic(Toxic.Latency, active, fallback);
     }
@@ -107,33 +114,52 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     @Test
     public void mttrWithFailoverShouldBeLessThan6s() {
         log.info("mttrWithFailoverShouldBeLessThan6s");
-        final double average = findAverageTime(new CountDownLatch(instancesPerTest), true);
+        final double average = findAverageTime(new CountDownLatch(RUNS_PER_TEST), "with failover", true);
         Assertions.assertTrue(average >= 0 && average < 6000);
     }
 
-    private double findAverageTime(CountDownLatch latch, boolean isFailover) {
+    @Test
+    public void mttrWithFailoverAnd200LatencyShouldBeLessThan6s() {
+        log.info("mttrWithLatencyShouldBeLessThan2s");
+        addToxic(Toxic.Latency, 200, active, fallback);
+        final double average = findAverageTime(new CountDownLatch(RUNS_PER_TEST), "with failover and latency 200", true);
+        Assertions.assertTrue(average >= 0 && average < 2000);
+        removeToxic(Toxic.Latency, active, fallback);
+    }
+
+
+    @Test
+    public void mttrWithFailoverAnd400LatencyShouldBeLessThan6s() {
+        log.info("mttrWithLatencyShouldBeLessThan2s");
+        addToxic(Toxic.Latency, 200, active, fallback);
+        final double average = findAverageTime(new CountDownLatch(RUNS_PER_TEST), "with failover and latency 400", true);
+        Assertions.assertTrue(average >= 0 && average < 2000);
+        removeToxic(Toxic.Latency, active, fallback);
+    }
+
+    private double findAverageTime(CountDownLatch latch, String testName, boolean triggerFailover) {
         List<ConnectionRecord> connectionRecords = new ArrayList<>();
         try {
-            executor.submit(() -> this.schedule(latch, isFailover, connectionRecords));
+            executor.submit(() -> this.schedule(latch, triggerFailover, connectionRecords));
             latch.await();
         } catch (InterruptedException e) {
             log.info("Interrupted test bench. ", e);
             Thread.currentThread().interrupt();
         }
         final double average = connectionRecords.stream().map(ConnectionRecord::getDiff).mapToDouble(r -> r).average().orElse(-1.0);
-        log.info("Connection Records for test {} failover: \n{}\n{}\n" +
+        log.info("Connection Records for test {}: \n{}\n{}\n" +
                         "Average duration of reconnection: {}\n",
-                isFailover ? "with" : "without",
+                testName,
                 String.format("%1$14s %2$14s %3$14s %4$14s", "Reestablished", "Reconnected", "Difference", "Redundant"),
                 connectionRecords.stream().map(ConnectionRecord::toString).collect(Collectors.joining("\n")),
                 average);
         return average;
     }
 
-    private void schedule(CountDownLatch latch, boolean isFailover, Collection<ConnectionRecord> records) {
-        log.info("Test {} failover, {} remaining.", isFailover ? "with" : "without", latch.getCount());
+    private void schedule(CountDownLatch latch, boolean triggerFailover, Collection<ConnectionRecord> records) {
+        log.info("Test {} failover, {} remaining.", triggerFailover ? "with" : "without", latch.getCount());
         try {
-            final ConnectionRecord connectionRecord = recordInstance(isFailover);
+            final ConnectionRecord connectionRecord = recordInstance(triggerFailover);
             records.add(connectionRecord);
             latch.countDown();
         } catch (Exception e) {
@@ -141,15 +167,15 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         }
         if (latch.getCount() > 0) {
             long interruptDelay = 1000L;
-            executor.schedule(() -> schedule(latch, isFailover, records), interruptDelay, TimeUnit.MILLISECONDS);
+            executor.schedule(() -> schedule(latch, triggerFailover, records), interruptDelay, TimeUnit.MILLISECONDS);
         }
     }
 
-    private ConnectionRecord recordInstance(boolean isFailover) throws InterruptedException, ExecutionException, TimeoutException {
+    private ConnectionRecord recordInstance(boolean triggerFailover) throws InterruptedException, ExecutionException, TimeoutException {
         ConnectionRecord record;
         synchronized (this) {
             final boolean currentActive = current == active;
-            if (isFailover) {
+            if (triggerFailover) {
                 log.info(currentActive ? "Failover from active to backup." : "Failover from backup to active.");
                 final EdgeImage fallback = currentActive ? EdgeTestBase.fallback : active;
                 record = changeConnection(current, fallback);

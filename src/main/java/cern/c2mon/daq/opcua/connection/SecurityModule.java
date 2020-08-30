@@ -105,13 +105,13 @@ public class SecurityModule {
     }
 
     private void sortCertifiers() {
-        certifiers.clear();
-        if (config.getCertifierPriority() != null) {
+        if (certifiers.isEmpty() && config.getCertifierPriority() != null) {
             certifiers.addAll(config.getCertifierPriority().entrySet().stream()
                     .filter(e -> e.getValue() != 0)
                     .sorted((o1, o2) -> Integer.compare(o2.getValue(), o1.getValue()))
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList()));
+            log.info("Sorted certifiers into order: {}", certifiers.stream().map(Enum::name).collect(Collectors.joining(", ")));
         }
         if (certifiers.isEmpty()) {
             certifiers.add(AppConfigProperties.CertifierMode.NO_SECURITY);
@@ -120,19 +120,18 @@ public class SecurityModule {
 
     private OpcUaClient attemptConnection(List<EndpointDescription> mutableEndpoints) throws OPCUAException {
         OpcUaClient client = null;
-        final Iterator<AppConfigProperties.CertifierMode> certifierIterator = certifiers.iterator();
-        while (certifierIterator.hasNext()) {
-            final Certifier certifier = getCertifierForMode(certifierIterator.next());
-            log.info("Attempt connection with Certifier '{}'! ", certifier.getClass().getName());
-            try {
-                client = attemptConnectionWithCertifier(mutableEndpoints, certifier);
-                break;
-            } catch (OPCUAException e) {
-                log.info("Unable to connect with Certifier {}. Last encountered exception: ", certifier.getClass().getName(), e);
-                if (!certifierIterator.hasNext()) {
-                    throw e;
+        for (int i = 0; i < certifiers.size(); i++) {
+            final Certifier certifier = getCertifierForMode(certifiers.get(i));
+                log.info("Attempt connection with Certifier '{}'! ", certifier.getClass().getName());
+                try {
+                    client = attemptConnectionWithCertifier(mutableEndpoints, certifier);
+                    break;
+                } catch (OPCUAException e) {
+                    log.info("Unable to connect with Certifier {}. Last encountered exception: ", certifier.getClass().getName(), e);
+                    if (i >= certifiers.size() - 1) {
+                        throw e;
+                    }
                 }
-            }
         }
         return client;
     }

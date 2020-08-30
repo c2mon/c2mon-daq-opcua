@@ -1,8 +1,6 @@
 package cern.c2mon.daq.opcua.config;
 
 
-import java.time.Instant;
-
 /**
  * The server can report a server timestamp, a source timestamp, or both, where either may be null or
  * badly configured. Some SDKs report unset values as Unix 0, which will be interpreted as 1970. Possible values are:
@@ -27,7 +25,7 @@ public enum TimeRecordMode {
         } else if (server == null || this.equals(SOURCE)) {
             return source;
         } else {
-            final long reference = Instant.now().toEpochMilli();
+            final long reference = System.currentTimeMillis();
             return (Math.abs(server - reference) > Math.abs(source - reference)) ? source : server;
         }
     }

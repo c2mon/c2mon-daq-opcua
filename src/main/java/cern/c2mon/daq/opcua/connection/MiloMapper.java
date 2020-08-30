@@ -1,16 +1,15 @@
 package cern.c2mon.daq.opcua.connection;
 
+import cern.c2mon.daq.opcua.config.TimeRecordMode;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
 import com.google.common.collect.ImmutableSet;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.serialization.UaEnumeration;
-import org.eclipse.milo.opcua.stack.core.types.builtin.ExpandedNodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
+import org.eclipse.milo.opcua.stack.core.types.builtin.*;
 import org.eclipse.milo.opcua.stack.core.util.TypeUtil;
 
 import java.util.Collection;
@@ -135,4 +134,25 @@ public abstract class MiloMapper {
         }
         return variant.getValue() instanceof UaEnumeration ? ((UaEnumeration) variant.getValue()).getValue() : variant.getValue();
     }
+
+    /**
+     * Maps a DataValue into a C2MON ValueUpdate.
+     * @param value the DataValue received from the Milo client
+     * @param mode  the timestamp included in the DataValue that should be used to create the ValueUpdate
+     * @return a ValueUpdate containg the value included in the DataValue as well as the appropriate timestamp, if any.
+     */
+    public static ValueUpdate toValueUpdate(DataValue value, TimeRecordMode mode) {
+        if (value == null) {
+            return null;
+        }
+        ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()));
+        final Long sourceTime = value.getSourceTime() == null ? null : value.getSourceTime().getJavaTime();
+        final Long serverTime = value.getServerTime() == null ? null : value.getServerTime().getJavaTime();
+        final Long recordedTime = mode.getTime(sourceTime, serverTime);
+        if (recordedTime != null) {
+            valueUpdate.setSourceTimestamp(recordedTime);
+        }
+        return valueUpdate;
+    }
+
 }
