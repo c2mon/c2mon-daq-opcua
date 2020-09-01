@@ -15,7 +15,6 @@ import eu.rekawek.toxiproxy.model.ToxicDirection;
 import eu.rekawek.toxiproxy.model.ToxicList;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +42,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
     private static Integer[] SLICE_SIZES = new Integer[] {50, 100, 150, 200, 400};
     private static Integer SLICER_DELAY = 20;
 
-    private static int RUNS_PER_TEST = 2;
+    private static int RUNS_PER_TEST = 15;
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
     TestListeners.Pulse pulseListener;
     IDataTagHandler tagHandler;
@@ -81,6 +80,22 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         shutdownAndAwaitTermination(executor);
         resetImageConnectivity();
         log.info("Done cleaning up.");
+    }
+
+    @Test
+    public void baselineWithoutFailover() {
+        String testName = "Baseline";
+        log.info(testName);
+        double avg = findAverageTime(new CountDownLatch(RUNS_PER_TEST), testName, false);
+        log.info("MTTR Baseline without Failover: {}", avg);
+    }
+
+    @Test
+    public void baselineWithFailover() {
+        String testName = "Baseline";
+        log.info(testName);
+        double avg = findAverageTime(new CountDownLatch(RUNS_PER_TEST), testName, true);
+        log.info("MTTR Baseline with Failover: {}", avg);
     }
 
 
@@ -133,7 +148,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         printResults(averages, Integer::compareTo);
     }
 
-    @Ignore
+    @Test
     public void mttrByBandwidthWithFailover() throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Failover_Bandwidth";
         log.info(testName);
@@ -142,12 +157,12 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         printResults(averages, Long::compareTo);
     }
 
-    @Ignore
+    @Test
     public void mttrBySlicerWithFailover() throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Failover_Slicer";
         log.info(testName);
         Map<Integer, Double> averages = getAverages(testName, SLICE_SIZES,
-                o -> o.toxicList.slicer(o.name, o.dir, o.arg, 0), true);
+                o -> o.toxicList.slicer(o.name, o.dir, o.arg, 0).setSizeVariation(o.arg/10), true);
         log. info("MTTR for Slicer without delay");
         printResults(averages, Integer::compareTo);
     }
@@ -157,7 +172,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         String testName = "Failover_Delay_Slicer";
         log.info(testName);
         Map<Integer, Double> averages = getAverages(testName, SLICE_SIZES,
-                o -> o.toxicList.slicer(o.name, o.dir, o.arg, SLICER_DELAY), true);
+                o -> o.toxicList.slicer(o.name, o.dir, o.arg, SLICER_DELAY).setSizeVariation(o.arg/10), true);
         log. info("MTTR for Slicer with delay");
         printResults(averages, Integer::compareTo);
     }
@@ -182,6 +197,7 @@ public class ReconnectionTimeIT extends EdgeTestBase {
         for (T v : values) {
             log.info("Test with {}", v.toString());
             for (ToxicDirection direction : ToxicDirection.values()) {
+                fallback.proxy.setConnectionCut(true);
                 Toxic tFallback = toxicAction.apply(new AverageArg<>(testName + "_Fallback_" + direction.name() + "_" + v, v, direction, fallback.proxy.toxics()));
                 Toxic tActive = toxicAction.apply(new AverageArg<>(testName + "_Active_" + direction.name() + "_" + v, v, direction, active.proxy.toxics()));
                 double avg = findAverageTime(new CountDownLatch(RUNS_PER_TEST), testName, triggerFailover);
