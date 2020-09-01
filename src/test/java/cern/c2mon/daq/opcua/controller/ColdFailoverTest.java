@@ -155,7 +155,7 @@ public class ColdFailoverTest {
 
     @Test
     public void initializeShouldConnectToFirstEndpointIfItIsHealthiest() throws InterruptedException, TimeoutException, ExecutionException {
-        readLatch = new CountDownLatch(2);
+        readLatch = new CountDownLatch(1);
         endpoint.setReadLatch(readLatch);
         endpoint.setReadValue(UByte.valueOf(100));
         final CompletableFuture<Void> f = runAsync(() -> initializeCatchAndVerifyConnectionMonitoring("redundant"));
@@ -164,7 +164,7 @@ public class ColdFailoverTest {
             endpoint.setReadValue(UByte.valueOf(50));
         }
         f.get(1000L, TimeUnit.MILLISECONDS);
-        assertEquals("redundant", endpoint.getUri());
+        assertEquals("test", endpoint.getUri());
     }
 
     @Test

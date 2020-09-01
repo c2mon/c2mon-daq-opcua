@@ -29,7 +29,6 @@ public class SpringScopeTest {
 
     @Test
     public final void newEquCreatesScope() {
-
         final ScopeTestHandler handler1 = new ScopeTestHandler(ctx);
         final ScopeTestHandler handler2 = new ScopeTestHandler(ctx);
 

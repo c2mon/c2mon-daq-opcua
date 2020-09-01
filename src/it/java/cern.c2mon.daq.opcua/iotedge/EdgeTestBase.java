@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.SpringTestBase;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
+import eu.rekawek.toxiproxy.model.Toxic;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,8 @@ import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.*;
 
 import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_IT;
@@ -25,82 +28,77 @@ public abstract class EdgeTestBase extends SpringTestBase {
     private static final ToxiproxyContainer toxiProxyContainer;
     public static EdgeImage active;
     public static EdgeImage fallback;
+    public static Collection<Toxic> activeCutToxics = new ArrayList<>();
+    public static Collection<Toxic> fallbackCutToxics = new ArrayList<>();
+
+    public static int counter = 0;
 
     static {
         toxiProxyContainer = new ToxiproxyContainer().withNetwork(network);
     }
 
     @BeforeAll
-    public static void setupContainers() {
+    public static void setupContainers () {
         log.info("Starting EdgeTestBase containers");
         toxiProxyContainer.start();
         active = new EdgeImage(toxiProxyContainer, network);
         fallback = new EdgeImage(toxiProxyContainer, network);
-        doWithTimeout(fallback, true);
+        resetImageConnectivity();
     }
 
     @AfterAll
-    public static void stopContainers() {
+    public static void stopContainers () {
         log.info("Stopping EdgeTestBase containers");
         toxiProxyContainer.stop();
         active.image.stop();
         fallback.image.stop();
-
     }
 
-    protected static boolean doWithTimeout(EdgeImage img, boolean cut) {
-        try {
-            return CompletableFuture.supplyAsync(() -> {
-                if (cut) {
-                    return addToxic(Toxic.Timeout, 0, img);
-                } else {
-                    return removeToxic(Toxic.Timeout, img);
-                }
-            }).get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            log.error("Error {} connection.", cut ? "cutting" : "restoring", e);
-            return false;
-        }
+    protected static void resetImageConnectivity () {
+        log.info("Disabling Fallback, enabling Active");
+        uncut(active);
+        cut(fallback);
     }
 
-    protected static boolean addToxic(Toxic toxic, int arg, EdgeImage... imgs) {
-        boolean success = true;
-        for (EdgeImage img : imgs) {
+    protected static void cut(EdgeImage img) {
+        Collection<Toxic> toxics = img == active ? activeCutToxics : fallbackCutToxics;
+        String imgname = img == active ? "active" : "fallback";
+        String name;
+        if (toxics.size() < 2) {
             for (ToxicDirection dir : ToxicDirection.values()) {
+                name = imgname + "_" + dir.name() + "_Cut_" + counter++;
                 try {
-                    // if timeout is 0, data is be delayed until the toxic is removed
-                    if (toxic == Toxic.Timeout) {
-                        img.proxy.toxics().timeout(toxic.name() + "_" + dir.name(), dir, arg);
-                    } else if (toxic == Toxic.Latency) {
-                        img.proxy.toxics().latency(toxic.name() + "_" + dir.name(), dir, arg);
-                    }
+                    toxics.add(img.proxy.toxics().limitData(name, dir, 0));
+                    log.info("Successfully added toxic {} to {}.", name, imgname);
                 } catch (IOException e) {
-                    log.error("Could not add toxic {}.", toxic.name() + "_" + dir.name(), e);
-                    success = false;
+                    log.error("Could not add toxic {} to {}.", name, imgname, e);
                 }
             }
         }
-        return success;
     }
 
-    protected static boolean removeToxic(Toxic toxic, EdgeImage... imgs) {
-        boolean success = true;
-        for (EdgeImage img : imgs) {
-            for (ToxicDirection dir : ToxicDirection.values()) {
-                try {
-                    img.proxy.toxics().get(toxic.name() + "_" + dir.name()).remove();
-                } catch (IOException e) {
-                    log.error("Could not remove toxic {}.", toxic, e);
-                    success = false;
-                }
+    protected static void uncut(EdgeImage img) {
+        Collection<Toxic> toxics = img == active ? activeCutToxics : fallbackCutToxics;
+        if (toxics.size() == 0) {
+            return;
+        }
+        for (Toxic t : toxics) {
+            try {
+                t.remove();
+                log.info("Successfully removed toxic {}.", t.getName());
+            } catch (IOException e) {
+                log.error("Could not remove toxic! {}.", t.getName(), e);
             }
         }
-        return success;
+        toxics.clear();
     }
 
-    protected static <T> T doAndWait(CompletableFuture<T> future, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
-        log.info(cut ? "Cutting connection." : "Reestablishing connection.");
-        doWithTimeout(img, cut);
+    protected static <T> T waitUntilRegistered (CompletableFuture<T> future, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
+        if (cut) {
+            cut(img);
+        } else {
+            uncut(img);
+        }
         return future.thenApply(c -> {
             log.info(cut ? "Connection cut." : "Connection reestablished.");
             return c;
@@ -123,8 +121,6 @@ public abstract class EdgeTestBase extends SpringTestBase {
         }
         log.info("Executor shut down");
     }
-
-    enum Toxic { Timeout, Latency; }
 
     public static class EdgeImage {
 

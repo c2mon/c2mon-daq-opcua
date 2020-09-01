@@ -30,6 +30,7 @@ public abstract class AddressParser {
     private static final String URI = "URI";
     private static final String KEYSTORE = "keystore.";
     private static final String PKI = "pki.";
+    private static final Pattern opcUriPattern = Pattern.compile("^((opc.tcp://)|(http://))+(?:.[^./]+)+(?:/.*)?");
 
     private static final ConversionService converter = new DefaultConversionService();
 
@@ -56,10 +57,9 @@ public abstract class AddressParser {
         }
         // Some hostnames contain characters not allowed in a URI, such as underscores in Windows machine hostnames.
         // Therefore, parsing is done using a regular expression rather than relying on java URI class methods.
-        final Pattern opcUri = Pattern.compile("^((opc.tcp://)|(http://))+(?:.[^./]+)+(?:/.*)?");
         final Collection<String> uris = Stream.of(uri.split(","))
                 .map(String::trim)
-                .filter(s -> opcUri.matcher(s).find())
+                .filter(s -> opcUriPattern.matcher(s).find())
                 .collect(Collectors.toList());
         if (uris.isEmpty()) {
             throw new ConfigurationException(ExceptionContext.URI_SYNTAX);

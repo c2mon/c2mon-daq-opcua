@@ -22,7 +22,6 @@ import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTyp
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.TransparentRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
-import org.springframework.stereotype.Component;
 
 import java.util.AbstractMap;
 import java.util.Collection;
@@ -55,8 +54,8 @@ public class TestEndpoint implements Endpoint {
     long delay = 0;
     boolean transparent = false;
     Object readValue = 0;
-    CountDownLatch initLatch;
-    CountDownLatch readLatch;
+    CountDownLatch initLatch = new CountDownLatch(1);
+    CountDownLatch readLatch = new CountDownLatch(2);
 
 
     public TestEndpoint(MessageSender sender, TagSubscriptionReader mapper) {
@@ -72,11 +71,13 @@ public class TestEndpoint implements Endpoint {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        if (initLatch != null) {
-            initLatch.countDown();
-        }
-        if (throwExceptions) {
-            throw toThrow == null ? new CommunicationException(CONNECT) : toThrow;
+        synchronized (initLatch) {
+            if (initLatch != null) {
+                initLatch.countDown();
+            }
+            if (throwExceptions) {
+                throw toThrow == null ? new CommunicationException(CONNECT) : toThrow;
+            }
         }
     }
 
@@ -144,14 +145,16 @@ public class TestEndpoint implements Endpoint {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        if (readLatch != null) {
-            readLatch.countDown();
+        synchronized (readLatch) {
+            if (readLatch != null) {
+                readLatch.countDown();
+            }
+            if (throwExceptions) {
+                throw toThrow == null ? new CommunicationException(READ) : toThrow;
+            }
+            final SourceDataTagQuality quality = new SourceDataTagQuality(returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
+            return new AbstractMap.SimpleEntry<>(new ValueUpdate(r), quality);
         }
-        if (throwExceptions) {
-            throw toThrow == null ? new CommunicationException(READ) : toThrow;
-        }
-        final SourceDataTagQuality quality = new SourceDataTagQuality(returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
-        return new AbstractMap.SimpleEntry<>(new ValueUpdate(r), quality);
     }
 
     @Override

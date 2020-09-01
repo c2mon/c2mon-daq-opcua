@@ -22,8 +22,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.concurrent.*;
 
 import static cern.c2mon.daq.opcua.testutils.TestUtils.*;
@@ -34,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
 @Testcontainers
-@TestPropertySource(properties = {"c2mon.daq.opcua.failoverDelay=2500", "c2mon.daq.opcua.retryDelay=250", "c2mon.daq.opcua.redundancyMode=COLD"}, locations = "classpath:application.properties")
+@TestPropertySource(properties = {"c2mon.daq.opcua.failoverDelay=200", "c2mon.daq.opcua.retryDelay=250", "c2mon.daq.opcua.redundancyMode=COLD"}, locations = "classpath:application.properties")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
     TestListeners.Pulse pulseListener;
@@ -44,8 +43,6 @@ public class FailoverIT extends EdgeTestBase {
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     private final Runnable serverSwitch = () -> ReflectionTestUtils.invokeMethod(coldFailover, "triggerServerSwitch");
-
-    private boolean resetConnection;
     private ExecutorService executor;
 
     public static void mockColdFailover() {
@@ -76,7 +73,6 @@ public class FailoverIT extends EdgeTestBase {
         tagHandler.subscribeTags(Collections.singletonList(tag));
         pulseListener.getTagUpdate().get(0).get(TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
-        resetConnection = false;
         executor = Executors.newScheduledThreadPool(2);
 
         coldFailover = (ControllerBase) ReflectionTestUtils.getField(controllerProxy, "controller");
@@ -87,66 +83,54 @@ public class FailoverIT extends EdgeTestBase {
     public void cleanUp() throws InterruptedException {
         log.info("############ CLEAN UP ############");
         controllerProxy.stop();
-        TimeUnit.MILLISECONDS.sleep(TIMEOUT_IT);
+        resetImageConnectivity();
         shutdownAndAwaitTermination(executor);
-
-        if (resetConnection) {
-            log.info("Resetting fallback proxy {}", fallback.proxy);
-            doWithTimeout(fallback, true);
-            log.info("Resetting active proxy {}", active.proxy);
-            doWithTimeout(active, false);
-        } else {
-            log.info("Skip resetting proxies");
-        }
         log.info("Done cleaning up.");
     }
 
     @Test
     public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldReconnectClient");
-        doAndWait(pulseListener.listen(), active, true);
+        waitUntilRegistered(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
         TimeUnit.MILLISECONDS.sleep(config.getRequestTimeout() + 1000);
-        assertEquals(MessageSender.EquipmentState.OK, doAndWait(pulseListener.listen(), fallback, false));
-        resetConnection = true;
+        assertEquals(MessageSender.EquipmentState.OK, waitUntilRegistered(pulseListener.listen(), fallback, false));
     }
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldResumeSubscriptions: " + config.getRequestTimeout());
-        doAndWait(pulseListener.listen(), active, true);
+        waitUntilRegistered(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
-        doAndWait(pulseListener.listen(), fallback, false);
+        waitUntilRegistered(pulseListener.listen(), fallback, false);
         assertTagUpdate();
-        resetConnection = true;
     }
 
     @Test
     public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
         config.setFailoverDelay(100L);
         log.info("longDisconnectShouldTriggerReconnectToAnyAvailableServer");
-        doAndWait(pulseListener.listen(), active, true);
-        doAndWait(pulseListener.listen(), fallback, false);
+        waitUntilRegistered(pulseListener.listen(), active, true);
+        waitUntilRegistered(pulseListener.listen(), fallback, false);
         assertTagUpdate();
-        resetConnection = true;
     }
 
     @Test
     public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
-        doAndWait(pulseListener.listen(), active, true);
+        waitUntilRegistered(pulseListener.listen(), active, true);
         executor.submit(serverSwitch);
         TimeUnit.MILLISECONDS.sleep(TIMEOUT);
-        doAndWait(pulseListener.listen(), active, false);
+        waitUntilRegistered(pulseListener.listen(), active, false);
         assertTagUpdate();
     }
 
     @Test
     public void reconnectAfterLongDisconnectShouldCancelReconnection() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
-        doAndWait(pulseListener.listen(), active, true);
+        waitUntilRegistered(pulseListener.listen(), active, true);
         TimeUnit.MILLISECONDS.sleep(config.getRequestTimeout() + 1000);
-        doAndWait(pulseListener.listen(), active, false);
+        waitUntilRegistered(pulseListener.listen(), active, false);
         assertTagUpdate();
     }
 
