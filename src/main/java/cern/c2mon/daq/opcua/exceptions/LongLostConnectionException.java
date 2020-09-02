@@ -14,4 +14,5 @@ public class LongLostConnectionException extends OPCUAException {
     public LongLostConnectionException(final ExceptionContext context, final Throwable cause) {
         super(context, cause);
     }
+
 }

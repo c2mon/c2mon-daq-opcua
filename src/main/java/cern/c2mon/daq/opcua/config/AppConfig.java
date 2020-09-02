@@ -15,6 +15,7 @@ import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.AlwaysRetryPolicy;
 import org.springframework.retry.policy.ExceptionClassifierRetryPolicy;
 import org.springframework.retry.policy.NeverRetryPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 
 import java.util.Map;
@@ -30,6 +31,23 @@ public class AppConfig {
     @Bean
     public static BeanFactoryPostProcessor beanFactoryPostProcessor() {
         return new EquipmentScopePostProcessor();
+    }
+
+    /**
+     * A retry template to repeatedly execute a call until successful termination with a delay starting at retryDelay
+     * and increasing by a factor of 2 on every failed attempt up to a maximum of maxFailoverDelay.
+     * @return the retry template.
+     */
+    @Bean
+    public RetryTemplate simpleRetryPolicy() {
+        RetryTemplate template = new RetryTemplate();
+        template.setBackOffPolicy(backOff());
+        final Map<Class<? extends Throwable>, RetryPolicy> policyMap = new ConcurrentHashMap<>();
+        Map<Class<? extends Throwable>, Boolean> retryableExceptions = new ConcurrentHashMap<>();
+        retryableExceptions.put(CommunicationException.class, true);
+        SimpleRetryPolicy policy = new SimpleRetryPolicy(properties.getMaxRetryAttempts(), retryableExceptions);
+        template.setRetryPolicy(policy);
+        return template;
     }
 
     /**

@@ -243,7 +243,7 @@ public class OPCUAMessageHandlerTest extends OPCUAMessageHandlerTestBase {
         oldConfig.setAliveTagInterval(100L);
         oldConfig.setAliveTagId(2);
         EquipmentConfiguration config = oldConfig.clone();
-        config.setAddress("test2");
+        config.setEquipmentAddress("test2");
         final ChangeReport changeReport = new ChangeReport();
         final CompletableFuture<Void> f = testListener.getAlive().get(0);
         handler.onUpdateEquipmentConfiguration(config, oldConfig, changeReport);

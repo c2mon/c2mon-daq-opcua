@@ -138,6 +138,20 @@ public class EdgeIT extends EdgeTestBase {
     }
 
     @Test
+    public void removeItemFromSubscriptionShouldNotUpdateIt() throws InterruptedException, ExecutionException, TimeoutException {
+        log.info("############ removeItemFromSubscriptionShouldNotUpdateIt ############");
+        tagHandler.subscribeTags(Collections.singletonList(tag));
+        pulseListener.reset();
+        pulseListener.setSourceID(tag.getId());
+        pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        tagHandler.removeTag(tag);
+        pulseListener.setSourceID(tag.getId());
+        pulseListener.reset();
+        tagHandler.refreshAllDataTags();
+        assertThrows(TimeoutException.class, () -> pulseListener.getTagValUpdate().get(100L, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
     public void subscribingImproperDataTagShouldReturnOnTagInvalid() {
         log.info("############ subscribingImproperDataTagShouldReturnOnTagInvalid ############");
         final ISourceDataTag tag = EdgeTagFactory.Invalid.createDataTag();

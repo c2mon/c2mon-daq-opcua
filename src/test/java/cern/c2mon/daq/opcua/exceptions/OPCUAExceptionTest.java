@@ -29,13 +29,13 @@ public class OPCUAExceptionTest {
 
     @Test
     public void endpointStoppedShouldThrowEndpointDisconnectedException() {
-        Throwable e = new UaException(StatusCodes.Bad_SecureChannelIdInvalid);
+        Throwable e = new UaException(StatusCodes.Bad_SecureChannelClosed);
         assertTrue(OPCUAException.of(c, e, false) instanceof EndpointDisconnectedException);
     }
 
     @Test
     public void endpointStoppedShouldThrowEndpointDisconnectedExceptionEvenIfLongLost() {
-        Throwable e = new UaException(StatusCodes.Bad_SecureChannelIdInvalid);
+        Throwable e = new UaException(StatusCodes.Bad_SecureChannelClosed);
         assertTrue(OPCUAException.of(c, e, true) instanceof EndpointDisconnectedException);
     }
 

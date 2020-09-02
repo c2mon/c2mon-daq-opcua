@@ -1,13 +1,15 @@
 package cern.c2mon.daq.opcua.exceptions;
 
-/** An exception which is unsolvable without a configuration change. */
+/**
+ * An exception which is unsolvable without a configuration change.
+ */
 public class ConfigurationException extends OPCUAException {
 
     /**
      * Creates a new ConfigurationException.
      * @param context describes the misconfiguration what triggered the exception.
      */
-    public ConfigurationException(final ExceptionContext context) {
+    public ConfigurationException (final ExceptionContext context) {
         super(context);
     }
 
@@ -16,7 +18,7 @@ public class ConfigurationException extends OPCUAException {
      * @param context describes the context of the action which triggered the throwable cause.
      * @param cause   the throwable causing the action to fail.
      */
-    public ConfigurationException(ExceptionContext context, final Throwable cause) {
+    public ConfigurationException (ExceptionContext context, final Throwable cause) {
         super(context, cause);
     }
 }

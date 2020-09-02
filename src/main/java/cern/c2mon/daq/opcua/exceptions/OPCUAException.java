@@ -14,7 +14,9 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
  */
 public abstract class OPCUAException extends EqIOException {
 
-    /** Status Codes returned by the server hinting at misconfigurations. */
+    /**
+     * Status Codes returned by the server hinting at misconfigurations.
+     */
     private static final Collection<Long> CONFIG = ImmutableSet.<Long>builder().add(
             Bad_NodeIdUnknown,
             Bad_ServerUriInvalid,
@@ -36,7 +38,9 @@ public abstract class OPCUAException extends EqIOException {
             Bad_FilterOperandInvalid,
             Bad_ServiceUnsupported).build();
 
-    /** Status Codes returned by the server hinting at misconfigurations of security settings. */
+    /**
+     * Status Codes returned by the server hinting at misconfigurations of security settings.
+     */
     private static final Collection<Long> SECURITY_CONFIG = ImmutableSet.<Long>builder().add(
             Bad_UserSignatureInvalid,
             Bad_UserAccessDenied,
@@ -49,15 +53,13 @@ public abstract class OPCUAException extends EqIOException {
 
     private static final Collection<Long> ENDPOINT_DISCONNECTED = ImmutableSet.<Long>builder().add(
             Bad_SessionClosed,
-            Bad_SessionIdInvalid,
-            Bad_SecureChannelIdInvalid,
             Bad_SecureChannelClosed).build();
 
-    protected OPCUAException(final ExceptionContext context) {
+    protected OPCUAException (final ExceptionContext context) {
         super(context.getMessage());
     }
 
-    protected OPCUAException(final ExceptionContext context, final Throwable e) {
+    protected OPCUAException (final ExceptionContext context, final Throwable e) {
         super(context.getMessage(), e);
     }
 
@@ -65,15 +67,13 @@ public abstract class OPCUAException extends EqIOException {
      * A static factory method called when the execution of an action on the server failed. The throwable causing this
      * failure is wrapped in a subclass of OPCUAException best describing the context of the exception, and the
      * prospects of retrying the action.
-     * @param context              The context that the  throwable e occurred in, used to form an informative error
-     *                             message.
-     * @param e                    The throwable which caused the action on the server to fail originally.
-     * @param disconnectionTooLong describes if the the client has been disconnected for so long time that retries are
-     *                             unlikely to succeed in due time.
+     *
+     * @param context The context that the  throwable e occurred in, used to form an informative error
+     *                message.
+     * @param e       The throwable which caused the action on the server to fail originally.
      * @return A concrete OPCUAException of type {@link ConfigurationException}, if the original error hints at an issue
-     * with the equipment configuration, of type {@link LongLostConnectionException} no configuration issue is detected
-     * and the connection has been lost so long that retries become unlikely to succeed, and of type {@link
-     * CommunicationException} if neither of the above is true.
+     * with the equipment configuration, of type {@link EndpointDisconnectedException} if the endpoint has been connected by the DAQ. In all other cases a {@link
+     * CommunicationException} is Thrown.
      */
     public static OPCUAException of(ExceptionContext context, Throwable e, boolean disconnectionTooLong) {
         if (isConfigIssue(e)) {
@@ -88,18 +88,19 @@ public abstract class OPCUAException extends EqIOException {
 
     /**
      * Checks whether the UaException e was throws due to a general security issue.
+     *
      * @param e the UaException to classify.
      * @return true is the exception e is due to a security general issue.
      */
-    public static boolean isSecurityIssue(UaException e) {
+    public static boolean isSecurityIssue (UaException e) {
         return SECURITY_CONFIG.contains(e.getStatusCode().getValue());
     }
 
-    private static boolean isConfigIssue(Throwable e) {
+    private static boolean isConfigIssue (Throwable e) {
         return e instanceof UnknownHostException || e instanceof UaException && CONFIG.contains(((UaException) e).getStatusCode().getValue());
     }
 
-    private static boolean isEndpointDisconnectedIssue(Throwable e) {
+    private static boolean isEndpointDisconnectedIssue (Throwable e) {
         return e instanceof UaException && ENDPOINT_DISCONNECTED.contains(((UaException) e).getStatusCode().getValue());
     }
 

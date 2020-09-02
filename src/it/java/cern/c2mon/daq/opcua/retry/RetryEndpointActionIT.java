@@ -2,6 +2,7 @@ package cern.c2mon.daq.opcua.retry;
 
 import cern.c2mon.daq.opcua.SpringTestBase;
 import cern.c2mon.daq.opcua.connection.Endpoint;
+import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -16,7 +17,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.UnknownHostException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.easymock.EasyMock.*;
 
@@ -37,6 +37,7 @@ public class RetryEndpointActionIT extends SpringTestBase {
         super.setupEquipmentScope();
         endpoint = ctx.getBean(Endpoint.class);
         ReflectionTestUtils.setField(endpoint, "client", client);
+        ((MiloEndpoint)endpoint).onSessionActive(null);
     }
 
     @Test
@@ -49,16 +50,6 @@ public class RetryEndpointActionIT extends SpringTestBase {
     public void configurationExceptionShouldNotBeRepeated() {
         //unknown host is thrown as configuration exception
         verifyExceptionOnRead(new UnknownHostException(), 1);
-    }
-
-
-    @Test
-    public void longLostConnectionExceptionShouldNotBeRepeated() {
-        //results in longLostConnectionException
-        // scope prototype on delegate -> fetch proper instance
-        ReflectionTestUtils.setField(endpoint, "disconnectedOn", new AtomicLong(2L));
-        verifyExceptionOnRead(new Exception(), 1);
-        ReflectionTestUtils.setField(endpoint, "disconnectedOn", new AtomicLong(0L));
     }
 
     private void verifyExceptionOnRead(Exception e, int numTimes) {

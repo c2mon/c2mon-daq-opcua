@@ -94,6 +94,7 @@ public abstract class EdgeTestBase extends SpringTestBase {
     }
 
     protected static <T> T waitUntilRegistered (CompletableFuture<T> future, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
+        log.info(cut ? "Cutting connection." : "Reestablishing connection.");
         if (cut) {
             cut(img);
         } else {

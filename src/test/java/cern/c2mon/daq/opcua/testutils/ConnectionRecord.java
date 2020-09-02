@@ -1,28 +1,31 @@
 package cern.c2mon.daq.opcua.testutils;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Setter
 public class ConnectionRecord {
-    final long reestablishedInstant;
-    final long reconnectInstant;
-    final boolean failoverToRedundantServer;
-    final long diff;
+    long reestablishedInstant;
+    long reconnectInstant;
+    long diff = 0;
 
-    public static ConnectionRecord of(long reestablishedInstant, long reconnectInstant, boolean failoverToRedundantServer) {
+    public static ConnectionRecord of(long reestablishedInstant, long reconnectInstant) {
         return new ConnectionRecord(reestablishedInstant,
                 reconnectInstant,
-                failoverToRedundantServer,
-                (reconnectInstant >= 0 && reestablishedInstant >= 0) ? reconnectInstant - reestablishedInstant : -1L);
+                (reconnectInstant > 0 && reestablishedInstant > 0) ? reconnectInstant - reestablishedInstant : -1L);
+    }
+
+    public void setReconnectInstant(long reconnectInstant) {
+        this.reconnectInstant = reconnectInstant;
+        this.diff = reestablishedInstant > 0 ? reconnectInstant - reestablishedInstant : this.diff;
     }
 
     @Override
     public String toString() {
-        return String.format("%1$14d %2$14d %3$14d %4$14s", reestablishedInstant, reconnectInstant, diff, failoverToRedundantServer);
+        return String.format("%1$14d %2$14d %3$14d", reestablishedInstant, reconnectInstant, diff);
     }
 }

@@ -1,6 +1,7 @@
 package cern.c2mon.daq.opcua.retry;
 
 import cern.c2mon.daq.opcua.SpringTestBase;
+import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.EndpointDisconnectedException;
@@ -27,7 +28,8 @@ public class RetryFailoverIT extends SpringTestBase {
     @BeforeEach
     public void setupEquipmentScope() throws ConfigurationException {
         super.setupEquipmentScope();
-        testController = ctx.getBean(TestController.class);
+        testController = new TestController(config);
+        testController.setEndpoint(ctx.getBean(Endpoint.class));
         config.setFailoverDelay(1L);
         testController.setStopped(false);
         testController.setListening(true);
