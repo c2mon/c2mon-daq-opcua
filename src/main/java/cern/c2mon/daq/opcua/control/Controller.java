@@ -7,7 +7,6 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 
@@ -30,12 +29,12 @@ public interface Controller {
      *                        server is not part of a redundant setup.
      * @throws OPCUAException if connecting to the server(s) failed.
      */
-    void connect(Collection<String> serverAddresses) throws OPCUAException;
+    void connect (Collection<String> serverAddresses) throws OPCUAException;
 
     /**
      * Disconnect from the OPC UA server and reset the controller to a neutral state.
      */
-    void stop();
+    void stop ();
 
     /**
      * Subscribes the {@link NodeId}s in the {@link ItemDefinition}s to the corresponding {@link SubscriptionGroup} on
@@ -45,7 +44,7 @@ public interface Controller {
      * @return the client handles of the subscribed {@link ItemDefinition}s and the associated quality of the service
      * call.
      */
-    Map<Integer, SourceDataTagQuality> subscribe(Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions);
+    Map<Integer, SourceDataTagQuality> subscribe (Map<SubscriptionGroup, List<ItemDefinition>> groupsWithDefinitions);
 
     /**
      * Unsubscribe from the {@link NodeId} in the {@link ItemDefinition} on the OPC UA server or on all servers in a
@@ -54,15 +53,15 @@ public interface Controller {
      * @return whether the removal from subscription was completed successfully at the currently active server. False if
      * the {@link ItemDefinition} was not subscribed in the first place.
      */
-    boolean unsubscribe(ItemDefinition definition);
+    boolean unsubscribe (ItemDefinition definition);
 
     /**
      * Read the current value from a node on the currently connected OPC UA server
      * @param nodeId the nodeId of the node whose value to read.
-     * @return the {@link ValueUpdate} and associated {@link SourceDataTagQualityCode} of the reading
+     * @return the {@link ValueUpdate} and associated {@link cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode} of the reading
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException;
+    Map.Entry<ValueUpdate, SourceDataTagQuality> read (NodeId nodeId) throws OPCUAException;
 
     /**
      * Call the method node associated with the definition. It no method node is specified within the definition, it is
@@ -74,7 +73,7 @@ public interface Controller {
      * null) in a Map Entry.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException;
+    Map.Entry<Boolean, Object[]> callMethod (ItemDefinition definition, Object arg) throws OPCUAException;
 
     /**
      * Write a value to a node on the currently connected OPC UA server.
@@ -83,5 +82,5 @@ public interface Controller {
      * @return whether the write command finished successfully
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    boolean write(NodeId nodeId, Object value) throws OPCUAException;
+    boolean write (NodeId nodeId, Object value) throws OPCUAException;
 }

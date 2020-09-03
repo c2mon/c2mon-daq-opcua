@@ -4,6 +4,8 @@ import cern.c2mon.shared.common.datatag.DataTagAddress;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTag;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
+import cern.c2mon.shared.common.datatag.util.JmsMessagePriority;
+import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -25,9 +27,9 @@ public class MappingBase {
         mapper.clear();
         opcHardwareAddress = new OPCHardwareAddressImpl("Primary");
         dataTagAddress = new DataTagAddress(opcHardwareAddress,
-                0, (short) 0,0, 0, 2, true);
+                0, ValueDeadbandType.EQUIPMENT_ABSOLUTE,0, 0, JmsMessagePriority.PRIORITY_LOW, true);
         dataTagAddressWithDifferentDeadband = new DataTagAddress(opcHardwareAddress,
-                0, (short) 1,1, 1, 2, true);
+                0, ValueDeadbandType.EQUIPMENT_RELATIVE,1, 1, JmsMessagePriority.PRIORITY_LOW, true);
         tag = makeSourceDataTag(1L, dataTagAddress);
         tagWithSameDeadband = makeSourceDataTag(2L, dataTagAddress);
         tagWithDifferentDeadband = makeSourceDataTag(3L, dataTagAddressWithDifferentDeadband);

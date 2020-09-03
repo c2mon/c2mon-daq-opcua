@@ -8,6 +8,8 @@ import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.shared.common.datatag.DataTagAddress;
 import cern.c2mon.shared.common.datatag.SourceDataTag;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
+import cern.c2mon.shared.common.datatag.util.JmsMessagePriority;
+import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +32,7 @@ public class AliveWriterTest {
     public void setUp() {
         final OPCHardwareAddressImpl hwAddress = new OPCHardwareAddressImpl("Test");
         hwAddress.setCurrentOPCItemName("test");
-        DataTagAddress tagAddress = new DataTagAddress(hwAddress, 0, (short) 0, 0, 0, 2, true);
+        DataTagAddress tagAddress = new DataTagAddress(hwAddress, 0, ValueDeadbandType.NONE, 0, 0, JmsMessagePriority.PRIORITY_LOW, true);
         aliveTag = new SourceDataTag((long) 1, "test", false, (short) 0, null, tagAddress);
         testEndpoint = new TestEndpoint(listener, mapper);
         aliveWriter =  new AliveWriter(TestUtils.getFailoverProxy(testEndpoint, listener), listener);

@@ -7,6 +7,8 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTag;
 import cern.c2mon.shared.common.datatag.address.OPCCommandHardwareAddress;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
+import cern.c2mon.shared.common.datatag.util.JmsMessagePriority;
+import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -22,21 +24,21 @@ public enum EdgeTagFactory {
     static int NAMESPACE = 2; // Hardcoded on the server
 
     public ISourceDataTag createDataTag() {
-        return createDataTag(0, (short) 0, 0);
+        return createDataTag(0, ValueDeadbandType.NONE, 0);
     }
 
     public ISourceDataTag createDataTagWithID(long id) {
-        return createDataTagWithID(id, 0, (short) 0, 0);
+        return createDataTagWithID(id, 0, ValueDeadbandType.NONE, 0);
     }
 
-    public ISourceDataTag createDataTag(float valDB, short dbType, int timeDB) {
+    public ISourceDataTag createDataTag(float valDB, ValueDeadbandType dbType, int timeDB) {
         return createDataTagWithID(ID.getAndIncrement(), valDB, dbType, timeDB);
     }
 
-    public ISourceDataTag createDataTagWithID(long id, float valDB, short dbType, int timeDB) {
+    public ISourceDataTag createDataTagWithID(long id, float valDB, ValueDeadbandType dbType, int timeDB) {
         OPCHardwareAddressImpl hwAddress = new OPCHardwareAddressImpl(this.name());
         hwAddress.setNamespace(NAMESPACE);
-        DataTagAddress dataTagAddress = new DataTagAddress(hwAddress, 0, dbType, valDB, timeDB, 2, true);
+        DataTagAddress dataTagAddress = new DataTagAddress(hwAddress, 0, dbType, valDB, timeDB, JmsMessagePriority.PRIORITY_LOW, true);
         return new SourceDataTag(id, this.name(), false, (short) 0, null, dataTagAddress);
     }
 

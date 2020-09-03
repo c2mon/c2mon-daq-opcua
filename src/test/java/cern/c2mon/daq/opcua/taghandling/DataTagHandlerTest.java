@@ -6,6 +6,8 @@ import cern.c2mon.shared.common.datatag.DataTagAddress;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTag;
 import cern.c2mon.shared.common.datatag.address.impl.DIPHardwareAddressImpl;
+import cern.c2mon.shared.common.datatag.util.JmsMessagePriority;
+import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +24,7 @@ public class DataTagHandlerTest extends TagHandlerTestBase {
     @BeforeEach
     public void setUp() throws OPCUAException, InterruptedException {
         final DIPHardwareAddressImpl dip = new DIPHardwareAddressImpl("badAddress");
-        DataTagAddress tagAddress = new DataTagAddress(dip, 0, (short) 0, 0, 0, 2, true);
+        DataTagAddress tagAddress = new DataTagAddress(dip, 0, ValueDeadbandType.NONE, 0, 0, JmsMessagePriority.PRIORITY_LOW, true);
         badTag = new SourceDataTag(70L, "test", false, (short) 0, null, tagAddress);
 
         super.setUp();
@@ -163,6 +165,33 @@ public class DataTagHandlerTest extends TagHandlerTestBase {
         tagHandler.refreshAllDataTags();
         final List<Long> ids = listener.getTagUpdate().stream().filter(CompletableFuture::isDone).map(CompletableFuture::join).collect(Collectors.toList());
         assertTrue(ids.containsAll(sourceTags.keySet()));
+    }
+
+    @Test
+    public void readUnknownDataTagShouldReturnErrorMsg() {
+        assertTrue(((DataTagHandler)tagHandler).readDataTag(-1).contains("Refresh is not possible"));
+    }
+
+    @Test
+    public void readDataTagShouldReturnValue() throws ConfigurationException {
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagInSource1);
+        mocker.replay();
+        assertTrue(((DataTagHandler)tagHandler).readDataTag(tagInSource1.getId()).contains("ValueUpdate(value="));
+    }
+
+    @Test
+    public void exceptionShouldBeReported() throws ConfigurationException {
+        mapper.getOrCreateDefinition(tagInSource1);
+        endpoint.setThrowExceptions(true);
+        System.out.println(((DataTagHandler)tagHandler).readDataTag(tagInSource1.getId()));
+        assertTrue(((DataTagHandler)tagHandler).readDataTag(tagInSource1.getId()).contains("Refreshing Tag with ID " + tagInSource1.getId() +" failed"));
+    }
+
+    @Test
+    public void readDataTagShouldReturnQuality() throws ConfigurationException {
+        mocker.mockStatusCodeAndClientHandle(StatusCode.GOOD, tagInSource1);
+        mocker.replay();
+        assertTrue(((DataTagHandler)tagHandler).readDataTag(tagInSource1.getId()).contains("SourceDataTagQuality(qualityCode="));
     }
 
     @Test

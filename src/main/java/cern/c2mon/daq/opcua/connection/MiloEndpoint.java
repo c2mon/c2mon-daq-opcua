@@ -8,8 +8,8 @@ import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
+import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.Getter;
@@ -36,7 +36,10 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -98,7 +101,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      *                        endpoints with the given authentication configuration settings.
      */
     @Override
-    public void initialize(String uri) throws OPCUAException {
+    public void initialize (String uri) throws OPCUAException {
         log.info("Initializing Endpoint at {}", uri);
         disconnectedOn.set(0);
         this.uri = uri;
@@ -112,7 +115,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     @Override
-    public void manageSessionActivityListener(boolean add, SessionActivityListener listener) {
+    public void manageSessionActivityListener (boolean add, SessionActivityListener listener) {
         if (add && !sessionActivityListeners.contains(listener)) {
             sessionActivityListeners.add(listener);
             client.addSessionActivityListener(listener);
@@ -128,7 +131,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     @Override
-    public void setUpdateEquipmentStateOnSessionChanges(boolean active) {
+    public void setUpdateEquipmentStateOnSessionChanges (boolean active) {
         updateEquipmentStateOnSessionChanges = active;
         if (active && disconnectedOn.get() <= 1L) {
             messageSender.onEquipmentStateUpdate(OK);
@@ -136,7 +139,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     @Override
-    public void disconnect() {
+    public void disconnect () {
         log.info("Disconnecting endpoint at {}", uri);
         if (client != null) {
             try {
@@ -159,7 +162,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     @Override
-    public Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException {
+    public Map<Integer, SourceDataTagQuality> subscribe (SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException {
         try {
             log.info("Subscribing definitions with publishing interval {}.", group.getPublishInterval());
             return subscribeWithCallback(group.getPublishInterval(), definitions, this::defaultSubscriptionCallback);
@@ -177,7 +180,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     @Override
-    public void recreateAllSubscriptions() throws CommunicationException {
+    public void recreateAllSubscriptions () throws CommunicationException {
         final Collection<SubscriptionGroup> groups = mapper.getGroups()
                 .stream()
                 .filter(g -> g.size() > 0)
@@ -202,9 +205,9 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         log.info("Recreated subscriptions on server {}.", uri);
     }
 
-    public Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval,
-                                                                    Collection<ItemDefinition> definitions,
-                                                                    Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
+    public Map<Integer, SourceDataTagQuality> subscribeWithCallback (int publishingInterval,
+                                                                     Collection<ItemDefinition> definitions,
+                                                                     Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException {
         UaSubscription subscription = getOrCreateSubscription(publishingInterval);
         List<MonitoredItemCreateRequest> requests = definitions.stream()
                 .map(this::toMonitoredItemCreateRequest)
@@ -215,7 +218,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     @Override
-    public boolean deleteItemFromSubscription(int clientHandle, int publishInterval) {
+    public boolean deleteItemFromSubscription (int clientHandle, int publishInterval) {
         final UaSubscription subscription = subscriptionMap.get(publishInterval);
         if (subscription == null) {
             log.info("Item cannot be mapped to a subscription. Skipping deletion.");
@@ -239,8 +242,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     @Override
-    public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
-        final DataValue value = retryOnConnection(READ,() -> client.readValue(0, TimestampsToReturn.Both, nodeId));
+    public Map.Entry<ValueUpdate, SourceDataTagQuality> read (NodeId nodeId) throws OPCUAException {
+        final DataValue value = retryOnConnection(READ, () -> client.readValue(0, TimestampsToReturn.Both, nodeId));
         if (value == null) {
             throw new ConfigurationException(READ);
         }
@@ -250,7 +253,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     @Override
-    public boolean write(NodeId nodeId, Object value) throws OPCUAException {
+    public boolean write (NodeId nodeId, Object value) throws OPCUAException {
         // Many OPC UA Servers are unable to deal with StatusCode or DateTime, hence set to null
         DataValue dataValue = new DataValue(new Variant(value), null, null);
         final StatusCode statusCode = retryOnConnection(WRITE, () -> client.writeValue(nodeId, dataValue));
@@ -259,14 +262,14 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     @Override
-    public Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException {
+    public Map.Entry<Boolean, Object[]> callMethod (ItemDefinition definition, Object arg) throws OPCUAException {
         return (definition.getMethodNodeId() == null)
                 ? callMethod(getParentObjectNodeId(definition.getNodeId()), definition.getNodeId(), arg)
                 : callMethod(definition.getNodeId(), definition.getMethodNodeId(), arg);
     }
 
     @Override
-    public ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException {
+    public ServerRedundancyTypeNode getServerRedundancyNode () throws OPCUAException {
         return retryOnConnection(SERVER_NODE,
                 () -> client.getAddressSpace().getObjectNode(Identifiers.Server_ServerRedundancy, ServerRedundancyTypeNode.class));
     }
@@ -276,7 +279,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @param session the current session
      */
     @Override
-    public void onSessionActive(UaSession session) {
+    public void onSessionActive (UaSession session) {
         log.info("Session activated");
         if (updateEquipmentStateOnSessionChanges) {
             messageSender.onEquipmentStateUpdate(OK);
@@ -289,7 +292,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @param session the current session
      */
     @Override
-    public void onSessionInactive(UaSession session) {
+    public void onSessionInactive (UaSession session) {
         log.info("Session deactivated");
         if (updateEquipmentStateOnSessionChanges) {
             messageSender.onEquipmentStateUpdate(CONNECTION_LOST);
@@ -308,7 +311,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @param status       the new status of the subscription
      */
     @Override
-    public void onStatusChanged(UaSubscription subscription, StatusCode status) {
+    public void onStatusChanged (UaSubscription subscription, StatusCode status) {
         log.info("onStatusChanged event for {} : StatusCode {}", subscription.toString(), status);
         if (status.isBad() && status.getValue() == StatusCodes.Bad_Timeout) {
             recreate(subscription);
@@ -325,7 +328,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      *                     "Bad_ServiceUnsupported"
      */
     @Override
-    public void onSubscriptionTransferFailed(UaSubscription subscription, StatusCode statusCode) {
+    public void onSubscriptionTransferFailed (UaSubscription subscription, StatusCode statusCode) {
         log.info("onSubscriptionTransferFailed event for {} : StatusCode {}", subscription.toString(), statusCode);
         recreate(subscription);
     }
@@ -335,7 +338,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @return the server's {@link ServerRedundancyTypeNode}
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    private NodeId getParentObjectNodeId(NodeId nodeId) throws OPCUAException {
+    private NodeId getParentObjectNodeId (NodeId nodeId) throws OPCUAException {
         final BrowseDescription bd = new BrowseDescription(
                 nodeId,
                 BrowseDirection.Inverse,
@@ -358,7 +361,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @param timeDeadband The timeDeadband of the subscription to delete along with all contained MonitoredItems.
      * @throws OPCUAException of type {@link CommunicationException} or {@link LongLostConnectionException}.
      */
-    private void deleteSubscription(int timeDeadband) throws OPCUAException {
+    private void deleteSubscription (int timeDeadband) throws OPCUAException {
         final UaSubscription subscription = subscriptionMap.remove(timeDeadband);
         if (subscription != null) {
             retryOnConnection(DELETE_SUBSCRIPTION,
@@ -366,12 +369,12 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-    private boolean resubscribeGroupsAndReportSuccess(SubscriptionGroup group) throws OPCUAException {
+    private boolean resubscribeGroupsAndReportSuccess (SubscriptionGroup group) throws OPCUAException {
         final Map<Integer, SourceDataTagQuality> handleQualityMap = subscribe(group, group.getTagIds().values());
         return handleQualityMap != null && handleQualityMap.values().stream().anyMatch(SourceDataTagQuality::isValid);
     }
 
-    private Map.Entry<Boolean, Object[]> callMethod(NodeId objectId, NodeId methodId, Object arg) throws OPCUAException {
+    private Map.Entry<Boolean, Object[]> callMethod (NodeId objectId, NodeId methodId, Object arg) throws OPCUAException {
         final Variant[] variants = arg == null ? null : new Variant[]{new Variant(arg)};
         final CallMethodResult result = retryOnConnection(METHOD, () -> client.call(new CallMethodRequest(objectId, methodId, variants)));
         final StatusCode statusCode = result.getStatusCode();
@@ -385,7 +388,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * recreation finishes successfully.
      * @param subscription the subscription to recreate on the client.
      */
-    private void recreate(UaSubscription subscription) {
+    private void recreate (UaSubscription subscription) {
         log.info("Attempt to recreate the subscription.");
         final Integer publishInterval = subscriptionMap.inverse().getOrDefault(subscription, -1);
         final SubscriptionGroup group = mapper.getGroup(publishInterval);
@@ -410,7 +413,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-    private UaSubscription getOrCreateSubscription(int timeDeadband) throws OPCUAException {
+    private UaSubscription getOrCreateSubscription (int timeDeadband) throws OPCUAException {
         UaSubscription subscription = subscriptionMap.get(timeDeadband);
         if (subscription == null || !client.getSubscriptionManager().getSubscriptions().contains(subscription)) {
             subscription = retryOnConnection(CREATE_SUBSCRIPTION,
@@ -420,7 +423,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         return subscription;
     }
 
-    private void defaultSubscriptionCallback(UaMonitoredItem item) {
+    private void defaultSubscriptionCallback (UaMonitoredItem item) {
         final Long tagId = mapper.getTagId(item.getClientHandle().intValue());
         if (tagId == null) {
             log.info("Receives a value update that could not be associated with a DataTag.");
@@ -437,7 +440,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         }
     }
 
-    private MonitoredItemCreateRequest toMonitoredItemCreateRequest(ItemDefinition definition) {
+    private MonitoredItemCreateRequest toMonitoredItemCreateRequest (ItemDefinition definition) {
         // If the samplingInterval is set to 0, the source will provide updates at the fastest possible rate.
         double samplingInterval = 0;
 
@@ -467,7 +470,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         });
     }
 
-    private <T> T processSupplier(ExceptionContext context, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
+    private <T> T processSupplier (ExceptionContext context, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
         try {
             return futureSupplier.get().get(properties.getRequestTimeout(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {

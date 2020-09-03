@@ -109,7 +109,7 @@ public class TagSubscriptionManagerTest extends MappingBase {
 
         assertEquals(tag.getTimeDeadband(), definition.getTimeDeadband());
         assertEquals(tag.getValueDeadband(), definition.getValueDeadband());
-        assertEquals(ValueDeadbandType.of(tag.getValueDeadbandType()), definition.getValueDeadbandType());
+        assertEquals(OpcuaValueDeadbandType.of(tag.getValueDeadbandType()), definition.getValueDeadbandType());
     }
 
     @Test

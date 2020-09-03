@@ -1,7 +1,7 @@
 package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
 import org.eclipse.milo.opcua.stack.core.serialization.UaEnumeration;
 import org.eclipse.milo.opcua.stack.core.serialization.UaStructure;
 import org.eclipse.milo.opcua.stack.core.types.builtin.ExpandedNodeId;

@@ -2,8 +2,8 @@ package cern.c2mon.daq.opcua.connection;
 
 import cern.c2mon.daq.opcua.config.TimeRecordMode;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
+import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
 import com.google.common.collect.ImmutableSet;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -75,7 +75,7 @@ public abstract class MiloMapper {
      * @param statusCode the status code returned by the Eclipse Milo client
      * @return a quality code that can be associated with a C2MON {@link cern.c2mon.shared.common.datatag.ISourceDataTag}.
      */
-    public static SourceDataTagQuality getDataTagQuality(StatusCode statusCode) {
+    public static SourceDataTagQuality getDataTagQuality (StatusCode statusCode) {
         SourceDataTagQualityCode tagCode = SourceDataTagQualityCode.UNKNOWN;
         if (statusCode == null) {
             return new SourceDataTagQuality(tagCode, "No status code was passed with the value update");
@@ -102,7 +102,7 @@ public abstract class MiloMapper {
      *                 update of a subscription, or other
      * @return the POJOs extracted from the Variants
      */
-    public static Object[] toObject(Variant... variants) {
+    public static Object[] toObject (Variant... variants) {
         return Stream.of(variants)
                 .map(MiloMapper::toObject)
                 .filter(Objects::nonNull)
@@ -116,7 +116,7 @@ public abstract class MiloMapper {
      *                update of a subscription, or other
      * @return the POJO extracted from the variant
      */
-    public static Object toObject(Variant variant) {
+    public static Object toObject (Variant variant) {
         final Optional<ExpandedNodeId> dataType = variant.getDataType();
         if (!dataType.isPresent()) {
             log.info("The variant {} did not contain a data type and cannot be processed.", variant);
@@ -141,7 +141,7 @@ public abstract class MiloMapper {
      * @param mode  the timestamp included in the DataValue that should be used to create the ValueUpdate
      * @return a ValueUpdate containg the value included in the DataValue as well as the appropriate timestamp, if any.
      */
-    public static ValueUpdate toValueUpdate(DataValue value, TimeRecordMode mode) {
+    public static ValueUpdate toValueUpdate (DataValue value, TimeRecordMode mode) {
         if (value == null) {
             return null;
         }

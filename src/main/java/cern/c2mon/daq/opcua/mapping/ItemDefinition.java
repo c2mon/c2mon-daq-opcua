@@ -7,6 +7,7 @@ import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
+import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
@@ -39,7 +40,7 @@ public class ItemDefinition {
     private final NodeId methodNodeId;
     private final int timeDeadband;
     private final float valueDeadband;
-    private final ValueDeadbandType valueDeadbandType;
+    private final OpcuaValueDeadbandType valueDeadbandType;
 
     /**
      * The {@link ItemDefinition}'s unique identifier, equal to the client Handle of a monitoredItem returned by a Milo
@@ -48,20 +49,20 @@ public class ItemDefinition {
     private final int clientHandle;
 
     private ItemDefinition(NodeId nodeId, NodeId methodNodeId) {
-        this(nodeId, methodNodeId, 0, 0, (short) 0);
+        this(nodeId, methodNodeId, 0, 0,0);
     }
 
     private ItemDefinition(final ISourceDataTag tag, final NodeId nodeId, final NodeId methodNodeId) {
         this(nodeId, methodNodeId, tag.getTimeDeadband(), tag.getValueDeadband(), tag.getValueDeadbandType());
     }
 
-    private ItemDefinition(NodeId nodeId, NodeId methodNodeId, int timeDeadband, float valueDeadband, short valueDeadbandType) {
+    private ItemDefinition(NodeId nodeId, NodeId methodNodeId, int timeDeadband, float valueDeadband, int valueDeadbandType) {
         this.nodeId = nodeId;
         this.methodNodeId = methodNodeId;
         this.clientHandle = clientHandles.getAndIncrement();
         this.timeDeadband = timeDeadband;
         this.valueDeadband = valueDeadband;
-        this.valueDeadbandType = ValueDeadbandType.of(valueDeadbandType);
+        this.valueDeadbandType = OpcuaValueDeadbandType.of(valueDeadbandType);
     }
 
     /**

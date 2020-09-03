@@ -35,7 +35,7 @@ public class ControllerFactory implements FactoryBean<ConcreteController> {
     }
 
     @Override
-    public ConcreteController getObject() throws Exception {
+    public ConcreteController getObject() {
         return new NoFailover();
     }
 

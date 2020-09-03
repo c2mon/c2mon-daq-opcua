@@ -6,6 +6,7 @@ import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +21,7 @@ public abstract class TagHandlerTestBase {
 
     protected ISourceDataTag tag1 = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
     protected ISourceDataTag tag2 = EdgeTagFactory.DipData.createDataTag();
-    protected ISourceDataTag tagWithDeadband = EdgeTagFactory.AlternatingBoolean.createDataTag(5f, (short)2, 800);
+    protected ISourceDataTag tagWithDeadband = EdgeTagFactory.AlternatingBoolean.createDataTag(5f, ValueDeadbandType.EQUIPMENT_ABSOLUTE, 800);
 
 
 

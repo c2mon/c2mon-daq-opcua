@@ -6,7 +6,6 @@ import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.SourceDataTagQualityCode;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
 import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaMonitoredItem;
@@ -29,31 +28,31 @@ public interface Endpoint {
      * @param uri the server address to connect to.
      * @throws OPCUAException if the server is unreachable or the configuration is erroneous.
      */
-    void initialize(String uri) throws OPCUAException;
+    void initialize (String uri) throws OPCUAException;
 
     /**
      * Adds or removes {@link SessionActivityListener}s from the client.
      * @param add      whether to add or remove a listener.
      * @param listener the listener to add or to remove.
      */
-    void manageSessionActivityListener(boolean add, SessionActivityListener listener);
+    void manageSessionActivityListener (boolean add, SessionActivityListener listener);
 
     /**
      * If active, the {@link MessageSender} will be informed of changes to a Session's activation status.
      * @param active whether or not to inform the {@link MessageSender} of changes to a Session's activation status.
      */
-    void setUpdateEquipmentStateOnSessionChanges(boolean active);
+    void setUpdateEquipmentStateOnSessionChanges (boolean active);
 
     /**
      * Get the address of the connected server.
      * @return the address of the connected server.
      */
-    String getUri();
+    String getUri ();
 
     /**
      * Disconnect from the server.
      */
-    void disconnect();
+    void disconnect ();
 
     /**
      * Add a list of item definitions as monitored items to a subscription and apply the default callback.
@@ -63,14 +62,14 @@ public interface Endpoint {
      * call.
      * @throws OPCUAException if the server indicates an error in the configuration of the ItemDefinitions, is unreachable, or has been disconnected.
      */
-    Map<Integer, SourceDataTagQuality> subscribe(SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException;
+    Map<Integer, SourceDataTagQuality> subscribe (SubscriptionGroup group, Collection<ItemDefinition> definitions) throws OPCUAException;
 
 
     /**
      * Recreate all subscriptions configured in {@link TagSubscriptionReader}.
      * @throws CommunicationException if not a single subscription could be recreated.
      */
-    void recreateAllSubscriptions() throws CommunicationException;
+    void recreateAllSubscriptions () throws CommunicationException;
 
     /**
      * Subscribes to a {@link NodeId} with the itemCreationCallback.
@@ -81,7 +80,7 @@ public interface Endpoint {
      * call.
      * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
-    Map<Integer, SourceDataTagQuality> subscribeWithCallback(int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException;
+    Map<Integer, SourceDataTagQuality> subscribeWithCallback (int publishingInterval, Collection<ItemDefinition> definitions, Consumer<UaMonitoredItem> itemCreationCallback) throws OPCUAException;
 
     /**
      * Delete a monitored item from an OPC UA subscription.
@@ -89,15 +88,15 @@ public interface Endpoint {
      * @param publishInterval the publishInterval of the subscription to remove the monitored item from.
      * @return whether the monitored item could be removed successfully
      */
-    boolean deleteItemFromSubscription(int clientHandle, int publishInterval);
+    boolean deleteItemFromSubscription (int clientHandle, int publishInterval);
 
     /**
      * Read the current value from a node on the currently connected OPC UA server
      * @param nodeId the nodeId of the node whose value to read.
-     * @return the {@link ValueUpdate} and associated {@link SourceDataTagQualityCode} of the reading
+     * @return the {@link ValueUpdate} and associated {@link cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode} of the reading
      * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
-    Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException;
+    Map.Entry<ValueUpdate, SourceDataTagQuality> read (NodeId nodeId) throws OPCUAException;
 
     /**
      * Write a value to a node on the currently connected OPC UA server.
@@ -106,7 +105,7 @@ public interface Endpoint {
      * @return whether the write command finished successfully
      * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
-    boolean write(NodeId nodeId, Object value) throws OPCUAException;
+    boolean write (NodeId nodeId, Object value) throws OPCUAException;
 
     /**
      * Call the method node associated with the definition. It no method node is specified within the definition, it is
@@ -118,13 +117,13 @@ public interface Endpoint {
      * null) in a Map Entry.
      * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
-    Map.Entry<Boolean, Object[]> callMethod(ItemDefinition definition, Object arg) throws OPCUAException;
+    Map.Entry<Boolean, Object[]> callMethod (ItemDefinition definition, Object arg) throws OPCUAException;
 
     /**
      * Return the node containing the server's redundancy information. See OPC UA Part 5, 6.3.7
      * @return the server's {@link ServerRedundancyTypeNode}
      * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
-    ServerRedundancyTypeNode getServerRedundancyNode() throws OPCUAException;
+    ServerRedundancyTypeNode getServerRedundancyNode () throws OPCUAException;
 
 }

@@ -14,9 +14,9 @@ import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -165,7 +165,7 @@ public class EdgeIT extends EdgeTestBase {
     @Test
     public void subscribeWithDeadband() throws ConfigurationException {
         log.info("############ subscribeWithDeadband ############");
-        final ISourceDataTag tagWithDeadband = EdgeTagFactory.RandomUnsignedInt32.createDataTag(10, (short) DeadbandType.Absolute.getValue(), 0);
+        final ISourceDataTag tagWithDeadband = EdgeTagFactory.RandomUnsignedInt32.createDataTag(10, ValueDeadbandType.NONE, 0);
         pulseListener.setSourceID(tagWithDeadband.getId());
         tagHandler.subscribeTags(Collections.singletonList(tagWithDeadband));
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS));
