@@ -21,6 +21,9 @@ import org.springframework.retry.support.RetryTemplate;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Spring configuration class providing different Spring Retry templates to be used throughout the OPC UA DAQ.
+ */
 @EnableRetry
 @Configuration
 @RequiredArgsConstructor
@@ -28,8 +31,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AppConfig {
     final AppConfigProperties properties;
 
+    /**
+     * Used by Spring during scoping to inject the EquipmentScope.
+     * @return the Equipment-specific BeanFactoryPostProcessor handing the EquipmentScope
+     */
     @Bean
-    public static BeanFactoryPostProcessor beanFactoryPostProcessor() {
+    public static BeanFactoryPostProcessor beanFactoryPostProcessor () {
         return new EquipmentScopePostProcessor();
     }
 
@@ -39,10 +46,9 @@ public class AppConfig {
      * @return the retry template.
      */
     @Bean
-    public RetryTemplate simpleRetryPolicy() {
+    public RetryTemplate simpleRetryPolicy () {
         RetryTemplate template = new RetryTemplate();
         template.setBackOffPolicy(backOff());
-        final Map<Class<? extends Throwable>, RetryPolicy> policyMap = new ConcurrentHashMap<>();
         Map<Class<? extends Throwable>, Boolean> retryableExceptions = new ConcurrentHashMap<>();
         retryableExceptions.put(CommunicationException.class, true);
         SimpleRetryPolicy policy = new SimpleRetryPolicy(properties.getMaxRetryAttempts(), retryableExceptions);
@@ -56,7 +62,7 @@ public class AppConfig {
      * @return the retry template.
      */
     @Bean
-    public RetryTemplate alwaysRetryTemplate() {
+    public RetryTemplate alwaysRetryTemplate () {
         RetryTemplate template = new RetryTemplate();
         template.setBackOffPolicy(backOff());
         template.setRetryPolicy(new AlwaysRetryPolicy());
@@ -70,7 +76,7 @@ public class AppConfig {
      * @return the retry template.
      */
     @Bean
-    public RetryTemplate exceptionClassifierTemplate() {
+    public RetryTemplate exceptionClassifierTemplate () {
         RetryTemplate template = new RetryTemplate();
         template.setBackOffPolicy(backOff());
         final NeverRetryPolicy neverRetry = new NeverRetryPolicy();
@@ -83,7 +89,7 @@ public class AppConfig {
         return template;
     }
 
-    private BackOffPolicy backOff() {
+    private BackOffPolicy backOff () {
         ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
         backoff.setMaxInterval(properties.getMaxRetryDelay());
         backoff.setInitialInterval(properties.getRetryDelay());

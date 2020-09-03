@@ -67,15 +67,17 @@ public abstract class OPCUAException extends EqIOException {
      * A static factory method called when the execution of an action on the server failed. The throwable causing this
      * failure is wrapped in a subclass of OPCUAException best describing the context of the exception, and the
      * prospects of retrying the action.
-     *
-     * @param context The context that the  throwable e occurred in, used to form an informative error
-     *                message.
-     * @param e       The throwable which caused the action on the server to fail originally.
+     * @param context              The context that the  throwable e occurred in, used to form an informative error
+     *                             message.
+     * @param e                    The throwable which caused the action on the server to fail originally.
+     * @param disconnectionTooLong A boolean indicating whether the connection between client and server has been
+     *                             severed for a significant amount of time.
      * @return A concrete OPCUAException of type {@link ConfigurationException}, if the original error hints at an issue
-     * with the equipment configuration, of type {@link EndpointDisconnectedException} if the endpoint has been connected by the DAQ. In all other cases a {@link
-     * CommunicationException} is Thrown.
+     * with the equipment configuration, of type {@link EndpointDisconnectedException} if the endpoint has been
+     * connected by the DAQ. If the connection has been severed for longer than all retries are expected to take, a
+     * {@link LongLostConnectionException} is returned, otherwise a {@link CommunicationException}.
      */
-    public static OPCUAException of(ExceptionContext context, Throwable e, boolean disconnectionTooLong) {
+    public static OPCUAException of (ExceptionContext context, Throwable e, boolean disconnectionTooLong) {
         if (isConfigIssue(e)) {
             return new ConfigurationException(context, e);
         } else if (isEndpointDisconnectedIssue(e)) {
@@ -88,7 +90,6 @@ public abstract class OPCUAException extends EqIOException {
 
     /**
      * Checks whether the UaException e was throws due to a general security issue.
-     *
      * @param e the UaException to classify.
      * @return true is the exception e is due to a security general issue.
      */

@@ -109,8 +109,4 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
     private boolean groupExists(int deadband) {
         return subscriptionGroups.get(deadband) != null;
     }
-    public void sayHello() {
-
-        System.out.printf("Hello from %s of type %s%n", this, this.getClass().getName());
-    }
 }
