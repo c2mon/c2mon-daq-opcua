@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.connection.MiloMapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.shared.common.datatag.address.impl.DBHardwareAddressImpl;
@@ -32,7 +33,7 @@ public class ItemDefinitionTest extends MappingBase {
         assertEquals(opcHardwareAddress.getNamespaceId(), dataTagDefinition.getNodeId().getNamespaceIndex().intValue());
         assertEquals(tag.getTimeDeadband(), dataTagDefinition.getTimeDeadband());
         assertEquals(tag.getValueDeadband(), dataTagDefinition.getValueDeadband());
-        assertEquals(OpcuaValueDeadbandType.of(tag.getValueDeadbandType()), dataTagDefinition.getValueDeadbandType());
+        assertEquals(MiloMapper.toDeadbandType(tag.getValueDeadbandType()), dataTagDefinition.getValueDeadbandType());
     }
 
     @Test

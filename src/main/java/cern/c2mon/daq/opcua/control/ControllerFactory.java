@@ -19,8 +19,8 @@ public class ControllerFactory implements FactoryBean<ConcreteController> {
     private final RetryTemplate alwaysRetryTemplate;
 
     /**
-     * Creates and returns a new ConcreteController for the FailoverMode. When new ConcreteControllers are implemented,
-     * they must be added here.
+     * Creates and returns a new ConcreteController for the FailoverMode.  Every FailoverMode in OPC UA can fall back to
+     * a "warmer" one. When new ConcreteControllers are implemented, they must be added here.
      * @param mode the FailoverMode for which a ConcreteController shall be created
      * @return the ConcreteController for the FailoverMode
      */
@@ -29,19 +29,24 @@ public class ControllerFactory implements FactoryBean<ConcreteController> {
     }
 
     /**
-     * Creates and returns a new ConcreteController for the RedundancySupport value. Every FailoverMode in OPC UA can
-     * fall back to a "warmer" one. "Transparent" servers are identical to single server setups to the Client.
+     * Creates and returns a new ConcreteController for the RedundancySupport value. "Transparent" servers are identical
+     * to single server setups to the Client.
      * @param redundancySupport The redundancy support value read from the server corresponding to the FailoverMode
      *                          created
      * @return The ConcreteController to handle the FailoverMode associated with the redundancySupport value.
      */
     public ConcreteController getObject (RedundancySupport redundancySupport) {
         switch (redundancySupport) {
-            case None:
-            case Transparent:
-                return getObject(AppConfigProperties.FailoverMode.NONE);
-            default:
+            case Cold:
                 return getObject(AppConfigProperties.FailoverMode.COLD);
+            case Warm:
+                return getObject(AppConfigProperties.FailoverMode.WARM);
+            case Hot:
+                return getObject(AppConfigProperties.FailoverMode.HOT);
+            case HotAndMirrored:
+                return getObject(AppConfigProperties.FailoverMode.HOTANDMIRRORED);
+            default:
+                return getObject(AppConfigProperties.FailoverMode.NONE);
         }
     }
 

@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ProcessConfiguration xmlns="http://timweb.cern.ch/schemas/c2mon-daq/Configuration"
+                      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                      xsi:schemaLocation="http://timweb.cern.ch/schemas/c2mon-daq/Configuration http://timweb/schemas/c2mon-daq/ProcessConfiguration.xsd"
+                      process-id="100007"
+                      type="initialise"
+                      name="P_OPCUA">
+    <alive-tag-id>100001</alive-tag-id>
+    <alive-interval>10000</alive-interval>
+    <max-message-size>100</max-message-size>
+    <max-message-delay>1000</max-message-delay>
+    <EquipmentUnits>
+        <EquipmentUnit id="10" name="E_VENUS_00">
+            <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
+            <commfault-tag-id>100003</commfault-tag-id>
+            <commfault-tag-value>false</commfault-tag-value>
+            <address>opc.tcp://power-supply-sim:4841</address>
+          <SubEquipmentUnits/>
+            <DataTags>
+                <DataTag id="101" name="IMon-EQ00" control="false">
+                    <data-type>java.lang.Float</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>simSY4527.Board00.Chan000.IMon</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                    <value-deadband-type>2</value-deadband-type>
+                    <value-deadband>10.0</value-deadband>
+                </DataTag>
+                <DataTag id="100" name="VMon-EQ00" control="false">
+                    <data-type>java.lang.Float</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>simSY4527.Board00.Chan000.VMon</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                    <value-deadband-type>2</value-deadband-type>
+                    <value-deadband>10.0</value-deadband>
+                </DataTag>
+            </DataTags>
+          <CommandTags/>
+        </EquipmentUnit>
+        <EquipmentUnit id="11" name="E_VENUS_01">
+            <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
+            <commfault-tag-id>100008</commfault-tag-id>
+            <commfault-tag-value>false</commfault-tag-value>
+            <address>opc.tcp://power-supply-sim:4841</address>
+          <SubEquipmentUnits/>
+            <DataTags>
+                <DataTag id="110" name="IMon-EQ01" control="false">
+                    <data-type>java.lang.Float</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>simSY4527.Board00.Chan001.IMon</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                    <value-deadband-type>3</value-deadband-type>
+                    <value-deadband>10.0</value-deadband>
+                </DataTag>
+                <DataTag id="111" name="VMon-EQ01" control="false">
+                    <data-type>java.lang.Float</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>simSY4527.Board00.Chan001.VMon</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                    <value-deadband-type>3</value-deadband-type>
+                    <value-deadband>10.0</value-deadband>
+                </DataTag>
+            </DataTags>
+          <CommandTags/>
+        </EquipmentUnit>
+        <EquipmentUnit id="12" name="E_VENUS_02">
+            <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
+            <commfault-tag-id>100013</commfault-tag-id>
+            <commfault-tag-value>false</commfault-tag-value>
+            <address>opc.tcp://power-supply-sim:4841</address>
+          <SubEquipmentUnits/>
+            <DataTags>
+                <DataTag id="120" name="IMon-EQ02" control="false">
+                    <data-type>java.lang.Float</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>simSY4527.Board00.Chan002.IMon</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                    <value-deadband-type>4</value-deadband-type>
+                    <value-deadband>10.0</value-deadband>
+                </DataTag>
+                <DataTag id="121" name="VMon-EQ02" control="false">
+                    <data-type>java.lang.Float</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>simSY4527.Board00.Chan002.VMon</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                    <value-deadband-type>4</value-deadband-type>
+                    <value-deadband>10.0</value-deadband>
+                </DataTag>
+            </DataTags>
+          <CommandTags/>
+        </EquipmentUnit>
+
+        <EquipmentUnit id="20" name="E_PILOT">
+            <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
+            <commfault-tag-id>100048</commfault-tag-id>
+            <commfault-tag-value>false</commfault-tag-value>
+            <address>opc.tcp://power-supply-sim:8890</address>
+          <SubEquipmentUnits/>
+            <DataTags>
+                <DataTag id="200" name="I_channel" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>genericPilot0.I_channel</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="201" name="tripChannelByLoad" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>genericPilot0.tripChannelByLoad</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="202" name="tripChannelByCurrent" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>genericPilot0.tripChannelByCurrent</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+            </DataTags>
+          <CommandTags/>
+        </EquipmentUnit>
+    </EquipmentUnits>
+</ProcessConfiguration>

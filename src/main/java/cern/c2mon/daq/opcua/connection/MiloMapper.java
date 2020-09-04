@@ -4,12 +4,14 @@ import cern.c2mon.daq.opcua.config.TimeRecordMode;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
 import com.google.common.collect.ImmutableSet;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.serialization.UaEnumeration;
 import org.eclipse.milo.opcua.stack.core.types.builtin.*;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 import org.eclipse.milo.opcua.stack.core.util.TypeUtil;
 
 import java.util.Collection;
@@ -153,6 +155,24 @@ public abstract class MiloMapper {
             valueUpdate.setSourceTimestamp(recordedTime);
         }
         return valueUpdate;
+    }
+
+    /**
+     * Maps the ValueDeadbandType constants in {@link ValueDeadbandType} to the OPC UA {@link DeadbandType} (@see <a
+     * href="https://reference.opcfoundation.org/v104/Core/docs/Part4/7.17.2">UA Part 4, 7.17.2</a>). If the {@link
+     * ValueDeadbandType} concerns the PROCESS, then value filtering is regarded by the DAQ Core.
+     * @param c2monDeadbandType the value deadband as a {@link ValueDeadbandType} constant.
+     * @return the OPC UA DeadbandType corresponding to the c2monDeadbandType.
+     */
+    public static DeadbandType toDeadbandType (int c2monDeadbandType) {
+        switch (ValueDeadbandType.getValueDeadbandType(c2monDeadbandType)) {
+            case EQUIPMENT_ABSOLUTE:
+                return DeadbandType.Absolute;
+            case EQUIPMENT_RELATIVE:
+                return DeadbandType.Percent;
+            default:
+                return DeadbandType.None;
+        }
     }
 
 }

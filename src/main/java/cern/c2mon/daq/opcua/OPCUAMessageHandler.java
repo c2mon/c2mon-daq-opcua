@@ -60,9 +60,12 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     @Override
     public void connectToDataSource() throws EqIOException {
-
         log.info("Initializing the OPC UA DAQ");
-        initializeScope();
+
+        if (scope == null) {
+            initializeScope();
+        }
+
         IEquipmentConfiguration config = getEquipmentConfiguration();
 
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
@@ -188,14 +191,9 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      */
     private void initializeScope() {
         final ApplicationContext ctx = getContext();
-        if (scope == null) {
-            scope = ctx.getBean(EquipmentScope.class);
-            ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", scope);
-
-            log.info("##################");
-            log.info("Created scope {} for Equipment {}", scope.toString(), getEquipmentConfiguration().getName());
-            log.info("##################");
-        }
+        scope = ctx.getBean(EquipmentScope.class);
+        ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", scope);
+        log.info("Created a new scope for Equipment {}", getEquipmentConfiguration().getName());
         controller = ctx.getBean(Controller.class);
         dataTagHandler = ctx.getBean(IDataTagHandler.class);
         commandTagHandler = ctx.getBean(CommandTagHandler.class);

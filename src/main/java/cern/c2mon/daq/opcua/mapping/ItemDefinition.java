@@ -1,5 +1,6 @@
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.connection.MiloMapper;
 import cern.c2mon.daq.opcua.control.ConcreteController;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -10,6 +11,7 @@ import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -39,7 +41,7 @@ public class ItemDefinition {
     private final NodeId methodNodeId;
     private final int timeDeadband;
     private final float valueDeadband;
-    private final OpcuaValueDeadbandType valueDeadbandType;
+    private final DeadbandType valueDeadbandType;
 
     /**
      * The {@link ItemDefinition}'s unique identifier, equal to the client Handle of a monitoredItem returned by a Milo
@@ -61,7 +63,7 @@ public class ItemDefinition {
         this.clientHandle = clientHandles.getAndIncrement();
         this.timeDeadband = timeDeadband;
         this.valueDeadband = valueDeadband;
-        this.valueDeadbandType = OpcuaValueDeadbandType.of(valueDeadbandType);
+        this.valueDeadbandType = MiloMapper.toDeadbandType(valueDeadbandType);
     }
 
     /**

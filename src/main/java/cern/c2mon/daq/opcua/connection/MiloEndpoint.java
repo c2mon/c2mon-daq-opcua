@@ -444,9 +444,11 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         // If the samplingInterval is set to 0, the source will provide updates at the fastest possible rate.
         double samplingInterval = 0;
 
-        DataChangeFilter filter = new DataChangeFilter(DataChangeTrigger.StatusValue,
-                uint(definition.getValueDeadbandType().getOpcuaValueDeadbandType()),
-                (double) definition.getValueDeadband());
+        DataChangeFilter filter = DataChangeFilter.builder()
+                .trigger(DataChangeTrigger.StatusValue) //Trigger if the value's status code or the value itself changes
+                .deadbandType(uint(definition.getValueDeadbandType().getValue()))
+                .deadbandValue((double) definition.getValueDeadband())
+                .build();
         MonitoringParameters mp = new MonitoringParameters(UInteger.valueOf(definition.getClientHandle()),
                 samplingInterval,
                 ExtensionObject.encode(client.getSerializationContext(), filter),

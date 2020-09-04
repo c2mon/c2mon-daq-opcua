@@ -16,6 +16,7 @@
  *****************************************************************************/
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.connection.MiloMapper;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import org.junit.jupiter.api.Test;
 
@@ -109,7 +110,7 @@ public class TagSubscriptionManagerTest extends MappingBase {
 
         assertEquals(tag.getTimeDeadband(), definition.getTimeDeadband());
         assertEquals(tag.getValueDeadband(), definition.getValueDeadband());
-        assertEquals(OpcuaValueDeadbandType.of(tag.getValueDeadbandType()), definition.getValueDeadbandType());
+        assertEquals(MiloMapper.toDeadbandType(tag.getValueDeadbandType()), definition.getValueDeadbandType());
     }
 
     @Test
