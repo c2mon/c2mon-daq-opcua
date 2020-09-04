@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 @EquipmentScoped
 public class AliveWriter {
 
-    private int writeCounter = 0;
+    private int writeCounter;
     private final Controller controller;
     private final MessageSender messageSender;
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);

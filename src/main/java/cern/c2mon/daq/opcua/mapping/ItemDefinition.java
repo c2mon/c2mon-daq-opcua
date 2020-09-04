@@ -7,7 +7,6 @@ import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
-import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
@@ -48,15 +47,15 @@ public class ItemDefinition {
      */
     private final int clientHandle;
 
-    private ItemDefinition(NodeId nodeId, NodeId methodNodeId) {
-        this(nodeId, methodNodeId, 0, 0,0);
+    private ItemDefinition (NodeId nodeId, NodeId methodNodeId) {
+        this(nodeId, methodNodeId, 0, 0, 0);
     }
 
-    private ItemDefinition(final ISourceDataTag tag, final NodeId nodeId, final NodeId methodNodeId) {
+    private ItemDefinition (final ISourceDataTag tag, final NodeId nodeId, final NodeId methodNodeId) {
         this(nodeId, methodNodeId, tag.getTimeDeadband(), tag.getValueDeadband(), tag.getValueDeadbandType());
     }
 
-    private ItemDefinition(NodeId nodeId, NodeId methodNodeId, int timeDeadband, float valueDeadband, int valueDeadbandType) {
+    private ItemDefinition (NodeId nodeId, NodeId methodNodeId, int timeDeadband, float valueDeadband, int valueDeadbandType) {
         this.nodeId = nodeId;
         this.methodNodeId = methodNodeId;
         this.clientHandle = clientHandles.getAndIncrement();
@@ -71,7 +70,7 @@ public class ItemDefinition {
      * @return the {@link NodeId} for the tag's primary address
      * @throws ConfigurationException if the primary address has an incorrect hardware type.
      */
-    public static NodeId getNodeIdForTag(final ISourceCommandTag tag) throws ConfigurationException {
+    public static NodeId getNodeIdForTag (final ISourceCommandTag tag) throws ConfigurationException {
         OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
         return new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName());
     }
@@ -82,7 +81,7 @@ public class ItemDefinition {
      * @param nodeId the {@link NodeId} for which to create an {@link ItemDefinition}
      * @return the newly created {@link ItemDefinition}
      */
-    public static ItemDefinition of(NodeId nodeId) {
+    public static ItemDefinition of (NodeId nodeId) {
         return new ItemDefinition(nodeId, null);
     }
 
@@ -93,7 +92,7 @@ public class ItemDefinition {
      * @return the newly created {@link ItemDefinition}
      * @throws ConfigurationException if the tag has an address of incorrect type
      */
-    public static ItemDefinition of(final ISourceDataTag tag) throws ConfigurationException {
+    public static ItemDefinition of (final ISourceDataTag tag) throws ConfigurationException {
         OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
         return new ItemDefinition(tag, new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName()), toRedundantNodeId(opcAddress));
     }
@@ -105,19 +104,19 @@ public class ItemDefinition {
      * @return the newly created {@link ItemDefinition}
      * @throws ConfigurationException if the tag has an address of incorrect type
      */
-    public static ItemDefinition of(final ISourceCommandTag tag) throws ConfigurationException {
+    public static ItemDefinition of (final ISourceCommandTag tag) throws ConfigurationException {
         OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
         return new ItemDefinition(new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName()), toRedundantNodeId(opcAddress));
     }
 
-    private static OPCHardwareAddress extractOpcAddress(HardwareAddress address) throws ConfigurationException {
+    private static OPCHardwareAddress extractOpcAddress (HardwareAddress address) throws ConfigurationException {
         if (!(address instanceof OPCHardwareAddress)) {
             throw new ConfigurationException(ExceptionContext.HARDWARE_ADDRESS_TYPE);
         }
         return (OPCHardwareAddress) address;
     }
 
-    private static NodeId toRedundantNodeId(OPCHardwareAddress opcAddress) {
+    private static NodeId toRedundantNodeId (OPCHardwareAddress opcAddress) {
         String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
         return (redundantOPCItemName == null || redundantOPCItemName.trim().isEmpty()) ?
                 null : new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);

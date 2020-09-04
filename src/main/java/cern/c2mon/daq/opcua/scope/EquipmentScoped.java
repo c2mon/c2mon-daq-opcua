@@ -8,6 +8,9 @@ import org.springframework.stereotype.Component;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+/**
+ * A composite annotation for Beans which call be included in the {@link EquipmentScope}.
+ */
 @Qualifier
 @Component
 @Scope(value = "equipment", proxyMode=ScopedProxyMode.NO)
