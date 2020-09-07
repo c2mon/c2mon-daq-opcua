@@ -399,7 +399,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 log.error("Could not delete subscription. Proceed with recreation.", e);
             }
             try {
-                config.exceptionClassifierTemplate().execute(retryContext -> {
+                config.exceptionClassifierTemplate(properties).execute(retryContext -> {
                     if (!resubscribeGroupsAndReportSuccess(group)) {
                         throw new CommunicationException(CREATE_SUBSCRIPTION);
                     }
@@ -462,7 +462,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
     }
 
     private <T> T retryOnConnection (ExceptionContext context, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
-        return config.simpleRetryPolicy().execute(retryContext -> {
+        return config.simpleRetryPolicy(properties).execute(retryContext -> {
             log.info("Attempt at {} nr {}", context, retryContext.getRetryCount());
             if (disconnectedOn.get() < 0) {
                 log.info("Endpoint was stopped, cease retries.");

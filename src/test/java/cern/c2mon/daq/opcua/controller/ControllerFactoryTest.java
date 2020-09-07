@@ -20,8 +20,8 @@ public class ControllerFactoryTest {
     @BeforeEach
     public void setUp() {
         AppConfigProperties properties = AppConfigProperties.builder().maxRetryAttempts(3).requestTimeout(300).timeRecordMode(TimeRecordMode.CLOSEST).retryDelay(1000).build();
-        AppConfig config = new AppConfig(properties);
-        factory = new ControllerFactory(properties, config.alwaysRetryTemplate());
+        AppConfig config = new AppConfig();
+        factory = new ControllerFactory(properties, config.alwaysRetryTemplate(properties));
     }
 
     @Test

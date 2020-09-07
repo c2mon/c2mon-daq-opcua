@@ -27,7 +27,7 @@ public class TestController extends FailoverBase {
     OPCUAException toThrow;
 
     public TestController(AppConfigProperties properties) {
-        super(properties, new AppConfig(properties).alwaysRetryTemplate());
+        super(properties, new AppConfig().alwaysRetryTemplate(properties));
         listening.set(true);
         stopped.set(false);
         toThrow = null;

@@ -15,6 +15,7 @@ import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedun
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
+import org.springframework.beans.factory.annotation.Lookup;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
 
@@ -28,7 +29,7 @@ import java.util.stream.Stream;
  * capabilities.
  */
 @Slf4j
-@ManagedResource
+@ManagedResource(objectName = "controller")
 @RequiredArgsConstructor
 @EquipmentScoped
 public class ControllerProxy implements Controller {

@@ -4,6 +4,7 @@ import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.config.AddressParser;
+import cern.c2mon.daq.opcua.config.AppConfig;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
@@ -61,12 +62,12 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     @Override
     public void connectToDataSource() throws EqIOException {
         log.info("Initializing the OPC UA DAQ");
+        IEquipmentConfiguration config = getEquipmentConfiguration();
 
         if (scope == null) {
-            initializeScope();
+            initializeScope(config.getName());
         }
 
-        IEquipmentConfiguration config = getEquipmentConfiguration();
 
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
@@ -189,11 +190,13 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * instance of the prototype-scoped {@link EquipmentScope} once when initiating the data collection process ensures
      * that a new set of beans is created.
      */
-    private void initializeScope() {
-        final ApplicationContext ctx = getContext();
-        scope = ctx.getBean(EquipmentScope.class);
+    private void initializeScope(String equipmentName) {
+        ApplicationContext ctx = getContext();
+        scope = new EquipmentScope();
+        scope.setExporter(ctx.getBean(AppConfig.class).mBeanExporter());
+        scope.setEquipmentName(equipmentName);
         ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", scope);
-        log.info("Created a new scope for Equipment {}", getEquipmentConfiguration().getName());
+        log.info("Created a new scope for Equipment {} with name {}", getEquipmentConfiguration().getName(), equipmentName);
         controller = ctx.getBean(Controller.class);
         dataTagHandler = ctx.getBean(IDataTagHandler.class);
         commandTagHandler = ctx.getBean(CommandTagHandler.class);

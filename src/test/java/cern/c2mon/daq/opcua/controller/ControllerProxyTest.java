@@ -42,7 +42,7 @@ public class ControllerProxyTest {
     @BeforeEach
     public void setUp() {
         properties = TestUtils.createDefaultConfig();
-        controllerFactory = new ControllerFactory(properties, new AppConfig(properties).alwaysRetryTemplate());
+        controllerFactory = new ControllerFactory(properties, new AppConfig().alwaysRetryTemplate(properties));
         applicationContext = createMock(ApplicationContext.class);
         controllerFactoryMock = createMock(ControllerFactory.class);
         testEndpoint = new TestEndpoint(new TestListeners.TestListener(), new TagSubscriptionMapper());

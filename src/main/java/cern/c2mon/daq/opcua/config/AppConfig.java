@@ -2,12 +2,14 @@ package cern.c2mon.daq.opcua.config;
 
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
+import cern.c2mon.daq.opcua.scope.EquipmentScopeNamingStrategy;
 import cern.c2mon.daq.opcua.scope.EquipmentScopePostProcessor;
-import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jmx.export.MBeanExporter;
+import org.springframework.jmx.export.naming.ObjectNamingStrategy;
 import org.springframework.retry.RetryPolicy;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.backoff.BackOffPolicy;
@@ -27,17 +29,29 @@ import java.util.concurrent.ConcurrentHashMap;
 @EnableRetry
 @Configuration
 @RequiredArgsConstructor
-@EquipmentScoped
 public class AppConfig {
-    final AppConfigProperties properties;
+
+    @Bean
+    public ObjectNamingStrategy objectNamingStrategy () {
+        return new EquipmentScopeNamingStrategy();
+    }
 
     /**
      * Used by Spring during scoping to inject the EquipmentScope.
      * @return the Equipment-specific BeanFactoryPostProcessor handing the EquipmentScope
      */
     @Bean
-    public static BeanFactoryPostProcessor beanFactoryPostProcessor () {
+    public BeanFactoryPostProcessor beanFactoryPostProcessor () {
         return new EquipmentScopePostProcessor();
+    }
+
+    @Bean
+    public MBeanExporter mBeanExporter() {
+        MBeanExporter exporter = new MBeanExporter();
+        exporter.setAutodetect(true);
+        exporter.setEnsureUniqueRuntimeObjectNames(false);
+        exporter.setNamingStrategy(new EquipmentScopeNamingStrategy());
+        return exporter;
     }
 
     /**
@@ -46,9 +60,9 @@ public class AppConfig {
      * @return the retry template.
      */
     @Bean
-    public RetryTemplate simpleRetryPolicy () {
+    public RetryTemplate simpleRetryPolicy (AppConfigProperties properties) {
         RetryTemplate template = new RetryTemplate();
-        template.setBackOffPolicy(backOff());
+        template.setBackOffPolicy(backOff(properties));
         Map<Class<? extends Throwable>, Boolean> retryableExceptions = new ConcurrentHashMap<>();
         retryableExceptions.put(CommunicationException.class, true);
         SimpleRetryPolicy policy = new SimpleRetryPolicy(properties.getMaxRetryAttempts(), retryableExceptions);
@@ -62,9 +76,9 @@ public class AppConfig {
      * @return the retry template.
      */
     @Bean
-    public RetryTemplate alwaysRetryTemplate () {
+    public RetryTemplate alwaysRetryTemplate (AppConfigProperties properties) {
         RetryTemplate template = new RetryTemplate();
-        template.setBackOffPolicy(backOff());
+        template.setBackOffPolicy(backOff(properties));
         template.setRetryPolicy(new AlwaysRetryPolicy());
         return template;
     }
@@ -76,9 +90,9 @@ public class AppConfig {
      * @return the retry template.
      */
     @Bean
-    public RetryTemplate exceptionClassifierTemplate () {
+    public RetryTemplate exceptionClassifierTemplate (AppConfigProperties properties) {
         RetryTemplate template = new RetryTemplate();
-        template.setBackOffPolicy(backOff());
+        template.setBackOffPolicy(backOff(properties));
         final NeverRetryPolicy neverRetry = new NeverRetryPolicy();
         final Map<Class<? extends Throwable>, RetryPolicy> policyMap = new ConcurrentHashMap<>();
         policyMap.put(CommunicationException.class, new AlwaysRetryPolicy());
@@ -89,7 +103,7 @@ public class AppConfig {
         return template;
     }
 
-    private BackOffPolicy backOff () {
+    private BackOffPolicy backOff (AppConfigProperties properties) {
         ExponentialBackOffPolicy backoff = new ExponentialBackOffPolicy();
         backoff.setMaxInterval(properties.getMaxRetryDelay());
         backoff.setInitialInterval(properties.getRetryDelay());

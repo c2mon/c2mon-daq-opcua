@@ -39,7 +39,7 @@ public class ColdFailoverTest {
     ColdFailover coldFailover;
     TestEndpoint endpoint;
     TestListeners.TestListener listener = new TestListeners.TestListener();
-    AppConfigProperties poperties;
+    AppConfigProperties properties;
     CountDownLatch initLatch;
     CountDownLatch readLatch;
     Capture<Consumer<DataValue>> serviceLevel;
@@ -52,8 +52,8 @@ public class ColdFailoverTest {
 
         readLatch = new CountDownLatch(1);
         initLatch = new CountDownLatch(2);
-        poperties = TestUtils.createDefaultConfig();
-        coldFailover = new ColdFailover(poperties, new AppConfig(poperties).alwaysRetryTemplate());
+        properties = TestUtils.createDefaultConfig();
+        coldFailover = new ColdFailover(properties, new AppConfig().alwaysRetryTemplate(properties));
         endpoint = new TestEndpoint(listener, new TagSubscriptionMapper());
         endpoint.setReadValue(UByte.valueOf(250));
         endpoint.setThrowExceptions(false);
@@ -349,7 +349,7 @@ public class ColdFailoverTest {
     @Test
     public void onSessionInactiveShouldTriggerFailover() throws OPCUAException, InterruptedException {
         setupConnectionMonitoring("redundant");
-        poperties.setFailoverDelay(10L);
+        properties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         initLatch.await(100L, TimeUnit.MILLISECONDS);
         assertEquals("redundant", endpoint.getUri());
@@ -361,9 +361,9 @@ public class ColdFailoverTest {
         endpoint.setThrowExceptions(true);
         initLatch = new CountDownLatch(4);
         endpoint.setInitLatch(initLatch);
-        poperties.setFailoverDelay(2L);
-        poperties.setRetryDelay(1L);
-        poperties.setRetryMultiplier(1);
+        properties.setFailoverDelay(2L);
+        properties.setRetryDelay(1L);
+        properties.setRetryMultiplier(1);
         coldFailover.onSessionInactive(null);
         assertTrue(initLatch.await(500L, TimeUnit.MILLISECONDS));
 
@@ -390,7 +390,7 @@ public class ColdFailoverTest {
     @Test
     public void onSessionActiveShouldCancelFailover() throws OPCUAException {
         setupConnectionMonitoring("redundant");
-        poperties.setFailoverDelay(10L);
+        properties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         coldFailover.onSessionActive(null);
         assertEquals("test", endpoint.getUri());
@@ -399,7 +399,7 @@ public class ColdFailoverTest {
     @Test
     public void onSessionInactiveActiveInactiveShouldTriggerFailover() throws OPCUAException, InterruptedException {
         setupConnectionMonitoring("redundant");
-        poperties.setFailoverDelay(10L);
+        properties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         coldFailover.onSessionActive(null);
         coldFailover.onSessionInactive(null);
@@ -410,7 +410,7 @@ public class ColdFailoverTest {
     @Test
     public void onSessionActiveWhenNeverInactiveShouldDoNothing() throws OPCUAException {
         setupConnectionMonitoring("redundant");
-        poperties.setFailoverDelay(10L);
+        properties.setFailoverDelay(10L);
         coldFailover.onSessionActive(null);
         assertEquals("test", endpoint.getUri());
     }
@@ -418,7 +418,7 @@ public class ColdFailoverTest {
     @Test
     public void twoOnSessionActivesShouldDoNothing() throws OPCUAException {
         setupConnectionMonitoring("redundant");
-        poperties.setFailoverDelay(10L);
+        properties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         coldFailover.onSessionActive(null);
         coldFailover.onSessionActive(null);
@@ -428,7 +428,7 @@ public class ColdFailoverTest {
     @Test
     public void twoOnSessionInactivesShouldTriggerOne() throws OPCUAException, InterruptedException {
         setupConnectionMonitoring("redundant");
-        poperties.setFailoverDelay(10L);
+        properties.setFailoverDelay(10L);
         coldFailover.onSessionInactive(null);
         coldFailover.onSessionInactive(null);
         initLatch.await(100L, TimeUnit.MILLISECONDS);
