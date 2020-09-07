@@ -21,13 +21,13 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * The AliveWriter ensures that the SubEquipments connected to the OPC UA server are still running by writing to them.
- * Not to be confused with OPC UA's built-in functionality. The built-in "keepalive" only asserts that the server is
- * running. The SubEquipment behind the Server may be down. The AliveWriter checks the state of the SubEquipment by
- * writing a counter to it and validating that the counter values are as expected.
+ * Not to be confused with OPC UA's built-in "keep-alive", which only asserts that the server is running. The
+ * SubEquipment behind the Server may be down. The AliveWriter checks the state of the SubEquipment by writing a counter
+ * to it and validating that the counter values are as expected.
  */
 @Slf4j
 @RequiredArgsConstructor
-@ManagedResource
+@ManagedResource(objectName = "AliveWriter", description = "Checks the state of the Equipment by writing values according to a counter.")
 @EquipmentScoped
 public class AliveWriter {
 
@@ -43,7 +43,7 @@ public class AliveWriter {
      * @param aliveTag         the DataTag containing the Node acting as AliveTag
      * @param aliveTagInterval the interval in which to write to the aliveTag
      */
-    public void startAliveWriter(ISourceDataTag aliveTag, long aliveTagInterval) {
+    public void startAliveWriter (ISourceDataTag aliveTag, long aliveTagInterval) {
         try {
             final ItemDefinition def = ItemDefinition.of(aliveTag);
             aliveTagAddress = def.getNodeId();
@@ -58,8 +58,8 @@ public class AliveWriter {
      * Restart a previously configured aliveWriter. To be invoked as an actuator operation.
      * @param aliveTagInterval the interval during which to read from the aliveTag
      */
-    @ManagedOperation(description = "Start the aliveWriter remotely. The Writer must have been initialized during DAQ startup.")
-    public void startAliveWriter(long aliveTagInterval) {
+    @ManagedOperation(description = "Manually start the AliveWriter. It must have been initialized during DAQ startup.")
+    public void startAliveWriter (long aliveTagInterval) {
         if (aliveTagAddress != null) {
             log.info("Starting AliveWriter...");
             cancelTask();
@@ -80,14 +80,14 @@ public class AliveWriter {
     /**
      * Stops the aliveWriter execution.
      */
-    @ManagedOperation
-    public void stopAliveWriter() {
+    @ManagedOperation(description = "Manually stop the AliveWriter")
+    public void stopAliveWriter () {
         log.info("Stopping AliveWriter...");
         cancelTask();
         executor.shutdownNow();
     }
 
-    private void aliveTagMonitoring() {
+    private void aliveTagMonitoring () {
         try {
             if (controller.write(aliveTagAddress, writeCounter)) {
                 messageSender.onAlive();
@@ -98,7 +98,7 @@ public class AliveWriter {
         }
     }
 
-    private void cancelTask() {
+    private void cancelTask () {
         if (writeAliveTask != null && !writeAliveTask.isCancelled()) {
             log.info("Stopping Alive Writer...");
             writeAliveTask.cancel(true);

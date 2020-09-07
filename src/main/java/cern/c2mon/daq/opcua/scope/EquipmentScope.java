@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @org.springframework.context.annotation.Scope(value = "prototype")
 @Slf4j
 public class EquipmentScope implements Scope {
-    private static String packageName = "cern.c2mon.daq.opcua";
+    private static String domain = "cern.c2mon.daq.opcua";
 
     private final Map<String, Object> scopedObjects = new ConcurrentHashMap<>();
     private final Map<String, Runnable> destructionCallbacks = new ConcurrentHashMap<>();
@@ -47,7 +47,7 @@ public class EquipmentScope implements Scope {
             if (exporter != null && o.getClass().isAnnotationPresent(ManagedResource.class)) {
                 log.info("Register as MBean: {} for equipment {}", o.getClass().getName(), equipmentName);
                     try {
-                        ObjectName objName = new ObjectName(packageName + ":equipment=" + equipmentName + ",bean=" + o.getClass().getSimpleName());
+                        ObjectName objName = new ObjectName(domain + ":equipment=" + equipmentName + ",bean=" + o.getClass().getSimpleName());
                         log.info("Registering bean {} with name {}", o, objName.toString());
                         exporter.registerManagedResource(o, objName);
                         log.info("Registered the bean {} of class {} under {}", o, o.getClass().getName(), objName.toString());
@@ -83,9 +83,4 @@ public class EquipmentScope implements Scope {
     public String getConversationId() {
         return equipmentName;
     }
-
-    public boolean contains(Object o) {
-        return scopedObjects.containsValue(o);
-    }
-
 }

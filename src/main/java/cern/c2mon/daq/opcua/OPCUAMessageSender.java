@@ -16,7 +16,7 @@ import org.springframework.jmx.export.annotation.ManagedResource;
 @NoArgsConstructor
 @Slf4j
 @Primary
-@ManagedResource
+@ManagedResource(objectName = "OPCUAMessageSender", description = "Communicate with the DAQ Core process")
 @EquipmentScoped
 public class OPCUAMessageSender implements MessageSender {
 
@@ -42,7 +42,7 @@ public class OPCUAMessageSender implements MessageSender {
     }
 
     @Override
-    @ManagedOperation
+    @ManagedOperation(description = "Manually trigger an AliveTag to be sent.")
     public void onAlive() {
         sender.sendSupervisionAlive();
     }
@@ -61,7 +61,7 @@ public class OPCUAMessageSender implements MessageSender {
      * @param state The EquipmentState to send with the Commfault. The value 'OK' will send set the CommfaultTag to
      *              false, any other value will set it to true.
      */
-    @ManagedOperation(description = "Manually send a CommfaultTag. The value 'OK' will send set the CommfaultTag to false, any other value will set it to true.")
+    @ManagedOperation(description = "Manually trigger a CommfaultTag to be sent. The value 'OK' will send set the CommfaultTag to false, any other value will set it to true.")
     public void onEquipmentStateUpdate(String state) {
         if (state.equalsIgnoreCase(EquipmentState.OK.name())) {
             sender.confirmEquipmentStateOK(state);

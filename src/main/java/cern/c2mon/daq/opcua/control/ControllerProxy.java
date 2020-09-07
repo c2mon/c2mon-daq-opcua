@@ -15,7 +15,6 @@ import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.NonTransparentRedun
 import org.eclipse.milo.opcua.sdk.client.model.nodes.objects.ServerRedundancyTypeNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.RedundancySupport;
-import org.springframework.beans.factory.annotation.Lookup;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
 
@@ -29,7 +28,7 @@ import java.util.stream.Stream;
  * capabilities.
  */
 @Slf4j
-@ManagedResource(objectName = "controller")
+@ManagedResource(objectName = "Controller", description = "A proxy to control actions inflicted upon the data source.")
 @RequiredArgsConstructor
 @EquipmentScoped
 public class ControllerProxy implements Controller {
@@ -44,7 +43,7 @@ public class ControllerProxy implements Controller {
      * operation.
      * @return the simple name of the controller for the failover mode currently in use.
      */
-    @ManagedOperation(description = "Find the controller name for the failover mode currently in use.")
+    @ManagedOperation(description = "Find the name of the current redundancy / failover handler.")
     public String getFailoverMode () {
         return controller == null ? "Currently not connected." : controller.getClass().getSimpleName();
     }

@@ -2,14 +2,13 @@ package cern.c2mon.daq.opcua.config;
 
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
-import cern.c2mon.daq.opcua.scope.EquipmentScopeNamingStrategy;
 import cern.c2mon.daq.opcua.scope.EquipmentScopePostProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jmx.export.MBeanExporter;
-import org.springframework.jmx.export.naming.ObjectNamingStrategy;
+import org.springframework.jmx.export.annotation.AnnotationMBeanExporter;
 import org.springframework.retry.RetryPolicy;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.backoff.BackOffPolicy;
@@ -30,12 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Configuration
 @RequiredArgsConstructor
 public class AppConfig {
-
-    @Bean
-    public ObjectNamingStrategy objectNamingStrategy () {
-        return new EquipmentScopeNamingStrategy();
-    }
-
     /**
      * Used by Spring during scoping to inject the EquipmentScope.
      * @return the Equipment-specific BeanFactoryPostProcessor handing the EquipmentScope
@@ -47,10 +40,9 @@ public class AppConfig {
 
     @Bean
     public MBeanExporter mBeanExporter() {
-        MBeanExporter exporter = new MBeanExporter();
-        exporter.setAutodetect(true);
+        MBeanExporter exporter = new AnnotationMBeanExporter();
+        exporter.setAutodetect(false);
         exporter.setEnsureUniqueRuntimeObjectNames(false);
-        exporter.setNamingStrategy(new EquipmentScopeNamingStrategy());
         return exporter;
     }
 

@@ -30,7 +30,7 @@ import static java.util.stream.Collectors.*;
  */
 @Slf4j
 @RequiredArgsConstructor
-@ManagedResource
+@ManagedResource(objectName = "DataTagHandler", description = "Interact with the DataTags subscribed on the current server.")
 @EquipmentScoped
 public class DataTagHandler implements IDataTagHandler {
 
@@ -121,7 +121,7 @@ public class DataTagHandler implements IDataTagHandler {
      * @param id the ID of the DataTag whose value shall be read. The DataTag must be configured on the DAQ.
      * @return the value and quality of the reading, or the reason for a failure.
      */
-    @ManagedOperation(description = "Read the current value of the DataTag with the given ID")
+    @ManagedOperation(description = "Read the current value of the DataTag with the given ID.")
     public String readDataTag(long id) {
         final ItemDefinition itemDefinition = manager.getDefinition(id);
         if (itemDefinition == null) {

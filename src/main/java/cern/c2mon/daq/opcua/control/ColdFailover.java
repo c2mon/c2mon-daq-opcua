@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * situation the client may need to wait for the redundant server to become available. See UA Part 4 6.6.2.4.5.2.
  */
 @Slf4j
-@ManagedResource
+@ManagedResource(objectName = "ColdFailover", description = "A handler redundant server sets in cold failover mode.")
 public class ColdFailover extends FailoverBase {
 
     private final Queue<String> redundantServers = new ConcurrentLinkedDeque<>();
@@ -88,7 +88,7 @@ public class ColdFailover extends FailoverBase {
      * @throws OPCUAException if the no connection could be established to any server
      */
     @Override
-    @ManagedOperation
+    @ManagedOperation(description = "Manually trigger a failover from the currently active server to the next. If no fallback servers are active, the currently active server will be reconnected. If no server is available, the DAQ will remain disconnected after this operation.")
     public void switchServers() throws OPCUAException {
         if (currentEndpoint() == null) {
             log.error("Cannot switch server, the Endpoint must be initialized first.");
