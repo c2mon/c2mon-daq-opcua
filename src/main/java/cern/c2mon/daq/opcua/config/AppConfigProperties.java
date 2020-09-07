@@ -16,7 +16,6 @@ import java.util.Map;
  * This class contains configuration options regarding the OPC UA DAQ connection and certification options and
  * optionally specific options for the respective certification option.
  */
-@Configuration
 @ConfigurationProperties(prefix = "c2mon.daq.opcua")
 @Data
 @AllArgsConstructor

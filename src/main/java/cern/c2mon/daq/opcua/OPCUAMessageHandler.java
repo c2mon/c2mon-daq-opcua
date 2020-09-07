@@ -25,7 +25,6 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.ApplicationContext;
 
@@ -69,8 +68,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         }
 
 
+        log.info("Connecting to the OPC UA data source at {}... ", config.getAddress());
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
-        log.info("Connecting to the OPC UA data source at {}... ", StringUtils.join(addresses, ", "));
         try {
             controller.connect(addresses);
         } catch (OPCUAException e) {

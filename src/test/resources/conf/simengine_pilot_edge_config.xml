@@ -98,7 +98,7 @@
             <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
             <commfault-tag-id>100013</commfault-tag-id>
             <commfault-tag-value>false</commfault-tag-value>
-            <address>opc.tcp://power-supply-sim:4841</address>
+            <address>opc.tcp://power-supply-sim:4841;trustAllServers=false</address>
           <SubEquipmentUnits/>
             <DataTags>
                 <DataTag id="120" name="IMon-EQ02" control="false">
