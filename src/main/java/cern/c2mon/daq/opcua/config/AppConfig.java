@@ -38,8 +38,14 @@ public class AppConfig {
         return new EquipmentScopePostProcessor();
     }
 
+    /**
+     * Publishes the properly annotated classes, methods and fields via JMX. The beans are registered to the exporter
+     * when created within a new {@link cern.c2mon.daq.opcua.scope.EquipmentScope} instead of detected manually, where
+     * they are also named according to the respective equipment.
+     * @return the exporter for JMX supervision
+     */
     @Bean
-    public MBeanExporter mBeanExporter() {
+    public MBeanExporter mBeanExporter () {
         MBeanExporter exporter = new AnnotationMBeanExporter();
         exporter.setAutodetect(false);
         exporter.setEnsureUniqueRuntimeObjectNames(false);
@@ -49,6 +55,7 @@ public class AppConfig {
     /**
      * A retry template to repeatedly execute a call until successful termination with a delay starting at retryDelay
      * and increasing by a factor of 2 on every failed attempt up to a maximum of maxFailoverDelay.
+     * @param properties The AppConfigProperties which shall be used to create the retry template.
      * @return the retry template.
      */
     @Bean
@@ -65,6 +72,7 @@ public class AppConfig {
     /**
      * A retry template to repeatedly execute a call until successful termination with a delay starting at retryDelay
      * and increasing by a factor of 2 on every failed attempt up to a maximum of maxFailoverDelay.
+     * @param properties The AppConfigProperties which shall be used to create the retry template.
      * @return the retry template.
      */
     @Bean
@@ -79,6 +87,7 @@ public class AppConfig {
      * A retry template to execute a call until successful termination with a delay starting at retryDelay and
      * increasing by a factor of 2 on every failed attempt up to a maximum of maxFailoverDelay. Calls are retried only
      * when they fail with a {@link CommunicationException}.
+     * @param properties The AppConfigProperties which shall be used to create the retry template.
      * @return the retry template.
      */
     @Bean
