@@ -25,7 +25,6 @@ Please check [here](https://gitlab.cern.ch/c2mon/c2mon-daq-opcua/tags) for the l
 
 
 # General configuration tips
-In order to configure RESTful datatags you have first to declare a REST DAQ [Process](http://c2mon.web.cern.ch/c2mon/docs/latest/user-guide/client-api/configuration/#configuring-processes) and [Equipment](http://c2mon.web.cern.ch/c2mon/docs/latest/user-guide/client-api/configuration/#configuring-equipment) to which you want then to attach the tags. 
 
 Please read therefore also the documentation about the [C2MON configuration API](http://c2mon.web.cern.ch/c2mon/docs/latest/user-guide/client-api/configuration/#configuration-api). 
 
