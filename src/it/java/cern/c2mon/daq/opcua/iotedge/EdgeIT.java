@@ -58,7 +58,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Slf4j
 @Testcontainers
 @TestPropertySource(locations = "classpath:application.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class EdgeIT extends EdgeTestBase {
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();

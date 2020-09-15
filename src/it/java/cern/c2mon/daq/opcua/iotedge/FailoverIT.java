@@ -55,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Slf4j
 @Testcontainers
 @TestPropertySource(properties = {"c2mon.daq.opcua.failoverDelay=200", "c2mon.daq.opcua.retryDelay=250", "c2mon.daq.opcua.redundancyMode=COLD"}, locations = "classpath:application.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class FailoverIT extends EdgeTestBase {
     TestListeners.Pulse pulseListener;
     IDataTagHandler tagHandler;
@@ -129,7 +129,6 @@ public class FailoverIT extends EdgeTestBase {
 
     @Test
     public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
-        config.setFailoverDelay(100L);
         log.info("longDisconnectShouldTriggerReconnectToAnyAvailableServer");
         waitUntilRegistered(pulseListener.listen(), active, true);
         waitUntilRegistered(pulseListener.listen(), fallback, false);
