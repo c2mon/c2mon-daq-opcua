@@ -34,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -117,7 +118,7 @@ public class ItemDefinition {
      */
     public static ItemDefinition of (final ISourceDataTag tag) throws ConfigurationException {
         OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
-        return new ItemDefinition(tag, new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName()), toRedundantNodeId(opcAddress));
+        return new ItemDefinition(tag, fromAddress(opcAddress, false), fromAddress(opcAddress, true));
     }
 
     /**
@@ -129,7 +130,7 @@ public class ItemDefinition {
      */
     public static ItemDefinition of (final ISourceCommandTag tag) throws ConfigurationException {
         OPCHardwareAddress opcAddress = extractOpcAddress(tag.getHardwareAddress());
-        return new ItemDefinition(new NodeId(opcAddress.getNamespaceId(), opcAddress.getOPCItemName()), toRedundantNodeId(opcAddress));
+        return new ItemDefinition(fromAddress(opcAddress, false), fromAddress(opcAddress, true));
     }
 
     private static OPCHardwareAddress extractOpcAddress (HardwareAddress address) throws ConfigurationException {
@@ -139,9 +140,21 @@ public class ItemDefinition {
         return (OPCHardwareAddress) address;
     }
 
-    private static NodeId toRedundantNodeId (OPCHardwareAddress opcAddress) {
-        String redundantOPCItemName = opcAddress.getOpcRedundantItemName();
-        return (redundantOPCItemName == null || redundantOPCItemName.trim().isEmpty()) ?
-                null : new NodeId(opcAddress.getNamespaceId(), redundantOPCItemName);
+    private static NodeId fromAddress(OPCHardwareAddress opcAddress, boolean redundant) {
+        int namespaceId = opcAddress.getNamespaceId();
+        String itemName = opcAddress.getOpcRedundantItemName();
+        if (redundant && (itemName == null || itemName.trim().isEmpty())) {
+            return null;
+        } else if (!redundant) {
+            itemName = opcAddress.getOPCItemName();
+        }
+        switch (opcAddress.getAddressType()) {
+            case GUID:
+                return new NodeId(namespaceId, UUID.fromString(itemName));
+            case NUMERIC:
+                return new NodeId(namespaceId, Integer.parseInt(itemName));
+            default:
+                return new NodeId(namespaceId, itemName);
+        }
     }
 }

@@ -438,7 +438,8 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
         UaSubscription subscription = subscriptionMap.get(timeDeadband);
         if (subscription == null || !client.getSubscriptionManager().getSubscriptions().contains(subscription)) {
             subscription = retryOnConnection(CREATE_SUBSCRIPTION,
-                    () -> client.getSubscriptionManager().createSubscription(timeDeadband));
+                    () -> client.getSubscriptionManager().createSubscription(timeDeadband*1000));
+            //OPC UA publishing interval is given in milliseconds, see https://reference.opcfoundation.org/v104/Core/docs/Part4/5.13.2/
             subscriptionMap.put(timeDeadband, subscription);
         }
         return subscription;
