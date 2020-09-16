@@ -124,14 +124,14 @@ public class EdgeIT extends EdgeTestBase {
         final CompletableFuture<MessageSender.EquipmentState> connectionRegained = pulseListener.listen();
         active.image.start();
         assertEquals(MessageSender.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
-
         pulseListener.reset();
         pulseListener.setSourceID(alreadySubscribedTag.getId());
+        TimeUnit.MILLISECONDS.sleep(1000L);
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     @Test
-    public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException, ConfigurationException {
+    public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ regainedConnectionShouldContinueDeliveringSubscriptionValues ############");
         tagHandler.subscribeTags(Collections.singletonList(tag));
         waitUntilRegistered(pulseListener.listen(), active, true);
