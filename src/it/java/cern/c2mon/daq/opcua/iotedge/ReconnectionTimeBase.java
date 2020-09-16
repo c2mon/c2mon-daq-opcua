@@ -119,12 +119,13 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
             Collection<Toxic> toxics = getToxics(testName, v, toxicAction);
             double avg = findAverageTime(new CountDownLatch(RUNS_PER_TEST), testName);
             averages.put(v, avg);
-            uncut(active);
+            uncut(current);
             for (Toxic t : toxics) {
                 doWithTimeout(t);
                 log.info("Removed toxic {}", t.getName());
             }
-            cut(fallback); // cut a proxy only after removing the previous proxies, it may hang forever: https://github.com/Shopify/toxiproxy/pull/168
+            EdgeImage passive = (current == active) ? fallback : active;
+            cut(passive); // cut a proxy only after removing the previous proxies, it may hang forever: https://github.com/Shopify/toxiproxy/pull/168
             toxics.clear();
         }
         return averages;

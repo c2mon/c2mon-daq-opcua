@@ -146,6 +146,7 @@ public class EdgeIT extends EdgeTestBase {
     public void connectionCutServerShouldSendLOST() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ connectionCutServerShouldSendLOST ############");
         assertEquals(CONNECTION_LOST, waitUntilRegistered(pulseListener.listen(), active, true));
+        TimeUnit.MILLISECONDS.sleep(1000L);
         waitUntilRegistered(pulseListener.listen(), active, false); //cleanup
     }
 
