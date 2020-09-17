@@ -135,11 +135,9 @@ public class EdgeIT extends EdgeTestBase {
         log.info("############ regainedConnectionShouldContinueDeliveringSubscriptionValues ############");
         tagHandler.subscribeTags(Collections.singletonList(tag));
         waitUntilRegistered(pulseListener.listen(), active, true);
-        pulseListener.reset();
-        pulseListener.setSourceID(tag.getId());
         waitUntilRegistered(pulseListener.listen(), active, false);
 
-        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        assertDoesNotThrow(() -> pulseListener.getTagUpdate().get(0).get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
     @Test
