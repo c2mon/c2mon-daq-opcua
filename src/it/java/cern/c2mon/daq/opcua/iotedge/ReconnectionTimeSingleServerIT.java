@@ -104,7 +104,6 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
         for (ToxicDirection direction : ToxicDirection.values()) {
             toxics.add(toxicAction.apply(new AverageArg<>(testName + "_Active_" + direction.name() + "_" + value, value, direction, active.proxy.toxics())));
         }
-        toxics.forEach(toxic -> log.info("Registered toxic {}", toxic.getName()));
         return toxics;
     }
 
@@ -112,7 +111,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
     protected ConnectionRecord recordInstance () throws InterruptedException, ExecutionException, TimeoutException {
         log.info("Temporarily cut connection.");
         ConnectionRecord record;
-        cutConnection(active, true);
+        waitUntilRegistered(pulseListener.listen(), active, true);
         synchronized (this) {
             long reestablished = System.currentTimeMillis();
             pulseListener.reset();

@@ -111,7 +111,7 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
         pulseListener.reset();
     }
 
-    protected <T> Map<T, Double> getAverages (String testName, T[] values, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    protected <T> Map<T, Double> getAverages (String testName, T[] values, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException, InterruptedException, TimeoutException, ExecutionException {
         Map<T, Double> averages = new ConcurrentHashMap<>();
         try {
             for (T v : values) {
@@ -126,12 +126,12 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
                 log.info("Uncutting fallback image.");
                 cutConnection(fallback, false);
                 for (Toxic t : toxics) {
-                    doWithTimeout(t);
-                    log.info("Removed toxic {}", t.getName());
+                    log.info("Removing toxic {}", t.getName());
+                    EdgeTestBase.doWithTimeout(t, 0);
                 }
                 toxics.clear();
             }
-        } catch (IOException | InterruptedException | ExecutionException | TimeoutException e) {
+        } catch (IOException | InterruptedException | TimeoutException | ExecutionException e) {
             log.error("Failed with error: ", e);
             throw e;
         }
@@ -144,17 +144,6 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
                 .map(s -> String.format("%1$14s %2$14s", s.getKey().toString(), s.getValue().toString()))
                 .collect(Collectors.joining("\n")));
 
-    }
-
-    protected void doWithTimeout (Toxic toxic) throws InterruptedException, ExecutionException, TimeoutException {
-        CompletableFuture.runAsync(() -> {
-            try {
-                toxic.remove();
-            } catch (IOException e) {
-                log.error("Could not remove Toxic {} ", toxic.getName(), e);
-                throw new CompletionException(e);
-            }
-        }).get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
     }
 
 

@@ -73,20 +73,7 @@ public abstract class EdgeTestBase extends SpringTestBase {
     }
 
     protected static void resetImageConnectivity () {
-        synchronized (active.isCurrentlyCut) {
-            if (active.isCurrentlyCut.get()) {
-                log.info("Enable Active");
-                try {
-                    for (Toxic t : active.proxy.toxics().getAll()) {
-                        log.info("Removing toxic {}", t.getName());
-                        t.remove();
-                    }
-                    active.isCurrentlyCut.set(false);
-                } catch (IOException e) {
-                    log.error("Could not remove toxics", e);
-                }
-            }
-        }
+        cutConnection(active, false);
         cutConnection(fallback, true);
     }
 
@@ -102,15 +89,36 @@ public abstract class EdgeTestBase extends SpringTestBase {
                     img.isCurrentlyCut.set(true);
                 } else if (!cut && img.isCurrentlyCut.get()) {
                     log.info("Uncutting connection on {} image.", img.getName());
-                    img.proxy.toxics().get("CUT_CONNECTION_DOWNSTREAM").remove();
-                    img.proxy.toxics().get("CUT_CONNECTION_UPSTREAM").remove();
+                    doWithTimeout(img.proxy.toxics().get("CUT_CONNECTION_DOWNSTREAM"), 0);
+                    doWithTimeout(img.proxy.toxics().get("CUT_CONNECTION_UPSTREAM"), 0);
                     img.isCurrentlyCut.set(false);
                 } else {
                     log.info("{} Image is already in the desired state.", img.getName());
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException | TimeoutException | ExecutionException e) {
             throw new RuntimeException("Could not control proxy", e);
+        }
+    }
+
+    public static void doWithTimeout (Toxic toxic, int counter) throws InterruptedException, TimeoutException, ExecutionException {
+        try {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    toxic.remove();
+                } catch (IOException e) {
+                    log.error("Could not remove Toxic {} ", toxic.getName(), e);
+                    throw new CompletionException(e);
+                }
+            }).get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
+        } catch (ExecutionException | TimeoutException e) {
+            if (counter < 3) {
+                log.error("Could not remove Toxic {}. Sleep and retry... ", toxic.getName(), e);
+                TimeUnit.MILLISECONDS.sleep(4000L);
+                doWithTimeout(toxic, ++counter);
+            }
+            log.error("Could not remove Toxic {} ", toxic.getName(), e);
+            throw e;
         }
     }
 
