@@ -113,20 +113,27 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
 
     protected <T> Map<T, Double> getAverages (String testName, T[] values, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException, InterruptedException, ExecutionException, TimeoutException {
         Map<T, Double> averages = new ConcurrentHashMap<>();
-        for (T v : values) {
-            log.info("################# Test {} with value {}.", testName, v.toString());
-            Collection<Toxic> toxics = applyToxics(testName, v, toxicAction);
-            double avg = findAverageTime(new CountDownLatch(RUNS_PER_TEST), testName);
-            averages.put(v, avg);
-            log.info("Uncutting active image.");
-            cutConnection(active, false);
-            log.info("Uncutting fallback image.");
-            cutConnection(fallback, false);
-            for (Toxic t : toxics) {
-                doWithTimeout(t);
-                log.info("Removed toxic {}", t.getName());
+        try {
+            for (T v : values) {
+                log.info("################# Test {} with value {}.", testName, v.toString());
+                Collection<Toxic> toxics;
+                toxics = applyToxics(testName, v, toxicAction);
+                log.info("Added toxics {}.", toxics.stream().map(Toxic::getName).collect(Collectors.joining(", ")));
+                double avg = findAverageTime(new CountDownLatch(RUNS_PER_TEST), testName);
+                averages.put(v, avg);
+                log.info("Uncutting active image.");
+                cutConnection(active, false);
+                log.info("Uncutting fallback image.");
+                cutConnection(fallback, false);
+                for (Toxic t : toxics) {
+                    doWithTimeout(t);
+                    log.info("Removed toxic {}", t.getName());
+                }
+                toxics.clear();
             }
-            toxics.clear();
+        } catch (IOException | InterruptedException | ExecutionException | TimeoutException e) {
+            log.error("Failed with error: ", e);
+            throw e;
         }
         return averages;
     }
