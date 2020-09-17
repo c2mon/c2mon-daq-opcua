@@ -126,7 +126,7 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
                 cutConnection(fallback, false);
                 for (Toxic t : toxics) {
                     log.info("Removing toxic {}", t.getName());
-                    EdgeTestBase.doWithTimeout(t, 0);
+                    EdgeTestBase.removeWithTimeout(t, 0);
                 }
                 toxics.clear();
             }

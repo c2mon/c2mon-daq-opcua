@@ -81,27 +81,34 @@ public abstract class EdgeTestBase extends SpringTestBase {
         // Don't use the ToxiproxyContainer.setConnectionCut method - if the connection is already cut and this method is called, the proxy hangs forever.
         log.info("{} Image is currently {} cut.", img.getName(), img.isCurrentlyCut.get() ? "" : "not");
         try {
-            synchronized (img.isCurrentlyCut) {
-                if (cut && !img.isCurrentlyCut.get()) {
-                    log.info("Cutting connection on {} image.", img.getName());
-                    img.proxy.toxics().bandwidth("CUT_CONNECTION_DOWNSTREAM", ToxicDirection.DOWNSTREAM, 0L);
-                    img.proxy.toxics().bandwidth("CUT_CONNECTION_UPSTREAM", ToxicDirection.UPSTREAM, 0L);
-                    img.isCurrentlyCut.set(true);
-                } else if (!cut && img.isCurrentlyCut.get()) {
-                    log.info("Uncutting connection on {} image.", img.getName());
-                    doWithTimeout(img.proxy.toxics().get("CUT_CONNECTION_DOWNSTREAM"), 0);
-                    doWithTimeout(img.proxy.toxics().get("CUT_CONNECTION_UPSTREAM"), 0);
-                    img.isCurrentlyCut.set(false);
-                } else {
-                    log.info("{} Image is already in the desired state.", img.getName());
-                }
+            if (cut && !img.isCurrentlyCut.get()) {
+                log.info("Cutting connection on {} image.", img.getName());
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        log.info("Adding CUT_CONNECTION_DOWNSTREAM toxic");
+                        img.proxy.toxics().limitData("CUT_CONNECTION_DOWNSTREAM", ToxicDirection.DOWNSTREAM, 0L);
+                        log.info("Adding CUT_CONNECTION_UPSTREAM toxic");
+                        img.proxy.toxics().limitData("CUT_CONNECTION_UPSTREAM", ToxicDirection.UPSTREAM, 0L);
+                    } catch (IOException e) {
+                        log.error("Could not add Toxic, ", e);
+                        throw new CompletionException(e);
+                    }
+                }).get(TIMEOUT_IT, TimeUnit.MILLISECONDS);
+                img.isCurrentlyCut.set(true);
+            } else if (!cut && img.isCurrentlyCut.get()) {
+                log.info("Uncutting connection on {} image.", img.getName());
+                removeWithTimeout(img.proxy.toxics().get("CUT_CONNECTION_DOWNSTREAM"), 0);
+                removeWithTimeout(img.proxy.toxics().get("CUT_CONNECTION_UPSTREAM"), 0);
+                img.isCurrentlyCut.set(false);
+            } else {
+                log.info("{} Image is already in the desired state.", img.getName());
             }
         } catch (IOException | InterruptedException | TimeoutException | ExecutionException e) {
             throw new RuntimeException("Could not control proxy", e);
         }
     }
 
-    public static void doWithTimeout (Toxic toxic, int counter) throws InterruptedException, TimeoutException, ExecutionException {
+    public static void removeWithTimeout (Toxic toxic, int counter) throws InterruptedException, TimeoutException, ExecutionException {
         try {
             CompletableFuture.runAsync(() -> {
                 try {
@@ -115,7 +122,7 @@ public abstract class EdgeTestBase extends SpringTestBase {
             if (counter < 3) {
                 log.error("Could not remove Toxic {}. Sleep and retry... ", toxic.getName(), e);
                 TimeUnit.MILLISECONDS.sleep(4000L);
-                doWithTimeout(toxic, ++counter);
+                removeWithTimeout(toxic, ++counter);
             }
             log.error("Could not remove Toxic {} ", toxic.getName(), e);
             throw e;
