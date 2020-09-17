@@ -485,7 +485,6 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
 
     private <T> T retryOnConnection (ExceptionContext context, Supplier<CompletableFuture<T>> futureSupplier) throws OPCUAException {
         return config.simpleRetryPolicy(properties).execute(retryContext -> {
-            log.info("Attempt at {} nr {}", context, retryContext.getRetryCount());
             if (disconnectedOn.get() < 0) {
                 log.info("Endpoint was stopped, cease retries.");
                 throw new EndpointDisconnectedException(context);

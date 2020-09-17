@@ -52,9 +52,9 @@ import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_TOXI;
 @Testcontainers
 public abstract class ReconnectionTimeBase extends EdgeTestBase {
 
-    protected static Long[] RATES = new Long[]{1L, 20L, 50L, 100L, 150L, 200L, 400L, 800L};
-    protected static Integer[] LATENCIES = new Integer[]{10, 20, 50, 100, 150, 200, 400, 800};
-    protected static Integer[] SLICE_SIZES = new Integer[]{10, 20, 50, 100, 150, 200, 400, 800};
+    protected static Long[] RATES = new Long[]{1L, 50L, 100L, 400L};
+    protected static Integer[] LATENCIES = new Integer[]{10, 50, 100, 800};
+    protected static Integer[] SLICE_SIZES = new Integer[]{10, 50, 200, 800};
     protected static Integer SLICER_DELAY = 20;
     protected static int RUNS_PER_TEST = 1;
     protected final ScheduledExecutorService executor = Executors.newScheduledThreadPool(4);
@@ -116,8 +116,7 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
         try {
             for (T v : values) {
                 log.info("################# Test {} with value {}.", testName, v.toString());
-                Collection<Toxic> toxics;
-                toxics = applyToxics(testName, v, toxicAction);
+                Collection<Toxic> toxics = applyToxics(testName, v, toxicAction);
                 log.info("Added toxics {}.", toxics.stream().map(Toxic::getName).collect(Collectors.joining(", ")));
                 double avg = findAverageTime(new CountDownLatch(RUNS_PER_TEST), testName);
                 averages.put(v, avg);
@@ -143,9 +142,7 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
                 .sorted((t1, t2) -> c.compare(t1.getKey(), t2.getKey()))
                 .map(s -> String.format("%1$14s %2$14s", s.getKey().toString(), s.getValue().toString()))
                 .collect(Collectors.joining("\n")));
-
     }
-
 
     protected double findAverageTime (CountDownLatch latch, String testName) {
         List<ConnectionRecord> connectionRecords = new ArrayList<>();

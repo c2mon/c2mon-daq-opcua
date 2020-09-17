@@ -25,6 +25,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.ConnectionRecord;
 import eu.rekawek.toxiproxy.model.Toxic;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
+import eu.rekawek.toxiproxy.model.toxic.Slicer;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,8 +93,11 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
     public void mttrByDelaySlicerWithoutFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Delay_Slicer";
         log.info(testName);
-        Map<Integer, Double> averages = getAverages(testName, SLICE_SIZES,
-                o -> o.toxicList.slicer(o.name, o.dir, o.arg, SLICER_DELAY).setSizeVariation(o.arg / 10));
+        Map<Integer, Double> averages = getAverages(testName, SLICE_SIZES, o -> {
+            Slicer slicer = o.toxicList.slicer(o.name, o.dir, o.arg, SLICER_DELAY);
+            slicer.setSizeVariation(o.arg / 10);
+            return slicer;
+        });
         log.info("MTTR for Slicer with delay");
         printResults(averages, Integer::compareTo);
     }
@@ -111,7 +115,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
     protected ConnectionRecord recordInstance () throws InterruptedException, ExecutionException, TimeoutException {
         log.info("Temporarily cut connection.");
         ConnectionRecord record;
-        waitUntilRegistered(pulseListener.listen(), active, true);
+        cutConnection(active, true);
         synchronized (this) {
             long reestablished = System.currentTimeMillis();
             pulseListener.reset();

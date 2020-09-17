@@ -26,6 +26,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.testutils.ConnectionRecord;
 import eu.rekawek.toxiproxy.model.Toxic;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
+import eu.rekawek.toxiproxy.model.toxic.Slicer;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,8 +88,11 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
     public void mttrBySlicerWithFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Failover_Slicer";
         log.info(testName);
-        Map<Integer, Double> averages = getAverages(testName, SLICE_SIZES,
-                o -> o.toxicList.slicer(o.name, o.dir, o.arg, 0).setSizeVariation(o.arg / 10));
+        Map<Integer, Double> averages = getAverages(testName, SLICE_SIZES, o -> {
+            Slicer slicer = o.toxicList.slicer(o.name, o.dir, o.arg, 0);
+            slicer.setSizeVariation(o.arg / 10);
+            return slicer;
+        });
         log.info("MTTR for Slicer without delay");
         printResults(averages, Integer::compareTo);
     }
@@ -97,8 +101,11 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
     public void mttrByDelaySlicerWithFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Failover_Delay_Slicer";
         log.info(testName);
-        Map<Integer, Double> averages = getAverages(testName, SLICE_SIZES,
-                o -> o.toxicList.slicer(o.name, o.dir, o.arg, SLICER_DELAY).setSizeVariation(o.arg / 10));
+        Map<Integer, Double> averages = getAverages(testName, SLICE_SIZES, o -> {
+            Slicer slicer = o.toxicList.slicer(o.name, o.dir, o.arg, SLICER_DELAY);
+            slicer.setSizeVariation(o.arg / 10);
+            return slicer;
+        });
         log.info("MTTR for Slicer with delay");
         printResults(averages, Integer::compareTo);
     }
@@ -124,19 +131,16 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
         return record;
     }
 
-    private ConnectionRecord changeConnection (EdgeImage cut, EdgeImage uncut) throws InterruptedException, ExecutionException, TimeoutException {
+    private synchronized ConnectionRecord changeConnection (EdgeImage cut, EdgeImage uncut) throws InterruptedException, ExecutionException, TimeoutException {
         ConnectionRecord record;
-        waitUntilRegistered(pulseListener, cut, true);
+        cutConnection(cut, true);
         log.info("Triggering server switch.");
         executor.submit(() -> ReflectionTestUtils.invokeMethod(((FailoverBase) controller), "triggerServerSwitch"));
         log.info("RECORDING current time");
-        synchronized (this) {
-            long reestablished = System.currentTimeMillis();
-            pulseListener.reset();
-            waitUntilRegistered(pulseListener, uncut, false);
-            record = ConnectionRecord.of(reestablished, System.currentTimeMillis());
-        }
-        pulseListener.getTagUpdate().get(0).join();
+        long reestablished = System.currentTimeMillis();
+        pulseListener.reset();
+        waitUntilRegistered(pulseListener.getTagUpdate().get(0), uncut, false);
+        record = ConnectionRecord.of(reestablished, System.currentTimeMillis());
         log.info("Record: {}", record);
         return record;
     }
