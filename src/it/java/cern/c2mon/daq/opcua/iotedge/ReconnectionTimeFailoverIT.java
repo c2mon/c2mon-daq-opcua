@@ -45,7 +45,7 @@ import java.util.concurrent.TimeoutException;
 @Slf4j
 @Testcontainers
 @TestPropertySource(locations = "classpath:failover.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
 
     @BeforeEach
@@ -104,7 +104,7 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
     }
 
     @Override
-    protected <T> Collection<Toxic> getToxics (String testName, T value, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException {
+    protected <T> Collection<Toxic> applyToxics (String testName, T value, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException {
         Collection<Toxic> toxics = new ArrayList<>();
         for (ToxicDirection direction : ToxicDirection.values()) {
             toxics.add(toxicAction.apply(new AverageArg<>(testName + "_Active_" + direction.name() + "_" + value, value, direction, active.proxy.toxics())));
@@ -126,14 +126,14 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
 
     private ConnectionRecord changeConnection (EdgeImage cut, EdgeImage uncut) throws InterruptedException, ExecutionException, TimeoutException {
         ConnectionRecord record;
-        cut(cut);
+        waitUntilRegistered(pulseListener, cut, true);
         log.info("Triggering server switch.");
         executor.submit(() -> ReflectionTestUtils.invokeMethod(((FailoverBase) controller), "triggerServerSwitch"));
         log.info("RECORDING current time");
         synchronized (this) {
             long reestablished = System.currentTimeMillis();
             pulseListener.reset();
-            waitUntilRegistered(pulseListener.listen(), uncut, false);
+            waitUntilRegistered(pulseListener, uncut, false);
             record = ConnectionRecord.of(reestablished, System.currentTimeMillis());
         }
         pulseListener.getTagUpdate().get(0).join();

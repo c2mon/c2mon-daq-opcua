@@ -45,7 +45,7 @@ import java.util.concurrent.TimeoutException;
 public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
 
     @BeforeEach
-    public void setUp() throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
+    public void setUp () throws OPCUAException, InterruptedException, ExecutionException, TimeoutException {
         log.info("############ SET UP ############");
         setUpBeans();
         connectAndSubscribe();
@@ -64,7 +64,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
     public void mttrByLatencyWithoutFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Latency";
         log.info(testName);
-        Map<Integer, Double> averages = getAverages(testName, LATENCIES, o -> o.toxicList.latency(o.name, o.dir, o.arg).setJitter(o.arg/10));
+        Map<Integer, Double> averages = getAverages(testName, LATENCIES, o -> o.toxicList.latency(o.name, o.dir, o.arg).setJitter(o.arg / 10));
         log.info("MTTR for Latency with Failover");
         printResults(averages, Integer::compareTo);
     }
@@ -99,7 +99,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
     }
 
     @Override
-    protected <T> Collection<Toxic> getToxics (String testName, T value, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException {
+    protected <T> Collection<Toxic> applyToxics (String testName, T value, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException {
         Collection<Toxic> toxics = new ArrayList<>();
         for (ToxicDirection direction : ToxicDirection.values()) {
             toxics.add(toxicAction.apply(new AverageArg<>(testName + "_Active_" + direction.name() + "_" + value, value, direction, active.proxy.toxics())));
@@ -112,7 +112,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
     protected ConnectionRecord recordInstance () throws InterruptedException, ExecutionException, TimeoutException {
         log.info("Temporarily cut connection.");
         ConnectionRecord record;
-        cut(active);
+        cutConnection(active, true);
         synchronized (this) {
             long reestablished = System.currentTimeMillis();
             pulseListener.reset();

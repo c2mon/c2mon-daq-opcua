@@ -21,7 +21,9 @@
  */
 package cern.c2mon.daq.opcua.iotedge;
 
+import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.SpringTestBase;
+import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import eu.rekawek.toxiproxy.model.Toxic;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
@@ -35,9 +37,8 @@ import org.testcontainers.containers.ToxiproxyContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_IT;
 
@@ -49,10 +50,6 @@ public abstract class EdgeTestBase extends SpringTestBase {
     private static final ToxiproxyContainer toxiProxyContainer;
     public static EdgeImage active;
     public static EdgeImage fallback;
-    public static Collection<Toxic> activeCutToxics = new ArrayList<>();
-    public static Collection<Toxic> fallbackCutToxics = new ArrayList<>();
-
-    public static int counter = 0;
 
     static {
         toxiProxyContainer = new ToxiproxyContainer().withNetwork(network);
@@ -62,8 +59,8 @@ public abstract class EdgeTestBase extends SpringTestBase {
     public static void setupContainers () {
         log.info("Starting EdgeTestBase containers");
         toxiProxyContainer.start();
-        active = new EdgeImage(toxiProxyContainer, network);
-        fallback = new EdgeImage(toxiProxyContainer, network);
+        active = new EdgeImage(toxiProxyContainer, network, "active");
+        fallback = new EdgeImage(toxiProxyContainer, network, "fallback");
         resetImageConnectivity();
     }
 
@@ -76,51 +73,59 @@ public abstract class EdgeTestBase extends SpringTestBase {
     }
 
     protected static void resetImageConnectivity () {
-        log.info("Disabling Fallback, enabling Active");
-        uncut(active);
-        cut(fallback);
-    }
-
-    protected static void cut(EdgeImage img) {
-        Collection<Toxic> toxics = img == active ? activeCutToxics : fallbackCutToxics;
-        String imgname = img == active ? "active" : "fallback";
-        String name;
-        if (toxics.size() < 2) {
-            for (ToxicDirection dir : ToxicDirection.values()) {
-                name = imgname + "_" + dir.name() + "_Cut_" + counter++;
+        synchronized (active.isCurrentlyCut) {
+            if (active.isCurrentlyCut.get()) {
+                log.info("Enable Active");
                 try {
-                    toxics.add(img.proxy.toxics().limitData(name, dir, 0));
-                    log.info("Successfully added toxic {} to {}.", name, imgname);
+                    for (Toxic t : active.proxy.toxics().getAll()) {
+                        log.info("Removing toxic {}", t.getName());
+                        t.remove();
+                    }
+                    active.isCurrentlyCut.set(false);
                 } catch (IOException e) {
-                    log.error("Could not add toxic {} to {}.", name, imgname, e);
+                    log.error("Could not remove toxics", e);
                 }
             }
         }
+        cutConnection(fallback, true);
     }
 
-    protected static void uncut(EdgeImage img) {
-        Collection<Toxic> toxics = img == active ? activeCutToxics : fallbackCutToxics;
-        if (toxics.size() == 0) {
-            return;
-        }
-        for (Toxic t : toxics) {
-            try {
-                t.remove();
-                log.info("Successfully removed toxic {}.", t.getName());
-            } catch (IOException e) {
-                log.error("Could not remove toxic! {}.", t.getName(), e);
+    protected static void cutConnection (EdgeImage img, boolean cut) {
+        // Don't use the ToxiproxyContainer.setConnectionCut method - if the connection is already cut and this method is called, the proxy hangs forever.
+        log.info("{} Image is currently {} cut.", img.getName(), img.isCurrentlyCut.get() ? "" : "not");
+        try {
+            synchronized (img.isCurrentlyCut) {
+                if (cut && !img.isCurrentlyCut.get()) {
+                    log.info("Cutting connection on {} image.", img.getName());
+                    img.proxy.toxics().bandwidth("CUT_CONNECTION_DOWNSTREAM", ToxicDirection.DOWNSTREAM, 0L);
+                    img.proxy.toxics().bandwidth("CUT_CONNECTION_UPSTREAM", ToxicDirection.UPSTREAM, 0L);
+                    img.isCurrentlyCut.set(true);
+                } else if (!cut && img.isCurrentlyCut.get()) {
+                    log.info("Uncutting connection on {} image.", img.getName());
+                    img.proxy.toxics().get("CUT_CONNECTION_DOWNSTREAM").remove();
+                    img.proxy.toxics().get("CUT_CONNECTION_UPSTREAM").remove();
+                    img.isCurrentlyCut.set(false);
+                } else {
+                    log.info("{} Image is already in the desired state.", img.getName());
+                }
             }
+        } catch (IOException e) {
+            throw new RuntimeException("Could not control proxy", e);
         }
-        toxics.clear();
+    }
+
+    protected static MessageSender.EquipmentState waitUntilRegistered (TestListeners.TestListener l, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
+        log.info(cut ? "Cutting connection on {} image." : "Reestablishing connection on {} image.", img.getName());
+        cutConnection(img, cut);
+        return l.listen().thenApply(c -> {
+            log.info(cut ? "Connection cut." : "Connection reestablished.");
+            return c;
+        }).get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
     }
 
     protected static <T> T waitUntilRegistered (CompletableFuture<T> future, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
-        log.info(cut ? "Cutting connection." : "Reestablishing connection.");
-        if (cut) {
-            cut(img);
-        } else {
-            uncut(img);
-        }
+        log.info(cut ? "Cutting connection on {} image." : "Reestablishing connection on {} image.", img.getName());
+        cutConnection(img, cut);
         return future.thenApply(c -> {
             log.info(cut ? "Connection cut." : "Connection reestablished.");
             return c;
@@ -153,13 +158,19 @@ public abstract class EdgeTestBase extends SpringTestBase {
         public ToxiproxyContainer.ContainerProxy proxy;
 
         @Getter
-        public String uri;
+        private final String name;
 
-        public EdgeImage(ToxiproxyContainer proxyContainer, Network network) {
+        @Getter
+        private String uri;
+
+        public final AtomicBoolean isCurrentlyCut = new AtomicBoolean(false);
+
+        public EdgeImage(ToxiproxyContainer proxyContainer, Network network, String name) {
             image.withNetwork(network).start();
             proxy = proxyContainer.getProxy(image, IOTEDGE);
             uri = "opc.tcp://" + proxy.getContainerIpAddress() + ":" + proxy.getProxyPort();
             log.info("Edge server ready at {}. ", uri);
+            this.name = name;
         }
     }
 }

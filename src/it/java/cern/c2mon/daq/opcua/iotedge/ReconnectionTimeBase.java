@@ -90,7 +90,7 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
 
     protected abstract ConnectionRecord recordInstance () throws InterruptedException, ExecutionException, TimeoutException;
 
-    protected abstract <T> Collection<Toxic> getToxics (String testName, T value, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException;
+    protected abstract <T> Collection<Toxic> applyToxics (String testName, T value, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException;
 
     protected void setUpBeans() throws ConfigurationException {
         super.setupEquipmentScope();
@@ -109,23 +109,23 @@ public abstract class ReconnectionTimeBase extends EdgeTestBase {
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.RandomUnsignedInt32.createDataTag()));
         pulseListener.getTagUpdate().get(0).get(TIMEOUT_TOXI, TimeUnit.SECONDS);
         pulseListener.reset();
-        pulseListener.setLogging(false);
     }
 
     protected <T> Map<T, Double> getAverages (String testName, T[] values, ThrowingFunc<AverageArg<T>, IOException, Toxic> toxicAction) throws IOException, InterruptedException, ExecutionException, TimeoutException {
         Map<T, Double> averages = new ConcurrentHashMap<>();
         for (T v : values) {
-            log.info("Test {} with value {}.", testName, v.toString());
-            Collection<Toxic> toxics = getToxics(testName, v, toxicAction);
+            log.info("################# Test {} with value {}.", testName, v.toString());
+            Collection<Toxic> toxics = applyToxics(testName, v, toxicAction);
             double avg = findAverageTime(new CountDownLatch(RUNS_PER_TEST), testName);
             averages.put(v, avg);
-            uncut(current);
+            log.info("Uncutting active image.");
+            cutConnection(active, false);
+            log.info("Uncutting fallback image.");
+            cutConnection(fallback, false);
             for (Toxic t : toxics) {
                 doWithTimeout(t);
                 log.info("Removed toxic {}", t.getName());
             }
-            EdgeImage passive = (current == active) ? fallback : active;
-            cut(passive); // cut a proxy only after removing the previous proxies, it may hang forever: https://github.com/Shopify/toxiproxy/pull/168
             toxics.clear();
         }
         return averages;
