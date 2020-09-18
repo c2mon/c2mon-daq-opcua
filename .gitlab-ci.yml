@@ -38,7 +38,7 @@ build:
     - docker-privileged
   script:
     - docker info
-    - mvn -U -B clean test failsafe:integration-test -DskipDockerBuild -DskipDockerTag --settings settings-ci.xml
+    - mvn -U -B clean -Dit.test EdgeIT#restartServerShouldReconnectAndResubscribe test failsafe:integration-test -DskipDockerBuild -DskipDockerTag --settings settings-ci.xml
   except:
     - tags
     - master

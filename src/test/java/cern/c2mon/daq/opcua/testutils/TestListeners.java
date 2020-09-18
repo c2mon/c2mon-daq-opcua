@@ -28,7 +28,6 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -78,6 +77,8 @@ public abstract class TestListeners {
                     }
                     tagValUpdate.complete(valueUpdate);
                 }
+            } else if (tagId != sourceID) {
+                log.info("Received a value from Tag with ID {}. Ignoring it, since sourceID is set to {}.", tagId, sourceID);
             }
         }
     }
