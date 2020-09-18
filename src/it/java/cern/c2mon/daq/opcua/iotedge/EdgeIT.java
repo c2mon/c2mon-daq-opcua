@@ -58,7 +58,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Slf4j
 @Testcontainers
 @TestPropertySource(locations = "classpath:application.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class EdgeIT extends EdgeTestBase {
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
@@ -134,8 +134,8 @@ public class EdgeIT extends EdgeTestBase {
     public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ regainedConnectionShouldContinueDeliveringSubscriptionValues ############");
         tagHandler.subscribeTags(Collections.singletonList(tag));
-        waitUntilRegistered(pulseListener.listen(), active, true);
-        waitUntilRegistered(pulseListener.listen(), active, false);
+        waitUntilRegistered(() -> pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.listen(), active, false);
 
         assertDoesNotThrow(() -> pulseListener.getTagUpdate().get(0).get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
@@ -143,9 +143,9 @@ public class EdgeIT extends EdgeTestBase {
     @Test
     public void connectionCutServerShouldSendLOST() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ connectionCutServerShouldSendLOST ############");
-        assertEquals(CONNECTION_LOST, waitUntilRegistered(pulseListener.listen(), active, true));
+        assertEquals(CONNECTION_LOST, waitUntilRegistered(() -> pulseListener.listen(), active, true));
         TimeUnit.MILLISECONDS.sleep(1000L);
-        waitUntilRegistered(pulseListener.listen(), active, false); //cleanup
+        waitUntilRegistered(() -> pulseListener.listen(), active, false); //cleanup
     }
 
     @Test
