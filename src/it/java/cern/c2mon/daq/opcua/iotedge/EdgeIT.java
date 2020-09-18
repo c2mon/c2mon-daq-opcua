@@ -120,14 +120,18 @@ public class EdgeIT extends EdgeTestBase {
         final CompletableFuture<MessageSender.EquipmentState> connectionLost = pulseListener.listen();
         active.image.stop();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
-
+        log.info("Lost connection.");
         final CompletableFuture<MessageSender.EquipmentState> connectionRegained = pulseListener.listen();
         active.image.start();
         assertEquals(MessageSender.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
-        pulseListener.reset();
-        pulseListener.setSourceID(alreadySubscribedTag.getId());
-        TimeUnit.MILLISECONDS.sleep(1000L);
-        assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        log.info("Regained connection.");
+
+        log.info("Waiting for ValueUpdate for Tag with ID {}.", alreadySubscribedTag.getId());
+        synchronized (this) {
+            pulseListener.reset();
+            pulseListener.setSourceID(alreadySubscribedTag.getId());
+            assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
+        }
     }
 
     @Test
