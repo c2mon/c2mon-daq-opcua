@@ -52,9 +52,9 @@ import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_TOXI;
 @Testcontainers
 public abstract class ReconnectionTimeBase extends EdgeTestBase {
 
-    protected static Long[] RATES = new Long[]{1L, 50L, 100L, 400L, 800L};
-    protected static Integer[] LATENCIES = new Integer[]{10, 50, 100, 400, 800};
-    protected static Integer[] SLICE_SIZES = new Integer[]{10, 50, 400, 800};
+    protected static Long[] RATES = new Long[]{1L, 20L, 50L, 100L, 150L, 200L, 400L, 800L};
+    protected static Integer[] LATENCIES = new Integer[]{10, 50, 100, 400, 1000, 2000};
+    protected static Integer[] SLICE_SIZES = new Integer[]{10, 50, 100, 200, 400, 800};
     protected static Integer SLICER_DELAY = 20;
     protected static int RUNS_PER_TEST = 5;
     protected final ScheduledExecutorService executor = Executors.newScheduledThreadPool(4);
