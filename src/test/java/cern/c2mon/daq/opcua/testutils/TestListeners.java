@@ -100,7 +100,7 @@ public abstract class TestListeners {
             alive.add(new CompletableFuture<>());
         }
 
-        public void reset() {
+        public synchronized void reset() {
             tagUpdate.clear();
             tagInvalid.clear();
             stateUpdate.clear();
@@ -112,7 +112,7 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onAlive() {
+        public synchronized void onAlive() {
             alive.get(0).complete(null);
             alive.add(0, new CompletableFuture<>());
         }
@@ -123,7 +123,7 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onTagInvalid(long tagId, SourceDataTagQuality quality) {
+        public synchronized void onTagInvalid(long tagId, SourceDataTagQuality quality) {
             if (logging) {
                 log.info("Received data tag {} invalid with quality {}", tagId, quality);
             }
@@ -132,7 +132,7 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onEquipmentStateUpdate(EquipmentState state) {
+        public synchronized void onEquipmentStateUpdate(EquipmentState state) {
             if (logging) {
                 log.info("State update: {}", state);
             }
@@ -141,7 +141,7 @@ public abstract class TestListeners {
         }
 
         @Override
-        public void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
+        public synchronized void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
             if (quality.isValid()) {
                 if (logging) {
                     log.info("received data tag {}, value update {}, quality {}", tagId, valueUpdate, quality);
