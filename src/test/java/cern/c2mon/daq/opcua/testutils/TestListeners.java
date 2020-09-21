@@ -152,11 +152,5 @@ public abstract class TestListeners {
                 onTagInvalid(tagId, quality);
             }
         }
-
-        public synchronized CompletableFuture<EquipmentState> listen() {
-            CompletableFuture<EquipmentState> stateFuture = new CompletableFuture<>();
-            stateUpdate.add(0, stateFuture);
-            return stateFuture;
-        }
     }
 }

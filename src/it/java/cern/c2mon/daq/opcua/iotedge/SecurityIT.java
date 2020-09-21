@@ -97,7 +97,7 @@ public class SecurityIT extends SpringTestBase {
         config.getCertifierPriority().put(LOAD, 3);
         cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
-        final CompletableFuture<MessageSender.EquipmentState> f = listener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> f = listener.getStateUpdate().get(0);
         controller.stop();
         try {
             f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
@@ -153,7 +153,7 @@ public class SecurityIT extends SpringTestBase {
 
         trustCertificatesOnClient();
 
-        final CompletableFuture<MessageSender.EquipmentState> state = listener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> state = listener.getStateUpdate().get(0);
         controller.connect(Collections.singleton(uri));
         assertEquals(MessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
@@ -177,7 +177,7 @@ public class SecurityIT extends SpringTestBase {
 
         log.info("Trust certificates server-side and reconnect...");
         trustCertificates();
-        final CompletableFuture<MessageSender.EquipmentState> state = listener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> state = listener.getStateUpdate().get(0);
 
         controller.connect(Collections.singleton(uri));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));

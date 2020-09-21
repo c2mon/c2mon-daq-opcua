@@ -112,15 +112,15 @@ public class FailoverIT extends EdgeTestBase {
     @Test
     public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldReconnectClient");
-        waitUntilRegistered(() -> pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
         executor.submit(serverSwitch);
-        assertEquals(MessageSender.EquipmentState.OK, waitUntilRegistered(() -> pulseListener.listen(), fallback, false));
+        assertEquals(MessageSender.EquipmentState.OK, waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), fallback, false));
     }
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldResumeSubscriptions: " + config.getRequestTimeout());
-        waitUntilRegistered(() -> pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
         executor.submit(serverSwitch);
         assertTagUpdate(tag.getId(), fallback);
     }
@@ -128,14 +128,14 @@ public class FailoverIT extends EdgeTestBase {
     @Test
     public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("longDisconnectShouldTriggerReconnectToAnyAvailableServer");
-        waitUntilRegistered(() -> pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
         assertTagUpdate(tag.getId(), active);
     }
 
     @Test
     public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
-        waitUntilRegistered(() -> pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
         executor.submit(serverSwitch);
         TimeUnit.MILLISECONDS.sleep(TIMEOUT);
         assertTagUpdate(tag.getId(), active);
@@ -144,7 +144,7 @@ public class FailoverIT extends EdgeTestBase {
     @Test
     public void reconnectAfterLongDisconnectShouldCancelReconnection() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
-        waitUntilRegistered(() -> pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
         TimeUnit.MILLISECONDS.sleep(config.getRequestTimeout() + 1000);
         assertTagUpdate(tag.getId(), active);
     }

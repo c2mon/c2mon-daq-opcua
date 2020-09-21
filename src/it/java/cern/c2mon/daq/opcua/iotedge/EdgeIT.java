@@ -117,15 +117,15 @@ public class EdgeIT extends EdgeTestBase {
     @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ restartServerShouldReconnectAndResubscribe ############");
-        final CompletableFuture<MessageSender.EquipmentState> connectionLost = pulseListener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> connectionLost = pulseListener.getStateUpdate().get(0);
         active.image.stop();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
         log.info("Lost connection.");
         pulseListener.reset();
         pulseListener.setSourceID(alreadySubscribedTag.getId());
-        final CompletableFuture<MessageSender.EquipmentState> connectionRegained = pulseListener.listen();
+        CompletableFuture<MessageSender.EquipmentState> completed = pulseListener.getStateUpdate().get(0);
         active.image.start();
-        assertEquals(MessageSender.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
+        assertEquals(MessageSender.EquipmentState.OK, completed.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
         log.info("Regained connection.");
 
         log.info("Waiting for ValueUpdate for Tag with ID {}.", alreadySubscribedTag.getId());
@@ -136,8 +136,8 @@ public class EdgeIT extends EdgeTestBase {
     public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ regainedConnectionShouldContinueDeliveringSubscriptionValues ############");
         tagHandler.subscribeTags(Collections.singletonList(tag));
-        waitUntilRegistered(() -> pulseListener.listen(), active, true);
-        waitUntilRegistered(() -> pulseListener.listen(), active, false);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, false);
 
         assertDoesNotThrow(() -> pulseListener.getTagUpdate().get(0).get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
@@ -145,9 +145,9 @@ public class EdgeIT extends EdgeTestBase {
     @Test
     public void connectionCutServerShouldSendLOST() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ connectionCutServerShouldSendLOST ############");
-        assertEquals(CONNECTION_LOST, waitUntilRegistered(() -> pulseListener.listen(), active, true));
+        assertEquals(CONNECTION_LOST, waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true));
         TimeUnit.MILLISECONDS.sleep(1000L);
-        waitUntilRegistered(() -> pulseListener.listen(), active, false); //cleanup
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, false); //cleanup
     }
 
     @Test
