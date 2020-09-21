@@ -40,7 +40,6 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
@@ -115,7 +114,7 @@ public class EdgeIT extends EdgeTestBase {
         assertTrue(s.isEmpty());
     }
 
-    @RepeatedTest(20)
+    @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ restartServerShouldReconnectAndResubscribe ############");
         final CompletableFuture<MessageSender.EquipmentState> connectionLost = pulseListener.getStateUpdate().get(0);
