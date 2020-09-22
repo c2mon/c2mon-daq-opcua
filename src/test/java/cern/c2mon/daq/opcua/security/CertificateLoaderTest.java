@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CertificateLoaderTest {
 
     String pfxPath = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
-    String keyPath = SecurityIT.class.getClassLoader().getResource("pkcs8server.key").getPath();
+    String keyPath = SecurityIT.class.getClassLoader().getResource("server.key").getPath();
     String certPath = SecurityIT.class.getClassLoader().getResource("server.crt").getPath();
     AppConfigProperties.PKIConfig pkiConfig;
     AppConfigProperties.KeystoreConfig ksConfig;
