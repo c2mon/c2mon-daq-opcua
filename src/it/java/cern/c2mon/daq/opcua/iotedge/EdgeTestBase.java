@@ -21,9 +21,7 @@
  */
 package cern.c2mon.daq.opcua.iotedge;
 
-import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.SpringTestBase;
-import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import eu.rekawek.toxiproxy.model.Toxic;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
@@ -39,6 +37,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import java.io.IOException;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import static cern.c2mon.daq.opcua.testutils.TestUtils.TIMEOUT_IT;
 
@@ -129,19 +128,11 @@ public abstract class EdgeTestBase extends SpringTestBase {
         }
     }
 
-    protected static MessageSender.EquipmentState waitUntilRegistered (TestListeners.TestListener l, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
+    // Always get the newest update, otherwise there's the possibility of waiting for an outdated completable future
+    protected static <T> T waitUntilRegistered(Supplier<CompletableFuture<T>> s, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
         log.info(cut ? "Cutting connection on {} image." : "Reestablishing connection on {} image.", img.getName());
         cutConnection(img, cut);
-        return l.listen().thenApply(c -> {
-            log.info(cut ? "Connection cut." : "Connection reestablished.");
-            return c;
-        }).get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
-    }
-
-    protected static <T> T waitUntilRegistered (CompletableFuture<T> future, EdgeImage img, boolean cut) throws InterruptedException, ExecutionException, TimeoutException {
-        log.info(cut ? "Cutting connection on {} image." : "Reestablishing connection on {} image.", img.getName());
-        cutConnection(img, cut);
-        return future.thenApply(c -> {
+        return s.get().thenApply(c -> {
             log.info(cut ? "Connection cut." : "Connection reestablished.");
             return c;
         }).get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);

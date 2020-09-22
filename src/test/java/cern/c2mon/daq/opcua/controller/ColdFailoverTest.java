@@ -80,6 +80,7 @@ public class ColdFailoverTest {
         endpoint.setThrowExceptions(false);
         endpoint.setInitLatch(initLatch);
         endpoint.setReadLatch(readLatch);
+        endpoint.setDelay(0L);
     }
 
     @AfterEach
@@ -106,6 +107,7 @@ public class ColdFailoverTest {
 
     @Test
     public void disconnectAfterInitializationShouldThrowException() throws InterruptedException, TimeoutException, ExecutionException {
+        endpoint.setDelay(10L);
         initLatch = new CountDownLatch(1);
         endpoint.setInitLatch(initLatch);
         final CompletableFuture<Void> f = runAsync(() -> assertThrows(CommunicationException.class,
@@ -119,6 +121,7 @@ public class ColdFailoverTest {
 
     @Test
     public void initializeAndStopShouldNotSetupMonitoring() throws InterruptedException, OPCUAException {
+        endpoint.setDelay(10L);
         endpoint.setReadValue(UByte.valueOf(10));
         endpoint.initialize("test");
         replay(endpoint.getMonitoredItem());
@@ -138,6 +141,7 @@ public class ColdFailoverTest {
 
     @Test
     public void monitoringShouldNotBeSetupOnStoppedEndpoint() throws InterruptedException, TimeoutException, ExecutionException, OPCUAException {
+        endpoint.setDelay(10L);
         endpoint.initialize("test");
         replay(endpoint.getMonitoredItem());
         final CompletableFuture<Void> f = runAsync(() -> {
@@ -163,6 +167,7 @@ public class ColdFailoverTest {
 
     @Test
     public void initializeShouldConnectToNextEndpointIfFirstIsUnhealthy() throws InterruptedException, TimeoutException, ExecutionException {
+        endpoint.setDelay(10L);
         endpoint.setReadValue(UByte.valueOf(10));
         final CompletableFuture<Void> f = runAsync(() -> initializeCatchAndVerifyConnectionMonitoring("redundant"));
         synchronized (endpoint.getReadLatch()) {
@@ -176,6 +181,7 @@ public class ColdFailoverTest {
 
     @Test
     public void initializeShouldConnectToFirstEndpointIfItIsHealthiest() throws InterruptedException, TimeoutException, ExecutionException {
+        endpoint.setDelay(10L);
         readLatch = new CountDownLatch(1);
         endpoint.setReadLatch(readLatch);
         endpoint.setReadValue(UByte.valueOf(100));
@@ -190,6 +196,7 @@ public class ColdFailoverTest {
 
     @Test
     public void disconnectedEndpointShouldThrowCommunicationException() throws InterruptedException, TimeoutException, ExecutionException {
+        endpoint.setDelay(10L);
         endpoint.setReadValue(UByte.valueOf(10));
         final CompletableFuture<Void> f = runAsync(() -> assertThrows(CommunicationException.class,
                 () -> setupConnectionMonitoringAndVerify("redundant"),
@@ -203,6 +210,7 @@ public class ColdFailoverTest {
 
     @Test
     public void stoppingEndpointDuringConnectionShouldNotSetupMonitoring() throws InterruptedException, TimeoutException, ExecutionException {
+        endpoint.setDelay(10L);
         replay(endpoint.getMonitoredItem());
         endpoint.setReadValue(UByte.valueOf(10));
         final CompletableFuture<Void> f = runAsync(() -> {
@@ -221,7 +229,8 @@ public class ColdFailoverTest {
         verify(endpoint.getMonitoredItem());
     }
     @Test
-    public void stoppingEndpointAfterMonitoringShouldNotSetupConsumer() throws InterruptedException, TimeoutException, ExecutionException, OPCUAException {
+    public void stoppingEndpointAfterMonitoringShouldNotSetupConsumer() throws InterruptedException, OPCUAException {
+        endpoint.setDelay(10L);
         setupConnectionMonitoring("redundant1", "redundant2");
         synchronized (endpoint.getInitLatch()) {
             initLatch.await(200L, TimeUnit.MILLISECONDS);

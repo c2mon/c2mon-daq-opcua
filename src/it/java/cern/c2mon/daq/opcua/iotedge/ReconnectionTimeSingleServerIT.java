@@ -41,7 +41,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 @Slf4j
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @TestPropertySource(properties = {"c2mon.daq.opcua.retryDelay=250", "c2mon.daq.opcua.redundancyMode=NONE"}, locations = "classpath:application.properties")
 public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
 
@@ -118,8 +118,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
         cutConnection(active, true);
         synchronized (this) {
             long reestablished = System.currentTimeMillis();
-            pulseListener.reset();
-            waitUntilRegistered(pulseListener.getTagUpdate().get(0), active, false);
+            waitUntilRegistered(() -> pulseListener.getTagUpdate().get(0), active, false);
             record = ConnectionRecord.of(reestablished, System.currentTimeMillis());
             log.info("Record: {}", record);
         }

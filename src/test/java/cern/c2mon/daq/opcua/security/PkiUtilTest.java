@@ -37,7 +37,7 @@ public class PkiUtilTest {
     AppConfigProperties.KeystoreConfig ksConfig;
     AppConfigProperties.PKIConfig pkiConfig;
     String pfxPath = SecurityIT.class.getClassLoader().getResource("keystore.pfx").getPath();
-    String keyPath = SecurityIT.class.getClassLoader().getResource("pkcs8server.key").getPath();
+    String keyPath = SecurityIT.class.getClassLoader().getResource("server.key").getPath();
     String certPath = SecurityIT.class.getClassLoader().getResource("server.crt").getPath();
 
     @BeforeEach

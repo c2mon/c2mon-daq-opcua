@@ -22,7 +22,6 @@
 package cern.c2mon.daq.opcua.iotedge;
 
 import cern.c2mon.daq.opcua.MessageSender;
-import cern.c2mon.daq.opcua.SpringTestBase;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.control.ControllerProxy;
@@ -42,9 +41,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.shaded.org.apache.commons.io.FileUtils;
 
@@ -61,27 +57,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @Testcontainers
 @TestPropertySource(locations = {"classpath:application.properties", "classpath:securityIT.properties"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class SecurityIT extends SpringTestBase {
+public class SecurityIT extends EdgeTestBase {
 
     Controller controller;
     IDataTagHandler tagHandler;
     TestListeners.Pulse listener;
 
-    private String uri;
-
-    @Container
-    public GenericContainer active = new GenericContainer<>("mcr.microsoft.com/iotedge/opc-plc")
-            .waitingFor(Wait.forLogMessage(".*OPC UA Server started.*\\n", 1))
-            .withCommand("--unsecuretransport")
-            .withExposedPorts(EdgeTestBase.IOTEDGE);
 
     @BeforeEach
     public void setupEquipmentScope() throws ConfigurationException {
+        log.info("############ SET UP ############");
         super.setupEquipmentScope();
         controller = ctx.getBean(ControllerProxy.class);
         tagHandler = ctx.getBean(DataTagHandler.class);
         listener = new TestListeners.Pulse();
-        uri = "opc.tcp://" + active.getContainerIpAddress() + ":" + active.getFirstMappedPort();
         ReflectionTestUtils.setField(tagHandler, "messageSender", listener);
         ReflectionTestUtils.setField(tagHandler, "controller", controller);
         final Endpoint e = (Endpoint) ReflectionTestUtils.getField(controller, "endpoint");
@@ -91,13 +80,14 @@ public class SecurityIT extends SpringTestBase {
 
     @AfterEach
     public void cleanUp() throws IOException, InterruptedException {
+        log.info("############ CLEAN UP ############");
         config.setTrustAllServers(true);
         config.getCertifierPriority().put(NO_SECURITY, 1);
         config.getCertifierPriority().put(GENERATE, 2);
         config.getCertifierPriority().put(LOAD, 3);
         cleanUpCertificates();
         FileUtils.deleteDirectory(new File(config.getPkiBaseDir()));
-        final CompletableFuture<MessageSender.EquipmentState> f = listener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> f = listener.getStateUpdate().get(0);
         controller.stop();
         try {
             f.get(TestUtils.TIMEOUT_IT, TimeUnit.MILLISECONDS);
@@ -109,14 +99,16 @@ public class SecurityIT extends SpringTestBase {
 
     @Test
     public void shouldConnectWithoutCertificateIfOthersFail() throws OPCUAException, InterruptedException, TimeoutException, ExecutionException {
+        log.info("############ shouldConnectWithoutCertificateIfOthersFail ############");
         final CompletableFuture<MessageSender.EquipmentState> f = listener.getStateUpdate().get(0);
-        controller.connect(Collections.singleton(uri));
+        controller.connect(Collections.singleton(active.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         assertEquals(MessageSender.EquipmentState.OK, f.get(TestUtils.TIMEOUT_IT*2, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void trustedSelfSignedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
+        log.info("############ trustedSelfSignedCertificateShouldAllowConnection ############");
         config.getCertifierPriority().remove(NO_SECURITY);
         config.getCertifierPriority().remove(LOAD);
         final CompletableFuture<MessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
@@ -125,6 +117,7 @@ public class SecurityIT extends SpringTestBase {
 
     @Test
     public void trustedLoadedCertificateShouldAllowConnection() throws IOException, InterruptedException, OPCUAException, TimeoutException, ExecutionException {
+        log.info("############ trustedLoadedCertificateShouldAllowConnection ############");
         config.getCertifierPriority().remove(NO_SECURITY);
         config.getCertifierPriority().remove(GENERATE);
         final CompletableFuture<MessageSender.EquipmentState> f = trustCertificatesOnServerAndConnect();
@@ -133,6 +126,7 @@ public class SecurityIT extends SpringTestBase {
 
     @Test
     public void activeKeyChainValidatorShouldFail() {
+        log.info("############ activeKeyChainValidatorShouldFail ############");
         config.setTrustAllServers(false);
         config.getCertifierPriority().remove(NO_SECURITY);
         config.getCertifierPriority().remove(GENERATE);
@@ -141,6 +135,7 @@ public class SecurityIT extends SpringTestBase {
 
     @Test
     public void serverCertificateInPkiFolderShouldSucceed() throws InterruptedException, OPCUAException, IOException, TimeoutException, ExecutionException {
+        log.info("############ serverCertificateInPkiFolderShouldSucceed ############");
         config.setTrustAllServers(false);
         config.getCertifierPriority().remove(NO_SECURITY);
         config.getCertifierPriority().remove(GENERATE);
@@ -153,8 +148,8 @@ public class SecurityIT extends SpringTestBase {
 
         trustCertificatesOnClient();
 
-        final CompletableFuture<MessageSender.EquipmentState> state = listener.listen();
-        controller.connect(Collections.singleton(uri));
+        final CompletableFuture<MessageSender.EquipmentState> state = listener.getStateUpdate().get(0);
+        controller.connect(Collections.singleton(active.getUri()));
         assertEquals(MessageSender.EquipmentState.OK, state.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
@@ -169,31 +164,27 @@ public class SecurityIT extends SpringTestBase {
     private CompletableFuture<MessageSender.EquipmentState> trustCertificatesOnServerAndConnect() throws IOException, InterruptedException, OPCUAException {
         log.info("Initial connection attempt...");
         try {
-            controller.connect(Collections.singleton(uri));
+            controller.connect(Collections.singleton(active.getUri()));
         } catch (CommunicationException e) {
             // expected behavior: rejected by the server
         }
         controller.stop();
 
         log.info("Trust certificates server-side and reconnect...");
-        trustCertificates();
-        final CompletableFuture<MessageSender.EquipmentState> state = listener.listen();
+        active.image.execInContainer("mkdir", "pki/trusted");
+        org.testcontainers.containers.Container.ExecResult cp = active.image.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
+        log.info("COPY:\n Exit Code: {}, Error Code: {}, \n {}", cp.getExitCode(), cp.getStderr(), cp.getStdout());
+        org.testcontainers.containers.Container.ExecResult list = active.image.execInContainer("ls", "-R", "pki/trusted");
+        log.info("TRUSTED:\n Exit Code: {}, Error Code: {}, \n {}", list.getExitCode(), list.getStderr(), list.getStdout());
+        final CompletableFuture<MessageSender.EquipmentState> state = listener.getStateUpdate().get(0);
 
-        controller.connect(Collections.singleton(uri));
+        controller.connect(Collections.singleton(active.getUri()));
         tagHandler.subscribeTags(Collections.singletonList(EdgeTagFactory.DipData.createDataTag()));
         return state;
     }
 
-
-
-    private void trustCertificates() throws IOException, InterruptedException {
-        log.info("Trust certificate.");
-        active.execInContainer("mkdir", "pki/trusted");
-        active.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
-    }
-
     private void cleanUpCertificates() throws IOException, InterruptedException {
         log.info("Cleanup.");
-        active.execInContainer("rm", "-r", "pki/trusted");
+        active.image.execInContainer("rm", "-r", "pki/trusted");
     }
 }

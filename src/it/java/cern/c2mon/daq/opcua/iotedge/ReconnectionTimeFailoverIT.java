@@ -139,7 +139,7 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
         log.info("RECORDING current time");
         long reestablished = System.currentTimeMillis();
         pulseListener.reset();
-        waitUntilRegistered(pulseListener.getTagUpdate().get(0), uncut, false);
+        waitUntilRegistered(() -> pulseListener.getTagUpdate().get(0), uncut, false);
         record = ConnectionRecord.of(reestablished, System.currentTimeMillis());
         log.info("Record: {}", record);
         return record;

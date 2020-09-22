@@ -55,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Slf4j
 @Testcontainers
 @TestPropertySource(properties = {"c2mon.daq.opcua.failoverDelay=200", "c2mon.daq.opcua.retryDelay=250", "c2mon.daq.opcua.redundancyMode=COLD"}, locations = "classpath:application.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class FailoverIT extends EdgeTestBase {
     TestListeners.Pulse pulseListener;
     IDataTagHandler tagHandler;
@@ -101,7 +101,7 @@ public class FailoverIT extends EdgeTestBase {
     }
 
     @AfterEach
-    public void cleanUp() throws InterruptedException {
+    public void cleanUp() {
         log.info("############ CLEAN UP ############");
         controllerProxy.stop();
         resetImageConnectivity();
@@ -112,54 +112,49 @@ public class FailoverIT extends EdgeTestBase {
     @Test
     public void coldFailoverShouldReconnect() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldReconnectClient");
-        waitUntilRegistered(pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
         executor.submit(serverSwitch);
-        TimeUnit.MILLISECONDS.sleep(config.getRequestTimeout() + 1000);
-        assertEquals(MessageSender.EquipmentState.OK, waitUntilRegistered(pulseListener.listen(), fallback, false));
+        assertEquals(MessageSender.EquipmentState.OK, waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), fallback, false));
     }
 
     @Test
     public void coldFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("coldFailoverShouldResumeSubscriptions: " + config.getRequestTimeout());
-        waitUntilRegistered(pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
         executor.submit(serverSwitch);
-        waitUntilRegistered(pulseListener.listen(), fallback, false);
-        assertTagUpdate();
+        assertTagUpdate(tag.getId(), fallback);
     }
 
     @Test
     public void longDisconnectShouldTriggerReconnectToAnyAvailableServer() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("longDisconnectShouldTriggerReconnectToAnyAvailableServer");
-        waitUntilRegistered(pulseListener.listen(), active, true);
-        waitUntilRegistered(pulseListener.listen(), fallback, false);
-        assertTagUpdate();
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
+        assertTagUpdate(tag.getId(), active);
     }
 
     @Test
     public void regainActiveConnectionWithColdFailoverShouldResumeSubscriptions() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("regainActiveConnectionWithColdFailoverShouldResumeSubscriptions");
-        waitUntilRegistered(pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
         executor.submit(serverSwitch);
         TimeUnit.MILLISECONDS.sleep(TIMEOUT);
-        waitUntilRegistered(pulseListener.listen(), active, false);
-        assertTagUpdate();
+        assertTagUpdate(tag.getId(), active);
     }
 
     @Test
     public void reconnectAfterLongDisconnectShouldCancelReconnection() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("restartServerWithColdFailoverShouldReconnectAndResubscribe");
-        waitUntilRegistered(pulseListener.listen(), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
         TimeUnit.MILLISECONDS.sleep(config.getRequestTimeout() + 1000);
-        waitUntilRegistered(pulseListener.listen(), active, false);
-        assertTagUpdate();
+        assertTagUpdate(tag.getId(), active);
     }
 
-    private void assertTagUpdate() throws InterruptedException, ExecutionException, TimeoutException {
-        CompletableFuture.runAsync(() -> {
-            log.info("Assert tag update for tag with ID {}.", tag.getId());
+    private void assertTagUpdate(long tagId, EdgeImage img) {
+        assertDoesNotThrow(() -> waitUntilRegistered(() -> {
+            log.info("Assert tag update for tag with ID {}.",tagId);
             pulseListener.reset();
             pulseListener.setSourceID(tag.getId());
-            assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
-        }).get(TIMEOUT_REDUNDANCY, TimeUnit.MINUTES);
+            return pulseListener.getTagValUpdate();
+        }, img, false));
     }
 }

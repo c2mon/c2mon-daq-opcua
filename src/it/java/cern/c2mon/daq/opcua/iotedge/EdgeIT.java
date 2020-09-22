@@ -24,7 +24,6 @@ package cern.c2mon.daq.opcua.iotedge;
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
 import cern.c2mon.daq.opcua.taghandling.DataTagHandler;
@@ -58,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Slf4j
 @Testcontainers
 @TestPropertySource(locations = "classpath:application.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class EdgeIT extends EdgeTestBase {
 
     private final ISourceDataTag tag = EdgeTagFactory.RandomUnsignedInt32.createDataTag();
@@ -117,16 +116,18 @@ public class EdgeIT extends EdgeTestBase {
     @Test
     public void restartServerShouldReconnectAndResubscribe() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ restartServerShouldReconnectAndResubscribe ############");
-        final CompletableFuture<MessageSender.EquipmentState> connectionLost = pulseListener.listen();
+        final CompletableFuture<MessageSender.EquipmentState> connectionLost = pulseListener.getStateUpdate().get(0);
         active.image.stop();
         connectionLost.get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS);
-
-        final CompletableFuture<MessageSender.EquipmentState> connectionRegained = pulseListener.listen();
-        active.image.start();
-        assertEquals(MessageSender.EquipmentState.OK, connectionRegained.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
+        log.info("Lost connection.");
         pulseListener.reset();
         pulseListener.setSourceID(alreadySubscribedTag.getId());
-        TimeUnit.MILLISECONDS.sleep(1000L);
+        CompletableFuture<MessageSender.EquipmentState> completed = pulseListener.getStateUpdate().get(0);
+        active.image.start();
+        assertEquals(MessageSender.EquipmentState.OK, completed.get(TestUtils.TIMEOUT_REDUNDANCY, TimeUnit.MINUTES));
+        log.info("Regained connection.");
+
+        log.info("Waiting for ValueUpdate for Tag with ID {}.", alreadySubscribedTag.getId());
         assertDoesNotThrow(() -> pulseListener.getTagValUpdate().get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
 
@@ -134,8 +135,8 @@ public class EdgeIT extends EdgeTestBase {
     public void regainedConnectionShouldContinueDeliveringSubscriptionValues() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ regainedConnectionShouldContinueDeliveringSubscriptionValues ############");
         tagHandler.subscribeTags(Collections.singletonList(tag));
-        waitUntilRegistered(pulseListener.listen(), active, true);
-        waitUntilRegistered(pulseListener.listen(), active, false);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true);
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, false);
 
         assertDoesNotThrow(() -> pulseListener.getTagUpdate().get(0).get(TestUtils.TIMEOUT_TOXI, TimeUnit.SECONDS));
     }
@@ -143,9 +144,9 @@ public class EdgeIT extends EdgeTestBase {
     @Test
     public void connectionCutServerShouldSendLOST() throws InterruptedException, ExecutionException, TimeoutException {
         log.info("############ connectionCutServerShouldSendLOST ############");
-        assertEquals(CONNECTION_LOST, waitUntilRegistered(pulseListener.listen(), active, true));
+        assertEquals(CONNECTION_LOST, waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, true));
         TimeUnit.MILLISECONDS.sleep(1000L);
-        waitUntilRegistered(pulseListener.listen(), active, false); //cleanup
+        waitUntilRegistered(() -> pulseListener.getStateUpdate().get(0), active, false); //cleanup
     }
 
     @Test
@@ -183,7 +184,7 @@ public class EdgeIT extends EdgeTestBase {
     }
 
     @Test
-    public void subscribeWithDeadband() throws ConfigurationException {
+    public void subscribeWithDeadband() {
         log.info("############ subscribeWithDeadband ############");
         final ISourceDataTag tagWithDeadband = EdgeTagFactory.RandomUnsignedInt32.createDataTag(10, ValueDeadbandType.NONE, 0);
         pulseListener.setSourceID(tagWithDeadband.getId());

@@ -87,14 +87,14 @@ public class TestEndpoint implements Endpoint {
     @Override
     public void initialize(String uri) throws OPCUAException {
         this.uri = uri;
-        try {
-            TimeUnit.MILLISECONDS.sleep(delay);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
         synchronized (initLatch) {
             if (initLatch != null) {
                 initLatch.countDown();
+            }
+            try {
+                TimeUnit.MILLISECONDS.sleep(delay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
             if (throwExceptions) {
                 throw toThrow == null ? new CommunicationException(CONNECT) : toThrow;
@@ -161,21 +161,21 @@ public class TestEndpoint implements Endpoint {
     @Override
     public Map.Entry<ValueUpdate, SourceDataTagQuality> read(NodeId nodeId) throws OPCUAException {
         final Object r = readValue;
-        try {
-            TimeUnit.MILLISECONDS.sleep(delay);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
         synchronized (readLatch) {
             if (readLatch != null) {
                 readLatch.countDown();
             }
+            try {
+                TimeUnit.MILLISECONDS.sleep(delay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             if (throwExceptions) {
                 throw toThrow == null ? new CommunicationException(READ) : toThrow;
             }
-            final SourceDataTagQuality quality = new SourceDataTagQuality(returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
-            return new AbstractMap.SimpleEntry<>(new ValueUpdate(r), quality);
         }
+        final SourceDataTagQuality quality = new SourceDataTagQuality(returnGoodStatusCodes ? SourceDataTagQualityCode.OK : SourceDataTagQualityCode.VALUE_CORRUPTED);
+        return new AbstractMap.SimpleEntry<>(new ValueUpdate(r), quality);
     }
 
     @Override
