@@ -34,7 +34,9 @@ import cern.c2mon.daq.test.UseHandler;
 import cern.c2mon.daq.tools.equipmentexceptions.EqCommandTagException;
 import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
+import cern.c2mon.shared.common.process.EquipmentConfiguration;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
+import cern.c2mon.shared.daq.config.ChangeReport;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.After;
 import org.junit.ClassRule;
@@ -62,7 +64,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @TestPropertySource(locations = "classpath:application.properties")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
 
     private static final int PILOT = 8890;
@@ -127,6 +129,20 @@ public class SimEngineMessageHandlerIT extends GenericMessageHandlerTest {
         expectLastCall().times(tagNr);
 
         handler.refreshAllDataTags();
+    }
+
+    @Test
+    @UseConf("simengine_power.xml")
+    public void restartDAQShouldNotHaveIssuesWithEquipmentScope() throws EqIOException {
+        handler.connectToDataSource();
+        EquipmentConfiguration oldConfig = (EquipmentConfiguration) handler.getEquipmentConfiguration();
+        EquipmentConfiguration config = oldConfig.clone();
+        config.setEquipmentAddress("http://localhost:8890");
+        final ChangeReport changeReport = new ChangeReport();
+
+        handler.onUpdateEquipmentConfiguration(config, oldConfig, changeReport);
+        assertTrue(changeReport.isSuccess());
+        assertTrue(changeReport.getInfoMessage().contains("DAQ restarted."));
     }
 
     @Test
