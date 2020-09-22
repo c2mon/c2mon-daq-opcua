@@ -184,9 +184,10 @@ public class SecurityIT extends SpringTestBase {
 
         log.info("Trust certificates server-side and reconnect...");
         active.execInContainer("mkdir", "pki/trusted");
-        active.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
-        org.testcontainers.containers.Container.ExecResult list = active.execInContainer("ls", "-R", "pki");
-        log.info("Trusted: {}, {}", list.getStderr(), list.getStdout());
+        org.testcontainers.containers.Container.ExecResult cp = active.execInContainer("cp", "-r", "pki/rejected/certs", "pki/trusted");
+        log.info("COPY:\n Exit Code: {}, Error Code: {}, \n {}", cp.getExitCode(), cp.getStderr(), cp.getStdout());
+        org.testcontainers.containers.Container.ExecResult list = active.execInContainer("ls", "-R", "pki/trusted");
+        log.info("TRUSTED:\n Exit Code: {}, Error Code: {}, \n {}", list.getExitCode(), list.getStderr(), list.getStdout());
         final CompletableFuture<MessageSender.EquipmentState> state = listener.getStateUpdate().get(0);
 
         controller.connect(Collections.singleton(uri));
