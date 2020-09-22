@@ -28,8 +28,8 @@ import eu.rekawek.toxiproxy.model.Toxic;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
 import eu.rekawek.toxiproxy.model.toxic.Slicer;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -58,7 +58,7 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
         log.info("############ TEST ############");
     }
 
-    @Ignore
+    @Test
     public void baselineWithFailover () {
         String testName = "Baseline";
         log.info(testName);
@@ -66,7 +66,7 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
         log.info("MTTR Baseline with Failover: {}", avg);
     }
 
-    @Ignore
+    @Test
     public void mttrByLatencyWithFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Failover_Latency";
         log.info(testName);
@@ -75,7 +75,7 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
         printResults(averages, Integer::compareTo);
     }
 
-    @Ignore
+    @Test
     public void mttrByBandwidthWithFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Failover_Bandwidth";
         log.info(testName);
@@ -84,7 +84,7 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
         printResults(averages, Long::compareTo);
     }
 
-    @Ignore
+    @Test
     public void mttrBySlicerWithFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Failover_Slicer";
         log.info(testName);
@@ -97,7 +97,7 @@ public class ReconnectionTimeFailoverIT extends ReconnectionTimeBase {
         printResults(averages, Integer::compareTo);
     }
 
-    @Ignore
+    @Test
     public void mttrByDelaySlicerWithFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Failover_Delay_Slicer";
         log.info(testName);
