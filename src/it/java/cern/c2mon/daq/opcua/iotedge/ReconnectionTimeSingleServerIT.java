@@ -27,8 +27,8 @@ import eu.rekawek.toxiproxy.model.Toxic;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
 import eu.rekawek.toxiproxy.model.toxic.Slicer;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 
@@ -53,7 +53,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
         log.info("############ TEST ############");
     }
 
-    @Test
+    @Ignore
     public void baselineWithoutFailover () {
         String testName = "Baseline";
         log.info(testName);
@@ -61,7 +61,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
         log.info("MTTR Baseline without Failover: {}", avg);
     }
 
-    @Test
+    @Ignore
     public void mttrByLatencyWithoutFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Latency";
         log.info(testName);
@@ -70,7 +70,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
         printResults(averages, Integer::compareTo);
     }
 
-    @Test
+    @Ignore
     public void mttrByBandwidthWithoutFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Bandwidth";
         log.info(testName);
@@ -79,7 +79,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
         printResults(averages, Long::compareTo);
     }
 
-    @Test
+    @Ignore
     public void mttrBySlicerWithoutFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Slicer";
         log.info(testName);
@@ -89,7 +89,7 @@ public class ReconnectionTimeSingleServerIT extends ReconnectionTimeBase {
         printResults(averages, Integer::compareTo);
     }
 
-    @Test
+    @Ignore
     public void mttrByDelaySlicerWithoutFailover () throws InterruptedException, ExecutionException, TimeoutException, IOException {
         String testName = "Delay_Slicer";
         log.info(testName);
