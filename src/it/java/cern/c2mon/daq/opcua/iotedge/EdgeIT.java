@@ -24,7 +24,6 @@ package cern.c2mon.daq.opcua.iotedge;
 import cern.c2mon.daq.opcua.MessageSender;
 import cern.c2mon.daq.opcua.connection.Endpoint;
 import cern.c2mon.daq.opcua.control.Controller;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.taghandling.CommandTagHandler;
 import cern.c2mon.daq.opcua.taghandling.DataTagHandler;
@@ -185,7 +184,7 @@ public class EdgeIT extends EdgeTestBase {
     }
 
     @Test
-    public void subscribeWithDeadband() throws ConfigurationException {
+    public void subscribeWithDeadband() {
         log.info("############ subscribeWithDeadband ############");
         final ISourceDataTag tagWithDeadband = EdgeTagFactory.RandomUnsignedInt32.createDataTag(10, ValueDeadbandType.NONE, 0);
         pulseListener.setSourceID(tagWithDeadband.getId());
