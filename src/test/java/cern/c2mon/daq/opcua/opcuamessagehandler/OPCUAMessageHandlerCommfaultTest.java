@@ -29,6 +29,7 @@ import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 
@@ -40,13 +41,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @UseHandler(OPCUAMessageHandler.class)
 public class OPCUAMessageHandlerCommfaultTest extends OPCUAMessageHandlerTestBase {
 
-    OPCUAMessageSender sender;
+    OPCUAMessageSender sender = new OPCUAMessageSender(new SimpleMeterRegistry());
     TestUtils.CommfaultSenderCapture capture;
 
     @Override
     protected void beforeTest() throws Exception {
-
-        sender = new OPCUAMessageSender();
         super.beforeTest(sender);
         testEndpoint.setThrowExceptions(true);
         testEndpoint.setDelay(100);
