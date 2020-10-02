@@ -71,6 +71,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     private AliveWriter aliveWriter;
     private CommandTagHandler commandTagHandler;
     private AppConfigProperties appConfigProperties;
+    private MessageSender sender;
     private EquipmentScope scope;
 
 
@@ -95,7 +96,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             controller.connect(addresses);
         } catch (OPCUAException e) {
             log.error("Connection failed with error: ", e);
-            getEquipmentMessageSender().confirmEquipmentStateIncorrect(CONNECTION_FAILED.message);
+            sender.onEquipmentStateUpdate(CONNECTION_FAILED);
             throw e;
         }
 
@@ -223,7 +224,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         appConfigProperties = ctx.getBean(AppConfigProperties.class);
         dataTagChanger = ctx.getBean(DataTagChanger.class);
         aliveWriter = ctx.getBean(AliveWriter.class);
-        ctx.getBean(MessageSender.class).initialize(getEquipmentMessageSender());
+        sender = ctx.getBean(MessageSender.class);
+        sender.initialize(getEquipmentMessageSender());
     }
 
     private void startAliveWriter(IEquipmentConfiguration config) throws ConfigurationException {

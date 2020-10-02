@@ -46,6 +46,7 @@ public abstract class OPCUAMessageHandlerTestBase extends GenericMessageHandlerT
     protected TagSubscriptionManager mapper;
     protected TestEndpoint testEndpoint;
     protected AppConfigProperties appConfigProperties;
+    protected AppConfig appConfig;
     protected IDataTagHandler dataTagHandler;
     protected CommandTagHandler commandTagHandler;
     protected DataTagChanger dataTagChanger;
@@ -62,6 +63,7 @@ public abstract class OPCUAMessageHandlerTestBase extends GenericMessageHandlerT
         commandTagHandler = new CommandTagHandler(testController);
         dataTagChanger = new DataTagChanger(dataTagHandler);
         writer = new AliveWriter(testController, sender);
+        appConfig = new AppConfig();
 
         handler = (OPCUAMessageHandler) msgHandler;
         handler.setContext(context);
@@ -76,6 +78,7 @@ public abstract class OPCUAMessageHandlerTestBase extends GenericMessageHandlerT
         expect(context.getBean(MessageSender.class)).andReturn(sender).anyTimes();
         expect(context.getBean(IDataTagHandler.class)).andReturn(dataTagHandler).anyTimes();
         expect(context.getBean(CommandTagHandler.class)).andReturn(commandTagHandler).anyTimes();
+        expect(context.getBean(AppConfig.class)).andReturn(appConfig).anyTimes();
         expect(context.getBean(AppConfigProperties.class)).andReturn(appConfigProperties).anyTimes();
         expect(context.getBean(DataTagChanger.class)).andReturn(dataTagChanger).anyTimes();
         expect(context.getBean(AliveWriter.class)).andReturn(writer).anyTimes();

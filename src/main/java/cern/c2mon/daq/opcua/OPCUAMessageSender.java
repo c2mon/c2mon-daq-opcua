@@ -25,7 +25,7 @@ import cern.c2mon.daq.common.IEquipmentMessageSender;
 import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import lombok.NoArgsConstructor;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jmx.export.annotation.ManagedOperation;
@@ -34,7 +34,6 @@ import org.springframework.jmx.export.annotation.ManagedResource;
 /**
  * Handles communication with the DAQ Core's {@link IEquipmentMessageSender}
  */
-@NoArgsConstructor
 @Slf4j
 @Primary
 @ManagedResource(objectName = "OPCUAMessageSender", description = "Communicate with the DAQ Core process")
@@ -42,6 +41,11 @@ import org.springframework.jmx.export.annotation.ManagedResource;
 public class OPCUAMessageSender implements MessageSender {
 
     private IEquipmentMessageSender sender;
+    private TagCounter perTagCounter;
+
+    public OPCUAMessageSender(MeterRegistry meterRegistry) {
+        this.perTagCounter = new TagCounter("tag-value", "tag-name", meterRegistry);
+    }
 
     @Override
     public void initialize(IEquipmentMessageSender sender) {
@@ -51,6 +55,7 @@ public class OPCUAMessageSender implements MessageSender {
     @Override
     public void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
         if (quality.isValid()) {
+            perTagCounter.increment(tagId);
             this.sender.update(tagId, valueUpdate, quality);
         } else {
             onTagInvalid(tagId, quality);

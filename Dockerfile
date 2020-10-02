@@ -1,5 +1,6 @@
 FROM openjdk:11-jre-slim
 COPY target/distribution /
+ADD src/test/resources/conf/edge.xml edge.xml
 ADD target/c2mon-daq-opcua-1.9.11-SNAPSHOT-dist.tar.gz c2mon-daq-opcua-1.9.11-SNAPSHOT
 EXPOSE 8913
 ENV JAVA_TOOL_OPTIONS "-Dcom.sun.management.jmxremote.ssl=false \
