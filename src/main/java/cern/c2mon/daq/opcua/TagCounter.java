@@ -27,23 +27,33 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * The TagCounter keeps track of the total number of updates for each Tag by ID.
+ */
 public class TagCounter {
 
     private String name;
-
     private MeterRegistry meterRegistry;
-    private Map<String, Counter> validCounter = new ConcurrentHashMap<>();
+    private Map<Long, Counter> validCounter = new ConcurrentHashMap<>();
 
+    /**
+     * Creates a new TagCounter
+     * @param name the name of the counter
+     * @param registry the Prometheus meterRegistry to register the tag updates to
+     */
     public TagCounter(String name, MeterRegistry registry) {
         this.name = name;
         this.meterRegistry = registry;
     }
 
-    public void incrementValid (long tagValue) {
-        String tagId = String.valueOf(tagValue);
+    /**
+     * Increments the counter value for the Tag with a given ID by 1 (starting by 0)
+     * @param tagId the tagId whose function calls shall be incremented
+     */
+    public void incrementValid (long tagId) {
         Counter counter = validCounter.get(tagId);
         if (counter == null)  {
-            counter = Counter.builder(name).tags("tag_id", tagId).register(meterRegistry);
+            counter = Counter.builder(name).tags("tag_id", String.valueOf(tagId)).register(meterRegistry);
             validCounter.put(tagId, counter);
         }
         counter.increment();
