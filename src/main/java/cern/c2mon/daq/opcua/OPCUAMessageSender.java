@@ -27,6 +27,7 @@ import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
@@ -41,10 +42,12 @@ import org.springframework.jmx.export.annotation.ManagedResource;
 public class OPCUAMessageSender implements MessageSender {
 
     private IEquipmentMessageSender sender;
-    private TagCounter perTagCounter;
+    private TagCounter validTagCounter;
+    private TagCounter invalidTagCounter;
 
-    public OPCUAMessageSender(MeterRegistry meterRegistry) {
-        this.perTagCounter = new TagCounter("tag-value", "tag-name", meterRegistry);
+    public OPCUAMessageSender(@Autowired MeterRegistry meterRegistry) {
+        this.validTagCounter = new TagCounter("valid_tag_counter", meterRegistry);
+        this.invalidTagCounter = new TagCounter("invalid_tag_counter", meterRegistry);
     }
 
     @Override
@@ -55,7 +58,7 @@ public class OPCUAMessageSender implements MessageSender {
     @Override
     public void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
         if (quality.isValid()) {
-            perTagCounter.increment(tagId);
+            validTagCounter.incrementValid(tagId);
             this.sender.update(tagId, valueUpdate, quality);
         } else {
             onTagInvalid(tagId, quality);
@@ -65,6 +68,7 @@ public class OPCUAMessageSender implements MessageSender {
     @Override
     public void onTagInvalid(long tagId, final SourceDataTagQuality quality) {
         this.sender.update(tagId, quality);
+        invalidTagCounter.incrementValid(tagId);
     }
 
     @Override
