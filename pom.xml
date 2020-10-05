@@ -25,6 +25,8 @@
 
     <properties>
         <guava.version>29.0-jre</guava.version>
+        <gitlab-repo>${project.artifactId}</gitlab-repo>
+        <dockerhub-repo>${project.artifactId}</dockerhub-repo>
     </properties>
 
     <dependencies>
@@ -163,9 +165,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <release>11</release>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.sonarsource.scanner.maven</groupId>
@@ -183,7 +182,6 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
-                    <release>11</release>
                 </configuration>
             </plugin>
             <plugin>
@@ -260,6 +258,31 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <configuration>
+                    <container>
+                        <environment>
+                            <JAVA_TOOL_OPTIONS>-Dcom.sun.management.jmxremote.ssl=false
+                                -Dcom.sun.management.jmxremote.authenticate=false
+                                -Dcom.sun.management.jmxremote.port=8913 -Dcom.sun.management.jmxremote.rmi.port=8913
+                                -Dcom.sun.management.jmxremote.host=0.0.0.0 -Djava.rmi.server.hostname=0.0.0.0</JAVA_TOOL_OPTIONS>
+                        </environment>
+                        <ports>
+                            <port>8913</port>
+                        </ports>
+                    </container>
+                    <extraDirectories>
+                        <paths>
+                            <path>
+                                <from>${project.basedir}/src/it/resources/jib</from>
+                                <into>/</into>
+                            </path>
+                        </paths>
+                    </extraDirectories>
+                </configuration>
             </plugin>
         </plugins>
     </build>
