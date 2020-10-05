@@ -30,23 +30,21 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TagCounter {
 
     private String name;
-    private String tagName;
 
     private MeterRegistry meterRegistry;
-    private Map<String, Counter> counters = new ConcurrentHashMap<>();
+    private Map<String, Counter> validCounter = new ConcurrentHashMap<>();
 
-    public TagCounter(String name, String tagName, MeterRegistry registry) {
+    public TagCounter(String name, MeterRegistry registry) {
         this.name = name;
-        this.tagName = tagName;
         this.meterRegistry = registry;
     }
 
-    public void increment(long tagValue) {
-        final String tagValueString = "data-tag-id-" + tagValue;
-        Counter counter = counters.get(tagValueString);
+    public void incrementValid (long tagValue) {
+        String tagId = String.valueOf(tagValue);
+        Counter counter = validCounter.get(tagId);
         if (counter == null)  {
-            counter = Counter.builder(name).tags(tagName, tagValueString).register(meterRegistry);
-            counters.put(tagValueString, counter);
+            counter = Counter.builder(name).tags("tag_id", tagId).register(meterRegistry);
+            validCounter.put(tagId, counter);
         }
         counter.increment();
     }
