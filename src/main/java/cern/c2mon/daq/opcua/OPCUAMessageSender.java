@@ -45,6 +45,10 @@ public class OPCUAMessageSender implements MessageSender {
     private TagCounter validTagCounter;
     private TagCounter invalidTagCounter;
 
+    /**
+     * To be used by Spring,creates a new OPCUAMessageSender with appropriate {@link TagCounter}s for valid and invalid tag updates to register to the meterRegistry
+     * @param meterRegistry currently used registry to export metrics to Prometheus
+     */
     public OPCUAMessageSender(@Autowired MeterRegistry meterRegistry) {
         this.validTagCounter = new TagCounter("valid_tag_counter", meterRegistry);
         this.invalidTagCounter = new TagCounter("invalid_tag_counter", meterRegistry);
