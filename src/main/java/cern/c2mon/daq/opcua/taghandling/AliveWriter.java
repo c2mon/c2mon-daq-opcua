@@ -50,50 +50,17 @@ import java.util.concurrent.*;
 @EquipmentScoped
 public class AliveWriter {
 
-    @RequiredArgsConstructor
-    private class WriteAliveTask {
-        private final NodeId aliveTagAddress;
-        private ScheduledFuture<?> writeAliveTask;
-        private int writeCounter;
-
-        void startTask (long aliveTagInterval) {
-            if (aliveTagInterval > 0L) {
-                this.writeAliveTask = executor.scheduleAtFixedRate(this::aliveTagMonitoring, aliveTagInterval, aliveTagInterval, TimeUnit.MILLISECONDS);
-            } else {
-                log.error(ExceptionContext.BAD_ALIVE_TAG_INTERVAL.getMessage());
-            }
-        }
-
-        void cancel () {
-            if (writeAliveTask != null && !writeAliveTask.isCancelled()) {
-                log.info("Stopping WriteAliveTask...");
-                writeAliveTask.cancel(true);
-            }
-        }
-
-        private void aliveTagMonitoring () {
-            try {
-                if (controller.write(aliveTagAddress, writeCounter)) {
-                    messageSender.onAlive();
-                }
-                writeCounter = (writeCounter < Byte.MAX_VALUE) ? writeCounter++ : 0;
-            } catch (OPCUAException e) {
-                log.error("Error while writing alive. Retrying...", e);
-            }
-        }
-    }
-
     private final Controller controller;
     private final MessageSender messageSender;
+    private final Map<Long, WriteAliveTask> tasks = new ConcurrentHashMap<>();
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-    private Map<Long, WriteAliveTask> tasks = new ConcurrentHashMap<>();
 
     /**
      * Start the AliveWriter on the given aliveTag.
      * @param aliveTag         the DataTag containing the Node acting as AliveTag
      * @param aliveTagInterval the interval in which to write to the aliveTag
      */
-    public void startAliveWriter (ISourceDataTag aliveTag, long aliveTagInterval) {
+    public void startAliveWriter(ISourceDataTag aliveTag, long aliveTagInterval) {
         final ItemDefinition def;
         try {
             def = ItemDefinition.of(aliveTag);
@@ -114,7 +81,7 @@ public class AliveWriter {
      * @param aliveTagInterval the interval during which to read from the aliveTag
      */
     @ManagedOperation(description = "Manually start the AliveWriter for the AliveTag with the given ID. It must have been initialized during DAQ startup.")
-    public void startAliveWriter (long tagId, long aliveTagInterval) {
+    public void startAliveWriter(long tagId, long aliveTagInterval) {
         WriteAliveTask aliveTask = tasks.get(tagId);
         if (aliveTask == null) {
             log.error("The AliveWriter has not been configured appropriately and cannot be invoked.");
@@ -132,7 +99,7 @@ public class AliveWriter {
     /**
      * End the AliveTag supervision procedure.
      */
-    public void stopAliveWriter () {
+    public void stopAliveWriter() {
         tasks.keySet().forEach(this::stopAliveWriter);
         executor.shutdownNow();
     }
@@ -142,13 +109,46 @@ public class AliveWriter {
      * @param tagId ID of the AliveTag which shall no longer be written to.
      */
     @ManagedOperation(description = "Manually stop the AliveWriter")
-    public void stopAliveWriter (long tagId) {
+    public void stopAliveWriter(long tagId) {
         WriteAliveTask aliveTask = tasks.get(tagId);
         if (aliveTask != null) {
             log.error("Stop writing to AliveTag with ID {}.", tagId);
             aliveTask.cancel();
         } else {
             log.error("Nothing to stop, no task is running for AliveTag with ID {}.", tagId);
+        }
+    }
+
+    @RequiredArgsConstructor
+    private class WriteAliveTask {
+        private final NodeId aliveTagAddress;
+        private ScheduledFuture<?> aliveTask;
+        private int writeCounter;
+
+        private void startTask(long aliveTagInterval) {
+            if (aliveTagInterval > 0L) {
+                this.aliveTask = executor.scheduleAtFixedRate(this::aliveTagMonitoring, aliveTagInterval, aliveTagInterval, TimeUnit.MILLISECONDS);
+            } else {
+                log.error(ExceptionContext.BAD_ALIVE_TAG_INTERVAL.getMessage());
+            }
+        }
+
+        private void cancel() {
+            if (aliveTask != null && !aliveTask.isCancelled()) {
+                log.info("Stopping WriteAliveTask...");
+                aliveTask.cancel(true);
+            }
+        }
+
+        private void aliveTagMonitoring() {
+            try {
+                if (controller.write(aliveTagAddress, writeCounter)) {
+                    messageSender.onAlive();
+                }
+                writeCounter = (writeCounter < Byte.MAX_VALUE) ? writeCounter++ : 0;
+            } catch (OPCUAException e) {
+                log.error("Error while writing alive. Retrying...", e);
+            }
         }
     }
 }

@@ -12,15 +12,21 @@
         <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
         <commfault-tag-id>107211</commfault-tag-id>
         <commfault-tag-value>true</commfault-tag-value>
-        <address>URI=opc.tcp://edge:50000</address>
+        <address>URI=opc.tcp://edge:50000;aliveWriterEnabled=true</address>
         <SubEquipmentUnits>
-            <SubEquipmentUnit id="333_2" name="E_EDGE_1">
-                <commfault-tag-id>107211</commfault-tag-id>
+            <SubEquipmentUnit id="52501" name="E_TEST_1">
+                <commfault-tag-id>101</commfault-tag-id>
                 <commfault-tag-value>true</commfault-tag-value>
-
+                <alive-tag-id>2</alive-tag-id>
+                <alive-interval>5000</alive-interval>
+            </SubEquipmentUnit>
+            <SubEquipmentUnit id="52502" name="E_TEST_2">
+                <commfault-tag-id>102</commfault-tag-id>
+                <commfault-tag-value>true</commfault-tag-value>
+                <alive-tag-id>3</alive-tag-id>
+                <alive-interval>10000</alive-interval>
             </SubEquipmentUnit>
         </SubEquipmentUnits>
-
         <DataTags>
             <DataTag id="1" name="EDGE:ALTERNATINGBOOLEAN" control="false">
                 <data-type>java.lang.Boolean</data-type>

@@ -81,7 +81,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * @throws EqIOException Throws an {@link EqIOException} if there is an IO problem during startup.
      */
     @Override
-    public void connectToDataSource () throws EqIOException {
+    public void connectToDataSource() throws EqIOException {
         log.info("Initializing the OPC UA DAQ");
         IEquipmentConfiguration config = getEquipmentConfiguration();
 
@@ -123,7 +123,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * Called when the core wants the OPC module to disconnect from the OPC server and discard all configuration.
      */
     @Override
-    public void disconnectFromDataSource () {
+    public void disconnectFromDataSource() {
         log.info("Disconnecting from OPC data source...");
         dataTagHandler.reset();
         controller.stop();
@@ -133,7 +133,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
 
     /** Triggers the refresh of all values directly from the OPC server. */
     @Override
-    public void refreshAllDataTags () {
+    public void refreshAllDataTags() {
         dataTagHandler.refreshAllDataTags();
     }
 
@@ -142,7 +142,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * @param dataTagId The id of the data tag to refresh.
      */
     @Override
-    public void refreshDataTag (final long dataTagId) {
+    public void refreshDataTag(final long dataTagId) {
         ISourceDataTag sourceDataTag = getEquipmentConfiguration().getSourceDataTag(dataTagId);
         if (sourceDataTag == null) {
             log.error("SourceDataTag with ID {} is unknown.", dataTagId);
@@ -161,7 +161,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      *                               uncertain.
      */
     @Override
-    public String runCommand (SourceCommandTagValue value) throws EqCommandTagException {
+    public String runCommand(SourceCommandTagValue value) throws EqCommandTagException {
         Long id = value.getId();
         ISourceCommandTag tag = getEquipmentConfiguration().getSourceCommandTag(id);
         if (tag == null) {
@@ -182,7 +182,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      *                     restart of the DAQ failed.
      */
     @Override
-    public void onUpdateEquipmentConfiguration (final IEquipmentConfiguration newConfig, final IEquipmentConfiguration oldConfig, final ChangeReport changeReport) {
+    public void onUpdateEquipmentConfiguration(final IEquipmentConfiguration newConfig, final IEquipmentConfiguration oldConfig, final ChangeReport changeReport) {
         log.info("Updating the Equipment Configuration");
         changeReport.setState(CHANGE_STATE.PENDING);
         if (!newConfig.getAddress().equals(oldConfig.getAddress())) {
@@ -210,7 +210,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * instance of the prototype-scoped {@link EquipmentScope} once when initiating the data collection process ensures
      * that a new set of beans is created.
      */
-    private void initializeScope (String equipmentName) {
+    private void initializeScope(String equipmentName) {
         ApplicationContext ctx = getContext();
         scope = new EquipmentScope();
         scope.setExporter(ctx.getBean(AppConfig.class).mBeanExporter());
@@ -226,7 +226,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         ctx.getBean(MessageSender.class).initialize(getEquipmentMessageSender());
     }
 
-    private void startAliveWriter (IEquipmentConfiguration config) throws ConfigurationException {
+    private void startAliveWriter(IEquipmentConfiguration config) throws ConfigurationException {
         StringBuilder errorLog = new StringBuilder(startAliveWriter(config.getAliveTagId(), config.getAliveTagInterval(), config));
         for (SubEquipmentConfiguration c : config.getSubEquipmentConfigurations().values()) {
             String s = startAliveWriter(c.getAliveTagId(), c.getAliveInterval(), config);
@@ -237,7 +237,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         }
     }
 
-    private String startAliveWriter (Long aliveTagId, Long aliveTagInterval, IEquipmentConfiguration config) {
+    private String startAliveWriter(Long aliveTagId, Long aliveTagInterval, IEquipmentConfiguration config) {
         String idLog = "Could not start supervision for aliveTag with ID " + aliveTagId + ": ";
         if (aliveTagInterval == 0) {
             return idLog + ExceptionContext.BAD_ALIVE_TAG_INTERVAL.getMessage();
@@ -250,7 +250,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         return "";
     }
 
-    private void restartDAQ (final ChangeReport changeReport) {
+    private void restartDAQ(final ChangeReport changeReport) {
         log.info("Restarting the DAQ...");
         try {
             changeReport.setState(CHANGE_STATE.REBOOT);
