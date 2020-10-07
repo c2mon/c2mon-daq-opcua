@@ -26,6 +26,7 @@ import cern.c2mon.daq.opcua.OPCUAMessageSender;
 import cern.c2mon.daq.opcua.exceptions.CommunicationException;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
@@ -41,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @UseHandler(OPCUAMessageHandler.class)
 public class OPCUAMessageHandlerCommfaultTest extends OPCUAMessageHandlerTestBase {
 
-    OPCUAMessageSender sender = new OPCUAMessageSender(new SimpleMeterRegistry());
+    OPCUAMessageSender sender = new OPCUAMessageSender(new MetricProxy(new SimpleMeterRegistry()));
     TestUtils.CommfaultSenderCapture capture;
 
     @Override
