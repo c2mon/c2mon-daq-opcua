@@ -22,12 +22,12 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import io.micrometer.core.instrument.MeterRegistry;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
@@ -39,20 +39,11 @@ import org.springframework.jmx.export.annotation.ManagedResource;
 @Primary
 @ManagedResource(objectName = "OPCUAMessageSender", description = "Communicate with the DAQ Core process")
 @EquipmentScoped
+@RequiredArgsConstructor
 public class OPCUAMessageSender implements MessageSender {
 
+    private final MetricProxy metricProxy;
     private IEquipmentMessageSender sender;
-    private TagCounter validTagCounter;
-    private TagCounter invalidTagCounter;
-
-    /**
-     * To be used by Spring,creates a new OPCUAMessageSender with appropriate {@link TagCounter}s for valid and invalid tag updates to register to the meterRegistry
-     * @param meterRegistry currently used registry to export metrics to Prometheus
-     */
-    public OPCUAMessageSender(@Autowired MeterRegistry meterRegistry) {
-        this.validTagCounter = new TagCounter("valid_tag_counter", meterRegistry);
-        this.invalidTagCounter = new TagCounter("invalid_tag_counter", meterRegistry);
-    }
 
     @Override
     public void initialize(IEquipmentMessageSender sender) {
@@ -62,7 +53,7 @@ public class OPCUAMessageSender implements MessageSender {
     @Override
     public void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
         if (quality.isValid()) {
-            validTagCounter.incrementValid(tagId);
+            metricProxy.getValidTagCounter().incrementValid(tagId);
             this.sender.update(tagId, valueUpdate, quality);
         } else {
             onTagInvalid(tagId, quality);
@@ -72,7 +63,7 @@ public class OPCUAMessageSender implements MessageSender {
     @Override
     public void onTagInvalid(long tagId, final SourceDataTagQuality quality) {
         this.sender.update(tagId, quality);
-        invalidTagCounter.incrementValid(tagId);
+        metricProxy.getInvalidTagCounter().incrementValid(tagId);
     }
 
     @Override

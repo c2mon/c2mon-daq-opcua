@@ -23,6 +23,7 @@ package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.daq.opcua.control.ConcreteController;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
+import io.micrometer.core.annotation.Timed;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -56,6 +57,7 @@ public class SubscriptionGroup {
      * @param tagId          the tagID associated with the {@link ItemDefinition} to add
      * @param itemDefinition the item to add
      */
+    @Timed
     public void add (final long tagId, final ItemDefinition itemDefinition) {
         this.tagIds.putIfAbsent(tagId, itemDefinition);
     }

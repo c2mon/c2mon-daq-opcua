@@ -95,7 +95,7 @@
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
-            <version>1.1.0</version>
+            <version>1.1.0</version> <!-- low version for compatibility with Spring Boot, update when possible-->
         </dependency>
 
         <!-- Test dependencies -->

@@ -22,6 +22,7 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
@@ -34,7 +35,7 @@ import static org.easymock.EasyMock.*;
 public class OPCUAMessageSenderTest {
 
     IEquipmentMessageSender eqSenderMock = niceMock(IEquipmentMessageSender.class);
-    OPCUAMessageSender sender = new OPCUAMessageSender(new SimpleMeterRegistry());
+    OPCUAMessageSender sender = new OPCUAMessageSender(new MetricProxy(new SimpleMeterRegistry()));
 
     @BeforeEach
     public void setUp() {
