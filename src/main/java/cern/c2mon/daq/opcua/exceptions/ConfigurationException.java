@@ -35,11 +35,19 @@ public class ConfigurationException extends OPCUAException {
     }
 
     /**
-     * Called Creates a new LongLostConnectionException wrapping the throwable which caused an action to fail.
+     * Creates a new ConfigurationException wrapping the throwable which caused an action to fail.
      * @param context describes the context of the action which triggered the throwable cause.
      * @param cause   the throwable causing the action to fail.
      */
     public ConfigurationException (ExceptionContext context, final Throwable cause) {
         super(context, cause);
+    }
+    /**
+     * Called Creates a new LongLostConnectionException wrapping the throwable which caused an action to fail.
+     * @param context describes the context of the action which triggered the throwable cause.
+     * @param details additional information on the cause of the error.
+     */
+    public ConfigurationException (ExceptionContext context, final String details) {
+        super(context.getMessage() + details);
     }
 }
