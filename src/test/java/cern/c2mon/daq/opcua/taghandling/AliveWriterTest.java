@@ -35,18 +35,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class AliveWriterTest {
     TestListeners.TestListener listener = new TestListeners.TestListener();
     TagSubscriptionReader mapper = new TagSubscriptionMapper();
     AliveWriter aliveWriter;
     SourceDataTag aliveTag;
+    SourceDataTag subAliveTag;
     TestEndpoint testEndpoint;
 
     @BeforeEach
@@ -55,6 +54,7 @@ public class AliveWriterTest {
         hwAddress.setCurrentOPCItemName("test");
         DataTagAddress tagAddress = new DataTagAddress(hwAddress, 0, ValueDeadbandType.NONE, 0, 0, JmsMessagePriority.PRIORITY_LOW, true);
         aliveTag = new SourceDataTag((long) 1, "test", false, (short) 0, null, tagAddress);
+        subAliveTag = new SourceDataTag((long) 1, "test", false, (short) 0, null, tagAddress);
         testEndpoint = new TestEndpoint(listener, mapper);
         aliveWriter =  new AliveWriter(TestUtils.getFailoverProxy(testEndpoint, listener), listener);
     }
@@ -65,24 +65,45 @@ public class AliveWriterTest {
     }
 
     @Test
-    public void writeAliveShouldNotifyListenerWithGoodStatusCode() {
-        final CompletableFuture<Void> alive = listener.getAlive().get(0);
+    public void writeAliveShouldNotifyListenerWithGoodStatusCode() throws InterruptedException {
         aliveWriter.startAliveWriter(aliveTag, 2L);
-        assertDoesNotThrow(() -> alive.get(100, TimeUnit.MILLISECONDS));
+        assertTrue(listener.getAliveLatch().await(100, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void exceptionInWriteAliveShouldNotNotifyListener() {
+    public void writeAliveShouldNotifyListenerWithGoodStatusCodeSeveralTimes() throws InterruptedException {
+        listener.setAliveLatch(new CountDownLatch(2));
+        aliveWriter.startAliveWriter(aliveTag, 2L);
+        assertTrue(listener.getAliveLatch().await(4L, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void writeAliveWithSubEquipmentsShouldNotifyListenerWithGoodStatusCode() throws InterruptedException {
+        listener.setAliveLatch(new CountDownLatch(2));
+        aliveWriter.startAliveWriter(aliveTag, 2L);
+        aliveWriter.startAliveWriter(subAliveTag, 2L);
+        assertTrue(listener.getAliveLatch().await(100, TimeUnit.MILLISECONDS));
+    }
+    @Test
+    public void writeAliveWithSubEquipmentsShouldNotifyListenerWithGoodStatusCodeSeveralTimes() throws InterruptedException {
+        listener.setAliveLatch(new CountDownLatch(6));
+        aliveWriter.startAliveWriter(aliveTag, 2L);
+        aliveWriter.startAliveWriter(subAliveTag, 2L);
+        assertTrue(listener.getAliveLatch().await(100L, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void exceptionInWriteAliveShouldNotNotifyListener() throws InterruptedException {
         testEndpoint.setThrowExceptions(true);
         aliveWriter.startAliveWriter(aliveTag, 2L);
-        assertThrows(TimeoutException.class, () -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
+        assertFalse(listener.getAliveLatch().await(50L, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void badStatusCodeShouldNotNotifyListener() {
+    public void badStatusCodeShouldNotNotifyListener() throws InterruptedException {
         testEndpoint.setReturnGoodStatusCodes(false);
         aliveWriter.startAliveWriter(aliveTag, 2L);
-        assertThrows(TimeoutException.class, () -> listener.getAlive().get(0).get(100, TimeUnit.MILLISECONDS));
+        assertFalse(listener.getAliveLatch().await(50L, TimeUnit.MILLISECONDS));
     }
 
     @Test

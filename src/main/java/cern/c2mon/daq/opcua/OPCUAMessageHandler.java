@@ -89,7 +89,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             initializeScope(config.getName());
         }
 
-
         log.info("Connecting to the OPC UA data source at {}... ", config.getAddress());
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         try {

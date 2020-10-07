@@ -72,6 +72,7 @@ public class OPCUAMessageHandlerTest extends OPCUAMessageHandlerTestBase {
     protected void afterTest() throws Exception {
 
     }
+
     @Test
     @UseConf("mock_test.xml")
     public void refreshShouldTriggerValueUpdateForEachSubscribedTag() {
@@ -215,14 +216,13 @@ public class OPCUAMessageHandlerTest extends OPCUAMessageHandlerTestBase {
         config.setAliveTagId(2);
         config.setAliveTagInterval(100L);
         final ChangeReport changeReport = new ChangeReport();
-        final CompletableFuture<Void> f = testListener.getAlive().get(0);
         handler.onUpdateEquipmentConfiguration(config, oldConfig, changeReport);
-        assertDoesNotThrow(() -> f.get(300L, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> testListener.getAliveLatch().await(300L, TimeUnit.MILLISECONDS));
     }
 
     @Test
     @UseConf("mock_test.xml")
-    public void equipmentUpdateShouldNotStartAliveWriterIfDisabled() {
+    public void equipmentUpdateShouldNotStartAliveWriterIfDisabled() throws InterruptedException {
         final TestListeners.TestListener testListener = new TestListeners.TestListener();
         ReflectionTestUtils.setField(writer, "messageSender", testListener);
         appConfigProperties.setAliveWriterEnabled(false);
@@ -231,9 +231,8 @@ public class OPCUAMessageHandlerTest extends OPCUAMessageHandlerTestBase {
         config.setAliveTagId(2);
         config.setAliveTagInterval(100L);
         final ChangeReport changeReport = new ChangeReport();
-        final CompletableFuture<Void> f = testListener.getAlive().get(0);
         handler.onUpdateEquipmentConfiguration(config, oldConfig, changeReport);
-        assertThrows(TimeoutException.class, () -> f.get(300L, TimeUnit.MILLISECONDS));
+        assertFalse(testListener.getAliveLatch().await(300L, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -249,9 +248,8 @@ public class OPCUAMessageHandlerTest extends OPCUAMessageHandlerTestBase {
         oldConfig.setAliveTagInterval(100L);
         config.setAliveTagInterval(200L);
         final ChangeReport changeReport = new ChangeReport();
-        final CompletableFuture<Void> f = testListener.getAlive().get(0);
         handler.onUpdateEquipmentConfiguration(config, oldConfig, changeReport);
-        assertDoesNotThrow(() -> f.get(5000L, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> testListener.getAliveLatch().await(5000L, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -266,10 +264,9 @@ public class OPCUAMessageHandlerTest extends OPCUAMessageHandlerTestBase {
         EquipmentConfiguration config = oldConfig.clone();
         config.setEquipmentAddress("test2");
         final ChangeReport changeReport = new ChangeReport();
-        final CompletableFuture<Void> f = testListener.getAlive().get(0);
         handler.onUpdateEquipmentConfiguration(config, oldConfig, changeReport);
         ReflectionTestUtils.setField(writer, "messageSender", testListener);
-        assertDoesNotThrow(() -> f.get(5000L, TimeUnit.MILLISECONDS));
+        assertDoesNotThrow(() -> testListener.getAliveLatch().await(5000L, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -287,4 +284,5 @@ public class OPCUAMessageHandlerTest extends OPCUAMessageHandlerTestBase {
         value.setId(20L);
         assertNull(handler.runCommand(value));
     }
+
 }
