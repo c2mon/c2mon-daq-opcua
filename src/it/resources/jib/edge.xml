@@ -8,129 +8,150 @@
   <max-message-delay>300</max-message-delay>
   <EquipmentUnits>
 
-    <EquipmentUnit id="333" name="E_EDGE">
-        <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
-        <commfault-tag-id>107211</commfault-tag-id>
-        <commfault-tag-value>true</commfault-tag-value>
-        <address>URI=opc.tcp://edge:50000;aliveWriterEnabled=true</address>
-        <SubEquipmentUnits>
-            <SubEquipmentUnit id="52501" name="E_TEST_1">
-                <commfault-tag-id>101</commfault-tag-id>
-                <commfault-tag-value>true</commfault-tag-value>
-                <alive-tag-id>2</alive-tag-id>
-                <alive-interval>5000</alive-interval>
-            </SubEquipmentUnit>
-            <SubEquipmentUnit id="52502" name="E_TEST_2">
-                <commfault-tag-id>102</commfault-tag-id>
-                <commfault-tag-value>true</commfault-tag-value>
-                <alive-tag-id>3</alive-tag-id>
-                <alive-interval>10000</alive-interval>
-            </SubEquipmentUnit>
-        </SubEquipmentUnits>
-        <DataTags>
-            <DataTag id="1" name="EDGE:ALTERNATINGBOOLEAN" control="false">
-                <data-type>java.lang.Boolean</data-type>
-                <DataTagAddress>
-                    <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
-                        <namespace>2</namespace>
-                        <opc-item-name>AlternatingBoolean</opc-item-name>
-                        <address-type>STRING</address-type>
-                    </HardwareAddress>
-                    <priority>2</priority>
-                    <guaranteed-delivery>false</guaranteed-delivery>
-                </DataTagAddress>
-            </DataTag>
-            <DataTag id="2" name="EDGE:DIPDATA" control="false">
-                <data-type>java.lang.Double</data-type>
-                <DataTagAddress>
-                    <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
-                        <namespace>2</namespace>
-                        <opc-item-name>DipData</opc-item-name>
-                        <address-type>STRING</address-type>
-                    </HardwareAddress>
-                    <priority>2</priority>
-                    <guaranteed-delivery>false</guaranteed-delivery>
-                </DataTagAddress>
-            </DataTag>
-            <DataTag id="3" name="EDGE:NEGATIVETRENTDATA" control="false">
-                <data-type>java.lang.Float</data-type>
-                <DataTagAddress>
-                    <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
-                        <namespace>2</namespace>
-                        <opc-item-name>NegativeTrendData</opc-item-name>
-                        <address-type>STRING</address-type>
-                    </HardwareAddress>
-                    <priority>2</priority>
-                    <guaranteed-delivery>false</guaranteed-delivery>
-                </DataTagAddress>
-            </DataTag>
-            <DataTag id="4" name="EDGE:POSITIVETRENDDATA" control="false">
-                <data-type>java.lang.Float</data-type>
-                <DataTagAddress>
-                    <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
-                        <namespace>2</namespace>
-                        <opc-item-name>PositiveTrentData</opc-item-name>
-                        <address-type>STRING</address-type>
-                    </HardwareAddress>
-                    <time-to-live>3600000</time-to-live>
-                    <priority>2</priority>
-                    <guaranteed-delivery>false</guaranteed-delivery>
-                </DataTagAddress>
-            </DataTag>
-            <DataTag id="5" name="EDGE:RANDOMSIGNEDINT" control="false">
-                <data-type>java.lang.Integer</data-type>
-                <DataTagAddress>
-                    <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
-                        <namespace>2</namespace>
-                        <opc-item-name>RandomSignedInt</opc-item-name>
-                        <address-type>STRING</address-type>
-                    </HardwareAddress>
-                    <time-to-live>3600000</time-to-live>
-                    <value-deadband-type>1</value-deadband-type>
-                    <value-deadband>1.0</value-deadband>
-                    <priority>2</priority>
-                    <guaranteed-delivery>false</guaranteed-delivery>
-                </DataTagAddress>
-            </DataTag>
-            <DataTag id="6" name="EDGE:RANDOMUNSIGNEDINT" control="false">
-                <data-type>java.lang.Integer</data-type>
-                <DataTagAddress>
-                    <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
-                        <namespace>2</namespace>
-                        <opc-item-name>RandomUnsignedInt</opc-item-name>
-                        <address-type>STRING</address-type>
-                    </HardwareAddress>
-                    <time-to-live>3600000</time-to-live>
-                    <priority>2</priority>
-                </DataTagAddress>
-            </DataTag>
-            <DataTag id="7" name="EDGE:SPIKEDATA" control="false">
-                <data-type>java.lang.Double</data-type>
-                <DataTagAddress>
-                    <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
-                        <namespace>2</namespace>
-                        <opc-item-name>SpikeData</opc-item-name>
-                        <address-type>STRING</address-type>
-                    </HardwareAddress>
-                    <time-to-live>3600000</time-to-live>
-                    <priority>2</priority>
-                </DataTagAddress>
-            </DataTag>
-            <DataTag id="8" name="EDGE:STEPUP" control="false">
-                <data-type>java.lang.Integer</data-type>
-                <DataTagAddress>
-                    <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
-                        <namespace>2</namespace>
-                        <opc-item-name>StepUp</opc-item-name>
-                        <address-type>STRING</address-type>
-                    </HardwareAddress>
-                    <time-to-live>3600000</time-to-live>
-                    <priority>2</priority>
-                </DataTagAddress>
-            </DataTag>
-        </DataTags>
-        <CommandTags>
-        </CommandTags>
-    </EquipmentUnit>
-  </EquipmentUnits>
+        <EquipmentUnit id="333" name="E_EDGE">
+            <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
+            <commfault-tag-id>107211</commfault-tag-id>
+            <commfault-tag-value>true</commfault-tag-value>
+            <address>URI=opc.tcp://edge:50000;aliveWriterEnabled=true</address>
+            <SubEquipmentUnits>
+                <SubEquipmentUnit id="52501" name="E_TEST_1">
+                    <commfault-tag-id>101</commfault-tag-id>
+                    <commfault-tag-value>true</commfault-tag-value>
+                    <alive-tag-id>2</alive-tag-id>
+                    <alive-interval>5000</alive-interval>
+                </SubEquipmentUnit>
+                <SubEquipmentUnit id="52502" name="E_TEST_2">
+                    <commfault-tag-id>102</commfault-tag-id>
+                    <commfault-tag-value>true</commfault-tag-value>
+                    <alive-tag-id>3</alive-tag-id>
+                    <alive-interval>10000</alive-interval>
+                </SubEquipmentUnit>
+            </SubEquipmentUnits>
+            <DataTags>
+                <DataTag id="1" name="EDGE:ALTERNATINGBOOLEAN" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>AlternatingBoolean</opc-item-name>
+                            <address-type>STRING</address-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                        <time-deadband>1</time-deadband>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="2" name="EDGE:DIPDATA" control="false">
+                    <data-type>java.lang.Double</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>DipData</opc-item-name>
+                            <address-type>STRING</address-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                        <time-deadband>2</time-deadband>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="3" name="EDGE:NEGATIVETRENTDATA" control="false">
+                    <data-type>java.lang.Float</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>NegativeTrendData</opc-item-name>
+                            <address-type>STRING</address-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                        <time-deadband>2</time-deadband>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="4" name="EDGE:POSITIVETRENDDATA" control="false">
+                    <data-type>java.lang.Float</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>PositiveTrendData</opc-item-name>
+                            <address-type>STRING</address-type>
+                        </HardwareAddress>
+                        <time-to-live>3600000</time-to-live>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                        <time-deadband>3</time-deadband>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="5" name="EDGE:RANDOMSIGNEDINT" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>RandomSignedInt32</opc-item-name>
+                            <address-type>STRING</address-type>
+                        </HardwareAddress>
+                        <time-to-live>3600000</time-to-live>
+                        <value-deadband-type>1</value-deadband-type>
+                        <value-deadband>1.0</value-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                        <time-deadband>3</time-deadband>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="6" name="EDGE:RANDOMUNSIGNEDINT" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>RandomUnsignedInt32</opc-item-name>
+                            <address-type>STRING</address-type>
+                        </HardwareAddress>
+                        <time-to-live>3600000</time-to-live>
+                        <priority>2</priority>
+                        <time-deadband>3</time-deadband>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="7" name="EDGE:SPIKEDATA" control="false">
+                    <data-type>java.lang.Double</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>SpikeData</opc-item-name>
+                            <address-type>STRING</address-type>
+                        </HardwareAddress>
+                        <time-to-live>3600000</time-to-live>
+                        <priority>2</priority>
+                        <time-deadband>4</time-deadband>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="8" name="EDGE:STEPUP" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>StepUp</opc-item-name>
+                            <address-type>STRING</address-type>
+                        </HardwareAddress>
+                        <time-to-live>3600000</time-to-live>
+                        <priority>2</priority>
+                        <time-deadband>5</time-deadband>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="8" name="EDGE:INVALID" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>invalid</opc-item-name>
+                            <address-type>STRING</address-type>
+                        </HardwareAddress>
+                        <time-to-live>3600000</time-to-live>
+                        <priority>2</priority>
+                        <time-deadband>6</time-deadband>
+                    </DataTagAddress>
+                </DataTag>
+            </DataTags>
+            <CommandTags>
+            </CommandTags>
+        </EquipmentUnit>
+    </EquipmentUnits>
 </ProcessConfiguration>

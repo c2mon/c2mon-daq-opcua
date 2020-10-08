@@ -53,7 +53,7 @@ public class OPCUAMessageSender implements MessageSender {
     @Override
     public void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
         if (quality.isValid()) {
-            metricProxy.getValidTagCounter().incrementValid(tagId);
+            metricProxy.incrementTagCounter(true, tagId);
             this.sender.update(tagId, valueUpdate, quality);
         } else {
             onTagInvalid(tagId, quality);
@@ -63,7 +63,7 @@ public class OPCUAMessageSender implements MessageSender {
     @Override
     public void onTagInvalid(long tagId, final SourceDataTagQuality quality) {
         this.sender.update(tagId, quality);
-        metricProxy.getInvalidTagCounter().incrementValid(tagId);
+        metricProxy.incrementTagCounter(false, tagId);
     }
 
     @Override
@@ -89,8 +89,10 @@ public class OPCUAMessageSender implements MessageSender {
     @ManagedOperation(description = "Manually trigger a CommfaultTag to be sent. The value 'OK' will send set the CommfaultTag to false, any other value will set it to true.")
     public void onEquipmentStateUpdate(String state) {
         if (state.equalsIgnoreCase(EquipmentState.OK.name())) {
+            metricProxy.incrementCommfault(true);
             sender.confirmEquipmentStateOK(state);
         } else {
+            metricProxy.incrementCommfault(false);
             sender.confirmEquipmentStateIncorrect(state);
         }
     }
