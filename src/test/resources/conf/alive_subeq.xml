@@ -1,0 +1,84 @@
+<!--
+  #%L
+  This file is part of the CERN Control and Monitoring Platform 'C2MON'.
+  %%
+  Copyright (C) 2010 - 2020 CERN
+  %%
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Lesser Public License for more details.
+  
+  You should have received a copy of the GNU General Lesser Public
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/lgpl-3.0.html>.
+  #L%
+  -->
+<EquipmentUnit id="5250" name="TEST1">
+    <handler-class-name>automatically-set-by-test</handler-class-name>
+    <commfault-tag-id>100</commfault-tag-id>
+    <commfault-tag-value>true</commfault-tag-value>
+    <alive-tag-id>1</alive-tag-id>
+    <alive-interval>10</alive-interval>
+    <address>URI=opc.tcp://test;aliveWriterEnabled=true</address>
+    <SubEquipmentUnits>
+        <SubEquipmentUnit id="52501" name="E_TEST_1">
+            <commfault-tag-id>101</commfault-tag-id>
+            <commfault-tag-value>true</commfault-tag-value>
+            <alive-tag-id>2</alive-tag-id>
+            <alive-interval>20</alive-interval>
+        </SubEquipmentUnit>
+        <SubEquipmentUnit id="52502" name="E_TEST_2">
+            <commfault-tag-id>102</commfault-tag-id>
+            <commfault-tag-value>true</commfault-tag-value>
+            <alive-tag-id>3</alive-tag-id>
+            <alive-interval>40</alive-interval>
+        </SubEquipmentUnit>
+    </SubEquipmentUnits>
+
+    <DataTags>
+        <DataTag id="1" name="BE.TEST:TEST1" control="false">
+            <data-type>Float</data-type>
+            <DataTagAddress>
+                <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                    <namespace>2</namespace>
+                    <opc-item-name>simSY4527.Board00.Chan000.VMon</opc-item-name>
+                    <command-pulse-length>0</command-pulse-length>
+                    <address-type>STRING</address-type>
+                    <command-type>CLASSIC</command-type>
+                </HardwareAddress>
+            </DataTagAddress>
+        </DataTag>
+        <DataTag id="2" name="BE.TEST:TEST2" control="false">
+            <data-type>Float</data-type>
+            <DataTagAddress>
+                <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                    <namespace>2</namespace>
+                    <opc-item-name>simSY4527.Board00.Chan000.VMon</opc-item-name>
+                    <command-pulse-length>0</command-pulse-length>
+                    <address-type>STRING</address-type>
+                    <command-type>CLASSIC</command-type>
+                </HardwareAddress>
+            </DataTagAddress>
+        </DataTag>
+        <DataTag id="3" name="BE.TEST:TEST3" control="false">
+            <data-type>Float</data-type>
+            <DataTagAddress>
+                <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                    <namespace>2</namespace>
+                    <opc-item-name>simSY4527.Board00.Chan000.VMon</opc-item-name>
+                    <command-pulse-length>0</command-pulse-length>
+                    <address-type>STRING</address-type>
+                    <command-type>CLASSIC</command-type>
+                </HardwareAddress>
+            </DataTagAddress>
+        </DataTag>
+    </DataTags>
+    <CommandTags>
+    </CommandTags>
+</EquipmentUnit>

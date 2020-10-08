@@ -8,12 +8,12 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
@@ -42,6 +42,7 @@ import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
+import cern.c2mon.shared.common.process.SubEquipmentConfiguration;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
@@ -88,7 +89,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             initializeScope(config.getName());
         }
 
-
         log.info("Connecting to the OPC UA data source at {}... ", config.getAddress());
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         try {
@@ -106,7 +106,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             try {
                 startAliveWriter(config);
             } catch (ConfigurationException e) {
-                log.info("Proceeding without starting the Alive Writer. ", e);
+                log.info("Proceeding without starting the affected AliveWriters. ", e);
             }
         } else {
             log.info("Alive Writer is disabled.");
@@ -227,18 +227,27 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     }
 
     private void startAliveWriter(IEquipmentConfiguration config) throws ConfigurationException {
-        if (aliveWriter == null) {
-            aliveWriter = getContext().getBean(AliveWriter.class);
+        StringBuilder errorLog = new StringBuilder(startAliveWriter(config.getAliveTagId(), config.getAliveTagInterval(), config));
+        for (SubEquipmentConfiguration c : config.getSubEquipmentConfigurations().values()) {
+            String s = startAliveWriter(c.getAliveTagId(), c.getAliveInterval(), config);
+            errorLog.append(s.isEmpty() ? s : "\n " + s);
         }
-        final long aliveTagInterval = config.getAliveTagInterval();
+        if (errorLog.length() > 0) {
+            throw new ConfigurationException(ExceptionContext.ALIVE_WRITER_FAIL, errorLog.toString());
+        }
+    }
+
+    private String startAliveWriter(Long aliveTagId, Long aliveTagInterval, IEquipmentConfiguration config) {
+        String idLog = "Could not start supervision for aliveTag with ID " + aliveTagId + ": ";
         if (aliveTagInterval == 0) {
-            throw new ConfigurationException(ExceptionContext.BAD_ALIVE_TAG_INTERVAL);
+            return idLog + ExceptionContext.BAD_ALIVE_TAG_INTERVAL.getMessage();
         }
-        final ISourceDataTag aliveTag = config.getSourceDataTag(config.getAliveTagId());
+        ISourceDataTag aliveTag = config.getSourceDataTag(aliveTagId);
         if (aliveTag == null) {
-            throw new ConfigurationException(ExceptionContext.BAD_ALIVE_TAG);
+            return idLog + ExceptionContext.BAD_ALIVE_TAG.getMessage();
         }
         aliveWriter.startAliveWriter(aliveTag, aliveTagInterval);
+        return "";
     }
 
     private void restartDAQ(final ChangeReport changeReport) {

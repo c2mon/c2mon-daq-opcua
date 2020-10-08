@@ -22,33 +22,35 @@
 package cern.c2mon.daq.opcua.opcuamessagehandler;
 
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
-import cern.c2mon.daq.opcua.OPCUAMessageSender;
-import cern.c2mon.daq.opcua.exceptions.CommunicationException;
-import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
-import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
+import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.UseConf;
 import cern.c2mon.daq.test.UseHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.Test;
 
-import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_FAILED;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 @UseHandler(OPCUAMessageHandler.class)
-public class OPCUAMessageHandlerCommfaultTest extends OPCUAMessageHandlerTestBase {
+public class OPCUAMessageHandlerAliveTest extends OPCUAMessageHandlerTestBase {
 
-    OPCUAMessageSender sender;
+    TestListeners.TestListener sender;
     TestUtils.CommfaultSenderCapture capture;
 
     @Override
     protected void beforeTest() throws Exception {
-        sender = new OPCUAMessageSender();
+        sender = new TestListeners.TestListener();
         super.beforeTest(sender);
-        testEndpoint.setThrowExceptions(true);
-        testEndpoint.setDelay(100);
+        testEndpoint.setDelay(1);
+        expect(testEndpoint.getMonitoredItem().getStatusCode()).andReturn(StatusCode.GOOD).anyTimes();
+        replay(testEndpoint.getMonitoredItem());
         capture = new TestUtils.CommfaultSenderCapture(this.messageSender);
     }
 
@@ -57,16 +59,8 @@ public class OPCUAMessageHandlerCommfaultTest extends OPCUAMessageHandlerTestBas
     }
 
     @Test
-    @UseConf("commfault_ok.xml")
-    public void properConfigButBadEndpointShouldThrowCommunicationError() {
-        configureContext(sender);
-        replay(messageSender);
-        assertThrows(CommunicationException.class, handler::connectToDataSource);
-    }
-
-    @Test
-    @UseConf("commfault_ok.xml")
-    public void properConfigButBadEndpointShouldSendFAIL() {
+    @UseConf("alive_ok.xml")
+    public void presentAliveTagShouldSendAliveOK() throws InterruptedException {
         configureContext(sender);
         replay(messageSender);
         try {
@@ -75,35 +69,38 @@ public class OPCUAMessageHandlerCommfaultTest extends OPCUAMessageHandlerTestBas
             //Ignore errors, we only care about the message
             log.error("Exception: ", e);
         }
-        capture.verifyCapture(107211L,
-                handler.getEquipmentConfiguration().getName() + ":COMM_FAULT",
-                CONNECTION_FAILED.message);
+        assertTrue(sender.getAliveLatch().await(100L, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    @UseConf("bad_address_string.xml")
-    public void badAddressStringShouldThrowError() {
+    @UseConf("alive_subeq.xml")
+    public void multipleAliveTagsShouldSendAliveOK() throws InterruptedException {
         configureContext(sender);
         replay(messageSender);
-        assertThrows(ConfigurationException.class,
-                () -> handler.connectToDataSource(),
-                ExceptionContext.URI_SYNTAX.getMessage());
-    }
-
-    @Test
-    @UseConf("commfault_ok.xml")
-    public void cannotEstablishInitialConnectionShouldSendFAIL() {
-        configureContext(sender);
-        replay(messageSender);
+        sender.setAliveLatch(new CountDownLatch(3));
         try {
             handler.connectToDataSource();
         } catch (Exception e) {
             //Ignore errors, we only care about the message
             log.error("Exception: ", e);
         }
-        capture.verifyCapture(107211L,
-                handler.getEquipmentConfiguration().getName() + ":COMM_FAULT",
-                CONNECTION_FAILED.message);
+        assertTrue(sender.getAliveLatch().await(20L, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    @UseConf("alive_subeq_false.xml")
+    public void oneGoodOneBadAliveTagShouldSendAliveOKOncePerInterval() throws InterruptedException {
+        configureContext(sender);
+        replay(messageSender);
+        sender.setAliveLatch(new CountDownLatch(2));
+        try {
+            handler.connectToDataSource();
+        } catch (Exception e) {
+            //Ignore errors, we only care about the message
+            log.error("Exception: ", e);
+        }
+        assertFalse(sender.getAliveLatch().await(20L, TimeUnit.MILLISECONDS));
+        assertEquals(1, sender.getAliveLatch().getCount());
     }
 }
 

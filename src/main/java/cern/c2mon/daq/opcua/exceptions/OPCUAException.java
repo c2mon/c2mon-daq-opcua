@@ -84,6 +84,10 @@ public abstract class OPCUAException extends EqIOException {
         super(context.getMessage(), e);
     }
 
+    protected OPCUAException (final String cause) {
+        super(cause);
+    }
+
     /**
      * A static factory method called when the execution of an action on the server failed. The throwable causing this
      * failure is wrapped in a subclass of OPCUAException best describing the context of the exception, and the

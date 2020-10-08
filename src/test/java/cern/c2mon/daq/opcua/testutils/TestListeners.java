@@ -32,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 
 @Slf4j
 public abstract class TestListeners {
@@ -88,7 +89,9 @@ public abstract class TestListeners {
         List<CompletableFuture<Long>> tagUpdate = new ArrayList<>();
         List<CompletableFuture<Long>> tagInvalid = new ArrayList<>();
         List<CompletableFuture<EquipmentState>> stateUpdate = new ArrayList<>();
-        List<CompletableFuture<Void>> alive = new ArrayList<>();
+
+        @Setter
+        CountDownLatch aliveLatch;
 
         @Setter
         boolean logging = true;
@@ -97,24 +100,22 @@ public abstract class TestListeners {
             tagUpdate.add(new CompletableFuture<>());
             tagInvalid.add(new CompletableFuture<>());
             stateUpdate.add(new CompletableFuture<>());
-            alive.add(new CompletableFuture<>());
+            aliveLatch = new CountDownLatch(1);
         }
 
         public synchronized void reset() {
             tagUpdate.clear();
             tagInvalid.clear();
             stateUpdate.clear();
-            alive.clear();
             tagUpdate.add(new CompletableFuture<>());
             tagInvalid.add(new CompletableFuture<>());
             stateUpdate.add(new CompletableFuture<>());
-            alive.add(new CompletableFuture<>());
+            aliveLatch = new CountDownLatch(1);
         }
 
         @Override
         public synchronized void onAlive() {
-            alive.get(0).complete(null);
-            alive.add(0, new CompletableFuture<>());
+            aliveLatch.countDown();
         }
 
 
