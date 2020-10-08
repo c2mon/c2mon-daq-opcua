@@ -61,9 +61,8 @@ public class AliveWriter {
      * @param aliveTagInterval the interval in which to write to the aliveTag
      */
     public void startAliveWriter(ISourceDataTag aliveTag, long aliveTagInterval) {
-        final ItemDefinition def;
         try {
-            def = ItemDefinition.of(aliveTag);
+            final ItemDefinition def = ItemDefinition.of(aliveTag);
             if (aliveTagInterval > 0L) {
                 tasks.put(aliveTag.getId(), new WriteAliveTask(def.getNodeId()));
             } else {
