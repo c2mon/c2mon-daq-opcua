@@ -22,6 +22,8 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -36,8 +38,8 @@ public class SubscriptionGroupTest extends MappingBase {
     public void setup() {
         super.setup();
 
-        group = new SubscriptionGroup(tag.getTimeDeadband());
-        groupWithDifferentDeadband = new SubscriptionGroup(tagWithDifferentDeadband.getTimeDeadband());
+        group = new SubscriptionGroup(tag.getTimeDeadband(), new MetricProxy(new SimpleMeterRegistry()));
+        groupWithDifferentDeadband = new SubscriptionGroup(tagWithDifferentDeadband.getTimeDeadband(), new MetricProxy(new SimpleMeterRegistry()));
     }
 
     @Test

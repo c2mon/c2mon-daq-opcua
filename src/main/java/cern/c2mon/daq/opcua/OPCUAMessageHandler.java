@@ -215,9 +215,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         ApplicationContext ctx = getContext();
         scope = new EquipmentScope();
         scope.setExporter(ctx.getBean(AppConfig.class).mBeanExporter());
-        scope.setEquipmentName(equipmentName);
+        scope.initializeForEquipment(equipmentName, ctx);
         ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", scope);
-        log.info("Created a new scope for Equipment {} with name {}", getEquipmentConfiguration().getName(), equipmentName);
         controller = ctx.getBean(Controller.class);
         dataTagHandler = ctx.getBean(IDataTagHandler.class);
         commandTagHandler = ctx.getBean(CommandTagHandler.class);

@@ -28,11 +28,13 @@ import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionManager;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.daq.opcua.scope.EquipmentScope;
 import cern.c2mon.daq.opcua.taghandling.*;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
 import cern.c2mon.daq.test.GenericMessageHandlerTest;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 
@@ -55,7 +57,7 @@ public abstract class OPCUAMessageHandlerTestBase extends GenericMessageHandlerT
 
     protected void beforeTest(MessageSender sender) {
         context = createMock(ApplicationContext.class);
-        mapper = new TagSubscriptionMapper();
+        mapper = new TagSubscriptionMapper(new MetricProxy(new SimpleMeterRegistry()));
         testEndpoint = new TestEndpoint(sender, mapper);
         appConfigProperties = TestUtils.createDefaultConfig();
         testController = TestUtils.getFailoverProxy(testEndpoint, sender);

@@ -25,10 +25,12 @@ import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.MiloEndpoint;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.config.Scope;
+import org.springframework.context.ApplicationContext;
 import org.springframework.jmx.export.MBeanExporter;
 import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
@@ -50,16 +52,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class EquipmentScope implements Scope {
     private static String domain = "cern.c2mon.daq.opcua";
-
     private final Map<String, Object> scopedObjects = new ConcurrentHashMap<>();
     private final Map<String, Runnable> destructionCallbacks = new ConcurrentHashMap<>();
 
     @Setter
     private MBeanExporter exporter;
 
-    @Setter
     private String equipmentName;
-
 
     @Override
     public Object get(String name, ObjectFactory<?> objectFactory) {
@@ -92,7 +91,6 @@ public class EquipmentScope implements Scope {
     @Override
     public void registerDestructionCallback(String name, Runnable callback) {
         destructionCallbacks.put(name, callback);
-
     }
 
     @Override
@@ -103,5 +101,13 @@ public class EquipmentScope implements Scope {
     @Override
     public String getConversationId() {
         return equipmentName;
+    }
+
+    public void initializeForEquipment(String equipmentName, ApplicationContext ctx) {
+        log.info("New scope for Equipment {}", equipmentName);
+        MetricProxy metricProxy = ctx.getBean(MetricProxy.class);
+        metricProxy.setEquipmentName(equipmentName);
+        metricProxy.setProcessName(ctx.getApplicationName());
+        this.equipmentName = equipmentName;
     }
 }

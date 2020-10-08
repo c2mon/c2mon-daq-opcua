@@ -25,9 +25,11 @@ import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.daq.opcua.testutils.*;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,7 +70,7 @@ public abstract class TagHandlerTestBase {
         sourceTags.put(10L, tagInSource1);
         sourceTags.put(20L, tagInSource2);
 
-        mapper = new TagSubscriptionMapper();
+        mapper = new TagSubscriptionMapper(new MetricProxy(new SimpleMeterRegistry()));
         listener = new TestListeners.TestListener();
         endpoint = new TestEndpoint(listener, mapper);
         proxy = TestUtils.getFailoverProxy(endpoint, listener);
