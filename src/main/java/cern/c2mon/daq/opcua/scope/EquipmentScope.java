@@ -66,14 +66,14 @@ public class EquipmentScope implements Scope {
             Object o = objectFactory.getObject();
             if (exporter != null && o.getClass().isAnnotationPresent(ManagedResource.class)) {
                 log.info("Register as MBean: {} for equipment {}", o.getClass().getName(), equipmentName);
-                    try {
-                        ObjectName objName = new ObjectName(domain + ":equipment=" + equipmentName + ",bean=" + o.getClass().getSimpleName());
-                        log.info("Registering bean {} with name {}", o, objName.toString());
-                        exporter.registerManagedResource(o, objName);
-                        log.info("Registered the bean {} of class {} under {}", o, o.getClass().getName(), objName.toString());
-                    } catch (MalformedObjectNameException e) {
-                        log.error("Could not register the bean as MBean: ", e);
-                    }
+                try {
+                    ObjectName objName = new ObjectName(domain + ":equipment=" + equipmentName + ",bean=" + o.getClass().getSimpleName());
+                    log.info("Registering bean {} with name {}", o, objName.toString());
+                    exporter.registerManagedResource(o, objName);
+                    log.info("Registered the bean {} of class {} under {}", o, o.getClass().getName(), objName.toString());
+                } catch (MalformedObjectNameException e) {
+                    log.error("Could not register the bean as MBean: ", e);
+                }
             } else if (equipmentName != null) {
                 log.info("Get Object of Class {} for equipment {}", o.getClass().getName(), equipmentName);
             }
@@ -103,11 +103,18 @@ public class EquipmentScope implements Scope {
         return equipmentName;
     }
 
-    public void initializeForEquipment(String equipmentName, ApplicationContext ctx) {
-        log.info("New scope for Equipment {}", equipmentName);
-        MetricProxy metricProxy = ctx.getBean(MetricProxy.class);
+    /**
+     * Each EquipmentScope is associated with an Equipment with a given name. To map the metrics supervised within the
+     * DAQ to a given Equipment name, the name is set during initization of the scope to the MetricProxy tasked with
+     * instrumentation and monitoring.
+     * @param equipmentName the Equipment associated with the Scope
+     * @param context       the current ApplicationContext
+     */
+    public void initializeForEquipment(String equipmentName, ApplicationContext context) {
+        log.info("Initialize scope for Equipment {}", equipmentName);
+        MetricProxy metricProxy = context.getBean(MetricProxy.class);
         metricProxy.setEquipmentName(equipmentName);
-        metricProxy.setProcessName(ctx.getApplicationName());
+        metricProxy.setProcessName(context.getApplicationName());
         this.equipmentName = equipmentName;
     }
 }

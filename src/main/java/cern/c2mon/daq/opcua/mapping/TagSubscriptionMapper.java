@@ -28,7 +28,7 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.Getter;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Collection;
 import java.util.Map;
@@ -41,17 +41,13 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Getter
 @EquipmentScoped
+@RequiredArgsConstructor
 public class TagSubscriptionMapper implements TagSubscriptionManager {
 
     private final MetricProxy metricProxy;
 
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
     private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
-
-    public TagSubscriptionMapper(@Autowired MetricProxy metricProxy) {
-        this.metricProxy = metricProxy;
-        metricProxy.initializeSubscriptionGauge(subscriptionGroups);
-    }
 
     @Override
     public SubscriptionGroup getGroup(int timeDeadband) {

@@ -42,6 +42,11 @@ public class SubscriptionGroup {
     private final Map<Long, ItemDefinition> tagIds = new ConcurrentHashMap<>();
     private final int publishInterval;
 
+    /**
+     * Create a new SubscriptionGroup with a given publishInterval.
+     * @param publishInterval the publishInterval for the subscription
+     * @param metricProxy Used to gauge the number of tags belonging to this SubscriptionGroup.
+     */
     public SubscriptionGroup(int publishInterval, MetricProxy metricProxy) {
         metricProxy.initializeTagsPerSubscriptionGauge(tagIds, publishInterval);
         this.publishInterval = publishInterval;

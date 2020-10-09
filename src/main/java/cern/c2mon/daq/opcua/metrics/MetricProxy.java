@@ -22,7 +22,6 @@
 package cern.c2mon.daq.opcua.metrics;
 
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
-import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -50,7 +49,6 @@ public class MetricProxy {
     private static final String PREFIX = "c2mon_daq_opcua";
     private static final String VALID_TAG_COUNTER = "tag_updates_valid";
     private static final String INVALID_TAG_COUNTER = "tag_updates_invalid";
-    private static final String SUBSCRIPTION_GAUGE = "subscription";
     private static final String TAGS_PER_SUBSCRIPTION_GAUGE = "subscription_tags";
 
     private final MeterRegistry registry;
@@ -63,16 +61,6 @@ public class MetricProxy {
 
     private TagCounter validTagCounter;
     private TagCounter invalidTagCounter;
-
-
-    /**
-     * Registers the amount of active subscriptions as a metric to be gauged
-     * @param map a map of active subscriptions to monitor
-     */
-    public void initializeSubscriptionGauge(Map<Integer, SubscriptionGroup> map) {
-        registry.gaugeMapSize(PREFIX + "_" + SUBSCRIPTION_GAUGE, getTags(), map);
-        registry.get(PREFIX + "_" + SUBSCRIPTION_GAUGE).gauge();
-    }
 
     /**
      * Registers the number or Tags per subscription to be gauged.
