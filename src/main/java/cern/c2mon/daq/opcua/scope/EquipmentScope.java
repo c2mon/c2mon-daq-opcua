@@ -111,11 +111,13 @@ public class EquipmentScope implements Scope {
      * @param equipmentName the Equipment associated with the Scope
      * @param context       the current ApplicationContext
      */
-    public void initializeForEquipment(String equipmentName, String processName, ApplicationContext context) {
-        log.info("Initialize scope for Equipment {}", equipmentName);
+    public void initialize(String equipmentName, Long equipmentId, String processName, Long processId, ApplicationContext context) {
+        log.info("Initialize scope for Process {} and Equipment {}", processName, equipmentName);
         MetricProxy metricProxy = context.getBean(MetricProxy.class);
-        metricProxy.setEquipmentName(equipmentName);
-        metricProxy.setProcessName(processName);
+        metricProxy.addDefaultTag("equipment_name", equipmentName);
+        metricProxy.addDefaultTag("process_name", processName);
+        metricProxy.addDefaultTag("equipment_id", String.valueOf(equipmentId));
+        metricProxy.addDefaultTag("process_id", String.valueOf(processId));
         this.equipmentName = equipmentName;
     }
 }

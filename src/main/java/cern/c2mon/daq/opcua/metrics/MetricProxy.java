@@ -33,8 +33,13 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -51,17 +56,11 @@ public class MetricProxy {
     private static final String INVALID_TAG_COUNTER = "tag_updates_invalid";
     private static final String TAGS_PER_SUBSCRIPTION_GAUGE = "tags_per_subscription";
 
-    private final MeterRegistry
-            registry;
-
-    @Setter
-    private String processName = "";
-
-    @Setter
-    private String equipmentName = "";
-
+    private final MeterRegistry registry;
     private TagCounter validTagCounter;
     private TagCounter invalidTagCounter;
+
+    private Tags defaultTags = Tags.empty();
 
     /**
      * Registers the number or Tags per subscription to be gauged.
@@ -90,6 +89,10 @@ public class MetricProxy {
         incrementCounter(valid, "commfault");
     }
 
+    public void addDefaultTag(String key, String value) {
+        defaultTags = defaultTags.and(key, value);
+    }
+
     private void incrementCounter(boolean valid, String id) {
         if (validTagCounter == null) {
             validTagCounter = new TagCounter(registry, PREFIX + "_" + VALID_TAG_COUNTER);
@@ -105,10 +108,7 @@ public class MetricProxy {
     }
 
     private Iterable<Tag> getTags(String... additional) {
-        return Tags.of(
-                Stream.of(new String[]{"process_name", processName, "equipment_name", equipmentName}, additional)
-                        .flatMap(Stream::of)
-                        .toArray(String[]::new));
+        return defaultTags.and(additional);
     }
 
     /**

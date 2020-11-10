@@ -49,7 +49,6 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.ApplicationContext;
 
@@ -90,7 +89,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         IEquipmentConfiguration config = getEquipmentConfiguration();
 
         if (scope == null) {
-            initializeScope(config.getName());
+            initializeScope(config.getName(), config.getId());
         }
 
         log.info("Connecting to the OPC UA data source at {}... ", config.getAddress());
@@ -214,13 +213,13 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * instance of the prototype-scoped {@link EquipmentScope} once when initiating the data collection process ensures
      * that a new set of beans is created.
      */
-    private void initializeScope(String equipmentName) {
+    private void initializeScope(String equipmentName, Long equipmentId) {
         ApplicationContext ctx = getContext();
         scope = new EquipmentScope();
         ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", scope);
         scope.setExporter(ctx.getBean(AppConfig.class).mBeanExporter());
         ProcessConfiguration processConfiguration = ProcessConfigurationHolder.getInstance();
-        scope.initializeForEquipment(equipmentName, processConfiguration.getProcessName(), ctx);
+        scope.initialize(equipmentName, equipmentId, processConfiguration.getProcessName(), processConfiguration.getProcessID(), ctx);
         controller = ctx.getBean(Controller.class);
         dataTagHandler = ctx.getBean(IDataTagHandler.class);
         commandTagHandler = ctx.getBean(CommandTagHandler.class);
