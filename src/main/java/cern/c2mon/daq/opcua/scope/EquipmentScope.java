@@ -29,6 +29,7 @@ import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.Scope;
 import org.springframework.context.ApplicationContext;
 import org.springframework.jmx.export.MBeanExporter;
@@ -110,11 +111,11 @@ public class EquipmentScope implements Scope {
      * @param equipmentName the Equipment associated with the Scope
      * @param context       the current ApplicationContext
      */
-    public void initializeForEquipment(String equipmentName, ApplicationContext context) {
+    public void initializeForEquipment(String equipmentName, String processName, ApplicationContext context) {
         log.info("Initialize scope for Equipment {}", equipmentName);
         MetricProxy metricProxy = context.getBean(MetricProxy.class);
         metricProxy.setEquipmentName(equipmentName);
-        metricProxy.setProcessName(context.getApplicationName());
+        metricProxy.setProcessName(processName);
         this.equipmentName = equipmentName;
     }
 }

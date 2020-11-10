@@ -23,6 +23,7 @@ package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
+import cern.c2mon.daq.common.conf.core.ProcessConfigurationHolder;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.config.AddressParser;
 import cern.c2mon.daq.opcua.config.AppConfig;
@@ -42,11 +43,13 @@ import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
+import cern.c2mon.shared.common.process.ProcessConfiguration;
 import cern.c2mon.shared.common.process.SubEquipmentConfiguration;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.ApplicationContext;
 
@@ -216,7 +219,8 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         scope = new EquipmentScope();
         ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", scope);
         scope.setExporter(ctx.getBean(AppConfig.class).mBeanExporter());
-        scope.initializeForEquipment(equipmentName, ctx);
+        ProcessConfiguration processConfiguration = ProcessConfigurationHolder.getInstance();
+        scope.initializeForEquipment(equipmentName, processConfiguration.getProcessName(), ctx);
         controller = ctx.getBean(Controller.class);
         dataTagHandler = ctx.getBean(IDataTagHandler.class);
         commandTagHandler = ctx.getBean(CommandTagHandler.class);

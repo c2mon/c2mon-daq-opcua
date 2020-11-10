@@ -49,9 +49,10 @@ public class MetricProxy {
     private static final String PREFIX = "c2mon_daq_opcua";
     private static final String VALID_TAG_COUNTER = "tag_updates_valid";
     private static final String INVALID_TAG_COUNTER = "tag_updates_invalid";
-    private static final String TAGS_PER_SUBSCRIPTION_GAUGE = "subscription_tags";
+    private static final String TAGS_PER_SUBSCRIPTION_GAUGE = "tags_per_subscription";
 
-    private final MeterRegistry registry;
+    private final MeterRegistry
+            registry;
 
     @Setter
     private String processName = "";
