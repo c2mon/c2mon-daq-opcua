@@ -8,12 +8,12 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
@@ -29,7 +29,6 @@ import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.Scope;
 import org.springframework.context.ApplicationContext;
 import org.springframework.jmx.export.MBeanExporter;
@@ -108,7 +107,10 @@ public class EquipmentScope implements Scope {
      * Each EquipmentScope is associated with an Equipment with a given name. To map the metrics supervised within the
      * DAQ to a given Equipment name, the name is set during initization of the scope to the MetricProxy tasked with
      * instrumentation and monitoring.
-     * @param equipmentName the Equipment associated with the Scope
+     * @param equipmentName the Equipment associated with the scope
+     * @param equipmentId the ID of the Equipment associated with the scope
+     * @param processName the Process associated with the scope
+     * @param processId the ID of the Process associated with the scope
      * @param context       the current ApplicationContext
      */
     public void initialize(String equipmentName, Long equipmentId, String processName, Long processId, ApplicationContext context) {

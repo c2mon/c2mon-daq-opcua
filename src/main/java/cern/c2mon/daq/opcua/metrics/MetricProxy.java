@@ -29,18 +29,11 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * An abstraction for Micrometer {@link io.micrometer.core.instrument.Meter}s
@@ -89,6 +82,11 @@ public class MetricProxy {
         incrementCounter(valid, "commfault");
     }
 
+    /**
+     * Creates a {@link Tag} from the key and value, which will be added to every metric update.
+     * @param key the key of the {@link Tag}
+     * @param value the {@link Tag} value
+     */
     public void addDefaultTag(String key, String value) {
         defaultTags = defaultTags.and(key, value);
     }
