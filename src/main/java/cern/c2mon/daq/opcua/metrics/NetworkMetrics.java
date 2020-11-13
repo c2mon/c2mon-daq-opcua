@@ -25,26 +25,33 @@ import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.MeterBinder;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import oshi.SystemInfo;
 import oshi.hardware.NetworkIF;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Gathers network metrics through Oshi.
- * Specified Class from @{link https://github.com/jrask/micrometer-oshi-binder} with some changes to go with Micrometer
- * 1.1.0. Open issue for Micrometer integration: @{link https://github.com/micrometer-metrics/micrometer/issues/1274}
+ * Gathers network metrics through Oshi. Specified Class from @{link https://github.com/jrask/micrometer-oshi-binder}
+ * with some changes to go with Micrometer 1.1.0. Open issue for Micrometer integration: @{link
+ * https://github.com/micrometer-metrics/micrometer/issues/1274}
  */
 @RequiredArgsConstructor
 public class NetworkMetrics implements MeterBinder {
 
     private static final int MAX_REFRESH_TIME = 5_000;
 
+    @AllArgsConstructor
     enum NetworkMetric {
-        BYTES_RECEIVED, BYTES_SENT, PACKETS_RECEIVED, PACKETS_SENT
+        BYTES_RECEIVED("system.network.bytes.received"),
+        BYTES_SENT("system.network.bytes.sent"),
+        PACKETS_RECEIVED("system.network.packets.received"),
+        PACKETS_SENT("system.network.packets.sent");
+        String name;
     }
 
     private final CachedNetworkStats networkStats = new CachedNetworkStats(new SystemInfo().getHardware().getNetworkIFs());
@@ -56,26 +63,11 @@ public class NetworkMetrics implements MeterBinder {
      */
     @Override
     public void bindTo(MeterRegistry meterRegistry) {
-
-        FunctionCounter.builder("system.network.bytes.received",
-                NetworkMetric.BYTES_RECEIVED, this::getNetworkMetricAsLong)
-                .tags(tags)
-                .register(meterRegistry);
-
-        FunctionCounter.builder("system.network.bytes.sent",
-                NetworkMetric.BYTES_SENT, this::getNetworkMetricAsLong)
-                .tags(tags)
-                .register(meterRegistry);
-
-        FunctionCounter.builder("system.network.packets.received",
-                NetworkMetric.PACKETS_RECEIVED, this::getNetworkMetricAsLong)
-                .tags(tags)
-                .register(meterRegistry);
-
-        FunctionCounter.builder("system.network.packets.sent",
-                NetworkMetric.PACKETS_SENT, this::getNetworkMetricAsLong)
-                .tags(tags)
-                .register(meterRegistry);
+        for (NetworkMetric networkMetric : NetworkMetric.values()) {
+            FunctionCounter.builder(networkMetric.name, networkMetric, this::getNetworkMetricAsLong)
+                    .tags(tags)
+                    .register(meterRegistry);
+        }
     }
 
     private long getNetworkMetricAsLong(cern.c2mon.daq.opcua.metrics.NetworkMetrics.NetworkMetric type) {
@@ -83,35 +75,32 @@ public class NetworkMetrics implements MeterBinder {
 
         switch (type) {
             case BYTES_SENT:
-                return networkStats.bytesSent;
+                return networkStats.bytesSent.get();
             case PACKETS_SENT:
-                return networkStats.packetsSent;
+                return networkStats.packetsSent.get();
             case BYTES_RECEIVED:
-                return networkStats.bytesReceived;
+                return networkStats.bytesReceived.get();
             case PACKETS_RECEIVED:
-                return networkStats.packetsReceived;
+                return networkStats.packetsReceived.get();
             default:
                 throw new IllegalStateException("Unknown NetworkMetrics: " + type.name());
         }
     }
 
+    @RequiredArgsConstructor
     private static class CachedNetworkStats {
 
         private final Lock lock = new ReentrantLock();
-
         private final List<NetworkIF> networks;
-        private long lastRefresh = 0;
+        private long lastRefresh;
 
-        public volatile long bytesReceived;
-        public volatile long bytesSent;
-        public volatile long packetsReceived;
-        public volatile long packetsSent;
+        private AtomicLong bytesReceived = new AtomicLong();
+        private AtomicLong bytesSent = new AtomicLong();
+        private AtomicLong packetsReceived = new AtomicLong();
+        private AtomicLong packetsSent = new AtomicLong();
 
-        public CachedNetworkStats(List<NetworkIF> networkIFs) {
-            this.networks = networkIFs;
-        }
 
-        public void refresh() {
+        private void refresh() {
             if (lock.tryLock()) {
                 try {
                     doRefresh();
@@ -127,24 +116,23 @@ public class NetworkMetrics implements MeterBinder {
                 return;
             }
 
-            long bytesReceived = 0;
-            long bytesSent = 0;
-            long packetsReceived = 0;
-            long packetsSent = 0;
+            long currentBytesReceived = 0;
+            long currentBytesSent = 0;
+            long currentPacketsReceived = 0;
+            long currentPacketsSent = 0;
 
             for (NetworkIF nif : networks) {
                 nif.updateAttributes();
-                bytesReceived += nif.getBytesRecv();
-                bytesSent += nif.getBytesSent();
-                packetsReceived += nif.getPacketsRecv();
-                packetsSent += nif.getPacketsSent();
-
+                currentBytesReceived += nif.getBytesRecv();
+                currentBytesSent += nif.getBytesSent();
+                currentPacketsReceived += nif.getPacketsRecv();
+                currentPacketsSent += nif.getPacketsSent();
             }
-            this.bytesReceived = bytesReceived;
-            this.bytesSent = bytesSent;
-            this.packetsReceived = packetsReceived;
-            this.packetsSent = packetsSent;
 
+            this.bytesReceived.set(currentBytesReceived);
+            this.bytesSent.set(currentBytesSent);
+            this.packetsReceived.set(currentPacketsReceived);
+            this.packetsSent.set(currentPacketsSent);
             this.lastRefresh = System.currentTimeMillis();
         }
     }
