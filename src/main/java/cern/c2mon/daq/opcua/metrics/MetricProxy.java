@@ -84,11 +84,13 @@ public class MetricProxy {
 
     /**
      * Creates a {@link Tag} from the key and value, which will be added to every metric update.
-     * @param key the key of the {@link Tag}
-     * @param value the {@link Tag} value
+     * @param keyValues an array of the {@link Tag} key and value pairs
      */
-    public void addDefaultTag(String key, String value) {
-        defaultTags = defaultTags.and(key, value);
+    public void addDefaultTags(String... keyValues) {
+        defaultTags = defaultTags.and(keyValues);
+
+        // Initialize OSHI metrics after the necessary default Tags have been added to the MetricProxy
+        new NetworkMetrics(defaultTags).bindTo(registry);
     }
 
     private void incrementCounter(boolean valid, String id) {

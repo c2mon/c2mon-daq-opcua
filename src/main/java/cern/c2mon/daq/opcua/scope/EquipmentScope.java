@@ -8,12 +8,12 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
@@ -108,18 +108,19 @@ public class EquipmentScope implements Scope {
      * DAQ to a given Equipment name, the name is set during initization of the scope to the MetricProxy tasked with
      * instrumentation and monitoring.
      * @param equipmentName the Equipment associated with the scope
-     * @param equipmentId the ID of the Equipment associated with the scope
-     * @param processName the Process associated with the scope
-     * @param processId the ID of the Process associated with the scope
+     * @param equipmentId   the ID of the Equipment associated with the scope
+     * @param processName   the Process associated with the scope
+     * @param processId     the ID of the Process associated with the scope
      * @param context       the current ApplicationContext
      */
     public void initialize(String equipmentName, Long equipmentId, String processName, Long processId, ApplicationContext context) {
         log.info("Initialize scope for Process {} and Equipment {}", processName, equipmentName);
         MetricProxy metricProxy = context.getBean(MetricProxy.class);
-        metricProxy.addDefaultTag("equipment_name", equipmentName);
-        metricProxy.addDefaultTag("process_name", processName);
-        metricProxy.addDefaultTag("equipment_id", String.valueOf(equipmentId));
-        metricProxy.addDefaultTag("process_id", String.valueOf(processId));
+        metricProxy.addDefaultTags(
+                "equipment_name", equipmentName,
+                "process_name", processName,
+                "equipment_id", String.valueOf(equipmentId),
+                "process_id", String.valueOf(processId));
         this.equipmentName = equipmentName;
     }
 }
