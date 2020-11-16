@@ -22,12 +22,13 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Collection;
 import java.util.Map;
@@ -38,10 +39,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * SubscriptionGroup}s, and maps in between the {@link ItemDefinition} containing the Milo-compatible {@link
  * org.eclipse.milo.opcua.stack.core.types.builtin.NodeId}s, and {@link ISourceDataTag}s.
  */
-@NoArgsConstructor
 @Getter
 @EquipmentScoped
+@RequiredArgsConstructor
 public class TagSubscriptionMapper implements TagSubscriptionManager {
+
+    private final MetricProxy metricProxy;
 
     private final Map<Integer, SubscriptionGroup> subscriptionGroups = new ConcurrentHashMap<>();
     private final BiMap<Long, ItemDefinition> tagIdDefinitionMap = HashBiMap.create();
@@ -51,7 +54,7 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
         if (groupExists(timeDeadband)) {
             return subscriptionGroups.get(timeDeadband);
         } else {
-            SubscriptionGroup group = new SubscriptionGroup(timeDeadband);
+            SubscriptionGroup group = new SubscriptionGroup(timeDeadband, metricProxy);
             subscriptionGroups.put(timeDeadband, group);
             return group;
         }
@@ -101,8 +104,12 @@ public class TagSubscriptionMapper implements TagSubscriptionManager {
         if (definition == null) {
             return false;
         }
-        final SubscriptionGroup group = subscriptionGroups.get(definition.getTimeDeadband());
-        return group != null && group.remove(tagId);
+        SubscriptionGroup group = subscriptionGroups.get(definition.getTimeDeadband());
+        if (group != null && group.remove(tagId) && group.size() == 0) {
+            subscriptionGroups.remove(definition.getTimeDeadband());
+            return true;
+        }
+        return false;
     }
 
     @Override

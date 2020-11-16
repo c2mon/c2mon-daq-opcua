@@ -22,10 +22,11 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.daq.opcua.scope.EquipmentScoped;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jmx.export.annotation.ManagedOperation;
@@ -34,13 +35,14 @@ import org.springframework.jmx.export.annotation.ManagedResource;
 /**
  * Handles communication with the DAQ Core's {@link IEquipmentMessageSender}
  */
-@NoArgsConstructor
 @Slf4j
 @Primary
 @ManagedResource(objectName = "OPCUAMessageSender", description = "Communicate with the DAQ Core process")
 @EquipmentScoped
+@RequiredArgsConstructor
 public class OPCUAMessageSender implements MessageSender {
 
+    private final MetricProxy metricProxy;
     private IEquipmentMessageSender sender;
 
     @Override
@@ -51,6 +53,7 @@ public class OPCUAMessageSender implements MessageSender {
     @Override
     public void onValueUpdate(long tagId, SourceDataTagQuality quality, ValueUpdate valueUpdate) {
         if (quality.isValid()) {
+            metricProxy.incrementTagCounter(true, tagId);
             this.sender.update(tagId, valueUpdate, quality);
         } else {
             onTagInvalid(tagId, quality);
@@ -60,6 +63,7 @@ public class OPCUAMessageSender implements MessageSender {
     @Override
     public void onTagInvalid(long tagId, final SourceDataTagQuality quality) {
         this.sender.update(tagId, quality);
+        metricProxy.incrementTagCounter(false, tagId);
     }
 
     @Override
@@ -85,8 +89,10 @@ public class OPCUAMessageSender implements MessageSender {
     @ManagedOperation(description = "Manually trigger a CommfaultTag to be sent. The value 'OK' will send set the CommfaultTag to false, any other value will set it to true.")
     public void onEquipmentStateUpdate(String state) {
         if (state.equalsIgnoreCase(EquipmentState.OK.name())) {
+            metricProxy.incrementCommfault(true);
             sender.confirmEquipmentStateOK(state);
         } else {
+            metricProxy.incrementCommfault(false);
             sender.confirmEquipmentStateIncorrect(state);
         }
     }

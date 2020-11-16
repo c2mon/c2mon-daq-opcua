@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ProcessConfiguration xmlns="http://timweb.cern.ch/schemas/c2mon-daq/Configuration" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                      xsi:schemaLocation="http://timweb.cern.ch/schemas/c2mon-daq/Configuration http://timweb/schemas/c2mon-daq/ProcessConfiguration.xsd"
+                      process-id="100007" type="initialise" name="P_OPCUA">
+    <alive-tag-id>100001</alive-tag-id>
+    <alive-interval>10000</alive-interval>
+    <max-message-size>100</max-message-size>
+    <max-message-delay>1000</max-message-delay>
+    <EquipmentUnits>
+
+        <EquipmentUnit id="500001" name="E_PLCCI">
+            <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
+            <commfault-tag-id>100003</commfault-tag-id>
+            <commfault-tag-value>false</commfault-tag-value>
+            <address>opc.tcp://cvw-plcci-2.cern.ch:55101</address>
+            <SubEquipmentUnits></SubEquipmentUnits>
+            <DataTags>
+                <DataTag id="100016" name="StepNumber11" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.11_Instance2_Circuit8.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>20</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100018" name="StepNumber13" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.13_Instance2_Circuit10.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>20</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100009" name="StepNumber4" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.4_Instance2_Circuit1.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>4</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100008" name="StepNumber3" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.3_Instance1_Circuit3.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>4</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100017" name="StepNumber12" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.12_Instance2_Circuit9.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>20</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100007" name="StepNumber2" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.2_Instance1_Circuit2.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>4</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100020" name="EXP_GPM_M" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.9_Instance2_Circuit6.EXP_GPM_M</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100006" name="StepNumber1" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.1_Instance1_Circuit1.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>4</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100011" name="StepNumber6" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.6_Instance2_Circuit3.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>6</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100012" name="StepNumber7" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.7_Instance2_Circuit4.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>6</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100005" name="currentTime" control="false">
+                    <data-type>java.lang.Object</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>0</namespace>
+                            <opc-item-name>2258</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>NUMERIC</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>4</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100019" name="CircuitState1" control="false">
+                    <data-type>[I</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.Actual_IO_DB.CircuitState</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100023"
+                         name="opc.tcp://cvw-plcci-2:55101?itemName=SIMATIC%20300(1).CPU%20319-3%20PNDP.Command"
+                         control="false">
+                    <data-type>java.lang.Object</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>0</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.Command</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100022" name="Param_BD" control="false">
+                    <data-type>[Z</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.Actual_IO_DB.Param_BD</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100013" name="StepNumber8" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.8_Instance2_Circuit5.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>6</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100014" name="StepNumber9" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.9_Instance2_Circuit6.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>6</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100021" name="Give_Permit" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.1_Instance1_Circuit1.Give_Permit</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100015" name="StepNumber10" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.10_Instance2_Circuit7.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>20</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100010" name="StepNumber5" control="false">
+                    <data-type>java.lang.Integer</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>7</namespace>
+                            <opc-item-name>SIMATIC 300(1).CPU 319-3 PNDP.5_Instance2_Circuit2.Step_number</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>6</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+            </DataTags>
+            <CommandTags></CommandTags>
+        </EquipmentUnit>
+        <EquipmentUnit id="500002" name="E_A78">
+            <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
+            <commfault-tag-id>100024</commfault-tag-id>
+            <commfault-tag-value>false</commfault-tag-value>
+            <address>opc.tcp://cs-ccr-mpetb01.cern.ch:4841</address>
+            <SubEquipmentUnits></SubEquipmentUnits>
+            <DataTags>
+                <DataTag id="100027" name="RB.A78.EVEN/REMOVE_PERMIT" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>RB.A78.EVEN/REMOVE_PERMIT</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>4</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100026" name="RB.A78.EVEN/GIVE_PERMIT" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>RB.A78.EVEN/GIVE_PERMIT</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+            </DataTags>
+            <CommandTags></CommandTags>
+        </EquipmentUnit>
+        <EquipmentUnit id="500003" name="E_A12">
+            <handler-class-name>cern.c2mon.daq.opcua.OPCUAMessageHandler</handler-class-name>
+            <commfault-tag-id>100028</commfault-tag-id>
+            <commfault-tag-value>false</commfault-tag-value>
+            <address>opc.tcp://cs-ccr-mpetb0.cern.ch:4841</address>
+            <SubEquipmentUnits></SubEquipmentUnits>
+            <DataTags>
+                <DataTag id="100030" name="RB.A12.EVEN/GIVE_PERMIT" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>RB.A12.EVEN/GIVE_PERMIT</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>4</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100033" name="RCD.A12B1/REMOVE_PERMIT" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>RCD.A12B1/REMOVE_PERMIT</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>2</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100032" name="RCD.A12B1/GIVE_PERMIT" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>RCD.A12B1/GIVE_PERMIT</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>2</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+                <DataTag id="100031" name="RB.A12.EVEN/REMOVE_PERMIT" control="false">
+                    <data-type>java.lang.Boolean</data-type>
+                    <DataTagAddress>
+                        <HardwareAddress class="cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl">
+                            <namespace>2</namespace>
+                            <opc-item-name>RB.A12.EVEN/REMOVE_PERMIT</opc-item-name>
+                            <command-pulse-length>0</command-pulse-length>
+                            <address-type>STRING</address-type>
+                            <command-type>CLASSIC</command-type>
+                        </HardwareAddress>
+                        <time-deadband>4</time-deadband>
+                        <priority>2</priority>
+                        <guaranteed-delivery>false</guaranteed-delivery>
+                    </DataTagAddress>
+                </DataTag>
+            </DataTags>
+            <CommandTags></CommandTags>
+        </EquipmentUnit>
+    </EquipmentUnits>
+</ProcessConfiguration>

@@ -22,9 +22,9 @@
 package cern.c2mon.daq.opcua.mapping;
 
 import cern.c2mon.daq.opcua.control.ConcreteController;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,11 +37,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * ISourceDataTag}s along with the subscribed {@link ItemDefinition}s for fast mapping.
  */
 @Getter
-@RequiredArgsConstructor
 public class SubscriptionGroup {
 
     private final Map<Long, ItemDefinition> tagIds = new ConcurrentHashMap<>();
     private final int publishInterval;
+
+    /**
+     * Create a new SubscriptionGroup with a given publishInterval.
+     * @param publishInterval the publishInterval for the subscription
+     * @param metricProxy Used to gauge the number of tags belonging to this SubscriptionGroup.
+     */
+    public SubscriptionGroup(int publishInterval, MetricProxy metricProxy) {
+        metricProxy.initializeTagsPerSubscriptionGauge(tagIds, publishInterval);
+        this.publishInterval = publishInterval;
+    }
 
     /**
      * Find the amount of items within the subscription.

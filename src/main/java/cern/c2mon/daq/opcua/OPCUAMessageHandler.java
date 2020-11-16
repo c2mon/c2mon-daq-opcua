@@ -8,12 +8,12 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Lesser Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Lesser Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/lgpl-3.0.html>.
@@ -23,6 +23,7 @@ package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
+import cern.c2mon.daq.common.conf.core.ProcessConfigurationHolder;
 import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.config.AddressParser;
 import cern.c2mon.daq.opcua.config.AppConfig;
@@ -42,6 +43,7 @@ import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.command.ISourceCommandTag;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.process.IEquipmentConfiguration;
+import cern.c2mon.shared.common.process.ProcessConfiguration;
 import cern.c2mon.shared.common.process.SubEquipmentConfiguration;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
@@ -71,6 +73,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     private AliveWriter aliveWriter;
     private CommandTagHandler commandTagHandler;
     private AppConfigProperties appConfigProperties;
+    private MessageSender sender;
     private EquipmentScope scope;
 
 
@@ -86,7 +89,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         IEquipmentConfiguration config = getEquipmentConfiguration();
 
         if (scope == null) {
-            initializeScope(config.getName());
+            initializeScope(config.getName(), config.getId());
         }
 
         log.info("Connecting to the OPC UA data source at {}... ", config.getAddress());
@@ -95,7 +98,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
             controller.connect(addresses);
         } catch (OPCUAException e) {
             log.error("Connection failed with error: ", e);
-            getEquipmentMessageSender().confirmEquipmentStateIncorrect(CONNECTION_FAILED.message);
+            sender.onEquipmentStateUpdate(CONNECTION_FAILED);
             throw e;
         }
 
@@ -210,20 +213,21 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
      * instance of the prototype-scoped {@link EquipmentScope} once when initiating the data collection process ensures
      * that a new set of beans is created.
      */
-    private void initializeScope(String equipmentName) {
+    private void initializeScope(String equipmentName, Long equipmentId) {
         ApplicationContext ctx = getContext();
         scope = new EquipmentScope();
-        scope.setExporter(ctx.getBean(AppConfig.class).mBeanExporter());
-        scope.setEquipmentName(equipmentName);
         ((ConfigurableBeanFactory) ctx.getAutowireCapableBeanFactory()).registerScope("equipment", scope);
-        log.info("Created a new scope for Equipment {} with name {}", getEquipmentConfiguration().getName(), equipmentName);
+        scope.setExporter(ctx.getBean(AppConfig.class).mBeanExporter());
+        ProcessConfiguration processConfiguration = ProcessConfigurationHolder.getInstance();
+        scope.initialize(equipmentName, equipmentId, processConfiguration.getProcessName(), processConfiguration.getProcessID(), ctx);
         controller = ctx.getBean(Controller.class);
         dataTagHandler = ctx.getBean(IDataTagHandler.class);
         commandTagHandler = ctx.getBean(CommandTagHandler.class);
         appConfigProperties = ctx.getBean(AppConfigProperties.class);
         dataTagChanger = ctx.getBean(DataTagChanger.class);
         aliveWriter = ctx.getBean(AliveWriter.class);
-        ctx.getBean(MessageSender.class).initialize(getEquipmentMessageSender());
+        sender = ctx.getBean(MessageSender.class);
+        sender.initialize(getEquipmentMessageSender());
     }
 
     private void startAliveWriter(IEquipmentConfiguration config) throws ConfigurationException {

@@ -33,6 +33,7 @@ import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import io.micrometer.core.annotation.Timed;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -122,6 +123,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      *                        endpoints with the given authentication configuration settings.
      */
     @Override
+    @Timed(value = "connect")
     public void initialize (String uri) throws OPCUAException {
         log.info("Initializing Endpoint at {}", uri);
         disconnectedOn.set(0);

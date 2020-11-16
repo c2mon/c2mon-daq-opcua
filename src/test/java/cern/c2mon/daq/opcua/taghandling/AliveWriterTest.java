@@ -23,6 +23,7 @@ package cern.c2mon.daq.opcua.taghandling;
 
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -31,6 +32,7 @@ import cern.c2mon.shared.common.datatag.SourceDataTag;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.common.datatag.util.JmsMessagePriority;
 import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class AliveWriterTest {
     TestListeners.TestListener listener = new TestListeners.TestListener();
-    TagSubscriptionReader mapper = new TagSubscriptionMapper();
+    TagSubscriptionReader mapper = new TagSubscriptionMapper(new MetricProxy(new SimpleMeterRegistry()));
     AliveWriter aliveWriter;
     SourceDataTag aliveTag;
     SourceDataTag subAliveTag;

@@ -21,12 +21,14 @@
  */
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.shared.common.datatag.DataTagAddress;
 import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.SourceDataTag;
 import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.common.datatag.util.JmsMessagePriority;
 import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -40,7 +42,7 @@ public class MappingBase {
     ISourceDataTag tagWithSameDeadband;
     ISourceDataTag tagWithDifferentDeadband;
 
-    TagSubscriptionMapper mapper = new TagSubscriptionMapper();
+    TagSubscriptionMapper mapper = new TagSubscriptionMapper(new MetricProxy(new SimpleMeterRegistry()));
 
 
     @BeforeEach

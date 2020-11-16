@@ -25,10 +25,12 @@ import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.opcua.OPCUAMessageHandler;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
 import cern.c2mon.daq.opcua.connection.MiloEndpoint;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.config.Scope;
+import org.springframework.context.ApplicationContext;
 import org.springframework.jmx.export.MBeanExporter;
 import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
@@ -50,16 +52,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class EquipmentScope implements Scope {
     private static String domain = "cern.c2mon.daq.opcua";
-
     private final Map<String, Object> scopedObjects = new ConcurrentHashMap<>();
     private final Map<String, Runnable> destructionCallbacks = new ConcurrentHashMap<>();
 
     @Setter
     private MBeanExporter exporter;
 
-    @Setter
     private String equipmentName;
-
 
     @Override
     public Object get(String name, ObjectFactory<?> objectFactory) {
@@ -67,14 +66,14 @@ public class EquipmentScope implements Scope {
             Object o = objectFactory.getObject();
             if (exporter != null && o.getClass().isAnnotationPresent(ManagedResource.class)) {
                 log.info("Register as MBean: {} for equipment {}", o.getClass().getName(), equipmentName);
-                    try {
-                        ObjectName objName = new ObjectName(domain + ":equipment=" + equipmentName + ",bean=" + o.getClass().getSimpleName());
-                        log.info("Registering bean {} with name {}", o, objName.toString());
-                        exporter.registerManagedResource(o, objName);
-                        log.info("Registered the bean {} of class {} under {}", o, o.getClass().getName(), objName.toString());
-                    } catch (MalformedObjectNameException e) {
-                        log.error("Could not register the bean as MBean: ", e);
-                    }
+                try {
+                    ObjectName objName = new ObjectName(domain + ":equipment=" + equipmentName + ",bean=" + o.getClass().getSimpleName());
+                    log.info("Registering bean {} with name {}", o, objName.toString());
+                    exporter.registerManagedResource(o, objName);
+                    log.info("Registered the bean {} of class {} under {}", o, o.getClass().getName(), objName.toString());
+                } catch (MalformedObjectNameException e) {
+                    log.error("Could not register the bean as MBean: ", e);
+                }
             } else if (equipmentName != null) {
                 log.info("Get Object of Class {} for equipment {}", o.getClass().getName(), equipmentName);
             }
@@ -92,7 +91,6 @@ public class EquipmentScope implements Scope {
     @Override
     public void registerDestructionCallback(String name, Runnable callback) {
         destructionCallbacks.put(name, callback);
-
     }
 
     @Override
@@ -103,5 +101,26 @@ public class EquipmentScope implements Scope {
     @Override
     public String getConversationId() {
         return equipmentName;
+    }
+
+    /**
+     * Each EquipmentScope is associated with an Equipment with a given name. To map the metrics supervised within the
+     * DAQ to a given Equipment name, the name is set during initization of the scope to the MetricProxy tasked with
+     * instrumentation and monitoring.
+     * @param equipmentName the Equipment associated with the scope
+     * @param equipmentId   the ID of the Equipment associated with the scope
+     * @param processName   the Process associated with the scope
+     * @param processId     the ID of the Process associated with the scope
+     * @param context       the current ApplicationContext
+     */
+    public void initialize(String equipmentName, Long equipmentId, String processName, Long processId, ApplicationContext context) {
+        log.info("Initialize scope for Process {} and Equipment {}", processName, equipmentName);
+        MetricProxy metricProxy = context.getBean(MetricProxy.class);
+        metricProxy.addDefaultTags(
+                "equipment_name", equipmentName,
+                "process_name", processName,
+                "equipment_id", String.valueOf(equipmentId),
+                "process_id", String.valueOf(processId));
+        this.equipmentName = equipmentName;
     }
 }

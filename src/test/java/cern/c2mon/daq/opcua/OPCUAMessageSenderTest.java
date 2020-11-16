@@ -22,9 +22,11 @@
 package cern.c2mon.daq.opcua;
 
 import cern.c2mon.daq.common.IEquipmentMessageSender;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +35,7 @@ import static org.easymock.EasyMock.*;
 public class OPCUAMessageSenderTest {
 
     IEquipmentMessageSender eqSenderMock = niceMock(IEquipmentMessageSender.class);
-    OPCUAMessageSender sender = new OPCUAMessageSender();
+    OPCUAMessageSender sender = new OPCUAMessageSender(new MetricProxy(new SimpleMeterRegistry()));
 
     @BeforeEach
     public void setUp() {

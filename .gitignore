@@ -23,3 +23,7 @@ activemq-data/
 # Maven release plugin
 /pom.xml.releaseBackup
 /release.properties
+
+# IntelliJ
+*.ipr
+*.iws

@@ -29,6 +29,7 @@ import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
 import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionMapper;
+import cern.c2mon.daq.opcua.metrics.MetricProxy;
 import cern.c2mon.daq.opcua.testutils.TestEndpoint;
 import cern.c2mon.daq.opcua.testutils.TestListeners;
 import cern.c2mon.daq.opcua.testutils.TestUtils;
@@ -43,6 +44,7 @@ import cern.c2mon.shared.common.datatag.address.impl.OPCHardwareAddressImpl;
 import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
 import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.easymock.EasyMock;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,7 +73,7 @@ public class CommandTagHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        this.endpoint = new TestEndpoint(l, new TagSubscriptionMapper());
+        this.endpoint = new TestEndpoint(l, new TagSubscriptionMapper(new MetricProxy(new SimpleMeterRegistry())));
         endpoint.setReturnGoodStatusCodes(true);
         tag = new SourceCommandTag(0L, "Power");
 
