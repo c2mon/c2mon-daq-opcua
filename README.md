@@ -8,22 +8,7 @@ The OPC-UA DAQ allows C2MON to collect data from OPC-UA servers. It relies on th
 
 The c2mon-daq-it tarball release can be downloaded from [CERN Nexus Repository](https://nexus.web.cern.ch/nexus/#nexus-search;gav~cern.c2mon.daq~c2mon-daq-opcua~~tar.gz~).
 
-Please check [here](https://gitlab.cern.ch/c2mon/c2mon-daq-opcua/tags) for the latest stable releaes version.
-
-
-## Installing
-
-- Download the latest stable distribution tarball
-- Note, that the tarball does not include a root folder, so you have to create this yourself before extracting it:
-  
-  ```bash
-  mkdir c2mon-daq-it; tar -xzf c2mon-daq-it-1.0.x-dist.tar.gz -C c2mon-daq-it
-  
-  ```
-
-# Commands
-
-The OPC-UA DAQ supports commands.
+Please check [here](https://gitlab.cern.ch/c2mon/c2mon-daq-opcua/tags) for the latest stable release version.
 
 # Configuration
 Follow the C2MON [Client API](https://c2mon.web.cern.ch/c2mon/docs/user-guide/client-api/index.html) for information on how to configure the Processes, Equipment and DataTags.
@@ -31,7 +16,7 @@ The `EquipmentMessageHandler` class to be specified during the Equipment creatio
 
 The DAQ can be configured externally through Spring Boot as described [here](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config). 
 These options are valid for all Equipments of a DAQ Process. They can be overwritten for a particular Equipment by appending the respective option to the EquipmentAddress. 
-For example, "URI=opc.tcp://hostname:2020;trustAllServers=true" will skip validation of the incoming server certificate against the stored certificate authority **only** for the equipment with that address.
+For example, `URI=opc.tcp://hostname:2020;trustAllServers=true` will skip validation of the incoming server certificate against the stored certificate authority **only** for the Equipment with that address.
 
 | Category          | Property                  | Description                                                                                                                                                                                                                                                                                                                                                                                           |
 |-------------------|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -99,17 +84,23 @@ The DAQ can be extended to support other redundancy modes as follows:
 *   Modify the `getObject(AppConfigProperties.FailoverMode mode)` method within `cern.c2mon.daq.opcua.control.ControllerFactory` to return an instance of your ConcreteController upon the appropriate FailoverMode  
     [Redundancy failover actions](https://reference.opcfoundation.org/v104/Core/docs/Part4/6.6.2/#Table111)
 
-# Spring Actuators
+# Metric Exposure
 
-The OPC UA DAQ exposes health, dumps, and info through Spring actuator endpoints, accessible through JMX and HTTP via Jolokia. The following operations are exposed to such access:
+The OPC UA DAQ exposes health, dumps, and info through Spring actuator endpoints, accessible through JMX and HTTP via Jolokia.
 
-*   reading out values from single DataTags
-    
-*   starting and stopping the AliveWriter
-    
-*   examining the type of redundancy Controller currently in use
-    
-*   triggering a failover process in the case of a redundant server setup
+In addition to Spring actuators, the following metrics are exposed:
+
+* `c2mon_daq_opcua_tag_updates_valid`
+* `c2mon_daq_opcua_tag_updates_invalid`
+* `c2mon_daq_opcua_tag_tags_per_subscription`
+* `system.network.bytes.received`
+* `system.network.bytes.sent`
+* `system.network.packets.received`
+* `system.network.packets.sent`
+
+Those metrics prefixed by `system.network` are gathered through the Operating System and Hardware Information library [OSHI](https://github.com/oshi/oshi).
+Networking
+The Grafana dashboard included in the file `src/resources/grafana_dashboard.json` provides an overview over relevant system and DAQ metrics.  
 
 ## JMX
 
@@ -132,3 +123,16 @@ To expose the application through HTTP, set the following application properties
   management.server.port=[HTTP PORT] 
   ```
 The process can now be accessed through HTTP under **http://[YOUR HOST]:[HTTP PORT]/actuator/jolokia**
+
+
+## Operations 
+
+ The following operations are exposed through JMX and Jolokia, and can be triggered remotely:
+
+*   reading out values from single DataTags
+    
+*   starting and stopping the AliveWriter
+    
+*   examining the type of redundancy Controller currently in use
+    
+*   triggering a failover process in the case of a redundant server setup
