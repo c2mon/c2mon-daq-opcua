@@ -1,12 +1,14 @@
-**This module is still in the testing phase, use with caution!**
-
 # Overview
 
-The OPC-UA DAQ allows C2MON to collect data from OPC-UA servers. It relies on the [Eclipse Milo](https://github.com/eclipse/milo) library (Eclipse Public License 1.0). 
+The OPC-UA DAQ allows C2MON to collect data from OPC-UA servers. OPC UA is the newest member of the [OPC family of standards](https://opcfoundation.org/)
+The modern and flexible design of this new technology has many advantages over its predecessors including platform independence, higher reliability, and a comprehensive security model.
+
+The OPC UA DAQ offers rich configurability options to suit the varying needs of different OPC UA servers, and exposes relevant metrics and endpoints for monitoring.
+It relies on the [Eclipse Milo](https://github.com/eclipse/milo) library (Eclipse Public License 1.0).
 
 # Downloading latest stable distribution tarball
 
-The c2mon-daq-it tarball release can be downloaded from [CERN Nexus Repository](https://nexus.web.cern.ch/nexus/#nexus-search;gav~cern.c2mon.daq~c2mon-daq-opcua~~tar.gz~).
+The latest tarball release can be downloaded from [CERN Nexus Repository](https://nexus.web.cern.ch/nexus/#nexus-search;gav~cern.c2mon.daq~c2mon-daq-opcua~~tar.gz~).
 
 Please check [here](https://gitlab.cern.ch/c2mon/c2mon-daq-opcua/tags) for the latest stable release version.
 
@@ -15,7 +17,7 @@ Follow the C2MON [Client API](https://c2mon.web.cern.ch/c2mon/docs/user-guide/cl
 The `EquipmentMessageHandler` class to be specified during the Equipment creation is: `cern.c2mon.daq.opcua.OPCUAMessageHandler`. 
 
 The DAQ can be configured externally through Spring Boot as described [here](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config). 
-These options are valid for all Equipments of a DAQ Process and can can be overwritten for a particular Equipment by appending the respective option to the EquipmentAddress. 
+These options are valid for all Equipments of a DAQ Process and can can be overwritten for a specific Equipment by appending the respective option to the respective EquipmentAddress. 
 For example, `URI=opc.tcp://hostname:2020;trustAllServers=true` will skip validation of the incoming server certificate against the stored certificate authority **only** for the Equipment with that address.
 
 | Category          | Property                  | Description                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -111,9 +113,9 @@ By default, JMX is exposed through port 8913. To change this port, modify the in
 When running with Docker, this port must be exposed.
 Set the following application property:
 
-  ```bash
-  spring.jmx.enabled=true
-  ```
+```bash
+spring.jmx.enabled=true
+```
 
 The process can now be accessed through JMX under **service:jmx:rmi:///jndi/rmi://[YOUR HOST]:8913/jmxrmi**
 
@@ -121,21 +123,18 @@ The process can now be accessed through JMX under **service:jmx:rmi:///jndi/rmi:
 
 To expose the application through HTTP, set the following application properties and expose [HTTP PORT].
 
-  ```bash
-  management.endpoints.web.exposure.include=[TO EXPOSE],jolokia
-  management.server.port=[HTTP PORT] 
-  ```
-The process can now be accessed through HTTP under **http://[YOUR HOST]:[HTTP PORT]/actuator/jolokia**
-
+```bash
+management.endpoints.web.exposure.include=[TO EXPOSE],jolokia
+management.server.port=[HTTP PORT] 
+```
+The process can now be accessed through HTTP under **http://[YOUR HOST]:[HTTP PORT]/actuator/jolokia**.
+See the official [Jolokia documentation](https://jolokia.org/documentation.html) for more details.
 
 ## Operations 
 
- The following operations are exposed through JMX and Jolokia, and can be triggered remotely:
+The following operations are exposed through JMX and Jolokia, and can be triggered remotely:
 
 *   reading out values from single DataTags
-    
 *   starting and stopping the AliveWriter
-    
 *   examining the type of redundancy Controller currently in use
-    
 *   triggering a failover process in the case of a redundant server setup
