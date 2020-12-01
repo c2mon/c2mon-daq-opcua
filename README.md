@@ -13,6 +13,7 @@ The latest tarball release can be downloaded from [CERN Nexus Repository](https:
 Please check [here](https://gitlab.cern.ch/c2mon/c2mon-daq-opcua/tags) for the latest stable release version.
 
 # Configuration
+
 Follow the C2MON [Client API](https://c2mon.web.cern.ch/c2mon/docs/user-guide/client-api/index.html) for information on how to configure the Processes, Equipment and DataTags.
 The `EquipmentMessageHandler` class to be specified during the Equipment creation is: `cern.c2mon.daq.opcua.OPCUAMessageHandler`. 
 
@@ -48,6 +49,16 @@ For example, `URI=opc.tcp://hostname:2020;trustAllServers=true` will skip valida
 |                   | maxRetryDelay             | The maximum delay when retrying failed service calls.                                                                                                                                                                                                                                                                                                                                                 |
 |                   | maxRetryAttempts          | The maximum amount of attempts to retry failed service calls in milliseconds. This does NOT include recreating subscriptions, and the failover process in redundant server setups.                                                                                                                                                                                                                    |
 
+# Tag Hardware Address
+
+| Field              | Data Type                    | Description                                                                                                                                                                                                                                                                                               |
+|--------------------|------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| opcItemName        | String                       | Full name of the publication within the OPC server.                                                                                                                                                                                                                                                       |
+| addressType        | Enum [STRING, NUMERIC, GUID] | The type of the address as defined on the OPC UA Server.                                                                                                                                                                                                                                                  |
+| commandType        | Enum [CLASSIC, METHOD]       | A CommandTag in C2MON may describe to two distinct concepts in OPC UA: METHOD describes a call to a Node of type *Method*, CLASSIC refers to a write operation to a Node of type *Variable*.                                                                                                              |
+| namespace          | int                          | The namespace index of the node corresponding to the Tag which the hardware address belongs to. An OPC UA addressspace is structured through one or more *namespaces*. Each namespace consists of multiple connected Nodes and is uniquely identified on the server by its index.                         |
+| commandPulseLength | int                          | Pulse commands set a CommandTag to the defined value and reset it to the original value after the commandPulseLength in milliseconds. A pulse length of less than 500 ms is not recommended as setting or resetting the value may take longer than 500 ms on the server. Only valid for CLASSIC commands. |
+
 # Redundancy
 
 OPC UA redundancy is supported in Cold Failover mode, which can be used as a fallback for higher redundancy modes. By default, the OPC UA DAQ  will only reconnect to a redundant server if the previously active server's ServiceLevel node shows a value below 200, or if its ServerState shows a value other than `Running` or `Unknown`. If the configuration parameter By default, the OPC UA DAQ  will only reconnect to a redundant server if the previously active server's ServiceLevel node shows a value below 200, or if its ServerState shows a value other than `Running` or `Unknown`.
@@ -64,7 +75,7 @@ The DAQ can be extended to support other redundancy modes as follows:
 
 ## OPC UA Redundancy modes
 
-*   Add a new ConcreteController extending FailoverBase which overwrite the initalize(), switchServers(), currentEndpoint() and passiveEndpoints() methods respectively with the appropriate actions:
+*   Add a new ConcreteController extending FailoverBase which overwrite the initialize(), switchServers(), currentEndpoint() and passiveEndpoints() methods respectively with the appropriate actions:
     *   **initialize()**  
         *   is passed an already connected Endpoint by the ControllerProxy.
         *   Find the _healthiest_ Server (with the highest ServiceLevel): this should be the active server
