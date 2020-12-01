@@ -21,7 +21,7 @@
   "panels": [
     {
       "collapsed": true,
-      "datasource": null,
+      "datasource": "TIM tags",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -40,7 +40,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": null,
+          "datasource": "TIM tags",
           "decimals": null,
           "editable": true,
           "error": false,
@@ -261,7 +261,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": null,
+          "datasource": "TIM tags",
           "editable": true,
           "error": false,
           "fieldConfig": {
@@ -818,7 +818,7 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
+      "datasource": "TIM tags",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1663,7 +1663,7 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
+      "datasource": "TIM tags",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1890,7 +1890,7 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
+      "datasource": "TIM tags",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -3044,7 +3044,7 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": "TIM tags",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -3745,7 +3745,7 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": "TIM tags",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -3762,7 +3762,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "TIM tags",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -3868,7 +3868,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "TIM tags",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -3966,7 +3966,7 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": "TIM tags",
       "gridPos": {
         "h": 1,
         "w": 24,
