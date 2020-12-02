@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>cern.c2mon.daq</groupId>
         <artifactId>c2mon-daq-parent</artifactId>
-        <version>1.9.11-SNAPSHOT</version>
-        <relativePath/>
+        <version>1.10.0</version>
+        <relativePath />
     </parent>
 
     <artifactId>c2mon-daq-opcua</artifactId>
-    <version>1.9.11-SNAPSHOT</version>
+    <version>1.10.0</version>
     <packaging>jar</packaging>
     <description>DAQ module for acquiring data from OPC UA servers</description>
 
@@ -20,7 +18,7 @@
         <url>https://gitlab.cern.ch/c2mon/c2mon-daq-opcua</url>
         <connection>scm:git:ssh://git@gitlab.cern.ch/c2mon/c2mon-daq-opcua.git</connection>
         <developerConnection>scm:git:ssh://git@gitlab.cern.ch:7999/c2mon/c2mon-daq-opcua.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>1.10.0</tag>
     </scm>
 
     <properties>
@@ -34,17 +32,17 @@
         <dependency>
             <groupId>cern.c2mon.daq</groupId>
             <artifactId>c2mon-daq-core</artifactId>
-            <version>1.9.11-SNAPSHOT</version>
+            <version>1.10.0</version>
         </dependency>
         <dependency>
             <groupId>cern.c2mon.daq</groupId>
             <artifactId>c2mon-daq-test</artifactId>
-            <version>1.9.11-SNAPSHOT</version>
+            <version>1.10.0</version>
         </dependency>
         <dependency>
             <groupId>cern.c2mon.shared</groupId>
             <artifactId>c2mon-shared-daq</artifactId>
-            <version>1.9.11-SNAPSHOT</version>
+            <version>1.10.0</version>
         </dependency>
 
         <!-- 3rd-party dependencies -->
