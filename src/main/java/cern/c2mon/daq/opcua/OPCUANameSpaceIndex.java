@@ -22,7 +22,6 @@
 
 package cern.c2mon.daq.opcua;
 
-
 import java.util.HashMap;
 
 public class OPCUANameSpaceIndex {
@@ -47,8 +46,14 @@ public class OPCUANameSpaceIndex {
     }
 
     public int getIdByItemName(String itemName) {
-        String namespaceName = itemName.substring(0, itemName.indexOf(":"));
-        return namespaceIndex.get(namespaceName);
+        if (itemName != null && !itemName.isEmpty()) {
+            int namespaceEndIdx = itemName.indexOf(":");
+            if (namespaceEndIdx > 0) {
+                String namespaceName = itemName.substring(0, namespaceEndIdx);
+                return namespaceIndex.get(namespaceName);
+            }
+        }
+        return 0;
     }
 
 }
