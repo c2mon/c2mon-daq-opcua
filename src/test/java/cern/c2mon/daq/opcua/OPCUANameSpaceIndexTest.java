@@ -31,11 +31,13 @@ public class OPCUANameSpaceIndexTest {
     public void testNamespaceResolution() {
         OPCUANameSpaceIndex index = OPCUANameSpaceIndex.get();
         index.addEntry("S7:", 1);
-        index.addEntry("BECK:", 2);
+        index.addEntry("beck:", 2);
         
         // Valid mappings to the S7 namespace, returning 1 in our test data
         Assertions.assertEquals(1, index.getIdByItemName("S7:P4US45VENT1.DB51.10,r"));
+        Assertions.assertEquals(1, index.getIdByItemName("s7:P4US45VENT1.DB51.10,r"));
         Assertions.assertEquals(1, index.getIdByItemName("S7:"));
+        Assertions.assertEquals(2, index.getIdByItemName("BECK:P4US45VENT1.DB51.10,r"));
         
         // missing column, or nothing after the column will not map , expected return is 0
         Assertions.assertEquals(0, index.getIdByItemName("S7"));

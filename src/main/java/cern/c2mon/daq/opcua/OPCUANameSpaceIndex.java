@@ -68,8 +68,8 @@ public class OPCUANameSpaceIndex {
      * Fill data on startup.
      */
     public void addEntry(String namespaceName, int namespaceId) {
-        namespaceIndex.put(namespaceName, namespaceId);
-        LOG.info(" - adding {} with id {}", namespaceName, namespaceId);
+        namespaceIndex.put(namespaceName.toUpperCase(), namespaceId);
+        LOG.info(" - adding {} with id {}", namespaceName.toUpperCase(), namespaceId);
     }
     
     /**
@@ -80,7 +80,7 @@ public class OPCUANameSpaceIndex {
         if (itemName != null && !itemName.isEmpty()) {
             int namespaceEndIdx = itemName.indexOf(":");
             if (namespaceEndIdx > 0) {
-                String namespaceName = itemName.substring(0, namespaceEndIdx + 1);
+                String namespaceName = itemName.substring(0, namespaceEndIdx + 1).toUpperCase();
                 if (namespaceIndex.containsKey(namespaceName)) {
                     return namespaceIndex.get(namespaceName);
                 } else {

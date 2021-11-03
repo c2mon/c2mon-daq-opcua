@@ -567,6 +567,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
      * @return
      * @throws EqIOException
      */
+    @Override
     public void fillNameSpaceIndex() throws EqIOException {
 
         CompletableFuture<DataValue> future = this.client.readValue(0, TimestampsToReturn.Neither,
