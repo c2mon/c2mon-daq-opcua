@@ -77,7 +77,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     private AppConfigProperties appConfigProperties;
     private MessageSender sender;
     private EquipmentScope scope;
-    private MiloEndpoint ua;
 
 
     /**
@@ -99,7 +98,6 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         try {
             controller.connect(addresses);
-            ua.fillNameSpaceIndex();
         } catch (OPCUAException e) {
             log.error("Connection failed with error: ", e);
             sender.onEquipmentStateUpdate(CONNECTION_FAILED);

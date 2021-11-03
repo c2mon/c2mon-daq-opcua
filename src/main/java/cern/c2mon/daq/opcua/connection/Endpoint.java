@@ -26,6 +26,7 @@ import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
+import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import org.eclipse.milo.opcua.sdk.client.SessionActivityListener;
@@ -146,5 +147,10 @@ public interface Endpoint {
      * @throws OPCUAException if the server is unreachable or has been disconnected.
      */
     ServerRedundancyTypeNode getServerRedundancyNode () throws OPCUAException;
+
+    /**
+     * On connect, retrieve the namespace mapping provided by the OPC UA server
+     */
+    void fillNameSpaceIndex() throws EqIOException ;
 
 }

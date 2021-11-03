@@ -24,34 +24,73 @@ package cern.c2mon.daq.opcua;
 
 import java.util.HashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
+/**
+ * On OCP UA DAQ startup, this map should be filled with the namespace-name/namespace-id pairs, so that later
+ * on we can easily use this information on the ItemDefinition to provide the correct namespace id based on 
+ * the item-name
+ * 
+ * @author mbuttner
+ */
 public class OPCUANameSpaceIndex {
 
     HashMap<String, Integer> namespaceIndex = new HashMap<>();
 
     private static OPCUANameSpaceIndex singleton;
-
+    private static final Logger LOG = LoggerFactory.getLogger(OPCUANameSpaceIndex.class);
+    
+    //
+    // --- CONSTRUCTION ------------------------------------------
+    //
+    /**
+     * Ctor is private (this is an old school singleton, to get easy access to its data
+     */
     private OPCUANameSpaceIndex() {
         //
     }
-
+    
     public static OPCUANameSpaceIndex get() {
         if (singleton == null) {
             singleton = new OPCUANameSpaceIndex();
+            LOG.info("Index created  ... ");
         }
         return singleton;
     }
+    
+    //
+    // --- PUBLIC METHODS ----------------------------------------
+    //
 
-    public void addEntry(String name, int id) {
-        namespaceIndex.put(name, id);
+    /**
+     * Fill data on startup.
+     */
+    public void addEntry(String namespaceName, int namespaceId) {
+        namespaceIndex.put(namespaceName, namespaceId);
+        LOG.info(" - adding {} with id {}", namespaceName, namespaceId);
     }
-
+    
+    /**
+     * @param itemName <code>String>/code> expected "namespaceName:rest of the name"
+     * @return <code>int</code> 0 if nothing matches, otherwise the namespace id as provided by the OPC UA server
+     */
     public int getIdByItemName(String itemName) {
         if (itemName != null && !itemName.isEmpty()) {
-            int namespaceEndIdx = itemName.indexOf(":");
-            if (namespaceEndIdx > 0) {
-                String namespaceName = itemName.substring(0, namespaceEndIdx);
-                return namespaceIndex.get(namespaceName);
+            int namespaceBeginIdx = itemName.indexOf(":");
+            if (namespaceBeginIdx > 0) {
+                String namespaceName = itemName.substring(namespaceBeginIdx + 1);
+                if (namespaceIndex.containsKey(namespaceName)) {
+                    return namespaceIndex.get(namespaceName);
+                } else {
+                    LOG.warn("namespace '{}' declared by itemName '{}' is not a domain exposed by the OPC UA server", namespaceName, itemName);                                    
+                }
+            } else {
+                LOG.warn("itemName '{}' does not expose a namespace-name (missing ':')", itemName);                
             }
+        } else {
+            LOG.warn("Can not resolve null or empty itemName");
         }
         return 0;
     }
