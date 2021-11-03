@@ -30,14 +30,14 @@ public class OPCUANameSpaceIndexTest {
     @Test
     public void testNamespaceResolution() {
         OPCUANameSpaceIndex index = OPCUANameSpaceIndex.get();
-        index.addEntry("P4US45VENT1.DB51.10,r", 1);
-        index.addEntry("ANOTHER_ONE", 2);
+        index.addEntry("S7:", 1);
+        index.addEntry("BECK:", 2);
         
         // Valid mappings to the S7 namespace, returning 1 in our test data
         Assertions.assertEquals(1, index.getIdByItemName("S7:P4US45VENT1.DB51.10,r"));
+        Assertions.assertEquals(1, index.getIdByItemName("S7:"));
         
         // missing column, or nothing after the column will not map , expected return is 0
-        Assertions.assertEquals(0, index.getIdByItemName("S7:"));
         Assertions.assertEquals(0, index.getIdByItemName("S7"));
         Assertions.assertEquals(0, index.getIdByItemName("XXX:Whatever comes after"));
         Assertions.assertEquals(0, index.getIdByItemName(null));

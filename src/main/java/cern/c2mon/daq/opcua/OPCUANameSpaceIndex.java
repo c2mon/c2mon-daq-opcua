@@ -78,9 +78,9 @@ public class OPCUANameSpaceIndex {
      */
     public int getIdByItemName(String itemName) {
         if (itemName != null && !itemName.isEmpty()) {
-            int namespaceBeginIdx = itemName.indexOf(":");
-            if (namespaceBeginIdx > 0) {
-                String namespaceName = itemName.substring(namespaceBeginIdx + 1);
+            int namespaceEndIdx = itemName.indexOf(":");
+            if (namespaceEndIdx > 0) {
+                String namespaceName = itemName.substring(0, namespaceEndIdx + 1);
                 if (namespaceIndex.containsKey(namespaceName)) {
                     return namespaceIndex.get(namespaceName);
                 } else {
