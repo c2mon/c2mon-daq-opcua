@@ -21,6 +21,14 @@
  */
 package cern.c2mon.daq.opcua;
 
+import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_FAILED;
+
+import java.util.Collection;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.ApplicationContext;
+
 import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.conf.core.ProcessConfigurationHolder;
@@ -28,6 +36,7 @@ import cern.c2mon.daq.common.conf.equipment.IEquipmentConfigurationChanger;
 import cern.c2mon.daq.opcua.config.AddressParser;
 import cern.c2mon.daq.opcua.config.AppConfig;
 import cern.c2mon.daq.opcua.config.AppConfigProperties;
+import cern.c2mon.daq.opcua.connection.MiloEndpoint;
 import cern.c2mon.daq.opcua.control.Controller;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
 import cern.c2mon.daq.opcua.exceptions.ExceptionContext;
@@ -49,13 +58,6 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.ApplicationContext;
-
-import java.util.Collection;
-import java.util.concurrent.TimeUnit;
-
-import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_FAILED;
 
 /**
  * The OPCUAMessageHandler is the entry point of the application. It is created and called by the C2MON DAQ core and
@@ -75,6 +77,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
     private AppConfigProperties appConfigProperties;
     private MessageSender sender;
     private EquipmentScope scope;
+    private MiloEndpoint ua;
 
 
     /**
@@ -96,6 +99,7 @@ public class OPCUAMessageHandler extends EquipmentMessageHandler implements IEqu
         Collection<String> addresses = AddressParser.parse(config.getAddress(), appConfigProperties);
         try {
             controller.connect(addresses);
+            ua.fillNameSpaceIndex();
         } catch (OPCUAException e) {
             log.error("Connection failed with error: ", e);
             sender.onEquipmentStateUpdate(CONNECTION_FAILED);

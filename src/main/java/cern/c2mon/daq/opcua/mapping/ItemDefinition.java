@@ -21,6 +21,7 @@
  */
 package cern.c2mon.daq.opcua.mapping;
 
+import cern.c2mon.daq.opcua.OPCUANameSpaceIndex;
 import cern.c2mon.daq.opcua.connection.MiloMapper;
 import cern.c2mon.daq.opcua.control.ConcreteController;
 import cern.c2mon.daq.opcua.exceptions.ConfigurationException;
@@ -141,13 +142,15 @@ public class ItemDefinition {
     }
 
     private static NodeId fromAddress(OPCHardwareAddress opcAddress, boolean redundant) {
-        int namespaceId = opcAddress.getNamespaceId();
         String itemName = opcAddress.getOpcRedundantItemName();
         if (redundant && (itemName == null || itemName.trim().isEmpty())) {
             return null;
         } else if (!redundant) {
             itemName = opcAddress.getOPCItemName();
         }
+        
+        int namespaceId = OPCUANameSpaceIndex.get().getIdByItemName(itemName);
+        
         switch (opcAddress.getAddressType()) {
             case GUID:
                 return new NodeId(namespaceId, UUID.fromString(itemName));
@@ -155,6 +158,5 @@ public class ItemDefinition {
                 return new NodeId(namespaceId, Integer.parseInt(itemName));
             default:
                 return new NodeId(namespaceId, itemName);
-        }
-    }
+        }    }
 }
