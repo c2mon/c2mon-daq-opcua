@@ -26,19 +26,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 public class OPCUANameSpaceIndexTest {
-        
+
     @Test
     public void testNamespaceResolution() {
         OPCUANameSpaceIndex index = OPCUANameSpaceIndex.get();
         index.addEntry("S7:", 1);
         index.addEntry("beck:", 2);
-        
+
         // Valid mappings to the S7 namespace, returning 1 in our test data
         Assertions.assertEquals(1, index.getIdByItemName("S7:P4US45VENT1.DB51.10,r"));
         Assertions.assertEquals(1, index.getIdByItemName("s7:P4US45VENT1.DB51.10,r"));
         Assertions.assertEquals(1, index.getIdByItemName("S7:"));
         Assertions.assertEquals(2, index.getIdByItemName("BECK:P4US45VENT1.DB51.10,r"));
-        
+
         // missing column, or nothing after the column will not map , expected return is 0
         Assertions.assertEquals(0, index.getIdByItemName("S7"));
         Assertions.assertEquals(0, index.getIdByItemName("XXX:Whatever comes after"));
@@ -46,6 +46,28 @@ public class OPCUANameSpaceIndexTest {
         Assertions.assertEquals(0, index.getIdByItemName(""));
         Assertions.assertEquals(0, index.getIdByItemName("    "));
 
+    }
+
+    @Test
+    public void testItemNameUpdate() {                
+        Assertions.assertNull(removeProtocolFromItemName(null));
+        Assertions.assertEquals("", removeProtocolFromItemName(""));
+
+        final String BLANK_STRING = "     ";
+        Assertions.assertEquals(BLANK_STRING, removeProtocolFromItemName(BLANK_STRING));
+
+        Assertions.assertEquals("", removeProtocolFromItemName("   :"));
+        Assertions.assertEquals("x", removeProtocolFromItemName("   :x"));
+        Assertions.assertEquals("x", removeProtocolFromItemName(":x"));
+        Assertions.assertEquals("x ", removeProtocolFromItemName(":x "));
+        Assertions.assertEquals("", removeProtocolFromItemName(":"));
+    }
+
+    private String removeProtocolFromItemName(String itemName) {
+        if (itemName == null) {
+            return null;
+        }
+        return itemName.substring(itemName.indexOf(':') + 1);
     }
 
 }

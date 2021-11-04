@@ -584,7 +584,7 @@ public class MiloEndpoint implements Endpoint, SessionActivityListener, UaSubscr
                 final String[] namespaces = (String[]) rawValue;
                 for (int i = 0; i < namespaces.length; i++) {
                     log.info("{} -> {}", namespaces[i], Unsigned.ushort(i));
-                    OPCUANameSpaceIndex.get().addEntry(namespaces[i], i);
+                    OPCUANameSpaceIndex.get().addEntry(namespaces[i].toUpperCase(), i);
                 }
             }
         } catch (Exception e) {

@@ -163,6 +163,9 @@ public class ItemDefinition {
         case NUMERIC:
             return new NodeId(namespaceId, Integer.parseInt(itemName));
         default:
+            if (itemName != null) {
+                itemName = itemName.substring(itemName.indexOf(':') + 1);
+            }
             return new NodeId(namespaceId, itemName);
         }
     }
