@@ -29,6 +29,7 @@ import cern.c2mon.daq.opcua.exceptions.OPCUAException;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.mapping.TagSubscriptionReader;
+import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
@@ -198,6 +199,12 @@ public class TestEndpoint implements Endpoint {
         } else {
             return nonTransparentRedundancyTypeNode;
         }
+    }
+
+    @Override
+    public void fillNameSpaceIndex() throws EqIOException {
+        // TODO Auto-generated method stub
+        
     }
 
 }

@@ -21,6 +21,14 @@
  */
 package cern.c2mon.daq.opcua;
 
+import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_FAILED;
+
+import java.util.Collection;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.ApplicationContext;
+
 import cern.c2mon.daq.common.EquipmentMessageHandler;
 import cern.c2mon.daq.common.ICommandRunner;
 import cern.c2mon.daq.common.conf.core.ProcessConfigurationHolder;
@@ -49,13 +57,6 @@ import cern.c2mon.shared.daq.command.SourceCommandTagValue;
 import cern.c2mon.shared.daq.config.ChangeReport;
 import cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.ApplicationContext;
-
-import java.util.Collection;
-import java.util.concurrent.TimeUnit;
-
-import static cern.c2mon.daq.opcua.MessageSender.EquipmentState.CONNECTION_FAILED;
 
 /**
  * The OPCUAMessageHandler is the entry point of the application. It is created and called by the C2MON DAQ core and

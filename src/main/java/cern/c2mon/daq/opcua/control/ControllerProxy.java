@@ -27,6 +27,7 @@ import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.scope.EquipmentScoped;
+import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
@@ -101,6 +102,11 @@ public class ControllerProxy implements Controller {
         }
         log.info("Using redundancy mode {}, redundant URIs {}.", controller.getClass().getName(), redundantUris);
         controller.initialize(endpoint, redundantUris);
+        try {
+            endpoint.fillNameSpaceIndex();
+        } catch (EqIOException e) {
+            log.error("Failed to load namepsace ids from OPC UA server", e);
+        }
     }
 
     /**
