@@ -59,4 +59,3 @@ quality_assurance:
   only:
     - master
     - develop
-
