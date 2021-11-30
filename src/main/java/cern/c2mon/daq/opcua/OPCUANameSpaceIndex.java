@@ -23,15 +23,14 @@
 package cern.c2mon.daq.opcua;
 
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
- * On OCP UA DAQ startup, this map should be filled with the namespace-name/namespace-id pairs, so that later
- * on we can easily use this information on the ItemDefinition to provide the correct namespace id based on 
- * the item-name
+ * On OCP UA DAQ startup, this map should be filled with the namespace-name/namespace-id pairs, so that later on we can
+ * easily use this information on the ItemDefinition to provide the correct namespace id based on the item-name
  * 
  * @author mbuttner
  */
@@ -41,7 +40,7 @@ public class OPCUANameSpaceIndex {
 
     private static OPCUANameSpaceIndex singleton;
     private static final Logger LOG = LoggerFactory.getLogger(OPCUANameSpaceIndex.class);
-    
+
     //
     // --- CONSTRUCTION ------------------------------------------
     //
@@ -51,7 +50,7 @@ public class OPCUANameSpaceIndex {
     private OPCUANameSpaceIndex() {
         //
     }
-    
+
     public static OPCUANameSpaceIndex get() {
         if (singleton == null) {
             singleton = new OPCUANameSpaceIndex();
@@ -59,7 +58,7 @@ public class OPCUANameSpaceIndex {
         }
         return singleton;
     }
-    
+
     //
     // --- PUBLIC METHODS ----------------------------------------
     //
@@ -71,28 +70,74 @@ public class OPCUANameSpaceIndex {
         namespaceIndex.put(namespaceName.toUpperCase(), namespaceId);
         LOG.info(" - adding {} with id {}", namespaceName.toUpperCase(), namespaceId);
     }
-    
+
     /**
      * @param itemName <code>String>/code> expected "namespaceName:rest of the name"
-     * @return <code>int</code> 0 if nothing matches, otherwise the namespace id as provided by the OPC UA server
+     * &#64;return <code>int</code> 0 if nothing matches, otherwise the namespace id as provided by the OPC UA server
      */
-    public int getIdByItemName(String itemName) {
+    public NamespaceInfo getNamespace(String itemName) {
+        NamespaceInfo nameSpace = new NamespaceInfo(itemName);
+        int maxLength = 0;
         if (itemName != null && !itemName.isEmpty()) {
-            int namespaceEndIdx = itemName.indexOf(":");
-            if (namespaceEndIdx > 0) {
-                String namespaceName = itemName.substring(0, namespaceEndIdx + 1).toUpperCase();
-                if (namespaceIndex.containsKey(namespaceName)) {
-                    return namespaceIndex.get(namespaceName);
-                } else {
-                    LOG.warn("namespace '{}' declared by itemName '{}' is not a domain exposed by the OPC UA server", namespaceName, itemName);                                    
+            for (Entry<String, Integer> indexEntry : namespaceIndex.entrySet()) {
+                if (itemName.toUpperCase().indexOf(indexEntry.getKey()) == 0) {
+                    if (indexEntry.getKey().length() > maxLength) {
+                        nameSpace.setId(indexEntry.getValue());
+                        nameSpace.setName(indexEntry.getKey());
+                        maxLength = indexEntry.getKey().length();
+                    }
                 }
-            } else {
-                LOG.warn("itemName '{}' does not expose a namespace-name (missing ':')", itemName);                
             }
         } else {
             LOG.warn("Can not resolve null or empty itemName");
         }
-        return 0;
+        if (nameSpace.getId() == -1) {
+            LOG.warn("itemName '{}' does not match any of the namespaces exposed by the OPC UA server", itemName);
+        } 
+        return nameSpace;
     }
 
+    public class NamespaceInfo {
+
+        private int id = -1;
+        private String name;
+        private String itemName;
+
+        
+        public NamespaceInfo(String itemName) {
+            this.itemName = itemName;
+        }
+
+        public String getOriginalItemName() {
+            return itemName;
+        }
+
+        /**
+         * @return <code>String</code> the original item name WITHOUT the namespace name
+         */
+        public String getEffectiveItemName() {
+            if (id >= 0) {
+                String effectiveItemName = itemName.substring(name.length());
+                return effectiveItemName.trim();
+            }
+            return itemName;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+    }
 }

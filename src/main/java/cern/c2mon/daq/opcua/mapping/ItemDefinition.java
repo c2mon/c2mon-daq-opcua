@@ -21,6 +21,12 @@
  */
 package cern.c2mon.daq.opcua.mapping;
 
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
+
 import cern.c2mon.daq.opcua.OPCUANameSpaceIndex;
 import cern.c2mon.daq.opcua.connection.MiloMapper;
 import cern.c2mon.daq.opcua.control.ConcreteController;
@@ -31,12 +37,6 @@ import cern.c2mon.shared.common.datatag.ISourceDataTag;
 import cern.c2mon.shared.common.datatag.address.HardwareAddress;
 import cern.c2mon.shared.common.datatag.address.OPCHardwareAddress;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
-
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * An {@link ItemDefinition} stores all values required to process an {@link ISourceDataTag} or an
@@ -44,7 +44,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * identified by a unique clientHandle which is used by the {@link TagSubscriptionMapper} to associate it with the tag.
  */
 @Getter
-@Slf4j
 public class ItemDefinition {
 
     private static final AtomicInteger clientHandles = new AtomicInteger();
@@ -155,18 +154,19 @@ public class ItemDefinition {
             itemName = opcAddress.getOPCItemName();
         }
 
-        int namespaceId = OPCUANameSpaceIndex.get().getIdByItemName(itemName);
+        OPCUANameSpaceIndex.NamespaceInfo namespace = OPCUANameSpaceIndex.get().getNamespace(itemName);
 
         switch (opcAddress.getAddressType()) {
         case GUID:
-            return new NodeId(namespaceId, UUID.fromString(itemName));
+            return new NodeId(namespace.getId(), UUID.fromString(itemName));
         case NUMERIC:
-            return new NodeId(namespaceId, Integer.parseInt(itemName));
+            return new NodeId(namespace.getId(), Integer.parseInt(itemName));
         default:
-            if (itemName != null) {
-                itemName = itemName.substring(itemName.indexOf(':') + 1);
+            if (namespace.getId() >= 0) {
+                itemName = namespace.getEffectiveItemName();
+                return new NodeId(namespace.getId(), itemName);
             }
-            return new NodeId(namespaceId, itemName);
+            return new NodeId(0, itemName);
         }
     }
 }

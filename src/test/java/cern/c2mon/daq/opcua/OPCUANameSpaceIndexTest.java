@@ -22,52 +22,76 @@
 
 package cern.c2mon.daq.opcua;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import cern.c2mon.daq.opcua.OPCUANameSpaceIndex.NamespaceInfo;
 
 public class OPCUANameSpaceIndexTest {
-
+    
+    /**
+     * This test us unchanged compared to the initial version expecting a ":" as separator, we keep it to ensure
+     * that things are still working as for the first version. For more complicated cases, see the test below
+     */
     @Test
-    public void testNamespaceResolution() {
+    public void testS7NamespaceResolution() {
         OPCUANameSpaceIndex index = OPCUANameSpaceIndex.get();
         index.addEntry("S7:", 1);
         index.addEntry("beck:", 2);
 
         // Valid mappings to the S7 namespace, returning 1 in our test data
-        Assertions.assertEquals(1, index.getIdByItemName("S7:P4US45VENT1.DB51.10,r"));
-        Assertions.assertEquals(1, index.getIdByItemName("s7:P4US45VENT1.DB51.10,r"));
-        Assertions.assertEquals(1, index.getIdByItemName("S7:"));
-        Assertions.assertEquals(2, index.getIdByItemName("BECK:P4US45VENT1.DB51.10,r"));
+        Assertions.assertEquals(1, index.getNamespace("S7:P4US45VENT1.DB51.10,r").getId());
+        Assertions.assertEquals(1, index.getNamespace("s7:P4US45VENT1.DB51.10,r").getId());
+        Assertions.assertEquals(1, index.getNamespace("S7:").getId());
+        Assertions.assertEquals(2, index.getNamespace("BECK:P4US45VENT1.DB51.10,r").getId());
 
         // missing column, or nothing after the column will not map , expected return is 0
-        Assertions.assertEquals(0, index.getIdByItemName("S7"));
-        Assertions.assertEquals(0, index.getIdByItemName("XXX:Whatever comes after"));
-        Assertions.assertEquals(0, index.getIdByItemName(null));
-        Assertions.assertEquals(0, index.getIdByItemName(""));
-        Assertions.assertEquals(0, index.getIdByItemName("    "));
+        Assertions.assertEquals(-1, index.getNamespace("S7").getId());
+        Assertions.assertEquals(-1, index.getNamespace("XXX:Whatever comes after").getId());
+        Assertions.assertEquals(-1, index.getNamespace(null).getId());
+        Assertions.assertEquals(-1, index.getNamespace("").getId());
+        Assertions.assertEquals(-1, index.getNamespace("    ").getId());
 
     }
-
+    
+    /**
+     * Try to check what happens with other situations ...
+     */
     @Test
-    public void testItemNameUpdate() {                
-        Assertions.assertNull(removeProtocolFromItemName(null));
-        Assertions.assertEquals("", removeProtocolFromItemName(""));
+    public void testOtherProtocolNamespaceResolution() {
+        OPCUANameSpaceIndex index = OPCUANameSpaceIndex.get();
+        index.addEntry("S7:", 1);
+        index.addEntry("beck:", 2);
+        index.addEntry("A very long namespace", 3);
+        index.addEntry("A very long namespace without sep", 4);        
 
-        final String BLANK_STRING = "     ";
-        Assertions.assertEquals(BLANK_STRING, removeProtocolFromItemName(BLANK_STRING));
+        NamespaceInfo namespace1 = index.getNamespace("A very long namespace P4US45VENT1.DB51.10,r ");
+        Assertions.assertEquals(3, namespace1.getId());
+        Assertions.assertEquals("P4US45VENT1.DB51.10,r", namespace1.getEffectiveItemName());
 
-        Assertions.assertEquals("", removeProtocolFromItemName("   :"));
-        Assertions.assertEquals("x", removeProtocolFromItemName("   :x"));
-        Assertions.assertEquals("x", removeProtocolFromItemName(":x"));
-        Assertions.assertEquals("x ", removeProtocolFromItemName(":x "));
-        Assertions.assertEquals("", removeProtocolFromItemName(":"));
+        NamespaceInfo namespace2 = index.getNamespace("A very long namespace without sep   P4US45VENT1.DB51.10,r ");
+        Assertions.assertEquals(4, namespace2.getId());
+        Assertions.assertEquals("P4US45VENT1.DB51.10,r", namespace2.getEffectiveItemName());
+        
+        // No namespace match? return everyhing as it is ?
+        NamespaceInfo namespace3 = index.getNamespace("A very long non matching namespace   P4US45VENT1.DB51.10,r ");
+        Assertions.assertEquals(-1, namespace3.getId());
+        Assertions.assertEquals("A very long non matching namespace   P4US45VENT1.DB51.10,r ", namespace3.getEffectiveItemName());
+
+        NamespaceInfo namespace4 = index.getNamespace(null);
+        Assertions.assertEquals(-1, namespace4.getId());
+        Assertions.assertEquals(null, namespace4.getEffectiveItemName());
+
+        NamespaceInfo namespace5 = index.getNamespace(" ");
+        Assertions.assertEquals(-1, namespace5.getId());
+        Assertions.assertEquals(" ", namespace5.getEffectiveItemName());
+        
+        // Just the namespace and no item?
+        NamespaceInfo namespace6 = index.getNamespace("A very long namespace            ");
+        Assertions.assertEquals(3, namespace6.getId());
+        Assertions.assertEquals("", namespace6.getEffectiveItemName());
+
     }
 
-    private String removeProtocolFromItemName(String itemName) {
-        if (itemName == null) {
-            return null;
-        }
-        return itemName.substring(itemName.indexOf(':') + 1);
-    }
 
 }
