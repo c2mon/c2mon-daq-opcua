@@ -3,6 +3,7 @@
 The OPC-UA DAQ allows C2MON to collect data from OPC-UA servers. OPC UA is the newest member of the [OPC family of standards](https://opcfoundation.org/)
 The modern and flexible design of this new technology has many advantages over its predecessors including platform independence, higher reliability, and a comprehensive security model.
 
+
 The OPC UA DAQ offers rich configurability options to suit the varying needs of different OPC UA servers, and exposes relevant metrics and endpoints for monitoring.
 It relies on the [Eclipse Milo](https://github.com/eclipse/milo) library (Eclipse Public License 1.0).
 

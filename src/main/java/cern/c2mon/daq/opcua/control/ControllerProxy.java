@@ -2,7 +2,7 @@
  * #%L
  * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
  * %%
- * Copyright (C) 2010 - 2020 CERN
+ * Copyright (C) 2010 - 2021 CERN
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -27,6 +27,7 @@ import cern.c2mon.daq.opcua.exceptions.*;
 import cern.c2mon.daq.opcua.mapping.ItemDefinition;
 import cern.c2mon.daq.opcua.mapping.SubscriptionGroup;
 import cern.c2mon.daq.opcua.scope.EquipmentScoped;
+import cern.c2mon.daq.tools.equipmentexceptions.EqIOException;
 import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
 import cern.c2mon.shared.common.datatag.ValueUpdate;
 import lombok.RequiredArgsConstructor;
@@ -101,6 +102,11 @@ public class ControllerProxy implements Controller {
         }
         log.info("Using redundancy mode {}, redundant URIs {}.", controller.getClass().getName(), redundantUris);
         controller.initialize(endpoint, redundantUris);
+        try {
+            endpoint.fillNameSpaceIndex();
+        } catch (EqIOException e) {
+            log.error("Failed to load namepsace ids from OPC UA server", e);
+        }
     }
 
     /**

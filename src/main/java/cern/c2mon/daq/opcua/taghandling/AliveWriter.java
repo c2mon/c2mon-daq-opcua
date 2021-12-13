@@ -2,7 +2,7 @@
  * #%L
  * This file is part of the CERN Control and Monitoring Platform 'C2MON'.
  * %%
- * Copyright (C) 2010 - 2020 CERN
+ * Copyright (C) 2010 - 2021 CERN
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -122,7 +122,7 @@ public class AliveWriter {
     private class WriteAliveTask {
         private final NodeId aliveTagAddress;
         private ScheduledFuture<?> aliveTask;
-        private int writeCounter;
+        private short writeCounter;
 
         private void startTask(long aliveTagInterval) {
             if (aliveTagInterval > 0L) {
