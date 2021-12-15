@@ -35,7 +35,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
+import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.REBOOT;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -118,7 +118,7 @@ public class DataTagChangerTest extends TagHandlerTestBase {
     public void invalidOnAddDataTagShouldReportFail () {
         endpoint.setThrowExceptions(true);
         tagChanger.onAddDataTag(tag, changeReport);
-        assertEquals(FAIL, changeReport.getState());
+        assertEquals(REBOOT, changeReport.getState());
     }
 
     @Test
