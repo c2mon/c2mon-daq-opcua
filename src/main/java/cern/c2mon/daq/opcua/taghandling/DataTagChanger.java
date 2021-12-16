@@ -37,8 +37,8 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.FAIL;
 import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.SUCCESS;
+import static cern.c2mon.shared.daq.config.ChangeReport.CHANGE_STATE.REBOOT;
 
 /**
  * The {@link DataTagChanger} handles changes  at runtime to the {@link ISourceDataTag}s in  {@link
@@ -57,7 +57,7 @@ public class DataTagChanger implements IDataTagChanger {
         } else {
             log.error(message);
             report.appendError(prevMsg.apply(report.getErrorMessage()) + message);
-            report.setState(FAIL);
+            report.setState(REBOOT);
         }
     };
 
