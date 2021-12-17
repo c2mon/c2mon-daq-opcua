@@ -144,7 +144,7 @@ public class AliveWriter {
                 if (controller.write(aliveTagAddress, writeCounter)) {
                     messageSender.onAlive();
                 }
-                writeCounter = (writeCounter < Byte.MAX_VALUE) ? writeCounter++ : 0;
+                writeCounter = (short) ((writeCounter < Byte.MAX_VALUE) ? writeCounter + 1 : 0);
             } catch (OPCUAException e) {
                 log.error("Error while writing alive. Retrying...", e);
             }
