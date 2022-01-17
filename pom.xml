@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>c2mon-daq-opcua</artifactId>
-    <version>1.10.3</version>
+    <version>1.10.3-SNAPSHOT</version>
     <packaging>jar</packaging>
     <description>DAQ module for acquiring data from OPC UA servers</description>
 
