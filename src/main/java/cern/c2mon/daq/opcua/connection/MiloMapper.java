@@ -21,26 +21,64 @@
  */
 package cern.c2mon.daq.opcua.connection;
 
-import cern.c2mon.daq.opcua.config.TimeRecordMode;
-import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
-import cern.c2mon.shared.common.datatag.ValueUpdate;
-import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
-import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
-import com.google.common.collect.ImmutableSet;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.eclipse.milo.opcua.stack.core.serialization.UaEnumeration;
-import org.eclipse.milo.opcua.stack.core.types.builtin.*;
-import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
-import org.eclipse.milo.opcua.stack.core.util.TypeUtil;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_ArgumentsMissing;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_BoundNotFound;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_BoundNotSupported;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_DataEncodingInvalid;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_DataLost;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_DataUnavailable;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_DeadbandFilterInvalid;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_IndexRangeNoData;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_MethodInvalid;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NoData;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NoDataAvailable;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NodeClassInvalid;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NodeIdInvalid;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NodeIdUnknown;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NotFound;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NotReadable;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NotSupported;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_NotWritable;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_OutOfRange;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_ParentNodeIdInvalid;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_ServiceUnsupported;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_SourceNodeIdInvalid;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_TargetNodeIdInvalid;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_TypeMismatch;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Bad_ViewIdUnknown;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Uncertain_EngineeringUnitsExceeded;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Uncertain_InitialValue;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Uncertain_NoCommunicationLastUsableValue;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Uncertain_NotAllNodesAvailable;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Uncertain_SensorNotAccurate;
+import static org.eclipse.milo.opcua.stack.core.StatusCodes.Uncertain_SubstituteValue;
 
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static org.eclipse.milo.opcua.stack.core.StatusCodes.*;
+import org.eclipse.milo.opcua.stack.core.serialization.UaEnumeration;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
+import org.eclipse.milo.opcua.stack.core.types.builtin.ExpandedNodeId;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.DeadbandType;
+import org.eclipse.milo.opcua.stack.core.util.TypeUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableSet;
+
+import cern.c2mon.daq.opcua.config.TimeRecordMode;
+import cern.c2mon.shared.common.datatag.SourceDataTagQuality;
+import cern.c2mon.shared.common.datatag.ValueUpdate;
+import cern.c2mon.shared.common.datatag.util.SourceDataTagQualityCode;
+import cern.c2mon.shared.common.datatag.util.ValueDeadbandType;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * This utility class provides a collection of functions mapping Milo- or OPCUA specific Java classes into a format that
@@ -158,6 +196,8 @@ public abstract class MiloMapper {
         return variant.getValue() instanceof UaEnumeration ? ((UaEnumeration) variant.getValue()).getValue() : variant.getValue();
     }
 
+    private static final Logger VALUE_UPDATE_LOGGER = LoggerFactory.getLogger("ValueUpdateLogger");
+    
     /**
      * Maps a DataValue into a C2MON ValueUpdate.
      * @param value the DataValue received from the Milo client
@@ -166,6 +206,7 @@ public abstract class MiloMapper {
      */
     public static ValueUpdate toValueUpdate (DataValue value, TimeRecordMode mode) {
         if (value == null) {
+            VALUE_UPDATE_LOGGER.debug("Discarded a null value update");
             return null;
         }
         ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()));

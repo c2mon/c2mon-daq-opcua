@@ -27,3 +27,4 @@ activemq-data/
 # IntelliJ
 *.ipr
 *.iws
+/cbng-build.log

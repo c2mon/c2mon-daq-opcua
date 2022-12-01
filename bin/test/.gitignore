@@ -1,0 +1,9 @@
+/extensions.cnf
+/failover.properties
+/generatekey.sh
+/keystore.pfx
+/nopwd.pfx
+/securityIT.properties
+/server.crt
+/server.csr
+/server.key
