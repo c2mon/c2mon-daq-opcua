@@ -54,6 +54,7 @@ import static org.eclipse.milo.opcua.stack.core.StatusCodes.Uncertain_SensorNotA
 import static org.eclipse.milo.opcua.stack.core.StatusCodes.Uncertain_SubstituteValue;
 
 import java.util.Collection;
+import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -212,10 +213,32 @@ public abstract class MiloMapper {
         ValueUpdate valueUpdate = new ValueUpdate(MiloMapper.toObject(value.getValue()));
         final Long sourceTime = value.getSourceTime() == null ? null : value.getSourceTime().getJavaTime();
         final Long serverTime = value.getServerTime() == null ? null : value.getServerTime().getJavaTime();
+        
+        VALUE_UPDATE_LOGGER.info("OPC-UA value update BEGIN -------------------------------------------------");
+        VALUE_UPDATE_LOGGER.info("Received value update: {}", value.toString());
+        VALUE_UPDATE_LOGGER.info(" - selected algo: {}", mode.name());
+        
+        String sourceTimeStr = "?";
+        if (sourceTime != null) {
+            sourceTimeStr = (new Date(sourceTime)).toString();
+        }
+        VALUE_UPDATE_LOGGER.info(" - source time:   {}", sourceTimeStr);
+
+        String serverTimeStr = "?";
+        if (serverTime != null) {
+            serverTimeStr = (new Date(serverTime)).toString();
+        }
+        VALUE_UPDATE_LOGGER.info(" - server time:   {}", serverTimeStr);
+
         final Long recordedTime = mode.getTime(sourceTime, serverTime);
         if (recordedTime != null) {
             valueUpdate.setSourceTimestamp(recordedTime);
+            VALUE_UPDATE_LOGGER.info(" Decoded to use: {} ({})", recordedTime, (new Date(recordedTime)).toString());
+        } else {
+            VALUE_UPDATE_LOGGER.warn("SELECTED SOURCE TIMESTAMP IS NULL!?");            
         }
+        VALUE_UPDATE_LOGGER.info("--> effective source timestamp: {} ", (new Date(valueUpdate.getSourceTimestamp())).toString());            
+        VALUE_UPDATE_LOGGER.info("OPC-UA value update END ---------------------------------------------------");
         return valueUpdate;
     }
 

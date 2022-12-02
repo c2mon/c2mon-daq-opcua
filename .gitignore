@@ -2,6 +2,9 @@
 *.class
 build/
 target/
+bin/
+.gradle/
+*.log
 
 # IDE files
 *.iml
