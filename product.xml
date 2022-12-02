@@ -1,5 +1,5 @@
 <products>
-	<product name="c2mon-daq-opcua" version="1.11.0" directory="c2mon-daq/c2mon-daq-opcua">
+	<product name="c2mon-daq-opcua" version="1.11.0" groupId="cern.c2mon-daq">
 		<description>DAQ module for acquiring data from OPC UA servers</description>
 		<href>https://gitlab.cern.ch/c2mon/c2mon-daq-opcua</href>
 		<dependencies>
@@ -11,7 +11,6 @@
 
 			<dep groupId="com.google.guava" product="guava" version="29.0-jre" />
 			<dep groupId="org.eclipse.milo" product="sdk-client" version="0.4.3" />
-			<dep groupId="org.projectlombok" product="lombok" version="1.18.12" />
 			<dep groupId="org.springframework.retry" product="spring-retry" version="1.2.5.RELEASE" />
 			<dep groupId="org.aspectj" product="aspectjweaver" />
 			<dep groupId="org.jolokia" product="jolokia-core" version="1.6.2" />
@@ -21,7 +20,7 @@
 			<dep groupId="io.micrometer" product="micrometer-registry-prometheus" version="1.1.0" />
 			<dep groupId="com.github.oshi" product="oshi-core" version="5.3.5" />
 
-			<dep groupId="org.junit.platform" product="junit-platform-launcher" version="1.8.1" />
+			<dep groupId="org.junit.platform" product="junit-platform-launcher" version="1.8.1" scope="test"/>
 			<dep groupId="org.junit.jupiter" product="junit-jupiter" version="5.6.0" scope="test" />
 			<dep groupId="org.junit.jupiter" product="junit-jupiter-params" version="5.6.0" scope="test" />
 			<dep groupId="org.junit.jupiter" product="junit-jupiter-engine" version="5.6.0" scope="test" />
