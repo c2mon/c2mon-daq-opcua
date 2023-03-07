@@ -131,6 +131,7 @@ public abstract class FailoverBase extends ControllerBase implements FailoverCon
         }
     }
 
+    
     protected void triggerServerSwitch() {
         synchronized (listening) {
             if (listening.getAndSet(false) && !stopped.get()) {
